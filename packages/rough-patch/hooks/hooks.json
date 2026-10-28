@@ -1,0 +1,97 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs"],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Edit(//**/.rough-patch/**)",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs"],
+            "timeout": 5,
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Write(//**/.rough-patch/**)",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs"],
+            "timeout": 5,
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "NotebookEdit(//**/.rough-patch/**)",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs"],
+            "timeout": 5,
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit|Bash|PowerShell|Agent|Task|Skill|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "${CLAUDE_PLUGIN_DATA}"],
+            "timeout": 5
+          }
+        ]
+      },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/.claude/**)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/projects/**)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/.git/**)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/.rough-patch/runs/**)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/CLAUDE.md)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/CLAUDE.local.md)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/AGENTS.md)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/.env)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/.env.*)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/*.pem)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/*.key)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/.ssh/**)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/.aws/**)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/.npmrc)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "if": "Read(//**/.netrc)", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] },
+      { "matcher": "Grep|Glob", "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "read"], "timeout": 5 }] }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "rough-patch:adversary",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guard.mjs", "stop", "${CLAUDE_PLUGIN_DATA}"],
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
