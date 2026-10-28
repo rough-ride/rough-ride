@@ -1,0 +1,97 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Grep|Glob|Agent|Task|Skill|Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/log.mjs",
+              "pre"
+            ],
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Edit(//**/.rough-patch/**)",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/log.mjs",
+              "if-edit"
+            ],
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Write(//**/.rough-patch/**)",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/log.mjs",
+              "if-write"
+            ],
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Read(//**/.rough-patch/**)",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/log.mjs",
+              "if-read"
+            ],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Read|Grep|Glob|Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/log.mjs",
+              "post"
+            ],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "rpprobe:prober|rpprobe:short",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/log.mjs",
+              "subagent-stop"
+            ],
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
