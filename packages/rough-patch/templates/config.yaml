@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/rough-patch/rough-patch/v0.1.0/packages/rough-patch/src/schemas/config.schema.json
+schema: 0.1.0
+# Every setting below is optional. Uncomment the ones your app needs.
+# target:
+#   url: http://localhost:3000        # skips Nuxt detection; trusted after the loopback check
+#   start: npm run dev                # for --start; a string, or a list run side by side
+#   startTimeout: 120                 # seconds --start waits for the app to answer
+#   ready: "window.appReady === true" # replaces the hydration / network-idle wait
+# reset: npm run db:reset             # never guessed; runs before the sign-in flow
+# browser: chrome                     # chrome | msedge | chromium
+# exclude:                            # pages no flow may visit
+#   - /admin/**
+# allow:
+#   remoteTarget: staging.example.com # the one non-loopback host the target may use
+#   remoteWrites:                     # exact hosts the browser may write to; no wildcards
+#     - abcd1234.supabase.co
