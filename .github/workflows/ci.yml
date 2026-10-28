@@ -1,0 +1,245 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - run: npm ci
+      - run: npm ci --prefix packages/rough-patch
+      - run: npm run build
+      - run: npm test
+
+  old-node:
+    name: old Node stop (Node 20)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 20.18.1
+      - run: node packages/rough-patch/test/old-node-check.mjs
+
+  hooks-node18:
+    name: hook scripts (Node ${{ matrix.node }})
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', 22.22.0]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --input-type=module -e "const m = await import('./packages/rough-patch/hooks/path-check.mjs'); if (!m.checkPath('a/.ROUGH-PATCH/x', process.cwd()).blocked) process.exit(1)"
+
+  formats:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - if: startsWith(github.ref, 'refs/tags/v')
+        run: node scripts/check-formats.mjs --tag "$GITHUB_REF_NAME"
+      - if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: node scripts/check-formats.mjs
+
+  version-sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - if: startsWith(github.ref, 'refs/tags/v')
+        run: node scripts/versions.mjs sync --tag "$GITHUB_REF_NAME"
+      - if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: node scripts/versions.mjs sync
+      - name: Telemetry flags stay in plugin.json
+        run: |
+          for word in no-usage-statistics no-performance-crux CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS; do
+            grep -q -- "$word" packages/rough-patch/.claude-plugin/plugin.json || { echo "plugin.json lost $word"; exit 1; }
+          done
+
+  pack-contents:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - run: npm ci
+      - run: npm ci --prefix packages/rough-patch
+      - run: npm run build
+      - run: node scripts/pack-contents.mjs
+
+  contract-sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - run: npm ci
+      - run: npm ci --prefix packages/rough-patch
+      - run: npm run build
+      # On a PR, a frozen editions entry must match the base branch's.
+      - if: github.event_name == 'pull_request'
+        run: node scripts/contract-sync.mjs --base "origin/$GITHUB_BASE_REF"
+      - if: github.event_name != 'pull_request'
+        run: node scripts/contract-sync.mjs
+
+  docs-pins:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - run: node scripts/docs-pins.mjs
+
+  template-shas:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - run: npm ci
+      - run: node scripts/workflow-template.mjs template-shas
+
+  # The workflow template's static checks, both README copies, and its comment
+  # job's script under bash with a mocked gh (the runner image ships jq).
+  template-checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - run: npm ci
+      - run: node scripts/workflow-template.mjs template-checks
+      - run: node --test packages/rough-patch/test/workflow-template.test.mjs
+
+  # actionlint at a fixed release, fetched through the Go module proxy, whose
+  # checksum database verifies it. The runner image ships Go and shellcheck.
+  actionlint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install actionlint 1.7.7
+        run: |
+          go_bin="$(command -v go || ls -d /opt/hostedtoolcache/go/*/x64/bin/go | sort -V | tail -n 1)"
+          GOBIN="$RUNNER_TEMP/bin" "$go_bin" install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+      - run: '"$RUNNER_TEMP/bin/actionlint" packages/rough-patch/templates/github-actions/rough-patch.yml'
+
+  bench:
+    name: bench (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - run: npm ci
+      - run: npm run bench:check
+      - run: npm run bench:test
+      - run: npm run bench -- lint
+      # A short work root keeps Windows inside its 40-character limit.
+      - run: npm run bench -- materialize fixture add-tags tags-keep-spaces --work-dir "${{ runner.temp }}"
+
+  three-os-app:
+    name: dev-split Nuxt app, target proof and sign-in (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - run: npm ci
+      - run: npm ci --prefix packages/rough-patch
+      - run: npm run build
+      # Materialises the base into a fresh repository, changes one page, and runs quick --start.
+      - run: node scripts/release-step5.mjs --work-dir "${{ runner.temp }}"
+
+  canary:
+    name: canary (Node ${{ matrix.node }})
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [lts/*, current]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm ci --prefix packages/rough-patch
+      - run: npm run build
+      - run: npm test
