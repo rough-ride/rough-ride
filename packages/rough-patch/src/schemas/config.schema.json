@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/rough-patch/rough-patch/v0.1.0/packages/rough-patch/src/schemas/config.schema.json",
+  "title": "rough-patch config.yaml",
+  "description": "Settings in .rough-patch/config.yaml at the git root. Every setting except schema is optional.",
+  "type": "object",
+  "required": [
+    "schema"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "description": "The format version: the rough-patch release that introduced it.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "target": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "description": "The target. Skips Nuxt detection; trusted once it passes the loopback check.",
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "start": {
+          "description": "The command --start runs in the git root: a string, or a list run side by side.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "startTimeout": {
+          "description": "Seconds --start waits for the app to answer.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 120
+        },
+        "ready": {
+          "description": "A JavaScript expression that replaces the ready wait after every full page load.",
+          "type": "string"
+        }
+      }
+    },
+    "reset": {
+      "description": "Runs once per flow-running invocation, before the sign-in flow, in the git root.",
+      "type": "string"
+    },
+    "browser": {
+      "description": "Pins one browser. --browser beats it.",
+      "enum": [
+        "chrome",
+        "msedge",
+        "chromium"
+      ]
+    },
+    "exclude": {
+      "description": "Page path patterns no flow may visit.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^/"
+      }
+    },
+    "allow": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "remoteTarget": {
+          "description": "The one non-loopback host the target may use.",
+          "type": "string"
+        },
+        "remoteWrites": {
+          "description": "Exact hosts the browser may write to. No wildcards.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[^*]+$"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+schema: 0.1.0
+signedIn: true
+steps:
+  - goto: /notes/new
+  - fill: {label: Title}
+    value: "Note ${unique}"
+  - press: {label: Title}
+    key: Enter
+  - click: {role: button, name: Save}
+  - expect: {text: "Note ${unique}"}

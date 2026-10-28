@@ -1,0 +1,6 @@
+schema: 0.1.0
+flow: create-note
+attack: {fault: "500", sticky: true, request: "POST /api/notes #1", page: /notes/new}
+checks: [values-survive, {id: app-body-too-long, at: settled, when: {outcome: refused}, assert: {text: "body is too long", within: {role: alert}}, spec: notes, because: "An overlong body gets a message about the body"}]
+context: {timezone: Europe/Berlin, locale: de-DE}
+found: {finding: 'Typed values lost after POST /api/notes fails with 500 (button "Save")', run: 20261025-141207-quick-k3fz, runner: 0.1.0, date: 2026-10-25}

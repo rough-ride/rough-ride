@@ -1,0 +1,158 @@
+{
+  "400": [
+    "preamble",
+    7
+  ],
+  "401": [
+    "preamble",
+    9
+  ],
+  "429": [
+    "preamble"
+  ],
+  "500": [
+    "preamble",
+    7
+  ],
+  "at-limit": [
+    "preamble",
+    6
+  ],
+  "back": [
+    7
+  ],
+  "delay-3s": [
+    "preamble",
+    2
+  ],
+  "double-submit": [
+    5
+  ],
+  "empty": [
+    "preamble",
+    6
+  ],
+  "empty-200": [
+    "preamble",
+    7
+  ],
+  "far-future": [
+    "preamble",
+    6
+  ],
+  "hang": [
+    "preamble",
+    2
+  ],
+  "huge": [
+    "preamble",
+    6
+  ],
+  "impossible-date": [
+    "preamble",
+    6
+  ],
+  "last-option": [
+    "preamble",
+    6
+  ],
+  "latest-response-wins": [
+    11
+  ],
+  "leap-day": [
+    "preamble",
+    6
+  ],
+  "long": [
+    "preamble",
+    6
+  ],
+  "malformed-json": [
+    "preamble",
+    7
+  ],
+  "negative": [
+    "preamble",
+    6
+  ],
+  "no-5xx-on-bad-input": [
+    6
+  ],
+  "no-broken-text": [
+    7
+  ],
+  "no-overflow-375": [
+    10
+  ],
+  "no-tld": [
+    "preamble",
+    6
+  ],
+  "no-uncaught-error": [
+    1,
+    7
+  ],
+  "not-a-number": [
+    "preamble",
+    6
+  ],
+  "one-write": [
+    5
+  ],
+  "out-of-order": [
+    11
+  ],
+  "placeholder": [
+    "preamble",
+    6
+  ],
+  "quote-plus": [
+    "preamble",
+    6
+  ],
+  "refresh": [
+    7,
+    8
+  ],
+  "reset": [
+    "preamble"
+  ],
+  "retry-recovers": [
+    3,
+    8
+  ],
+  "settles": [
+    2
+  ],
+  "signed-out-reload": [
+    9
+  ],
+  "spaces": [
+    "preamble",
+    6
+  ],
+  "specials": [
+    "preamble",
+    6
+  ],
+  "unicode": [
+    "preamble",
+    6
+  ],
+  "values-survive": [
+    4
+  ],
+  "viewport-375": [
+    "preamble",
+    10
+  ],
+  "visible-error-message": [
+    1,
+    6,
+    8
+  ],
+  "zero": [
+    "preamble",
+    6
+  ]
+}

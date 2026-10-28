@@ -1,0 +1,7 @@
+schema: 0.1.0
+accepted:
+  - page: /reports
+    step: click
+    action: POST /api/export
+    check: settles
+    because: The export streams for up to a minute and shows its own progress bar.
