@@ -1,0 +1,17 @@
+# Whole words the hint lint refuses in patches, requests and base files
+# (spec part 7 section 29.10 step 6). Category slugs and bug ids are added by
+# the bench script.
+bug
+buggy
+planted
+inject
+injected
+decoy
+twin
+benchmark
+chaos
+rough-patch
+fixme
+todo
+hack
+xxx

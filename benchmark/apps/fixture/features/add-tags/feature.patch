@@ -1,0 +1,46 @@
+diff --git a/backend/app.py b/backend/app.py
+index fffaa83..7cc7e08 100644
+--- a/backend/app.py
++++ b/backend/app.py
+@@ -5,3 +5,7 @@ PORT = 8700
+ 
+ def notes() -> list[dict]:
+     return [{"id": 1, "title": "Welcome"}]
++
++
++def tags(note: dict) -> list[str]:
++    return list(note.get("tags", []))
+diff --git a/server.mjs b/server.mjs
+index f748cda..c031bf1 100644
+--- a/server.mjs
++++ b/server.mjs
+@@ -1,10 +1,11 @@
+ // A very small notes page. Web on 3700, API on 8700.
+ import { createServer } from 'node:http';
++import { addTag, tagList } from './tags.mjs';
+ 
+-const notes = [{ id: 1, title: 'Welcome' }];
++let notes = [addTag({ id: 1, title: 'Welcome' }, 'start')];
+ 
+ function page() {
+-  const items = notes.map((n) => `<li>${n.title}</li>`).join('');
++  const items = notes.map((n) => `<li>${n.title} <small>${tagList(n)}</small></li>`).join('');
+   return `<!doctype html><title>Notes</title><h1>Notes</h1><ul>${items}</ul>`;
+ }
+ 
+diff --git a/tags.mjs b/tags.mjs
+new file mode 100644
+index 0000000..3a4450b
+--- /dev/null
++++ b/tags.mjs
+@@ -0,0 +1,10 @@
++// Tags for notes: each note keeps a short list of labels.
++export function addTag(note, tag) {
++  const clean = tag.trim().toLowerCase();
++  if (!clean) return note;
++  return { ...note, tags: [...(note.tags ?? []), clean] };
++}
++
++export function tagList(note) {
++  return (note.tags ?? []).join(', ');
++}

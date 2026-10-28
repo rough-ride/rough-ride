@@ -1,0 +1,18 @@
+# A tiny stand-in app for the bench script's own tests. Not a benchmark app:
+# it is never scored, and the real dev-split apps replace it (tickets 11 to 14).
+id: fixture
+product: Fixture Notes
+stack: node-python
+stratum: other
+split: pending
+ports: {web: 3700, api: 8700}
+start: [npm run dev]
+readyPath: /
+warmPaths: [/]
+reset: npm run reset
+check: [npm run check]
+env: {DEMO_EMAIL: demo@example.com, DEMO_PASSWORD: demo-password}
+harvest: {model: none, claudeCode: none, date: 2026-10-27}
+builtBy: maintainer
+basedOn: null
+status: active

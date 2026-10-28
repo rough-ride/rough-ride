@@ -1,0 +1,516 @@
+diff --git a/backend/app.py b/backend/app.py
+index e68c9ae..e6faa8d 100644
+--- a/backend/app.py
++++ b/backend/app.py
+@@ -7,7 +7,7 @@ from fastapi import FastAPI
+ from fastapi.middleware.cors import CORSMiddleware
+ 
+ from db import connect, create_schema
+-from routers import auth, beds, dashboard, harvests, plants, tasks
++from routers import auth, beds, dashboard, harvests, plants, stats, tasks
+ 
+ ALLOWED_ORIGINS = ["http://localhost:3701"]
+ 
+@@ -33,7 +33,7 @@ app.add_middleware(
+     allow_headers=["Content-Type"],
+ )
+ 
+-for router_module in (auth, beds, plants, harvests, tasks, dashboard):
++for router_module in (auth, beds, plants, harvests, tasks, dashboard, stats):
+     app.include_router(router_module.router)
+ 
+ 
+diff --git a/backend/routers/dashboard.py b/backend/routers/dashboard.py
+index 302bbef..223fa56 100644
+--- a/backend/routers/dashboard.py
++++ b/backend/routers/dashboard.py
+@@ -6,6 +6,7 @@ from datetime import date
+ from fastapi import APIRouter, Depends
+ 
+ from db import get_db
++from routers.stats import top_plants, year_bounds
+ from schemas import SummaryOut
+ from security import require_user
+ 
+@@ -17,8 +18,8 @@ router = APIRouter(
+ @router.get("/summary", response_model=SummaryOut)
+ def summary(conn: sqlite3.Connection = Depends(get_db)) -> dict:
+     today = date.today()
+-    year_start = date(today.year, 1, 1).isoformat()
+-    year_end = date(today.year, 12, 31).isoformat()
++    year_from, year_to = year_bounds(today.year)
++    year_start, year_end = year_from.isoformat(), year_to.isoformat()
+ 
+     plant_count = conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
+     bed_count = conn.execute("SELECT COUNT(*) FROM beds").fetchone()[0]
+@@ -36,14 +37,8 @@ def summary(conn: sqlite3.Connection = Depends(get_db)) -> dict:
+         """,
+         (today.isoformat(),),
+     ).fetchone()
+-    top = conn.execute(
+-        """
+-        SELECT p.name FROM harvests h JOIN plants p ON p.id = h.plant_id
+-        WHERE h.harvested_on BETWEEN ? AND ?
+-        GROUP BY p.id ORDER BY SUM(h.weight_grams) DESC, p.name LIMIT 1
+-        """,
+-        (year_start, year_end),
+-    ).fetchone()
++    best = top_plants(conn, year_from, year_to, limit=1)
++    top = best[0] if best else None
+ 
+     return {
+         "year": today.year,
+@@ -53,5 +48,7 @@ def summary(conn: sqlite3.Connection = Depends(get_db)) -> dict:
+         "harvest_grams_year": harvest_grams,
+         "open_task_count": open_count,
+         "overdue_task_count": overdue_count,
+-        "top_plant": top[0] if top else None,
++        "top_plant": top["plant_name"] if top else None,
++        "top_plant_id": top["plant_id"] if top else None,
++        "top_plant_grams": top["total_grams"] if top else 0,
+     }
+diff --git a/backend/routers/stats.py b/backend/routers/stats.py
+new file mode 100644
+index 0000000..bd5a25b
+--- /dev/null
++++ b/backend/routers/stats.py
+@@ -0,0 +1,101 @@
++"""Harvest statistics over a date range."""
++
++import sqlite3
++from datetime import date
++
++from fastapi import APIRouter, Depends, HTTPException, Query, status
++
++from db import get_db
++from schemas import HarvestStatsOut
++from security import require_user
++
++router = APIRouter(prefix="/api/stats", tags=["stats"], dependencies=[Depends(require_user)])
++
++TOP_PLANT_LIMIT = 3
++
++
++def year_bounds(year: int) -> tuple[date, date]:
++    return date(year, 1, 1), date(year, 12, 31)
++
++
++def top_plants(
++    conn: sqlite3.Connection, date_from: date, date_to: date, limit: int = TOP_PLANT_LIMIT
++) -> list[dict]:
++    """Plants with the most harvested weight in the range, heaviest first."""
++    rows = conn.execute(
++        """
++        SELECT p.id AS plant_id, p.name AS plant_name, p.variety,
++               SUM(h.weight_grams) AS total_grams
++        FROM harvests h JOIN plants p ON p.id = h.plant_id
++        WHERE h.harvested_on BETWEEN ? AND ?
++        GROUP BY p.id
++        ORDER BY total_grams DESC, p.name, p.id
++        LIMIT ?
++        """,
++        (date_from.isoformat(), date_to.isoformat(), limit),
++    ).fetchall()
++    return [dict(r) for r in rows]
++
++
++@router.get("/harvests", response_model=HarvestStatsOut)
++def harvest_stats(
++    date_from: date | None = Query(default=None, alias="from"),
++    date_to: date | None = Query(default=None, alias="to"),
++    conn: sqlite3.Connection = Depends(get_db),
++) -> dict:
++    year_start, year_end = year_bounds(date.today().year)
++    date_from = date_from or year_start
++    date_to = date_to or year_end
++    if date_from > date_to:
++        raise HTTPException(
++            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
++            detail="The From date must be on or before the To date.",
++        )
++
++    rows = conn.execute(
++        """
++        SELECT p.id AS plant_id, p.name AS plant_name, p.variety,
++               substr(h.harvested_on, 1, 7) AS month,
++               SUM(h.weight_grams) AS grams, COUNT(*) AS harvests
++        FROM harvests h JOIN plants p ON p.id = h.plant_id
++        WHERE h.harvested_on BETWEEN ? AND ?
++        GROUP BY p.id, month
++        ORDER BY p.name, p.id, month
++        """,
++        (date_from.isoformat(), date_to.isoformat()),
++    ).fetchall()
++
++    months = sorted({row["month"] for row in rows})
++    month_index = {month: i for i, month in enumerate(months)}
++    month_totals = [0] * len(months)
++    plants: dict[int, dict] = {}
++    harvest_count = 0
++
++    for row in rows:
++        plant = plants.setdefault(
++            row["plant_id"],
++            {
++                "plant_id": row["plant_id"],
++                "plant_name": row["plant_name"],
++                "variety": row["variety"],
++                "monthly_grams": [0] * len(months),
++                "total_grams": 0,
++            },
++        )
++        i = month_index[row["month"]]
++        plant["monthly_grams"][i] = row["grams"]
++        plant["total_grams"] += row["grams"]
++        month_totals[i] += row["grams"]
++        harvest_count += row["harvests"]
++
++    return {
++        "date_from": date_from,
++        "date_to": date_to,
++        "months": [
++            {"month": month, "total_grams": total} for month, total in zip(months, month_totals)
++        ],
++        "plants": list(plants.values()),
++        "total_grams": sum(month_totals),
++        "harvest_count": harvest_count,
++        "top_plants": top_plants(conn, date_from, date_to),
++    }
+diff --git a/backend/schemas.py b/backend/schemas.py
+index cb26f49..44d3909 100644
+--- a/backend/schemas.py
++++ b/backend/schemas.py
+@@ -132,3 +132,31 @@ class SummaryOut(BaseModel):
+     open_task_count: int
+     overdue_task_count: int
+     top_plant: str | None
++    top_plant_id: int | None
++    top_plant_grams: int
++
++
++class PlantWeightOut(BaseModel):
++    plant_id: int
++    plant_name: str
++    variety: str
++    total_grams: int
++
++
++class MonthWeightOut(BaseModel):
++    month: str
++    total_grams: int
++
++
++class PlantMonthlyOut(PlantWeightOut):
++    monthly_grams: list[int]
++
++
++class HarvestStatsOut(BaseModel):
++    date_from: date
++    date_to: date
++    months: list[MonthWeightOut]
++    plants: list[PlantMonthlyOut]
++    total_grams: int
++    harvest_count: int
++    top_plants: list[PlantWeightOut]
+diff --git a/frontend/app/assets/css/main.css b/frontend/app/assets/css/main.css
+index f23f4af..3ae86f2 100644
+--- a/frontend/app/assets/css/main.css
++++ b/frontend/app/assets/css/main.css
+@@ -887,6 +887,38 @@ textarea:focus-visible {
+   border-bottom: none;
+ }
+ 
++/* Stats */
++
++.filters--range {
++  grid-template-columns: 1fr 1fr auto;
++}
++
++ol.stats {
++  padding: 0;
++  margin: 0;
++  list-style: none;
++}
++
++.table-scroll {
++  overflow-x: auto;
++}
++
++.stats-table th[scope="row"] {
++  font-size: 0.95rem;
++  font-weight: 600;
++  color: var(--color-text);
++  text-transform: none;
++  letter-spacing: normal;
++  white-space: nowrap;
++}
++
++.stats-table tfoot th,
++.stats-table tfoot td {
++  font-weight: 700;
++  border-top: 2px solid var(--color-border);
++  border-bottom: none;
++}
++
+ /* Beds */
+ 
+ .bed-list {
+diff --git a/frontend/app/layouts/default.vue b/frontend/app/layouts/default.vue
+index 22b2e0d..0888913 100644
+--- a/frontend/app/layouts/default.vue
++++ b/frontend/app/layouts/default.vue
+@@ -8,6 +8,7 @@ const links = [
+   { to: '/', label: 'Dashboard', exact: true },
+   { to: '/plants', label: 'Plants', exact: false },
+   { to: '/harvests/new', label: 'Log harvest', exact: true },
++  { to: '/stats', label: 'Stats', exact: true },
+   { to: '/tasks', label: 'Tasks', exact: true },
+   { to: '/beds', label: 'Beds', exact: true },
+ ]
+diff --git a/frontend/app/pages/index.vue b/frontend/app/pages/index.vue
+index d9d3c00..7a9fb95 100644
+--- a/frontend/app/pages/index.vue
++++ b/frontend/app/pages/index.vue
+@@ -22,6 +22,11 @@ const greeting = computed(() => {
+   return name ? `Welcome back, ${name}. Here is how the garden is doing.` : 'Here is how the garden is doing.'
+ })
+ 
++const topPlantHint = computed(() => {
++  if (!summary.value?.top_plant) return 'By harvest weight'
++  return `${formatWeight(summary.value.top_plant_grams)} harvested`
++})
++
+ const taskHint = computed(() => {
+   if (!summary.value) return undefined
+   const overdue = summary.value.overdue_task_count
+@@ -71,7 +76,8 @@ async function completeTask(task: Task): Promise<void> {
+         <StatCard
+           label="Top plant this year"
+           :value="summary.top_plant ?? 'None yet'"
+-          hint="By harvest weight"
++          :hint="topPlantHint"
++          to="/stats"
+         />
+         <StatCard
+           label="Open tasks"
+diff --git a/frontend/app/pages/stats.vue b/frontend/app/pages/stats.vue
+new file mode 100644
+index 0000000..c817eb5
+--- /dev/null
++++ b/frontend/app/pages/stats.vue
+@@ -0,0 +1,153 @@
++<script setup lang="ts">
++import type { HarvestStats } from '~/types/api'
++
++useHead({ title: 'Stats' })
++
++const route = useRoute()
++const router = useRouter()
++
++const year = todayIso().slice(0, 4)
++const defaultFrom = `${year}-01-01`
++const defaultTo = `${year}-12-31`
++
++function queryDate(value: unknown, fallback: string): string {
++  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : fallback
++}
++
++const dateFrom = ref(queryDate(route.query.from, defaultFrom))
++const dateTo = ref(queryDate(route.query.to, defaultTo))
++
++const query = computed(() => {
++  const params: Record<string, string> = {}
++  if (dateFrom.value) params.from = dateFrom.value
++  if (dateTo.value) params.to = dateTo.value
++  return params
++})
++
++const { data: stats, error: statsError, status } = await useApiFetch<HarvestStats>('/stats/harvests', { query })
++
++watch([dateFrom, dateTo], ([from, to]) => {
++  const next: Record<string, string> = {}
++  if (from && from !== defaultFrom) next.from = from
++  if (to && to !== defaultTo) next.to = to
++  router.replace({ query: next })
++})
++
++const isDefaultRange = computed(() => dateFrom.value === defaultFrom && dateTo.value === defaultTo)
++
++const rangeText = computed(() => {
++  if (!stats.value) return ''
++  const { date_from: from, date_to: to, harvest_count: count } = stats.value
++  return `${plural(count, 'harvest')} from ${formatDate(from)} to ${formatDate(to)}`
++})
++
++function resetRange(): void {
++  dateFrom.value = defaultFrom
++  dateTo.value = defaultTo
++}
++</script>
++
++<template>
++  <div>
++    <PageHeader title="Stats" subtitle="Harvest weight per plant and month.">
++      <template #actions>
++        <NuxtLink to="/harvests/new" class="btn btn--primary">Log harvest</NuxtLink>
++      </template>
++    </PageHeader>
++
++    <form class="filters filters--range card" aria-label="Date range" @submit.prevent>
++      <div class="field">
++        <label for="stats-from">From</label>
++        <input id="stats-from" v-model="dateFrom" type="date" name="from" :max="dateTo || undefined">
++      </div>
++      <div class="field">
++        <label for="stats-to">To</label>
++        <input id="stats-to" v-model="dateTo" type="date" name="to" :min="dateFrom || undefined">
++      </div>
++      <div class="filters__end">
++        <button v-if="!isDefaultRange" type="button" class="btn btn--ghost" @click="resetRange">
++          This year
++        </button>
++      </div>
++    </form>
++
++    <p class="results-count" aria-live="polite">
++      <span v-if="status === 'pending'">Loading stats…</span>
++      <span v-else-if="stats">{{ rangeText }}</span>
++    </p>
++
++    <AlertMessage v-if="statsError">
++      {{ apiErrorMessage(statsError, 'Could not load harvest stats.') }}
++    </AlertMessage>
++
++    <template v-else-if="stats && stats.plants.length">
++      <section aria-labelledby="top-heading" class="section">
++        <h2 id="top-heading">Best plants</h2>
++        <ol class="stats">
++          <li v-for="(plant, index) in stats.top_plants" :key="plant.plant_id" class="stat">
++            <p class="stat__label">No. {{ index + 1 }}</p>
++            <p class="stat__value">{{ plant.plant_name }}</p>
++            <p class="stat__hint">
++              {{ formatWeight(plant.total_grams) }}<template v-if="plant.variety"> · {{ plant.variety }}</template>
++            </p>
++            <NuxtLink :to="`/plants/${plant.plant_id}`" class="stat__link">
++              View<span class="visually-hidden"> {{ plant.plant_name }}</span>
++            </NuxtLink>
++          </li>
++        </ol>
++      </section>
++
++      <section aria-labelledby="table-heading" class="section card">
++        <div class="section__head">
++          <h2 id="table-heading">Weight by plant and month</h2>
++          <span class="badge">{{ formatWeight(stats.total_grams) }} total</span>
++        </div>
++        <div class="table-scroll">
++          <table class="table stats-table">
++            <caption class="visually-hidden">
++              Harvest weight per plant and month, {{ formatDate(stats.date_from) }} to {{ formatDate(stats.date_to) }}
++            </caption>
++            <thead>
++              <tr>
++                <th scope="col">Plant</th>
++                <th v-for="month in stats.months" :key="month.month" scope="col" class="num">
++                  {{ formatMonth(month.month) }}
++                </th>
++                <th scope="col" class="num">Total</th>
++              </tr>
++            </thead>
++            <tbody>
++              <tr v-for="plant in stats.plants" :key="plant.plant_id">
++                <th scope="row">
++                  <NuxtLink :to="`/plants/${plant.plant_id}`" class="link">{{ plant.plant_name }}</NuxtLink>
++                  <span v-if="plant.variety" class="muted"> · {{ plant.variety }}</span>
++                </th>
++                <td v-for="(grams, index) in plant.monthly_grams" :key="stats.months[index]?.month" class="num">
++                  {{ grams ? formatWeight(grams) : '–' }}
++                </td>
++                <td class="num">{{ formatWeight(plant.total_grams) }}</td>
++              </tr>
++            </tbody>
++            <tfoot>
++              <tr>
++                <th scope="row">Total</th>
++                <td v-for="month in stats.months" :key="month.month" class="num">
++                  {{ formatWeight(month.total_grams) }}
++                </td>
++                <td class="num">{{ formatWeight(stats.total_grams) }}</td>
++              </tr>
++            </tfoot>
++          </table>
++        </div>
++      </section>
++    </template>
++
++    <EmptyState
++      v-else-if="stats"
++      title="No harvests in this range"
++      message="Pick a different date range, or log a harvest to see it here."
++    >
++      <NuxtLink to="/harvests/new" class="btn btn--ghost">Log harvest</NuxtLink>
++    </EmptyState>
++  </div>
++</template>
+diff --git a/frontend/app/types/api.ts b/frontend/app/types/api.ts
+index fb4af05..bc39724 100644
+--- a/frontend/app/types/api.ts
++++ b/frontend/app/types/api.ts
+@@ -80,4 +80,34 @@ export interface Summary {
+   open_task_count: number
+   overdue_task_count: number
+   top_plant: string | null
++  top_plant_id: number | null
++  top_plant_grams: number
++}
++
++export interface PlantWeight {
++  plant_id: number
++  plant_name: string
++  variety: string
++  total_grams: number
++}
++
++export interface MonthWeight {
++  /** Calendar month as YYYY-MM. */
++  month: string
++  total_grams: number
++}
++
++export interface PlantMonthly extends PlantWeight {
++  /** Grams per month, aligned with `HarvestStats.months`. */
++  monthly_grams: number[]
++}
++
++export interface HarvestStats {
++  date_from: string
++  date_to: string
++  months: MonthWeight[]
++  plants: PlantMonthly[]
++  total_grams: number
++  harvest_count: number
++  top_plants: PlantWeight[]
+ }
+diff --git a/frontend/app/utils/format.ts b/frontend/app/utils/format.ts
+index f1a3d3c..be6d0bf 100644
+--- a/frontend/app/utils/format.ts
++++ b/frontend/app/utils/format.ts
+@@ -14,6 +14,18 @@ export function formatDate(value: string | null | undefined): string {
+   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
+ }
+ 
++const monthFormatter = new Intl.DateTimeFormat('en-GB', {
++  month: 'short',
++  year: 'numeric',
++  timeZone: 'UTC',
++})
++
++/** Formats a calendar month (YYYY-MM) as e.g. "Jun 2026". */
++export function formatMonth(value: string): string {
++  const date = new Date(`${value.slice(0, 7)}-01T00:00:00Z`)
++  return Number.isNaN(date.getTime()) ? value : monthFormatter.format(date)
++}
++
+ export function formatWeight(grams: number | null | undefined): string {
+   if (grams === null || grams === undefined) return '–'
+   if (grams >= 1000) {

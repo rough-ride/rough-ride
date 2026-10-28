@@ -1,0 +1,17 @@
+{
+  "name": "garden-log",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal garden journal: Nuxt frontend and FastAPI backend.",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently --names api,web --prefix-colors green,cyan --kill-others-on-fail \"uv run --project backend uvicorn app:app --app-dir backend --host 127.0.0.1 --port 8701\" \"npm --workspace frontend run dev\"",
+    "reset": "uv run --project backend python backend/reset_db.py",
+    "check": "npm --workspace frontend run build && uv run --project backend python -m compileall -q backend/app.py backend/db.py backend/security.py backend/schemas.py backend/reset_db.py backend/routers"
+  },
+  "devDependencies": {
+    "concurrently": "9.2.5"
+  }
+}

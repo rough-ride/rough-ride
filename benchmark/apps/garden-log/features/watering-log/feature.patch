@@ -1,0 +1,718 @@
+diff --git a/backend/app.py b/backend/app.py
+index e68c9ae..b658b09 100644
+--- a/backend/app.py
++++ b/backend/app.py
+@@ -7,7 +7,7 @@ from fastapi import FastAPI
+ from fastapi.middleware.cors import CORSMiddleware
+ 
+ from db import connect, create_schema
+-from routers import auth, beds, dashboard, harvests, plants, tasks
++from routers import auth, beds, dashboard, harvests, plants, tasks, waterings
+ 
+ ALLOWED_ORIGINS = ["http://localhost:3701"]
+ 
+@@ -33,7 +33,7 @@ app.add_middleware(
+     allow_headers=["Content-Type"],
+ )
+ 
+-for router_module in (auth, beds, plants, harvests, tasks, dashboard):
++for router_module in (auth, beds, plants, harvests, tasks, waterings, dashboard):
+     app.include_router(router_module.router)
+ 
+ 
+diff --git a/backend/db.py b/backend/db.py
+index 1cd5840..44f9e81 100644
+--- a/backend/db.py
++++ b/backend/db.py
+@@ -67,9 +67,21 @@ CREATE TABLE IF NOT EXISTS tasks (
+ );
+ 
+ CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(done, due_on);
++
++CREATE TABLE IF NOT EXISTS waterings (
++    id INTEGER PRIMARY KEY,
++    bed_id INTEGER NOT NULL REFERENCES beds(id) ON DELETE CASCADE,
++    watered_on TEXT NOT NULL,
++    watered_at TEXT,
++    litres REAL CHECK (litres IS NULL OR litres > 0),
++    created_at TEXT NOT NULL DEFAULT (datetime('now'))
++);
++
++CREATE INDEX IF NOT EXISTS idx_waterings_bed ON waterings(bed_id, watered_on);
++CREATE INDEX IF NOT EXISTS idx_waterings_date ON waterings(watered_on);
+ """
+ 
+-TABLES_IN_DROP_ORDER = ("tasks", "harvests", "plants", "beds", "sessions", "users")
++TABLES_IN_DROP_ORDER = ("waterings", "tasks", "harvests", "plants", "beds", "sessions", "users")
+ 
+ 
+ def connect() -> sqlite3.Connection:
+diff --git a/backend/routers/beds.py b/backend/routers/beds.py
+index 80f0dda..8b67ffd 100644
+--- a/backend/routers/beds.py
++++ b/backend/routers/beds.py
+@@ -16,7 +16,13 @@ SELECT b.id, b.name, b.sunlight, b.notes,
+        (SELECT COUNT(*) FROM plants p WHERE p.bed_id = b.id) AS plant_count,
+        (SELECT COALESCE(SUM(h.weight_grams), 0)
+           FROM harvests h JOIN plants p ON p.id = h.plant_id
+-         WHERE p.bed_id = b.id) AS harvest_grams
++         WHERE p.bed_id = b.id) AS harvest_grams,
++       (SELECT w.watered_on FROM waterings w WHERE w.bed_id = b.id
++         ORDER BY w.watered_on DESC, w.watered_at IS NULL, w.watered_at DESC, w.id DESC
++         LIMIT 1) AS last_watered_on,
++       (SELECT w.watered_at FROM waterings w WHERE w.bed_id = b.id
++         ORDER BY w.watered_on DESC, w.watered_at IS NULL, w.watered_at DESC, w.id DESC
++         LIMIT 1) AS last_watered_at
+ FROM beds b
+ """
+ 
+diff --git a/backend/routers/waterings.py b/backend/routers/waterings.py
+new file mode 100644
+index 0000000..f35e5fb
+--- /dev/null
++++ b/backend/routers/waterings.py
+@@ -0,0 +1,75 @@
++"""Bed watering log."""
++
++import sqlite3
++from datetime import datetime, timezone
++
++from fastapi import APIRouter, Depends, Query, Response, status
++
++from db import get_db
++from routers.common import ensure_bed_exists, not_found
++from schemas import WateringIn, WateringOut
++from security import require_user
++
++router = APIRouter(
++    prefix="/api/waterings", tags=["waterings"], dependencies=[Depends(require_user)]
++)
++
++WATERING_SELECT = """
++SELECT w.id, w.bed_id, b.name AS bed_name, w.watered_on, w.watered_at, w.litres
++FROM waterings w
++JOIN beds b ON b.id = w.bed_id
++"""
++
++# Same-day entries recorded with "Water now" carry a time; they sort above
++# past entries for that day, which only have a date.
++WATERING_ORDER = " ORDER BY w.watered_on DESC, w.watered_at IS NULL, w.watered_at DESC, w.id DESC"
++
++
++def _get_watering(conn: sqlite3.Connection, watering_id: int) -> dict:
++    row = conn.execute(WATERING_SELECT + " WHERE w.id = ?", (watering_id,)).fetchone()
++    if row is None:
++        raise not_found("Watering")
++    return dict(row)
++
++
++@router.get("", response_model=list[WateringOut])
++def list_waterings(
++    bed_id: int | None = Query(default=None, gt=0),
++    limit: int | None = Query(default=None, ge=1, le=1000),
++    conn: sqlite3.Connection = Depends(get_db),
++) -> list[dict]:
++    where, params = "", []
++    if bed_id is not None:
++        where, params = " WHERE w.bed_id = ?", [bed_id]
++    sql = WATERING_SELECT + where + WATERING_ORDER
++    if limit is not None:
++        sql += " LIMIT ?"
++        params.append(limit)
++    return [dict(r) for r in conn.execute(sql, params).fetchall()]
++
++
++@router.post("", response_model=WateringOut, status_code=status.HTTP_201_CREATED)
++def create_watering(payload: WateringIn, conn: sqlite3.Connection = Depends(get_db)) -> dict:
++    """Records a watering: without a date it is "now", with the current time."""
++    ensure_bed_exists(conn, payload.bed_id)
++    if payload.watered_on is None:
++        now = datetime.now(timezone.utc).replace(microsecond=0)
++        watered_on = now.astimezone().date().isoformat()
++        watered_at = now.strftime("%Y-%m-%d %H:%M:%S")
++    else:
++        watered_on = payload.watered_on.isoformat()
++        watered_at = None
++    cur = conn.execute(
++        "INSERT INTO waterings (bed_id, watered_on, watered_at, litres) VALUES (?, ?, ?, ?)",
++        (payload.bed_id, watered_on, watered_at, payload.litres),
++    )
++    conn.commit()
++    return _get_watering(conn, cur.lastrowid)
++
++
++@router.delete("/{watering_id}", status_code=status.HTTP_204_NO_CONTENT)
++def delete_watering(watering_id: int, conn: sqlite3.Connection = Depends(get_db)) -> Response:
++    _get_watering(conn, watering_id)
++    conn.execute("DELETE FROM waterings WHERE id = ?", (watering_id,))
++    conn.commit()
++    return Response(status_code=status.HTTP_204_NO_CONTENT)
+diff --git a/backend/schemas.py b/backend/schemas.py
+index cb26f49..2f09bb2 100644
+--- a/backend/schemas.py
++++ b/backend/schemas.py
+@@ -40,6 +40,8 @@ class BedOut(BaseModel):
+     notes: str
+     plant_count: int
+     harvest_grams: int
++    last_watered_on: date | None
++    last_watered_at: str | None
+ 
+ 
+ class PlantIn(StrictModel):
+@@ -123,6 +125,33 @@ class TaskOut(BaseModel):
+     overdue: bool
+ 
+ 
++class WateringIn(StrictModel):
++    bed_id: int = Field(gt=0)
++    watered_on: date | None = None
++    litres: float | None = Field(default=None, gt=0, le=10_000)
++
++    @field_validator("watered_on", "litres", mode="before")
++    @classmethod
++    def blank_is_none(cls, value: object) -> object:
++        return None if value == "" else value
++
++    @field_validator("watered_on")
++    @classmethod
++    def not_in_future(cls, value: date | None) -> date | None:
++        if value is not None and value > date.today():
++            raise ValueError("Watering date cannot be in the future.")
++        return value
++
++
++class WateringOut(BaseModel):
++    id: int
++    bed_id: int
++    bed_name: str
++    watered_on: date
++    watered_at: str | None
++    litres: float | None
++
++
+ class SummaryOut(BaseModel):
+     year: int
+     plant_count: int
+diff --git a/frontend/app/assets/css/main.css b/frontend/app/assets/css/main.css
+index f23f4af..e89a58b 100644
+--- a/frontend/app/assets/css/main.css
++++ b/frontend/app/assets/css/main.css
+@@ -731,6 +731,10 @@ textarea:focus-visible {
+   align-items: flex-end;
+ }
+ 
++.filters--compact {
++  grid-template-columns: 1fr auto;
++}
++
+ .results-count {
+   min-height: 1.5em;
+   font-size: 0.9rem;
+@@ -925,6 +929,23 @@ textarea:focus-visible {
+   gap: var(--space-2);
+ }
+ 
++.water-form {
++  display: grid;
++  grid-template-columns: 1fr 1fr auto;
++  gap: var(--space-3);
++  align-items: end;
++  padding: var(--space-3);
++  margin-bottom: var(--space-3);
++  background: var(--color-surface-muted);
++  border: 1px solid var(--color-border);
++  border-radius: var(--radius);
++}
++
++.water-form__actions {
++  display: flex;
++  gap: var(--space-2);
++}
++
+ /* Sign-in and error screens */
+ 
+ .auth-shell {
+@@ -1019,7 +1040,8 @@ textarea:focus-visible {
+ 
+   .form__grid,
+   .details,
+-  .filters {
++  .filters,
++  .water-form {
+     grid-template-columns: 1fr;
+   }
+ 
+diff --git a/frontend/app/layouts/default.vue b/frontend/app/layouts/default.vue
+index 22b2e0d..8c75d88 100644
+--- a/frontend/app/layouts/default.vue
++++ b/frontend/app/layouts/default.vue
+@@ -10,6 +10,7 @@ const links = [
+   { to: '/harvests/new', label: 'Log harvest', exact: true },
+   { to: '/tasks', label: 'Tasks', exact: true },
+   { to: '/beds', label: 'Beds', exact: true },
++  { to: '/waterings', label: 'Waterings', exact: true },
+ ]
+ 
+ function isActive(link: { to: string; exact: boolean }): boolean {
+diff --git a/frontend/app/pages/beds.vue b/frontend/app/pages/beds.vue
+index c00bc99..795b363 100644
+--- a/frontend/app/pages/beds.vue
++++ b/frontend/app/pages/beds.vue
+@@ -1,5 +1,5 @@
+ <script setup lang="ts">
+-import type { Bed, BedInput, Sunlight } from '~/types/api'
++import type { Bed, BedInput, Sunlight, WateringInput } from '~/types/api'
+ 
+ useHead({ title: 'Beds' })
+ 
+@@ -24,6 +24,13 @@ const editError = ref<string | null>(null)
+ const deletingId = ref<number | null>(null)
+ const listError = ref<string | null>(null)
+ 
++const wateringBedId = ref<number | null>(null)
++const waterNotice = ref<{ bedId: number; text: string } | null>(null)
++const waterError = ref<{ bedId: number; text: string } | null>(null)
++
++const pastFormBedId = ref<number | null>(null)
++const pastDraft = reactive({ watered_on: todayIso(), litres: '' })
++
+ const totalPlants = computed(() => beds.value?.reduce((sum, bed) => sum + bed.plant_count, 0) ?? 0)
+ 
+ async function addBed(): Promise<void> {
+@@ -79,6 +86,56 @@ async function saveEdit(bed: Bed): Promise<void> {
+   }
+ }
+ 
++async function recordWatering(bed: Bed, body: WateringInput): Promise<boolean> {
++  wateringBedId.value = bed.id
++  waterError.value = null
++  waterNotice.value = null
++  try {
++    await api('/waterings', { method: 'POST', body })
++    await refresh()
++    return true
++  } catch (err) {
++    waterError.value = { bedId: bed.id, text: apiErrorMessage(err, 'Could not record the watering.') }
++    return false
++  } finally {
++    wateringBedId.value = null
++  }
++}
++
++async function waterNow(bed: Bed): Promise<void> {
++  if (await recordWatering(bed, { bed_id: bed.id })) {
++    waterNotice.value = { bedId: bed.id, text: `Watered ${bed.name}.` }
++  }
++}
++
++function togglePastForm(bed: Bed): void {
++  waterError.value = null
++  waterNotice.value = null
++  if (pastFormBedId.value === bed.id) {
++    pastFormBedId.value = null
++    return
++  }
++  pastFormBedId.value = bed.id
++  Object.assign(pastDraft, { watered_on: todayIso(), litres: '' })
++}
++
++async function savePastWatering(bed: Bed): Promise<void> {
++  const litres = Number(pastDraft.litres)
++  if (!pastDraft.watered_on) {
++    waterError.value = { bedId: bed.id, text: 'Choose the date of the watering.' }
++    return
++  }
++  if (pastDraft.litres === '' || !Number.isFinite(litres) || litres <= 0) {
++    waterError.value = { bedId: bed.id, text: 'Enter an amount in litres greater than zero.' }
++    return
++  }
++  const saved = await recordWatering(bed, { bed_id: bed.id, watered_on: pastDraft.watered_on, litres })
++  if (saved) {
++    pastFormBedId.value = null
++    waterNotice.value = { bedId: bed.id, text: `Recorded ${formatLitres(litres)} on ${formatDate(pastDraft.watered_on)}.` }
++  }
++}
++
+ async function deleteBed(bed: Bed): Promise<void> {
+   if (!window.confirm(`Delete the bed "${bed.name}"?`)) return
+   deletingId.value = bed.id
+@@ -214,8 +271,83 @@ async function deleteBed(bed: Bed): Promise<void> {
+                   <dt>Harvested</dt>
+                   <dd>{{ formatWeight(bed.harvest_grams) }}</dd>
+                 </div>
++                <div>
++                  <dt>Last watered</dt>
++                  <dd>
++                    <time v-if="bed.last_watered_on" :datetime="bed.last_watered_at ?? bed.last_watered_on">
++                      {{ formatWatered(bed.last_watered_on, bed.last_watered_at) }}
++                    </time>
++                    <template v-else>Never</template>
++                  </dd>
++                </div>
+               </dl>
++              <AlertMessage v-if="waterError?.bedId === bed.id">{{ waterError.text }}</AlertMessage>
++              <AlertMessage v-if="waterNotice?.bedId === bed.id" tone="success">{{ waterNotice.text }}</AlertMessage>
++              <form
++                v-if="pastFormBedId === bed.id"
++                class="water-form"
++                novalidate
++                @submit.prevent="savePastWatering(bed)"
++              >
++                <div class="field">
++                  <label :for="`bed-water-date-${bed.id}`">Date</label>
++                  <input
++                    :id="`bed-water-date-${bed.id}`"
++                    v-model="pastDraft.watered_on"
++                    type="date"
++                    :max="todayIso()"
++                    required
++                  >
++                </div>
++                <div class="field">
++                  <label :for="`bed-water-litres-${bed.id}`">Litres</label>
++                  <input
++                    :id="`bed-water-litres-${bed.id}`"
++                    v-model="pastDraft.litres"
++                    type="number"
++                    min="0.1"
++                    max="10000"
++                    step="0.1"
++                    inputmode="decimal"
++                    placeholder="5"
++                    required
++                  >
++                </div>
++                <div class="water-form__actions">
++                  <button type="submit" class="btn btn--primary btn--small" :disabled="wateringBedId === bed.id">
++                    {{ wateringBedId === bed.id ? 'Saving…' : 'Save watering' }}
++                  </button>
++                  <button type="button" class="btn btn--ghost btn--small" @click="togglePastForm(bed)">
++                    Cancel
++                  </button>
++                </div>
++              </form>
+               <div class="bed__actions">
++                <button
++                  type="button"
++                  class="btn btn--primary btn--small"
++                  :disabled="wateringBedId === bed.id"
++                  @click="waterNow(bed)"
++                >
++                  {{ wateringBedId === bed.id && pastFormBedId !== bed.id ? 'Watering…' : 'Water now' }}<span
++                    class="visually-hidden"
++                  > {{ bed.name }}</span>
++                </button>
++                <button
++                  type="button"
++                  class="btn btn--ghost btn--small"
++                  :aria-expanded="pastFormBedId === bed.id"
++                  @click="togglePastForm(bed)"
++                >
++                  Record past watering<span class="visually-hidden"> for {{ bed.name }}</span>
++                </button>
++                <NuxtLink
++                  v-if="bed.last_watered_on"
++                  :to="{ path: '/waterings', query: { bed: bed.id } }"
++                  class="btn btn--ghost btn--small"
++                >
++                  Watering history<span class="visually-hidden"> of {{ bed.name }}</span>
++                </NuxtLink>
+                 <NuxtLink
+                   v-if="bed.plant_count"
+                   :to="{ path: '/plants', query: { bed: bed.id } }"
+diff --git a/frontend/app/pages/index.vue b/frontend/app/pages/index.vue
+index d9d3c00..8f65d2c 100644
+--- a/frontend/app/pages/index.vue
++++ b/frontend/app/pages/index.vue
+@@ -1,18 +1,20 @@
+ <script setup lang="ts">
+-import type { Summary, Task } from '~/types/api'
++import type { Summary, Task, Watering } from '~/types/api'
+ 
+ useHead({ title: 'Dashboard' })
+ 
+ const user = useCurrentUser()
+ const api = useApiClient()
+ 
+-const [summaryResult, tasksResult] = await Promise.all([
++const [summaryResult, tasksResult, wateringsResult] = await Promise.all([
+   useApiFetch<Summary>('/dashboard/summary'),
+   useApiFetch<Task[]>('/tasks/upcoming', { query: { limit: 5 } }),
++  useApiFetch<Watering[]>('/waterings', { query: { limit: 5 } }),
+ ])
+ 
+ const { data: summary, error: summaryError, refresh: refreshSummary } = summaryResult
+ const { data: tasks, error: tasksError, refresh: refreshTasks } = tasksResult
++const { data: waterings, error: wateringsError } = wateringsResult
+ 
+ const busyTaskId = ref<number | null>(null)
+ const actionError = ref<string | null>(null)
+@@ -110,6 +112,44 @@ async function completeTask(task: Task): Promise<void> {
+       </EmptyState>
+     </section>
+ 
++    <section aria-labelledby="waterings-heading" class="section card">
++      <div class="section__head">
++        <h2 id="waterings-heading">Recent waterings</h2>
++        <NuxtLink to="/waterings" class="link">All waterings</NuxtLink>
++      </div>
++      <AlertMessage v-if="wateringsError">
++        {{ apiErrorMessage(wateringsError, 'Could not load recent waterings.') }}
++      </AlertMessage>
++      <table v-else-if="waterings && waterings.length" class="table">
++        <caption class="visually-hidden">The five most recent waterings</caption>
++        <thead>
++          <tr>
++            <th scope="col">When</th>
++            <th scope="col">Bed</th>
++            <th scope="col" class="num">Amount</th>
++          </tr>
++        </thead>
++        <tbody>
++          <tr v-for="watering in waterings" :key="watering.id">
++            <td>
++              <time :datetime="watering.watered_at ?? watering.watered_on">
++                {{ formatWatered(watering.watered_on, watering.watered_at) }}
++              </time>
++            </td>
++            <td>{{ watering.bed_name }}</td>
++            <td class="num">{{ formatLitres(watering.litres) }}</td>
++          </tr>
++        </tbody>
++      </table>
++      <EmptyState
++        v-else-if="waterings"
++        title="No waterings yet"
++        message="Use “Water now” on a bed to record one."
++      >
++        <NuxtLink to="/beds" class="btn btn--ghost">Go to beds</NuxtLink>
++      </EmptyState>
++    </section>
++
+     <section v-if="summary && summary.bed_count === 0" class="section">
+       <AlertMessage tone="info">
+         Start by creating a garden bed, then add the plants growing in it.
+diff --git a/frontend/app/pages/waterings.vue b/frontend/app/pages/waterings.vue
+new file mode 100644
+index 0000000..13584df
+--- /dev/null
++++ b/frontend/app/pages/waterings.vue
+@@ -0,0 +1,148 @@
++<script setup lang="ts">
++import type { Bed, Watering } from '~/types/api'
++
++useHead({ title: 'Waterings' })
++
++const route = useRoute()
++const router = useRouter()
++const api = useApiClient()
++
++const bedFilter = ref(typeof route.query.bed === 'string' ? route.query.bed : '')
++
++const query = computed(() => {
++  const params: Record<string, string> = {}
++  if (bedFilter.value) params.bed_id = bedFilter.value
++  return params
++})
++
++const [wateringsResult, bedsResult] = await Promise.all([
++  useApiFetch<Watering[]>('/waterings', { query }),
++  useApiFetch<Bed[]>('/beds'),
++])
++
++const { data: waterings, error: wateringsError, status, refresh } = wateringsResult
++const { data: beds } = bedsResult
++
++watch(bedFilter, (bed) => {
++  router.replace({ query: bed ? { bed } : {} })
++})
++
++const removingId = ref<number | null>(null)
++const listError = ref<string | null>(null)
++
++const filtering = computed(() => Boolean(bedFilter.value))
++const totalLitres = computed(() => waterings.value?.reduce((sum, w) => sum + (w.litres ?? 0), 0) ?? 0)
++const resultText = computed(() => {
++  const count = waterings.value?.length ?? 0
++  const amount = totalLitres.value > 0 ? `, ${formatLitres(totalLitres.value)} in total` : ''
++  return `${plural(count, 'watering')}${amount}`
++})
++
++function clearFilter(): void {
++  bedFilter.value = ''
++}
++
++async function removeWatering(watering: Watering): Promise<void> {
++  const when = formatWatered(watering.watered_on, watering.watered_at)
++  if (!window.confirm(`Delete the watering of ${watering.bed_name} on ${when}?`)) return
++  removingId.value = watering.id
++  listError.value = null
++  try {
++    await api(`/waterings/${watering.id}`, { method: 'DELETE' })
++    await refresh()
++  } catch (err) {
++    listError.value = apiErrorMessage(err, 'Could not delete the watering.')
++  } finally {
++    removingId.value = null
++  }
++}
++</script>
++
++<template>
++  <div>
++    <PageHeader title="Waterings" subtitle="Every time a bed was watered.">
++      <template #actions>
++        <NuxtLink to="/beds" class="btn btn--primary">Water a bed</NuxtLink>
++      </template>
++    </PageHeader>
++
++    <form class="filters filters--compact card" role="search" @submit.prevent>
++      <div class="field">
++        <label for="watering-bed">Bed</label>
++        <select id="watering-bed" v-model="bedFilter" name="bed">
++          <option value="">All beds</option>
++          <option v-for="bed in beds ?? []" :key="bed.id" :value="String(bed.id)">
++            {{ bed.name }}
++          </option>
++        </select>
++      </div>
++      <div class="filters__end">
++        <button v-if="filtering" type="button" class="btn btn--ghost" @click="clearFilter">
++          Clear filter
++        </button>
++      </div>
++    </form>
++
++    <p class="results-count" aria-live="polite">
++      <span v-if="status === 'pending'">Loading waterings…</span>
++      <span v-else-if="waterings">{{ resultText }}</span>
++    </p>
++
++    <AlertMessage v-if="wateringsError">
++      {{ apiErrorMessage(wateringsError, 'Could not load waterings.') }}
++    </AlertMessage>
++    <AlertMessage v-if="listError">{{ listError }}</AlertMessage>
++
++    <section v-if="waterings && waterings.length" class="card" aria-labelledby="watering-list-heading">
++      <h2 id="watering-list-heading" class="visually-hidden">Watering log</h2>
++      <table class="table">
++        <caption class="visually-hidden">Waterings, most recent first</caption>
++        <thead>
++          <tr>
++            <th scope="col">When</th>
++            <th scope="col">Bed</th>
++            <th scope="col" class="num">Amount</th>
++            <th scope="col"><span class="visually-hidden">Actions</span></th>
++          </tr>
++        </thead>
++        <tbody>
++          <tr v-for="watering in waterings" :key="watering.id">
++            <td>
++              <time :datetime="watering.watered_at ?? watering.watered_on">
++                {{ formatWatered(watering.watered_on, watering.watered_at) }}
++              </time>
++            </td>
++            <td>{{ watering.bed_name }}</td>
++            <td class="num">{{ formatLitres(watering.litres) }}</td>
++            <td class="actions">
++              <button
++                type="button"
++                class="btn btn--ghost btn--small"
++                :disabled="removingId === watering.id"
++                @click="removeWatering(watering)"
++              >
++                Delete<span class="visually-hidden"> watering of {{ watering.bed_name }}</span>
++              </button>
++            </td>
++          </tr>
++        </tbody>
++      </table>
++    </section>
++
++    <EmptyState
++      v-else-if="waterings && filtering"
++      title="No waterings for this bed"
++      message="Pick another bed or record a watering on the beds page."
++    >
++      <button type="button" class="btn btn--ghost" @click="clearFilter">Clear filter</button>
++    </EmptyState>
++
++    <EmptyState
++      v-else-if="waterings"
++      title="No waterings yet"
++      message="Use “Water now” on a bed to record the first one."
++    >
++      <NuxtLink to="/beds" class="btn btn--primary">Go to beds</NuxtLink>
++    </EmptyState>
++  </div>
++</template>
+diff --git a/frontend/app/types/api.ts b/frontend/app/types/api.ts
+index fb4af05..586a9c2 100644
+--- a/frontend/app/types/api.ts
++++ b/frontend/app/types/api.ts
+@@ -17,6 +17,8 @@ export interface Bed {
+   notes: string
+   plant_count: number
+   harvest_grams: number
++  last_watered_on: string | null
++  last_watered_at: string | null
+ }
+ 
+ export interface BedInput {
+@@ -81,3 +83,18 @@ export interface Summary {
+   overdue_task_count: number
+   top_plant: string | null
+ }
++
++export interface Watering {
++  id: number
++  bed_id: number
++  bed_name: string
++  watered_on: string
++  watered_at: string | null
++  litres: number | null
++}
++
++export interface WateringInput {
++  bed_id: number
++  watered_on?: string
++  litres?: number | null
++}
+diff --git a/frontend/app/utils/format.ts b/frontend/app/utils/format.ts
+index f1a3d3c..b71cdc1 100644
+--- a/frontend/app/utils/format.ts
++++ b/frontend/app/utils/format.ts
+@@ -14,6 +14,32 @@ export function formatDate(value: string | null | undefined): string {
+   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
+ }
+ 
++const dateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
++  day: 'numeric',
++  month: 'short',
++  year: 'numeric',
++  hour: '2-digit',
++  minute: '2-digit',
++})
++
++/** Formats a UTC timestamp (YYYY-MM-DD HH:MM:SS) in the viewer's time zone. */
++export function formatDateTime(value: string | null | undefined): string {
++  if (!value) return '–'
++  const date = new Date(`${value.replace(' ', 'T')}Z`)
++  return Number.isNaN(date.getTime()) ? value : dateTimeFormatter.format(date)
++}
++
++/** A watering's moment: date and time for "Water now" entries, the date otherwise. */
++export function formatWatered(on: string | null | undefined, at: string | null | undefined): string {
++  if (at) return formatDateTime(at)
++  return on ? formatDate(on) : 'Never'
++}
++
++export function formatLitres(litres: number | null | undefined): string {
++  if (litres === null || litres === undefined) return '–'
++  return `${litres.toLocaleString('en-GB', { maximumFractionDigits: 2 })} L`
++}
++
+ export function formatWeight(grams: number | null | undefined): string {
+   if (grams === null || grams === undefined) return '–'
+   if (grams >= 1000) {

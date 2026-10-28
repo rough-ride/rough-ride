@@ -1,0 +1,8 @@
+node_modules/
+frontend/.nuxt/
+frontend/.output/
+frontend/.data/
+backend/.venv/
+backend/garden.db
+__pycache__/
+*.pyc

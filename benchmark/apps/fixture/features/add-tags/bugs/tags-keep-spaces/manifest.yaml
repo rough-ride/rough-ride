@@ -1,0 +1,14 @@
+id: tags-keep-spaces
+category: missing-input-guard
+provenance: reverted-fix
+layer: frontend
+reach: direct
+needsAppKnowledge: false
+flow: tags.yaml
+exposedBy:
+  - { badInput: spaces, field: Tag }
+checks: [visible-error-message]
+symptom: "A tag of only spaces is saved as an empty-looking label"
+addedIn: 0.1.0
+review: single
+allowWords: []

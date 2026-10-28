@@ -1,0 +1,12 @@
+diff --git a/tags.mjs b/tags.mjs
+index 3a4450b..d00b005 100644
+--- a/tags.mjs
++++ b/tags.mjs
+@@ -1,6 +1,6 @@
+ // Tags for notes: each note keeps a short list of labels.
+ export function addTag(note, tag) {
+-  const clean = tag.trim().toLowerCase();
++  const clean = tag.toLowerCase();
+   if (!clean) return note;
+   return { ...note, tags: [...(note.tags ?? []), clean] };
+ }

@@ -1,0 +1,10 @@
+schema: 0.1.0
+signedIn: false
+steps:
+  - goto: /login
+  - fill: {label: Email}
+    value: ${env.DEMO_EMAIL}
+  - fill: {label: Password}
+    value: ${env.DEMO_PASSWORD}
+  - click: {role: button, name: Sign in}
+  - expect: {role: heading, name: Notes}

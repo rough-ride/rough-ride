@@ -1,0 +1,858 @@
+diff --git a/backend/app.py b/backend/app.py
+index e68c9ae..fd8bf73 100644
+--- a/backend/app.py
++++ b/backend/app.py
+@@ -7,7 +7,7 @@ from fastapi import FastAPI
+ from fastapi.middleware.cors import CORSMiddleware
+ 
+ from db import connect, create_schema
+-from routers import auth, beds, dashboard, harvests, plants, tasks
++from routers import auth, beds, dashboard, harvests, journal, plants, tasks
+ 
+ ALLOWED_ORIGINS = ["http://localhost:3701"]
+ 
+@@ -33,7 +33,7 @@ app.add_middleware(
+     allow_headers=["Content-Type"],
+ )
+ 
+-for router_module in (auth, beds, plants, harvests, tasks, dashboard):
++for router_module in (auth, beds, plants, harvests, journal, tasks, dashboard):
+     app.include_router(router_module.router)
+ 
+ 
+diff --git a/backend/db.py b/backend/db.py
+index 1cd5840..081946d 100644
+--- a/backend/db.py
++++ b/backend/db.py
+@@ -57,6 +57,18 @@ CREATE TABLE IF NOT EXISTS harvests (
+ CREATE INDEX IF NOT EXISTS idx_harvests_plant ON harvests(plant_id);
+ CREATE INDEX IF NOT EXISTS idx_harvests_date ON harvests(harvested_on);
+ 
++CREATE TABLE IF NOT EXISTS journal_entries (
++    id INTEGER PRIMARY KEY,
++    plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
++    entry_on TEXT NOT NULL,
++    body TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 500),
++    created_at TEXT NOT NULL DEFAULT (datetime('now')),
++    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
++);
++
++CREATE INDEX IF NOT EXISTS idx_journal_plant ON journal_entries(plant_id);
++CREATE INDEX IF NOT EXISTS idx_journal_date ON journal_entries(entry_on);
++
+ CREATE TABLE IF NOT EXISTS tasks (
+     id INTEGER PRIMARY KEY,
+     title TEXT NOT NULL,
+@@ -69,7 +81,14 @@ CREATE TABLE IF NOT EXISTS tasks (
+ CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(done, due_on);
+ """
+ 
+-TABLES_IN_DROP_ORDER = ("tasks", "harvests", "plants", "beds", "sessions", "users")
++TABLES_IN_DROP_ORDER = (
++    "tasks",
++    "journal_entries",
++    "harvests", "plants",
++    "beds",
++    "sessions",
++    "users",
++)
+ 
+ 
+ def connect() -> sqlite3.Connection:
+diff --git a/backend/routers/journal.py b/backend/routers/journal.py
+new file mode 100644
+index 0000000..d3ba965
+--- /dev/null
++++ b/backend/routers/journal.py
+@@ -0,0 +1,90 @@
++"""Dated journal entries written about a plant."""
++
++import sqlite3
++
++from fastapi import APIRouter, Depends, Query, Response, status
++
++from db import get_db
++from routers.common import ensure_plant_exists, escape_like, not_found
++from schemas import JournalEntryCreate, JournalEntryIn, JournalEntryOut
++from security import require_user
++
++router = APIRouter(
++    prefix="/api/journal", tags=["journal"], dependencies=[Depends(require_user)]
++)
++
++JOURNAL_SELECT = """
++SELECT j.id, j.plant_id, p.name AS plant_name, j.entry_on, j.body,
++       j.created_at, j.updated_at
++FROM journal_entries j
++JOIN plants p ON p.id = j.plant_id
++"""
++
++NEWEST_FIRST = " ORDER BY j.entry_on DESC, j.id DESC"
++
++
++def _get_entry(conn: sqlite3.Connection, entry_id: int) -> dict:
++    row = conn.execute(JOURNAL_SELECT + " WHERE j.id = ?", (entry_id,)).fetchone()
++    if row is None:
++        raise not_found("Journal entry")
++    return dict(row)
++
++
++@router.get("", response_model=list[JournalEntryOut])
++def list_entries(
++    q: str = Query(default="", max_length=80),
++    plant_id: int | None = Query(default=None, gt=0),
++    limit: int = Query(default=50, ge=1, le=500),
++    conn: sqlite3.Connection = Depends(get_db),
++) -> list[dict]:
++    clauses: list[str] = []
++    params: list[object] = []
++    term = q.strip()
++    if term:
++        pattern = f"%{escape_like(term)}%"
++        clauses.append("(j.body LIKE ? ESCAPE '\\' OR p.name LIKE ? ESCAPE '\\')")
++        params.extend([pattern, pattern])
++    if plant_id is not None:
++        clauses.append("j.plant_id = ?")
++        params.append(plant_id)
++    where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
++    rows = conn.execute(
++        JOURNAL_SELECT + where + NEWEST_FIRST + " LIMIT ?", [*params, limit]
++    ).fetchall()
++    return [dict(r) for r in rows]
++
++
++@router.post("", response_model=JournalEntryOut, status_code=status.HTTP_201_CREATED)
++def create_entry(payload: JournalEntryCreate, conn: sqlite3.Connection = Depends(get_db)) -> dict:
++    ensure_plant_exists(conn, payload.plant_id)
++    cur = conn.execute(
++        "INSERT INTO journal_entries (plant_id, entry_on, body) VALUES (?, ?, ?)",
++        (payload.plant_id, payload.entry_on.isoformat(), payload.body),
++    )
++    conn.commit()
++    return _get_entry(conn, cur.lastrowid)
++
++
++@router.put("/{entry_id}", response_model=JournalEntryOut)
++def update_entry(
++    entry_id: int, payload: JournalEntryIn, conn: sqlite3.Connection = Depends(get_db)
++) -> dict:
++    _get_entry(conn, entry_id)
++    conn.execute(
++        """
++        UPDATE journal_entries
++        SET entry_on = ?, body = ?, updated_at = datetime('now')
++        WHERE id = ?
++        """,
++        (payload.entry_on.isoformat(), payload.body, entry_id),
++    )
++    conn.commit()
++    return _get_entry(conn, entry_id)
++
++
++@router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
++def delete_entry(entry_id: int, conn: sqlite3.Connection = Depends(get_db)) -> Response:
++    _get_entry(conn, entry_id)
++    conn.execute("DELETE FROM journal_entries WHERE id = ?", (entry_id,))
++    conn.commit()
++    return Response(status_code=status.HTTP_204_NO_CONTENT)
+diff --git a/backend/routers/plants.py b/backend/routers/plants.py
+index b58769f..ab89bc3 100644
+--- a/backend/routers/plants.py
++++ b/backend/routers/plants.py
+@@ -16,7 +16,8 @@ PLANT_SELECT = """
+ SELECT p.id, p.name, p.variety, p.bed_id, b.name AS bed_name, p.spacing_cm,
+        p.planted_on, p.notes, p.created_at, p.updated_at,
+        COUNT(h.id) AS harvest_count,
+-       COALESCE(SUM(h.weight_grams), 0) AS harvest_grams
++       COALESCE(SUM(h.weight_grams), 0) AS harvest_grams,
++       (SELECT COUNT(*) FROM journal_entries j WHERE j.plant_id = p.id) AS journal_count
+ FROM plants p
+ JOIN beds b ON b.id = p.bed_id
+ LEFT JOIN harvests h ON h.plant_id = p.id
+diff --git a/backend/schemas.py b/backend/schemas.py
+index cb26f49..a92ab3e 100644
+--- a/backend/schemas.py
++++ b/backend/schemas.py
+@@ -72,6 +72,7 @@ class PlantOut(BaseModel):
+     notes: str
+     harvest_count: int
+     harvest_grams: int
++    journal_count: int
+     created_at: str
+     updated_at: str
+ 
+@@ -103,6 +104,32 @@ class PlantDetailOut(PlantOut):
+     harvests: list[HarvestOut]
+ 
+ 
++class JournalEntryIn(StrictModel):
++    entry_on: date
++    body: str = Field(min_length=1, max_length=500)
++
++    @field_validator("entry_on")
++    @classmethod
++    def not_in_future(cls, value: date) -> date:
++        if value > date.today():
++            raise ValueError("Journal date cannot be in the future.")
++        return value
++
++
++class JournalEntryCreate(JournalEntryIn):
++    plant_id: int = Field(gt=0)
++
++
++class JournalEntryOut(BaseModel):
++    id: int
++    plant_id: int
++    plant_name: str
++    entry_on: date
++    body: str
++    created_at: str
++    updated_at: str
++
++
+ class TaskIn(StrictModel):
+     title: str = Field(min_length=1, max_length=120)
+     due_on: date
+diff --git a/frontend/app/assets/css/main.css b/frontend/app/assets/css/main.css
+index f23f4af..9a07d10 100644
+--- a/frontend/app/assets/css/main.css
++++ b/frontend/app/assets/css/main.css
+@@ -850,6 +850,107 @@ textarea:focus-visible {
+   color: var(--color-danger);
+ }
+ 
++.detail-layout__full {
++  grid-column: 1 / -1;
++}
++
++.plant-card__journal {
++  margin: var(--space-3) 0 0;
++}
++
++/* Journal */
++
++.filters--single {
++  grid-template-columns: 1fr auto;
++}
++
++.journal-layout {
++  display: grid;
++  grid-template-columns: minmax(240px, 1fr) 2fr;
++  gap: var(--space-5);
++  align-items: start;
++}
++
++.journal-form__date {
++  max-width: 12rem;
++}
++
++.journal-form__count--low {
++  font-weight: 600;
++  color: var(--color-warn);
++}
++
++.journal-list,
++.journal-feed {
++  padding: 0;
++  margin: 0;
++  list-style: none;
++}
++
++.journal-entry {
++  padding: var(--space-3) 0;
++  border-bottom: 1px solid var(--color-border);
++}
++
++.journal-entry:first-child {
++  padding-top: 0;
++}
++
++.journal-entry:last-child {
++  border-bottom: none;
++}
++
++.journal-entry__head {
++  display: flex;
++  flex-wrap: wrap;
++  gap: var(--space-2);
++  align-items: baseline;
++  justify-content: space-between;
++  margin-bottom: var(--space-1);
++}
++
++.journal-entry__date {
++  font-size: 0.85rem;
++  font-weight: 600;
++  color: var(--color-text-muted);
++}
++
++.journal-entry__edited {
++  font-size: 0.8rem;
++  font-style: italic;
++  color: var(--color-text-muted);
++}
++
++.journal-entry__body {
++  margin-bottom: var(--space-2);
++  overflow-wrap: anywhere;
++}
++
++.journal-entry__actions {
++  display: flex;
++  gap: var(--space-2);
++}
++
++.journal-feed {
++  display: grid;
++  gap: var(--space-3);
++}
++
++.journal-feed__item {
++  padding: var(--space-4) var(--space-5);
++}
++
++.journal-feed__plant {
++  font-family: var(--font-display);
++  font-size: 1.1rem;
++  font-weight: 600;
++  text-decoration: none;
++}
++
++.journal-feed__plant:hover {
++  text-decoration: underline;
++}
++
+ /* Tables */
+ 
+ .table {
+@@ -985,7 +1086,8 @@ textarea:focus-visible {
+ 
+ @media (max-width: 860px) {
+   .tasks-layout,
+-  .detail-layout {
++  .detail-layout,
++  .journal-layout {
+     grid-template-columns: 1fr;
+   }
+ }
+diff --git a/frontend/app/components/JournalEntryForm.vue b/frontend/app/components/JournalEntryForm.vue
+new file mode 100644
+index 0000000..1726f01
+--- /dev/null
++++ b/frontend/app/components/JournalEntryForm.vue
+@@ -0,0 +1,101 @@
++<script setup lang="ts">
++import type { JournalEntryInput } from '~/types/api'
++
++const BODY_LIMIT = 500
++
++const props = withDefaults(defineProps<{
++  initial?: Partial<JournalEntryInput>
++  submitLabel: string
++  pending?: boolean
++  error?: string | null
++  cancellable?: boolean
++}>(), {
++  initial: () => ({}),
++  pending: false,
++  error: null,
++  cancellable: false,
++})
++
++const emit = defineEmits<{
++  submit: [value: JournalEntryInput]
++  cancel: []
++}>()
++
++const ids = {
++  date: useId(),
++  body: useId(),
++  count: useId(),
++}
++
++const today = todayIso()
++const form = reactive({
++  entryOn: props.initial.entry_on ?? today,
++  body: props.initial.body ?? '',
++})
++
++const localError = ref<string | null>(null)
++const shownError = computed(() => localError.value ?? props.error)
++const remaining = computed(() => BODY_LIMIT - form.body.length)
++const bodyInput = ref<HTMLTextAreaElement | null>(null)
++
++function validate(): string | null {
++  if (!form.entryOn) return 'Choose a date.'
++  if (form.entryOn > today) return 'Journal date cannot be in the future.'
++  if (!form.body.trim()) return 'Write something for the entry.'
++  if (form.body.trim().length > BODY_LIMIT) return `Keep the entry to ${BODY_LIMIT} characters.`
++  return null
++}
++
++function handleSubmit(): void {
++  localError.value = validate()
++  if (localError.value) return
++  emit('submit', { entry_on: form.entryOn, body: form.body.trim() })
++}
++
++/** Clears the text after a successful save; keeps the date for the next entry. */
++function reset(): void {
++  form.body = ''
++  localError.value = null
++}
++
++function focus(): void {
++  bodyInput.value?.focus()
++}
++
++defineExpose({ reset, focus })
++</script>
++
++<template>
++  <form class="form journal-form" novalidate @submit.prevent="handleSubmit">
++    <AlertMessage v-if="shownError">{{ shownError }}</AlertMessage>
++    <div class="field journal-form__date">
++      <label :for="ids.date">Date</label>
++      <input :id="ids.date" v-model="form.entryOn" type="date" name="entry_on" :max="today" required>
++    </div>
++    <div class="field">
++      <label :for="ids.body">Entry</label>
++      <textarea
++        :id="ids.body"
++        ref="bodyInput"
++        v-model="form.body"
++        name="body"
++        rows="3"
++        :maxlength="BODY_LIMIT"
++        :aria-describedby="ids.count"
++        placeholder="First flowers opened; watered deeply."
++        required
++      />
++      <p :id="ids.count" class="field__hint" :class="{ 'journal-form__count--low': remaining < 50 }">
++        {{ plural(remaining, 'character') }} left
++      </p>
++    </div>
++    <div class="form__actions">
++      <button type="submit" class="btn btn--primary" :disabled="pending">
++        {{ pending ? 'Saving…' : submitLabel }}
++      </button>
++      <button v-if="cancellable" type="button" class="btn btn--ghost" :disabled="pending" @click="emit('cancel')">
++        Cancel
++      </button>
++    </div>
++  </form>
++</template>
+diff --git a/frontend/app/components/JournalEntryItem.vue b/frontend/app/components/JournalEntryItem.vue
+new file mode 100644
+index 0000000..b63d528
+--- /dev/null
++++ b/frontend/app/components/JournalEntryItem.vue
+@@ -0,0 +1,88 @@
++<script setup lang="ts">
++import type { JournalEntry, JournalEntryInput } from '~/types/api'
++
++const props = defineProps<{
++  entry: JournalEntry
++  busy?: boolean
++}>()
++
++const emit = defineEmits<{
++  saved: [entry: JournalEntry]
++  remove: [entry: JournalEntry]
++}>()
++
++const api = useApiClient()
++const editing = ref(false)
++const saving = ref(false)
++const saveError = ref<string | null>(null)
++const editButton = ref<HTMLButtonElement | null>(null)
++
++const edited = computed(() => props.entry.updated_at !== props.entry.created_at)
++
++function startEditing(): void {
++  saveError.value = null
++  editing.value = true
++}
++
++async function stopEditing(): Promise<void> {
++  editing.value = false
++  saveError.value = null
++  await nextTick()
++  editButton.value?.focus()
++}
++
++async function save(value: JournalEntryInput): Promise<void> {
++  saving.value = true
++  saveError.value = null
++  try {
++    const updated = await api<JournalEntry>(`/journal/${props.entry.id}`, { method: 'PUT', body: value })
++    emit('saved', updated)
++    await stopEditing()
++  } catch (err) {
++    saveError.value = apiErrorMessage(err, 'Could not save the entry.')
++  } finally {
++    saving.value = false
++  }
++}
++</script>
++
++<template>
++  <li class="journal-entry" :class="{ 'journal-entry--editing': editing }">
++    <JournalEntryForm
++      v-if="editing"
++      :initial="{ entry_on: entry.entry_on, body: entry.body }"
++      submit-label="Save entry"
++      :pending="saving"
++      :error="saveError"
++      cancellable
++      @submit="save"
++      @cancel="stopEditing"
++    />
++    <template v-else>
++      <div class="journal-entry__head">
++        <time class="journal-entry__date" :datetime="entry.entry_on">{{ formatDate(entry.entry_on) }}</time>
++        <span v-if="edited" class="journal-entry__edited">edited</span>
++      </div>
++      <p class="journal-entry__body prewrap">{{ entry.body }}</p>
++      <div class="journal-entry__actions">
++        <button
++          ref="editButton"
++          type="button"
++          class="btn btn--ghost btn--small"
++          :disabled="busy"
++          @click="startEditing"
++        >
++          Edit<span class="visually-hidden"> entry from {{ formatDate(entry.entry_on) }}</span>
++        </button>
++        <button
++          type="button"
++          class="btn btn--ghost btn--small"
++          :disabled="busy"
++          @click="emit('remove', entry)"
++        >
++          Delete<span class="visually-hidden"> entry from {{ formatDate(entry.entry_on) }}</span>
++        </button>
++      </div>
++    </template>
++  </li>
++</template>
+diff --git a/frontend/app/layouts/default.vue b/frontend/app/layouts/default.vue
+index 22b2e0d..f2243cf 100644
+--- a/frontend/app/layouts/default.vue
++++ b/frontend/app/layouts/default.vue
+@@ -8,6 +8,7 @@ const links = [
+   { to: '/', label: 'Dashboard', exact: true },
+   { to: '/plants', label: 'Plants', exact: false },
+   { to: '/harvests/new', label: 'Log harvest', exact: true },
++  { to: '/journal', label: 'Journal', exact: true },
+   { to: '/tasks', label: 'Tasks', exact: true },
+   { to: '/beds', label: 'Beds', exact: true },
+ ]
+diff --git a/frontend/app/pages/journal.vue b/frontend/app/pages/journal.vue
+new file mode 100644
+index 0000000..66243a6
+--- /dev/null
++++ b/frontend/app/pages/journal.vue
+@@ -0,0 +1,99 @@
++<script setup lang="ts">
++import type { JournalEntry } from '~/types/api'
++
++useHead({ title: 'Journal' })
++
++const LATEST_LIMIT = 50
++
++const route = useRoute()
++const router = useRouter()
++
++const search = ref(typeof route.query.q === 'string' ? route.query.q : '')
++
++const query = computed(() => {
++  const params: Record<string, string | number> = { limit: LATEST_LIMIT }
++  if (search.value.trim()) params.q = search.value.trim()
++  return params
++})
++
++const { data: entries, error: loadError, status } = await useApiFetch<JournalEntry[]>('/journal', { query })
++
++watch(search, (q) => {
++  router.replace({ query: q.trim() ? { q: q.trim() } : {} })
++})
++
++const searching = computed(() => Boolean(search.value.trim()))
++const resultText = computed(() => {
++  const count = entries.value?.length ?? 0
++  if (searching.value) return `${plural(count, 'entry', 'entries')} match`
++  return count >= LATEST_LIMIT ? `Latest ${LATEST_LIMIT} entries` : plural(count, 'entry', 'entries')
++})
++
++function clearSearch(): void {
++  search.value = ''
++}
++</script>
++
++<template>
++  <div>
++    <PageHeader title="Journal" subtitle="The latest notes from across the garden, newest first.">
++      <template #actions>
++        <NuxtLink to="/plants" class="btn btn--ghost">Write in a plant's journal</NuxtLink>
++      </template>
++    </PageHeader>
++
++    <form class="filters filters--single card" role="search" @submit.prevent>
++      <div class="field">
++        <label for="journal-search">Search</label>
++        <input
++          id="journal-search"
++          v-model="search"
++          type="search"
++          name="q"
++          placeholder="Search entries or plant names"
++          autocomplete="off"
++        >
++      </div>
++      <div class="filters__end">
++        <button v-if="searching" type="button" class="btn btn--ghost" @click="clearSearch">
++          Clear search
++        </button>
++      </div>
++    </form>
++
++    <p class="results-count" aria-live="polite">
++      <span v-if="status === 'pending'">Loading entries…</span>
++      <span v-else-if="entries">{{ resultText }}</span>
++    </p>
++
++    <AlertMessage v-if="loadError">
++      {{ apiErrorMessage(loadError, 'Could not load the journal.') }}
++    </AlertMessage>
++
++    <ol v-else-if="entries && entries.length" class="journal-feed">
++      <li v-for="entry in entries" :key="entry.id" class="journal-feed__item card">
++        <div class="journal-entry__head">
++          <NuxtLink :to="`/plants/${entry.plant_id}`" class="journal-feed__plant">{{ entry.plant_name }}</NuxtLink>
++          <time class="journal-entry__date" :datetime="entry.entry_on">{{ formatDate(entry.entry_on) }}</time>
++        </div>
++        <p class="journal-entry__body prewrap">{{ entry.body }}</p>
++      </li>
++    </ol>
++
++    <EmptyState
++      v-else-if="entries && searching"
++      title="No entries match"
++      message="Try a different word or plant name."
++    >
++      <button type="button" class="btn btn--ghost" @click="clearSearch">Clear search</button>
++    </EmptyState>
++
++    <EmptyState
++      v-else-if="entries"
++      title="No journal entries yet"
++      message="Open a plant and write the first entry in its journal."
++    >
++      <NuxtLink to="/plants" class="btn btn--primary">Go to plants</NuxtLink>
++    </EmptyState>
++  </div>
++</template>
+diff --git a/frontend/app/pages/plants/[id].vue b/frontend/app/pages/plants/[id].vue
+index 945cd2c..31a5413 100644
+--- a/frontend/app/pages/plants/[id].vue
++++ b/frontend/app/pages/plants/[id].vue
+@@ -1,5 +1,5 @@
+ <script setup lang="ts">
+-import type { Bed, Harvest, PlantDetail, PlantInput } from '~/types/api'
++import type { Bed, Harvest, JournalEntry, JournalEntryInput, PlantDetail, PlantInput } from '~/types/api'
+ 
+ const route = useRoute()
+ const api = useApiClient()
+@@ -9,13 +9,15 @@ if (plantId === null) {
+   throw createError({ statusCode: 404, statusMessage: 'Plant not found' })
+ }
+ 
+-const [plantResult, bedsResult] = await Promise.all([
++const [plantResult, bedsResult, journalResult] = await Promise.all([
+   useApiFetch<PlantDetail>(`/plants/${plantId}`),
+   useApiFetch<Bed[]>('/beds'),
++  useApiFetch<JournalEntry[]>('/journal', { query: { plant_id: plantId, limit: 500 } }),
+ ])
+ 
+ const { data: plant, error: plantError, refresh } = plantResult
+ const { data: beds } = bedsResult
++const { data: journal, error: journalLoadError, refresh: refreshJournal } = journalResult
+ 
+ if (plantError.value?.statusCode === 404) {
+   throw createError({ statusCode: 404, statusMessage: 'Plant not found' })
+@@ -31,6 +33,19 @@ const deleteError = ref<string | null>(null)
+ const removingHarvestId = ref<number | null>(null)
+ const harvestError = ref<string | null>(null)
+ const notice = ref<string | null>(null)
++const addingEntry = ref(false)
++const entryFormError = ref<string | null>(null)
++const journalError = ref<string | null>(null)
++const removingEntryId = ref<number | null>(null)
++const entryForm = ref<{ reset: () => void; focus: () => void } | null>(null)
++
++const deleteQuestion = computed(() => {
++  const p = plant.value
++  if (!p) return ''
++  const parts = [plural(p.harvest_count, 'harvest')]
++  if (p.journal_count) parts.push(plural(p.journal_count, 'journal entry', 'journal entries'))
++  return `Delete ${p.name} and its ${parts.join(' and ')}?`
++})
+ 
+ const editInitial = computed<Partial<PlantInput>>(() => ({
+   name: plant.value?.name,
+@@ -85,6 +100,45 @@ async function deletePlant(): Promise<void> {
+   }
+ }
+ 
++async function refreshPlantAndJournal(): Promise<void> {
++  await Promise.all([refresh(), refreshJournal()])
++}
++
++async function addEntry(value: JournalEntryInput): Promise<void> {
++  addingEntry.value = true
++  entryFormError.value = null
++  journalError.value = null
++  try {
++    await api('/journal', { method: 'POST', body: { ...value, plant_id: plantId } })
++    await refreshPlantAndJournal()
++    entryForm.value?.reset()
++    entryForm.value?.focus()
++  } catch (err) {
++    entryFormError.value = apiErrorMessage(err, 'Could not add the entry.')
++  } finally {
++    addingEntry.value = false
++  }
++}
++
++async function onEntrySaved(): Promise<void> {
++  journalError.value = null
++  await refreshJournal()
++}
++
++async function removeEntry(entry: JournalEntry): Promise<void> {
++  if (!window.confirm(`Delete the journal entry from ${formatDate(entry.entry_on)}?`)) return
++  removingEntryId.value = entry.id
++  journalError.value = null
++  try {
++    await api(`/journal/${entry.id}`, { method: 'DELETE' })
++    await refreshPlantAndJournal()
++  } catch (err) {
++    journalError.value = apiErrorMessage(err, 'Could not delete the entry.')
++  } finally {
++    removingEntryId.value = null
++  }
++}
++
+ async function removeHarvest(harvest: Harvest): Promise<void> {
+   const label = `${formatWeight(harvest.weight_grams)} on ${formatDate(harvest.harvested_on)}`
+   if (!window.confirm(`Delete the harvest of ${label}?`)) return
+@@ -175,7 +229,7 @@ async function removeHarvest(harvest: Harvest): Promise<void> {
+             <AlertMessage v-if="deleteError">{{ deleteError }}</AlertMessage>
+             <ConfirmButton
+               label="Delete plant"
+-              :question="`Delete ${plant.name} and its ${plural(plant.harvest_count, 'harvest')}?`"
++              :question="deleteQuestion"
+               confirm-label="Yes, delete plant"
+               :pending="deleting"
+               @confirm="deletePlant"
+@@ -228,6 +282,50 @@ async function removeHarvest(harvest: Harvest): Promise<void> {
+             </NuxtLink>
+           </EmptyState>
+         </section>
++
++        <section class="card detail-layout__full" aria-labelledby="journal-heading">
++          <div class="section__head">
++            <h2 id="journal-heading">Journal</h2>
++            <span class="badge">{{ plural(plant.journal_count, 'entry', 'entries') }}</span>
++          </div>
++
++          <div class="journal-layout">
++            <div>
++              <h3>New entry</h3>
++              <JournalEntryForm
++                ref="entryForm"
++                submit-label="Add entry"
++                :pending="addingEntry"
++                :error="entryFormError"
++                @submit="addEntry"
++              />
++            </div>
++
++            <div>
++              <h3 class="visually-hidden">Entries, newest first</h3>
++              <AlertMessage v-if="journalLoadError">
++                {{ apiErrorMessage(journalLoadError, 'Could not load the journal.') }}
++              </AlertMessage>
++              <AlertMessage v-if="journalError">{{ journalError }}</AlertMessage>
++
++              <ul v-if="journal && journal.length" class="journal-list">
++                <JournalEntryItem
++                  v-for="entry in journal"
++                  :key="entry.id"
++                  :entry="entry"
++                  :busy="removingEntryId === entry.id"
++                  @saved="onEntrySaved"
++                  @remove="removeEntry"
++                />
++              </ul>
++              <EmptyState
++                v-else-if="journal"
++                title="No journal entries yet"
++                message="Note what you see: first shoots, pests, the weather."
++              />
++            </div>
++          </div>
++        </section>
+       </div>
+     </template>
+   </div>
+diff --git a/frontend/app/pages/plants/index.vue b/frontend/app/pages/plants/index.vue
+index e5fefe3..52a4776 100644
+--- a/frontend/app/pages/plants/index.vue
++++ b/frontend/app/pages/plants/index.vue
+@@ -108,6 +108,9 @@ function clearFilters(): void {
+             <dd>{{ formatWeight(plant.harvest_grams) }}</dd>
+           </div>
+         </dl>
++        <p class="plant-card__journal">
++          <span class="badge">{{ plural(plant.journal_count, 'journal entry', 'journal entries') }}</span>
++        </p>
+       </li>
+     </ul>
+ 
+diff --git a/frontend/app/types/api.ts b/frontend/app/types/api.ts
+index fb4af05..98e9182 100644
+--- a/frontend/app/types/api.ts
++++ b/frontend/app/types/api.ts
+@@ -36,6 +36,7 @@ export interface Plant {
+   notes: string
+   harvest_count: number
+   harvest_grams: number
++  journal_count: number
+   created_at: string
+   updated_at: string
+ }
+@@ -62,6 +63,21 @@ export interface PlantDetail extends Plant {
+   harvests: Harvest[]
+ }
+ 
++export interface JournalEntry {
++  id: number
++  plant_id: number
++  plant_name: string
++  entry_on: string
++  body: string
++  created_at: string
++  updated_at: string
++}
++
++export interface JournalEntryInput {
++  entry_on: string
++  body: string
++}
++
+ export interface Task {
+   id: number
+   title: string
