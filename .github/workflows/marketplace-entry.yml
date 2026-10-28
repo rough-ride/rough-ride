@@ -1,0 +1,23 @@
+name: marketplace-entry
+
+# Required on the one-line PR that moves the marketplace pin (spec part 1
+# section 5): the pin is an exact semver, npm serves it, and the registry
+# tarball's plugin.json says the same version.
+on:
+  pull_request:
+    paths: ['.claude-plugin/marketplace.json']
+
+permissions:
+  contents: read
+
+jobs:
+  marketplace-entry:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - run: node scripts/marketplace-entry.mjs
