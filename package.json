@@ -1,0 +1,20 @@
+{
+  "name": "rough-patch-repo",
+  "private": true,
+  "description": "Development tooling for the rough-patch package. Not published.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "tsc -p packages/rough-patch/tsconfig.json && node scripts/copy-schemas.mjs",
+    "test": "node --test \"packages/rough-patch/test/*.test.mjs\"",
+    "bench": "node benchmark/bench/cli.mts",
+    "bench:check": "tsc -p benchmark/bench/tsconfig.json",
+    "bench:test": "node --test \"benchmark/bench/test/*.test.mts\"",
+    "version:set": "node scripts/versions.mjs set",
+    "version-sync": "node scripts/versions.mjs sync"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "7.0.2",
+    "yaml": "2.9.1"
+  }
+}
