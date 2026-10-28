@@ -1,0 +1,39 @@
+{
+  "name": "rough-patch",
+  "version": "0.1.0",
+  "description": "Attacks a web app that a coding agent just changed with faults and bad inputs, and judges whether it stays usable and honest.",
+  "license": "Apache-2.0",
+  "keywords": [
+    "resilience",
+    "testing",
+    "playwright",
+    "fault-injection",
+    "claude-code",
+    "claude-code-plugin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rough-patch/rough-patch.git",
+    "directory": "packages/rough-patch"
+  },
+  "type": "module",
+  "bin": {
+    "rough-patch": "dist/cli.mjs"
+  },
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "files": [
+    ".claude-plugin/plugin.json",
+    "skills/",
+    "agents/",
+    "hooks/",
+    "dist/",
+    "templates/",
+    "npm-shrinkwrap.json"
+  ],
+  "dependencies": {
+    "playwright-core": "1.64.1",
+    "yaml": "2.9.1"
+  }
+}
