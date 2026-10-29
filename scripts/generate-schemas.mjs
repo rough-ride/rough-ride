@@ -1,11 +1,11 @@
-// Writes packages/rough-patch/src/schemas/*.schema.json. The locator and check
+// Writes packages/rough-ride/src/schemas/*.schema.json. The locator and check
 // condition subschemas appear inline in several files and must stay identical,
 // and JSON Schema's $ref is outside the allowed keywords, so one script builds
 // them all. Run it after changing a format: node scripts/generate-schemas.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const SCHEMAS = new URL('../packages/rough-patch/src/schemas/', import.meta.url);
-const FORMATS = readFileSync(new URL('../packages/rough-patch/src/formats.mts', import.meta.url), 'utf8');
+const SCHEMAS = new URL('../packages/rough-ride/src/schemas/', import.meta.url);
+const FORMATS = readFileSync(new URL('../packages/rough-ride/src/formats.mts', import.meta.url), 'utf8');
 
 function current(kind) {
   const match = new RegExp(`${kind}: \\{ current: '([0-9.]+)'`).exec(FORMATS);
@@ -71,21 +71,21 @@ const AT = { enum: ['settled', 'end', 'every-step'] };
 function header(kind, file, title, description) {
   return {
     $schema: 'http://json-schema.org/draft-07/schema#',
-    $id: `https://raw.githubusercontent.com/rough-patch/rough-patch/v${current(kind)}/packages/rough-patch/src/schemas/${file}`,
+    $id: `https://raw.githubusercontent.com/rough-ride/rough-ride/v${current(kind)}/packages/rough-ride/src/schemas/${file}`,
     title,
     description,
   };
 }
 
 const schemaField = {
-  description: 'The format version: the rough-patch release that introduced it.',
+  description: 'The format version: the rough-ride release that introduced it.',
   type: 'string',
   pattern: VERSION,
 };
 
 const config = {
-  ...header('config', 'config.schema.json', 'rough-patch config.yaml',
-    'Settings in .rough-patch/config.yaml at the git root. Every setting except schema is optional.'),
+  ...header('config', 'config.schema.json', 'rough-ride config.yaml',
+    'Settings in .rough-ride/config.yaml at the git root. Every setting except schema is optional.'),
   ...object(
     {
       schema: schemaField,
@@ -129,8 +129,8 @@ const config = {
 
 const step = (kind, extra = {}) => object({ [kind]: LOCATOR, ...extra });
 const flow = {
-  ...header('flow', 'flow.schema.json', 'rough-patch flow',
-    'A flow in .rough-patch/flows/<name>.yaml: one user goal as a list of steps the runner interprets.'),
+  ...header('flow', 'flow.schema.json', 'rough-ride flow',
+    'A flow in .rough-ride/flows/<name>.yaml: one user goal as a list of steps the runner interprets.'),
   ...object({
     schema: schemaField,
     signedIn: { description: 'Whether the flow runs signed in.', type: 'boolean' },
@@ -168,8 +168,8 @@ const testCheck = {
 };
 
 const test = {
-  ...header('tests', 'test.schema.json', 'rough-patch regression test',
-    'A regression test in .rough-patch/tests/<name>.yaml: one attack on one flow and the checks it failed.'),
+  ...header('tests', 'test.schema.json', 'rough-ride regression test',
+    'A regression test in .rough-ride/tests/<name>.yaml: one attack on one flow and the checks it failed.'),
   ...object(
     {
       schema: schemaField,
@@ -216,7 +216,7 @@ const test = {
 };
 
 const accepted = {
-  ...header('accepted', 'accepted.schema.json', 'rough-patch accepted.yaml',
+  ...header('accepted', 'accepted.schema.json', 'rough-ride accepted.yaml',
     'Findings a person accepted, keyed by page, step, action and check. People write this file; the runner never does.'),
   ...object({
     schema: schemaField,
@@ -283,7 +283,7 @@ const link = {
 };
 const sha256 = string('^[0-9a-f]{64}$');
 const plan = {
-  ...header('plan', 'plan.schema.json', 'rough-patch plan.json',
+  ...header('plan', 'plan.schema.json', 'rough-ride plan.json',
     'The attack plan a run used, as runs/<id>/plan.json. input is the plan the adversary wrote, which carries no schema key.'),
   ...object(
     {

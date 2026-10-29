@@ -17,8 +17,8 @@ const tar = spawn('tar', ['--no-xattrs', '--exclude', 'node_modules', '--exclude
 });
 const script = [
   'mkdir /work && cd /work && tar xf - 2>/dev/null',
-  'npm ci --silent && npm ci --silent --prefix packages/rough-patch && npm run build --silent',
-  `npx -y -p node@${node} -- node --test "packages/rough-patch/test/*.test.mjs"`,
+  'npm ci --silent && npm ci --silent --prefix packages/rough-ride && npm run build --silent',
+  `npx -y -p node@${node} -- node --test "packages/rough-ride/test/*.test.mjs"`,
   `npx -y -p node@${node} -- node --test "benchmark/bench/test/*.test.mts"`,
 ].join(' && ');
 const docker = spawn('docker', ['run', '--rm', '-i', '--init', IMAGE, 'bash', '-c', script], { stdio: ['pipe', 'inherit', 'inherit'] });

@@ -1,6 +1,6 @@
 // The checks on the documented GitHub Actions workflow (spec part 13 section 51,
 // Acceptance, and 53.5): `template-shas` compares the template's action pins with
-// rough-patch's own workflows, and `template-checks` runs the static checks and
+// rough-ride's own workflows, and `template-checks` runs the static checks and
 // compares both READMEs' fenced copy with the template byte for byte.
 // Usage: node scripts/workflow-template.mjs template-shas | template-checks
 import { spawnSync } from 'node:child_process';
@@ -11,8 +11,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import YAML from 'yaml';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-export const TEMPLATE = 'packages/rough-patch/templates/github-actions/rough-patch.yml';
-export const SECTION = '## Run rough-patch on pull requests (GitHub Actions)';
+export const TEMPLATE = 'packages/rough-ride/templates/github-actions/rough-ride.yml';
+export const SECTION = '## Run rough-ride on pull requests (GitHub Actions)';
 const USES = /^\s*(?:-\s+)?uses:\s*(.*)$/;
 const PIN = /^\s*(?:-\s+)?uses:\s*([^@\s]+)@([0-9a-f]{40}) +# (v\S+)/;
 const CI_ONLY = ['DEMO_EMAIL', 'DEMO_PASSWORD', 'SAMPLE_DB'];
@@ -49,8 +49,8 @@ export function templateShasProblems(template, workflows) {
 }
 
 const steps = (job) => (Array.isArray(job?.steps) ? job.steps : []);
-const isRunner = (s) => typeof s.run === 'string' && /\brough-patch\s+("\$RP_TIER"|regress)(?=\s|$)/.test(s.run);
-const isRender = (s) => typeof s.run === 'string' && /\brough-patch\s+pr-comment\b/.test(s.run);
+const isRunner = (s) => typeof s.run === 'string' && /\brough-ride\s+("\$RP_TIER"|regress)(?=\s|$)/.test(s.run);
+const isRender = (s) => typeof s.run === 'string' && /\brough-ride\s+pr-comment\b/.test(s.run);
 const sameKeys = (value, expected) => JSON.stringify(value) === JSON.stringify(expected);
 
 // The static checks on the template's text.
@@ -139,8 +139,8 @@ export function runCommentScript({ script, body = null, comments = [], listFails
     mkdirSync(bin);
     mkdirSync(temp);
     if (body !== null) {
-      mkdirSync(path.join(temp, 'rough-patch'));
-      writeFileSync(path.join(temp, 'rough-patch', 'comment.md'), body);
+      mkdirSync(path.join(temp, 'rough-ride'));
+      writeFileSync(path.join(temp, 'rough-ride', 'comment.md'), body);
     }
     writeFileSync(path.join(dir, 'comments.json'), JSON.stringify(comments));
     const gh = [
@@ -180,7 +180,7 @@ export function runCommentScript({ script, body = null, comments = [], listFails
     const r = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', path.join(dir, 'step.sh')], { env, encoding: 'utf8' });
     const log = path.join(dir, 'calls.jsonl');
     const calls = existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : [];
-    const written = path.join(temp, 'rough-patch', 'comment.md');
+    const written = path.join(temp, 'rough-ride', 'comment.md');
     return { status: r.status, stdout: r.stdout, stderr: r.stderr, calls, body: existsSync(written) ? readFileSync(written, 'utf8') : null };
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -199,7 +199,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   if (command === 'template-shas') problems.push(...templateShasProblems(template.toString('utf8'), ownWorkflows(ROOT)));
   else if (command === 'template-checks') {
     problems.push(...templateProblems(template.toString('utf8')));
-    for (const f of ['README.md', 'packages/rough-patch/README.md']) problems.push(...readmeProblems(f, readFileSync(path.join(ROOT, f), 'utf8'), template));
+    for (const f of ['README.md', 'packages/rough-ride/README.md']) problems.push(...readmeProblems(f, readFileSync(path.join(ROOT, f), 'utf8'), template));
   } else {
     console.log('Usage: node scripts/workflow-template.mjs template-shas | template-checks');
     process.exit(64);

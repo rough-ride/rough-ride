@@ -10,8 +10,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 export function entryProblems(marketplace) {
-  const entry = marketplace.plugins?.find((p) => p.name === 'rough-patch');
-  if (!entry) return ['no rough-patch entry in .claude-plugin/marketplace.json'];
+  const entry = marketplace.plugins?.find((p) => p.name === 'rough-ride');
+  if (!entry) return ['no rough-ride entry in .claude-plugin/marketplace.json'];
   const version = entry.source?.version;
   if (version === undefined) return ['source.version is missing'];
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) return [`source.version ${version} is not an exact x.y.z (no ranges, no dist-tags)`];
@@ -21,18 +21,18 @@ export function entryProblems(marketplace) {
 
 function npmChecks(version) {
   const sh = (args, cwd) => execFileSync('npm', args, { cwd, encoding: 'utf8', shell: process.platform === 'win32' }).trim();
-  const served = sh(['view', `rough-patch@${version}`, 'version'], ROOT);
-  if (served !== version) return [`npm does not serve rough-patch@${version}`];
+  const served = sh(['view', `rough-ride@${version}`, 'version'], ROOT);
+  if (served !== version) return [`npm does not serve rough-ride@${version}`];
   const dir = mkdtempSync(path.join(tmpdir(), 'rp-entry-'));
-  sh(['pack', `rough-patch@${version}`, '--silent'], dir);
-  const plugin = JSON.parse(execFileSync('tar', ['-xzOf', path.join(dir, `rough-patch-${version}.tgz`), 'package/.claude-plugin/plugin.json'], { encoding: 'utf8' }));
+  sh(['pack', `rough-ride@${version}`, '--silent'], dir);
+  const plugin = JSON.parse(execFileSync('tar', ['-xzOf', path.join(dir, `rough-ride-${version}.tgz`), 'package/.claude-plugin/plugin.json'], { encoding: 'utf8' }));
   return plugin.version === version ? [] : [`the registry tarball's plugin.json says ${plugin.version}, not ${version}`];
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const marketplace = JSON.parse(readFileSync(path.join(ROOT, '.claude-plugin', 'marketplace.json'), 'utf8'));
   let problems = entryProblems(marketplace);
-  if (problems.length === 0 && !process.argv.includes('--offline')) problems = npmChecks(marketplace.plugins.find((p) => p.name === 'rough-patch').source.version);
+  if (problems.length === 0 && !process.argv.includes('--offline')) problems = npmChecks(marketplace.plugins.find((p) => p.name === 'rough-ride').source.version);
   for (const p of problems) console.log(p);
   if (problems.length > 0) process.exit(1);
   console.log('marketplace-entry: ok');

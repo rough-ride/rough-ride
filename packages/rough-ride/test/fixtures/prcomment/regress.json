@@ -1,0 +1,52 @@
+{
+  "command": "regress",
+  "status": "passed",
+  "exitCode": 0,
+  "runId": null,
+  "root": "/work/repo",
+  "cwd": "/work/repo",
+  "stop": null,
+  "protectedLines": [],
+  "sections": [
+    {
+      "id": "header",
+      "lines": [
+        "rough-ride regress | 0.2s"
+      ]
+    },
+    {
+      "id": "after",
+      "lines": [
+        "No regression tests in .rough-ride/tests/."
+      ]
+    },
+    {
+      "id": "runner",
+      "lines": [
+        "Runner: rough-ride 0.1.0 from devDependency package.json | Node 22.23.3 | Playwright 1.64.1"
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "id": "protected-trust",
+      "text": "Protected files compared with local main (no remote). Commits on main count as reviewed, so rough-ride can't tell your commits there from an agent's."
+    }
+  ],
+  "regress": {
+    "fail": 0,
+    "flaky": 0,
+    "overLimit": 0,
+    "pass": 0,
+    "stale": 0,
+    "tests": []
+  },
+  "runner": {
+    "version": "0.1.0"
+  },
+  "summaryLines": [
+    "rough-ride regress | 0.2s",
+    "No regression tests in .rough-ride/tests/.",
+    "Runner: rough-ride 0.1.0 from devDependency package.json | Node 22.23.3 | Playwright 1.64.1"
+  ]
+}

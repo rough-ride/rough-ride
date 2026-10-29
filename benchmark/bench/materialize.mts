@@ -97,7 +97,7 @@ export function materialize(appId: string, featureId: string, bugId: string | nu
   gitIn(dir, emptyConfig, ['apply', path.join(feature.dir, 'feature.patch')]);
   if (bug) gitIn(dir, emptyConfig, ['apply', path.join(bug.dir, 'bug.patch')]);
 
-  const specs = path.join(dir, '.rough-patch', 'specs');
+  const specs = path.join(dir, '.rough-ride', 'specs');
   mkdirSync(specs, { recursive: true });
   copyFileSync(path.join(feature.dir, 'request.md'), path.join(specs, 'request.txt'));
   if (options.install !== false) install(dir);

@@ -21,25 +21,25 @@ jobs:
         with:
           node-version: 22.22.0
       - run: npm ci
-      - run: npm ci --prefix packages/rough-patch
+      - run: npm ci --prefix packages/rough-ride
       - run: npm run build
       - run: npm test
       - run: node scripts/versions.mjs sync --tag "$GITHUB_REF_NAME"
       - run: node scripts/pack-contents.mjs
       - name: npm pack
-        working-directory: packages/rough-patch
+        working-directory: packages/rough-ride
         run: |
           npm pack --ignore-scripts
-          sha512sum rough-patch-*.tgz | tee tarball.sha512
-          mkdir files && tar -xzf rough-patch-*.tgz -C files
+          sha512sum rough-ride-*.tgz | tee tarball.sha512
+          mkdir files && tar -xzf rough-ride-*.tgz -C files
           (cd files && find . -type f -print0 | sort -z | xargs -0 sha256sum) > files.sha256
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: tarball
           path: |
-            packages/rough-patch/rough-patch-*.tgz
-            packages/rough-patch/tarball.sha512
-            packages/rough-patch/files.sha256
+            packages/rough-ride/rough-ride-*.tgz
+            packages/rough-ride/tarball.sha512
+            packages/rough-ride/files.sha256
 
   test-tarball:
     name: test-tarball (${{ matrix.os }})
@@ -66,12 +66,12 @@ jobs:
         run: npm install --global @anthropic-ai/claude-code@2.1.299
       - name: Steps 1 to 5 (the single Linux-packed tarball)
         shell: bash
-        run: node scripts/test-tarball.mjs tarball/rough-patch-*.tgz --step5
+        run: node scripts/test-tarball.mjs tarball/rough-ride-*.tgz --step5
       - name: Validate again at the newest tested Claude Code
         shell: bash
         run: |
           npm install --global @anthropic-ai/claude-code@2.1.311
-          mkdir unpacked && tar -xzf tarball/rough-patch-*.tgz -C unpacked
+          mkdir unpacked && tar -xzf tarball/rough-ride-*.tgz -C unpacked
           (cd unpacked/package && npm ci --omit=dev --ignore-scripts)
           claude plugin validate --strict unpacked/package
       - name: Version check through pwsh and cmd (Windows shims)
@@ -81,11 +81,11 @@ jobs:
           New-Item -ItemType Directory -Force shim | Out-Null
           Set-Location shim
           '{"name":"shim","private":true}' | Out-File -Encoding ascii package.json
-          $tgz = (Get-ChildItem ..\tarball\rough-patch-*.tgz).FullName
+          $tgz = (Get-ChildItem ..\tarball\rough-ride-*.tgz).FullName
           npm install --no-audit --no-fund --ignore-scripts $tgz
-          npx --no -- rough-patch --version
+          npx --no -- rough-ride --version
           if ($LASTEXITCODE -ne 0) { exit 1 }
-          cmd /c "npx --no -- rough-patch --version"
+          cmd /c "npx --no -- rough-ride --version"
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
   publish:
@@ -111,7 +111,7 @@ jobs:
         run: |
           sha512sum --check tarball.sha512
           if [ "${{ vars.NPM_PUBLISH }}" = "direct" ]; then
-            npm publish ./rough-patch-*.tgz
+            npm publish ./rough-ride-*.tgz
           else
-            npm stage publish ./rough-patch-*.tgz
+            npm stage publish ./rough-ride-*.tgz
           fi

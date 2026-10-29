@@ -10,7 +10,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const EDITIONS = 'packages/rough-patch/src/contract-editions.json';
+const EDITIONS = 'packages/rough-ride/src/contract-editions.json';
 const OPENING = /^<!-- resilience-contract edition=([1-9][0-9]{0,3}) -->$/;
 const CLOSING = '<!-- /resilience-contract -->';
 const MAX_CHARS = 2400;
@@ -103,7 +103,7 @@ export function contractProblems({ template, readme, editions, previous = null, 
   const nonBlank = lines.filter((l) => l.trim() !== '').length;
   if (nonBlank > MAX_LINES) problems.push(`(e) the text has ${nonBlank} non-blank lines, over ${MAX_LINES}`);
   const squashed = text.toLowerCase().replace(/[^a-z0-9]/g, '');
-  for (const name of ['roughpatch', 'weatherproof']) if (squashed.includes(name)) problems.push(`(e) the text names ${name}`);
+  for (const name of ['roughride', 'weatherproof']) if (squashed.includes(name)) problems.push(`(e) the text names ${name}`);
 
   // (f) the lines between the markers.
   const body = inner.join('\n');
@@ -118,7 +118,7 @@ export function contractProblems({ template, readme, editions, previous = null, 
 
 // This tree's inputs, from the source files and the built runner.
 export async function readTree(root = ROOT) {
-  const pkg = path.join(root, 'packages', 'rough-patch');
+  const pkg = path.join(root, 'packages', 'rough-ride');
   const dist = (name) => import(pathToFileURL(path.join(pkg, 'dist', name)).href);
   const { CHECK_RANK } = await dist('checks.mjs');
   const { FAULT_IDS } = await dist('faults.mjs');

@@ -14,7 +14,7 @@ const APP = 'garden-log';
 const args = process.argv.slice(2);
 const workIndex = args.indexOf('--work-dir');
 const workDir = workIndex === -1 ? tmpdir() : args.splice(workIndex, 2)[1];
-const cli = path.resolve(args[0] ?? path.join(ROOT, 'packages', 'rough-patch', 'dist', 'cli.mjs'));
+const cli = path.resolve(args[0] ?? path.join(ROOT, 'packages', 'rough-ride', 'dist', 'cli.mjs'));
 
 // 1. The base, committed as materialize's step 2 does, then installed.
 const made = spawnSync(process.execPath, [path.join(ROOT, 'benchmark', 'bench', 'cli.mts'), 'materialize-base', APP, '--work-dir', workDir], {

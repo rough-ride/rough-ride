@@ -1,6 +1,6 @@
 // test-tarball (spec part 1 section 4, Packaging checks in CI), on one machine.
-// Usage: node scripts/test-tarball.mjs <rough-patch-x.y.z.tgz> [--step5]
-//   1. install the tarball into a scratch project; `npx --no -- rough-patch --version`
+// Usage: node scripts/test-tarball.mjs <rough-ride-x.y.z.tgz> [--step5]
+//   1. install the tarball into a scratch project; `npx --no -- rough-ride --version`
 //   2. unpack it, `npm ci --omit=dev --ignore-scripts`, `claude plugin validate --strict` (when claude is on PATH)
 //   3. hook scripts with fixture stdin (once hooks/hooks.json exists, ticket 37)
 //   4. the MCP entry answers `initialize`
@@ -15,7 +15,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const tgz = path.resolve(process.argv[2] ?? '');
 const windows = process.platform === 'win32';
 if (!existsSync(tgz)) {
-  console.error('Usage: node scripts/test-tarball.mjs <rough-patch-x.y.z.tgz> [--step5]');
+  console.error('Usage: node scripts/test-tarball.mjs <rough-ride-x.y.z.tgz> [--step5]');
   process.exit(64);
 }
 const version = JSON.parse(spawnSync('tar', ['-xzOf', tgz, 'package/package.json'], { encoding: 'utf8' }).stdout).version;
@@ -37,8 +37,8 @@ step('1. install the tarball into a scratch project and run the version check', 
   const project = mkdtempSync(path.join(tmpdir(), 'rp-project-'));
   writeFileSync(path.join(project, 'package.json'), JSON.stringify({ name: 'scratch', private: true }));
   sh('npm', ['install', '--no-audit', '--no-fund', '--ignore-scripts', tgz], project);
-  const out = sh('npx', ['--no', '--', 'rough-patch', '--version'], project).stdout.trim();
-  if (!new RegExp(`^rough-patch ${version.replaceAll('.', '\\.')} \\| Playwright 1\\.64\\.1 \\| Node \\d+\\.\\d+\\.\\d+$`).test(out)) {
+  const out = sh('npx', ['--no', '--', 'rough-ride', '--version'], project).stdout.trim();
+  if (!new RegExp(`^rough-ride ${version.replaceAll('.', '\\.')} \\| Playwright 1\\.64\\.1 \\| Node \\d+\\.\\d+\\.\\d+$`).test(out)) {
     throw new Error(`unexpected --version output: ${out}`);
   }
   console.log(out);

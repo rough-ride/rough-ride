@@ -1,15 +1,15 @@
 {
-  "name": "rough-patch",
+  "name": "rough-ride",
   "owner": {
-    "name": "rough-patch maintainers"
+    "name": "rough-ride maintainers"
   },
   "description": "Attacks a web app that a coding agent just changed with faults and bad inputs, and judges whether it stays usable and honest.",
   "plugins": [
     {
-      "name": "rough-patch",
+      "name": "rough-ride",
       "source": {
         "source": "npm",
-        "package": "rough-patch",
+        "package": "rough-ride",
         "version": "0.1.0"
       },
       "description": "Attacks a web app that a coding agent just changed with faults and bad inputs, and judges whether it stays usable and honest.",

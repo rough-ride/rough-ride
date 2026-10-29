@@ -48,8 +48,8 @@ test('one Initial commit on main by Dev at the fixed date; the feature is uncomm
   assert.equal(git(dir, 'log', '--format=%s|%an <%ae>|%at|%ct', 'main').trim(), `Initial commit|Dev <dev@example.com>|${epoch}|${epoch}`);
   assert.equal(git(dir, 'rev-parse', '--abbrev-ref', 'HEAD').trim(), 'main');
   const status = git(dir, 'status', '--porcelain', '--untracked-files=all').split('\n').filter(Boolean).sort();
-  assert.deepEqual(status, ['?? .rough-patch/specs/request.txt', '?? tags.mjs', ' M backend/app.py', ' M server.mjs'].sort());
-  assert.deepEqual(readFileSync(path.join(dir, '.rough-patch', 'specs', 'request.txt')), readFileSync(path.join(APPS, 'fixture', 'features', 'add-tags', 'request.md')));
+  assert.deepEqual(status, ['?? .rough-ride/specs/request.txt', '?? tags.mjs', ' M backend/app.py', ' M server.mjs'].sort());
+  assert.deepEqual(readFileSync(path.join(dir, '.rough-ride', 'specs', 'request.txt')), readFileSync(path.join(APPS, 'fixture', 'features', 'add-tags', 'request.md')));
 });
 
 test('no materialised folder holds a manifest, reference test or instruction file', () => {
@@ -103,7 +103,7 @@ test('the portability lint fails each rule', () => {
     ['another port', (b) => writeFileSync(path.join(b, 'server.mjs'), "fetch('http://localhost:3000/api')\n"), /port 3000 is not this app's/],
     ['Nuxt + FastAPI config', (b, app) => {
       app.yaml.stack = 'nuxt-fastapi';
-      writeFileSync(path.join(b, '.rough-patch', 'config.yaml'), 'schema: 0.1.0\nreset: npm run reset\ntarget:\n  url: http://localhost:3700\n');
+      writeFileSync(path.join(b, '.rough-ride', 'config.yaml'), 'schema: 0.1.0\nreset: npm run reset\ntarget:\n  url: http://localhost:3700\n');
     }, /holds target; a Nuxt \+ FastAPI base holds only schema and reset/],
   ];
   for (const [name, breakIt, expected] of cases) {
@@ -142,6 +142,6 @@ test('the hint lint finds whole words in added lines, and allowWords lets one th
 test('the bench script never imports the runner', () => {
   for (const file of filesUnder(path.join(BENCHMARK, 'bench'))) {
     const text = readFileSync(path.join(BENCHMARK, 'bench', file), 'utf8');
-    assert.ok(!/packages\/rough-patch|from 'rough-patch'/.test(text) || file.startsWith('test/'), file);
+    assert.ok(!/packages\/rough-ride|from 'rough-ride'/.test(text) || file.startsWith('test/'), file);
   }
 });

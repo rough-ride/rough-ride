@@ -46,10 +46,10 @@ export function portabilityProblems(app: App): string[] {
     }
   }
   if (app.yaml.stack === 'nuxt-fastapi') {
-    const config = path.join(base, '.rough-patch', 'config.yaml');
+    const config = path.join(base, '.rough-ride', 'config.yaml');
     const keys = existsSync(config) ? Object.keys((parse(readFileSync(config, 'utf8')) as Record<string, unknown>) ?? {}) : [];
     const extra = keys.filter((k) => k !== 'schema' && k !== 'reset');
-    if (extra.length > 0) at(`base/.rough-patch/config.yaml holds ${extra.join(', ')}; a Nuxt + FastAPI base holds only schema and reset`);
+    if (extra.length > 0) at(`base/.rough-ride/config.yaml holds ${extra.join(', ')}; a Nuxt + FastAPI base holds only schema and reset`);
   }
   return problems;
 }

@@ -1,6 +1,6 @@
 // The `pack-contents` CI job (spec part 1 section 4, Packaging checks in CI):
 // what `npm pack` would put in the tarball must match the package's rules.
-// Usage: node scripts/pack-contents.mjs [package dir, default packages/rough-patch]
+// Usage: node scripts/pack-contents.mjs [package dir, default packages/rough-ride]
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -59,7 +59,7 @@ export function npmPack(dir) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  const dir = path.resolve(process.argv[2] ?? path.join(ROOT, 'packages', 'rough-patch'));
+  const dir = path.resolve(process.argv[2] ?? path.join(ROOT, 'packages', 'rough-ride'));
   const problems = packProblems(dir, npmPack(dir));
   for (const p of problems) console.log(p);
   if (problems.length > 0) process.exit(1);

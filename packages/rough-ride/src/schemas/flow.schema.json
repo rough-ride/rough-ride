@@ -1,0 +1,446 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/rough-ride/rough-ride/v0.1.0/packages/rough-ride/src/schemas/flow.schema.json",
+  "title": "rough-ride flow",
+  "description": "A flow in .rough-ride/flows/<name>.yaml: one user goal as a list of steps the runner interprets.",
+  "type": "object",
+  "required": [
+    "schema",
+    "signedIn",
+    "steps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "description": "The format version: the rough-ride release that introduced it.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "signedIn": {
+      "description": "Whether the flow runs signed in.",
+      "type": "boolean"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "goto"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "goto": {
+                "type": "string",
+                "pattern": "^/"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "click"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "click": {
+                "description": "Exactly one of role (with an optional name), label, text or testId.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "role"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "role": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "label"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "text"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "testId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "testId": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "fill",
+              "value"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "fill": {
+                "description": "Exactly one of role (with an optional name), label, text or testId.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "role"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "role": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "label"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "text"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "testId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "testId": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              },
+              "value": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "select",
+              "value"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "select": {
+                "description": "Exactly one of role (with an optional name), label, text or testId.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "role"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "role": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "label"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "text"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "testId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "testId": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              },
+              "value": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "check"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "check": {
+                "description": "Exactly one of role (with an optional name), label, text or testId.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "role"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "role": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "label"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "text"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "testId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "testId": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "press",
+              "key"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "press": {
+                "description": "Exactly one of role (with an optional name), label, text or testId.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "role"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "role": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "label"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "text"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "testId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "testId": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              },
+              "key": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "expect"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "expect": {
+                "description": "Exactly one of role (with an optional name), label, text or testId.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "role"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "role": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "label"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "text"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "testId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "testId": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

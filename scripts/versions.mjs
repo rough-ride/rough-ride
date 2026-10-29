@@ -8,15 +8,15 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const PKG = path.join(ROOT, 'packages', 'rough-patch');
+const PKG = path.join(ROOT, 'packages', 'rough-ride');
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-// Pinned examples: rough-patch@1.2.3 and rough-patch@x.y.z in docs and templates.
-const PINNED = /\brough-patch@(\d+\.\d+\.\d+)\b(?!-)/g;
+// Pinned examples: rough-ride@1.2.3 and rough-ride@x.y.z in docs and templates.
+const PINNED = /\brough-ride@(\d+\.\d+\.\d+)\b(?!-)/g;
 
 function docFiles(root) {
   const out = [];
-  for (const f of ['README.md', path.join('packages', 'rough-patch', 'README.md')]) if (existsSync(path.join(root, f))) out.push(f);
-  for (const dir of ['docs', path.join('packages', 'rough-patch', 'templates'), path.join('packages', 'rough-patch', 'skills'), path.join('packages', 'rough-patch', 'agents')]) {
+  for (const f of ['README.md', path.join('packages', 'rough-ride', 'README.md')]) if (existsSync(path.join(root, f))) out.push(f);
+  for (const dir of ['docs', path.join('packages', 'rough-ride', 'templates'), path.join('packages', 'rough-ride', 'skills'), path.join('packages', 'rough-ride', 'agents')]) {
     if (!existsSync(path.join(root, dir))) continue;
     for (const f of readdirSync(path.join(root, dir), { recursive: true })) {
       if (/\.(md|ya?ml|json|txt)$/.test(String(f))) out.push(path.join(dir, String(f)));
@@ -27,11 +27,11 @@ function docFiles(root) {
 
 // Every place the version appears, with the value found there.
 export function versionsIn(root = ROOT) {
-  const pkgDir = path.join(root, 'packages', 'rough-patch');
+  const pkgDir = path.join(root, 'packages', 'rough-ride');
   const read = (f) => JSON.parse(readFileSync(path.join(pkgDir, f), 'utf8'));
   const found = [
-    { where: 'packages/rough-patch/package.json', value: read('package.json').version },
-    { where: 'packages/rough-patch/.claude-plugin/plugin.json', value: read('.claude-plugin/plugin.json').version },
+    { where: 'packages/rough-ride/package.json', value: read('package.json').version },
+    { where: 'packages/rough-ride/.claude-plugin/plugin.json', value: read('.claude-plugin/plugin.json').version },
     { where: 'npm-shrinkwrap.json version', value: read('npm-shrinkwrap.json').version },
     { where: 'npm-shrinkwrap.json packages[""].version', value: read('npm-shrinkwrap.json').packages[''].version },
   ];
@@ -44,7 +44,7 @@ export function versionsIn(root = ROOT) {
 export function syncProblems(found, tag = null) {
   const problems = [];
   const first = found[0].value;
-  for (const f of found) if (f.value !== first) problems.push(`${f.where} says ${f.value}, packages/rough-patch/package.json says ${first}`);
+  for (const f of found) if (f.value !== first) problems.push(`${f.where} says ${f.value}, packages/rough-ride/package.json says ${first}`);
   if (tag !== null) {
     const m = /^v(\d+\.\d+\.\d+)(-rc\.\d+)?$/.exec(tag);
     if (!m) problems.push(`${tag} is not a vX.Y.Z or vX.Y.Z-rc.N tag`);
@@ -55,7 +55,7 @@ export function syncProblems(found, tag = null) {
 
 export function setVersion(version, root = ROOT) {
   if (!SEMVER.test(version)) throw new Error(`${version} is not x.y.z`);
-  const pkgDir = path.join(root, 'packages', 'rough-patch');
+  const pkgDir = path.join(root, 'packages', 'rough-ride');
   const edit = (file, fn) => {
     const full = path.join(pkgDir, file);
     const json = JSON.parse(readFileSync(full, 'utf8'));
@@ -71,7 +71,7 @@ export function setVersion(version, root = ROOT) {
   for (const f of docFiles(root)) {
     const full = path.join(root, f);
     const text = readFileSync(full, 'utf8');
-    const next = text.replace(PINNED, `rough-patch@${version}`);
+    const next = text.replace(PINNED, `rough-ride@${version}`);
     if (next !== text) writeFileSync(full, next);
   }
 }

@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Edit(//**/.rough-patch/**)",
+            "if": "Edit(//**/.rough-ride/**)",
             "command": "node",
             "args": [
               "${CLAUDE_PLUGIN_ROOT}/log.mjs",
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Write(//**/.rough-patch/**)",
+            "if": "Write(//**/.rough-ride/**)",
             "command": "node",
             "args": [
               "${CLAUDE_PLUGIN_ROOT}/log.mjs",
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Read(//**/.rough-patch/**)",
+            "if": "Read(//**/.rough-ride/**)",
             "command": "node",
             "args": [
               "${CLAUDE_PLUGIN_ROOT}/log.mjs",

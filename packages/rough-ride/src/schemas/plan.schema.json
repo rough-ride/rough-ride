@@ -1,0 +1,1015 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/rough-ride/rough-ride/v0.1.0/packages/rough-ride/src/schemas/plan.schema.json",
+  "title": "rough-ride plan.json",
+  "description": "The attack plan a run used, as runs/<id>/plan.json. input is the plan the adversary wrote, which carries no schema key.",
+  "type": "object",
+  "required": [
+    "schema",
+    "run",
+    "tier",
+    "runner",
+    "input"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "description": "The format version: the rough-ride release that introduced it.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "run": {
+      "type": "string",
+      "pattern": "^[0-9]{8}-[0-9]{6}-[a-z]+-[a-z0-9]{4}$"
+    },
+    "tier": {
+      "enum": [
+        "quick",
+        "standard"
+      ]
+    },
+    "runner": {
+      "type": "string"
+    },
+    "base": {
+      "type": "object",
+      "required": [
+        "ref",
+        "sha"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "type": "string"
+        },
+        "sha": {
+          "type": "string"
+        }
+      }
+    },
+    "digest": {
+      "type": "string"
+    },
+    "spec": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "sha256",
+          "bytes"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "flows": {
+      "description": "The sha256 of every flow the run attacked, by name.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "links": {
+      "type": "object",
+      "required": [
+        "input",
+        "accepted",
+        "rejected"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "file",
+                  "endpoint",
+                  "because"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "endpoint": {
+                    "type": "string"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "file",
+                  "flow",
+                  "because"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "flow": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "file",
+                  "page",
+                  "because"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "page": {
+                    "type": "string",
+                    "pattern": "^/"
+                  },
+                  "entry": {
+                    "const": "in-app"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "accepted": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "file",
+                  "endpoint",
+                  "because"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "endpoint": {
+                    "type": "string"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "file",
+                  "flow",
+                  "because"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "flow": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "file",
+                  "page",
+                  "because"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "page": {
+                    "type": "string",
+                    "pattern": "^/"
+                  },
+                  "entry": {
+                    "const": "in-app"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "file",
+                  "endpoint",
+                  "because"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "endpoint": {
+                    "type": "string"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "file",
+                  "flow",
+                  "because"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "flow": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "file",
+                  "page",
+                  "because"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "page": {
+                    "type": "string",
+                    "pattern": "^/"
+                  },
+                  "entry": {
+                    "const": "in-app"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "flowSaves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "item",
+          "outcome"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"
+          },
+          "item": {
+            "type": "object",
+            "required": [
+              "file"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "page": {
+                "type": "string",
+                "pattern": "^/"
+              },
+              "entry": {
+                "type": "string"
+              }
+            }
+          },
+          "outcome": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "attacks": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "flow",
+                  "because",
+                  "fault",
+                  "request"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "flow": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  },
+                  "fault": {
+                    "enum": [
+                      "500",
+                      "400",
+                      "401",
+                      "429",
+                      "malformed-json",
+                      "empty-200",
+                      "reset",
+                      "hang",
+                      "delay-3s"
+                    ]
+                  },
+                  "request": {
+                    "type": "string",
+                    "pattern": "^[A-Z]+ /.* #[0-9]+$"
+                  },
+                  "oneShot": {
+                    "const": true
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "flow",
+                  "because",
+                  "badInputs",
+                  "form"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "flow": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  },
+                  "badInputs": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "form": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z]+ /"
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "submit"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "submit": {
+                            "description": "Exactly one of role (with an optional name), label, text or testId.",
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "role"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "role": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "required": [
+                                  "label"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "label": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "required": [
+                                  "text"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "text": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "required": [
+                                  "testId"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "testId": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "flow",
+                  "because",
+                  "viewport"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "flow": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"
+                  },
+                  "because": {
+                    "type": "string",
+                    "pattern": "^[ -~]{1,160}$"
+                  },
+                  "viewport": {
+                    "const": 375
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "flow",
+              "when",
+              "at",
+              "assert",
+              "spec",
+              "quote",
+              "because"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^app-[a-z0-9][a-z0-9-]{0,39}$"
+              },
+              "flow": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"
+              },
+              "when": {
+                "type": "object",
+                "required": [
+                  "attack"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "attack": {
+                    "enum": [
+                      "fault",
+                      "bad-input",
+                      "timing",
+                      "viewport"
+                    ]
+                  },
+                  "point": {
+                    "type": "string",
+                    "pattern": "^[A-Z]+ /"
+                  },
+                  "field": {
+                    "description": "Exactly one of role (with an optional name), label, text or testId.",
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "role"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "role": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "label"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "text"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "testId"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "testId": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "outcome": {
+                    "enum": [
+                      "told",
+                      "refused",
+                      "accepted"
+                    ]
+                  }
+                }
+              },
+              "at": {
+                "enum": [
+                  "settled",
+                  "end",
+                  "every-step"
+                ]
+              },
+              "assert": {
+                "description": "Exactly one condition: text, count, path, requests or outcome.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "text"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "within": {
+                        "description": "Exactly one of role (with an optional name), label, text or testId.",
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "required": [
+                              "role"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "role": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "label"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "label": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "text"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "text": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "testId"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "testId": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "absent": {
+                        "const": true
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "count"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "count": {
+                        "type": "object",
+                        "required": [
+                          "of"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "of": {
+                            "description": "Exactly one of role (with an optional name), label, text or testId.",
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "role"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "role": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "required": [
+                                  "label"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "label": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "required": [
+                                  "text"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "text": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "required": [
+                                  "testId"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "testId": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "is": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "atLeast": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "atMost": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "path": {
+                        "type": "object",
+                        "required": [],
+                        "additionalProperties": false,
+                        "properties": {
+                          "is": {
+                            "type": "string",
+                            "pattern": "^/"
+                          },
+                          "isNot": {
+                            "type": "string",
+                            "pattern": "^/"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "requests"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "requests": {
+                        "type": "object",
+                        "required": [
+                          "key"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "pattern": "^[A-Z]+ /"
+                          },
+                          "status": {
+                            "enum": [
+                              "2xx",
+                              "3xx",
+                              "4xx",
+                              "5xx",
+                              "failed"
+                            ]
+                          },
+                          "is": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "atLeast": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "atMost": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "outcome"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "outcome": {
+                        "enum": [
+                          "accepted",
+                          "refused"
+                        ]
+                      }
+                    }
+                  }
+                ]
+              },
+              "spec": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"
+              },
+              "quote": {
+                "type": "string"
+              },
+              "because": {
+                "type": "string",
+                "pattern": "^[ -~]{1,160}$"
+              }
+            }
+          }
+        },
+        "noFlow": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "file",
+              "why"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "page": {
+                "type": "string",
+                "pattern": "^/"
+              },
+              "why": {
+                "type": "string",
+                "pattern": "^[ -~]{1,160}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "attackIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "why": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^app-[a-z0-9][a-z0-9-]{0,39}$"
+          },
+          "status": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "noFlow": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "why"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "why": {
+            "type": "string",
+            "pattern": "^[ -~]{1,160}$"
+          }
+        }
+      }
+    }
+  }
+}

@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const PKG = path.join(ROOT, 'packages', 'rough-patch');
+const PKG = path.join(ROOT, 'packages', 'rough-ride');
 const FILES = { config: 'config', flow: 'flow', tests: 'test', accepted: 'accepted', plan: 'plan' };
 
 export function compare(a, b) {
@@ -102,7 +102,7 @@ export function tagProblems({ tag, formats, changedKinds }) {
 // Every schema URL in the repo's own files names a kind's current tag.
 export function urlProblems(name, text, formats) {
   const problems = [];
-  const re = /rough-patch\/rough-patch\/([^/\s]+)\/packages\/rough-patch\/src\/schemas\/([a-z]+)\.schema\.json/g;
+  const re = /rough-ride\/rough-ride\/([^/\s]+)\/packages\/rough-ride\/src\/schemas\/([a-z]+)\.schema\.json/g;
   for (const m of text.matchAll(re)) {
     const kind = Object.keys(FILES).find((k) => FILES[k] === m[2]);
     if (!kind) continue;
@@ -132,7 +132,7 @@ function filesUnder(dir, keep) {
 function main(argv) {
   const formats = readFormats(readFileSync(path.join(PKG, 'src', 'formats.mts'), 'utf8'));
   const problems = [];
-  const schemaPath = (kind) => `packages/rough-patch/src/schemas/${FILES[kind]}.schema.json`;
+  const schemaPath = (kind) => `packages/rough-ride/src/schemas/${FILES[kind]}.schema.json`;
   const schemaAt = (ref, kind) => {
     const text = git('show', `${ref}:${schemaPath(kind)}`);
     return text === null ? null : JSON.parse(text);
@@ -179,7 +179,7 @@ function main(argv) {
   }
 
   // Committed files the runner reads in this repository lie inside [floor, current].
-  const committed = filesUnder(path.join(ROOT, 'benchmark', 'apps'), (p) => /\.rough-patch[\\/].*\.yaml$|features[\\/][^\\/]+[\\/]flows[\\/].*\.yaml$/.test(p));
+  const committed = filesUnder(path.join(ROOT, 'benchmark', 'apps'), (p) => /\.rough-ride[\\/].*\.yaml$|features[\\/][^\\/]+[\\/]flows[\\/].*\.yaml$/.test(p));
   for (const file of committed) {
     const value = /^schema:\s*["']?([0-9.]+)/m.exec(readFileSync(file, 'utf8'))?.[1];
     const kind = /[\\/]flows[\\/]/.test(file) ? 'flow' : /[\\/]tests[\\/]/.test(file) ? 'tests' : /accepted\.yaml$/.test(file) ? 'accepted' : 'config';

@@ -12,8 +12,8 @@ const PINNED = /^[A-Za-z0-9][A-Za-z0-9_-]*\/[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_./-]+
 
 // The files docs-pins reads, repository-relative with forward slashes.
 export function docsFiles(root = ROOT) {
-  const out = ['README.md', 'packages/rough-patch/README.md'].filter((f) => existsSync(path.join(root, f)));
-  for (const dir of ['docs', 'packages/rough-patch/templates']) {
+  const out = ['README.md', 'packages/rough-ride/README.md'].filter((f) => existsSync(path.join(root, f)));
+  for (const dir of ['docs', 'packages/rough-ride/templates']) {
     if (!existsSync(path.join(root, dir))) continue;
     for (const f of readdirSync(path.join(root, dir), { recursive: true })) {
       if (/\.(md|ya?ml)$/.test(String(f))) out.push(`${dir}/${String(f).split(path.sep).join('/')}`);

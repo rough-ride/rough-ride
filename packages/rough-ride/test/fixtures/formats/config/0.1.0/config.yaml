@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/rough-ride/rough-ride/v0.1.0/packages/rough-ride/src/schemas/config.schema.json
+schema: 0.1.0
+target:
+  url: http://localhost:3000
+  start: npm run dev
+reset: npm run db:reset
+exclude:
+  - /admin/**

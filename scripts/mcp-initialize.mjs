@@ -6,9 +6,9 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-const dir = path.resolve(process.argv[2] ?? 'packages/rough-patch');
+const dir = path.resolve(process.argv[2] ?? 'packages/rough-ride');
 const plugin = JSON.parse(readFileSync(path.join(dir, '.claude-plugin', 'plugin.json'), 'utf8'));
-const entry = plugin.mcpServers['rough-patch-devtools'];
+const entry = plugin.mcpServers['rough-ride-devtools'];
 const data = mkdtempSync(path.join(tmpdir(), 'rp-plugin-data-'));
 const sub = (s) => s.replaceAll('${CLAUDE_PLUGIN_DATA}', data).replaceAll('${CLAUDE_PLUGIN_ROOT}', dir);
 const child = spawn(entry.command, entry.args.map(sub), {
@@ -39,5 +39,5 @@ child.stdin.write(JSON.stringify({
   jsonrpc: '2.0',
   id: 1,
   method: 'initialize',
-  params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'rough-patch-test-tarball', version: '0' } },
+  params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'rough-ride-test-tarball', version: '0' } },
 }) + '\n');

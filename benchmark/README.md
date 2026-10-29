@@ -1,6 +1,6 @@
 # Benchmark
 
-The planted-bug benchmark for rough-patch (spec part 7). It sits outside `packages/rough-patch/` and is never published to npm.
+The planted-bug benchmark for rough-ride (spec part 7). It sits outside `packages/rough-ride/` and is never published to npm.
 
 ## Commands
 
@@ -10,7 +10,7 @@ npm run bench -- materialize-base <app> [--work-dir <dir>] [--no-install]
 npm run bench -- lint [<app> ...]
 ```
 
-`materialize` turns committed patches into a fresh repository: base as one "Initial commit" on `main`, the feature (and the bug, for a buggy variant) as uncommitted changes, and the feature's `request.md` as an untracked `.rough-patch/specs/request.txt`. `lint` runs the portability rules and the hint lint.
+`materialize` turns committed patches into a fresh repository: base as one "Initial commit" on `main`, the feature (and the bug, for a buggy variant) as uncommitted changes, and the feature's `request.md` as an untracked `.rough-ride/specs/request.txt`. `lint` runs the portability rules and the hint lint.
 
 ## Port registry
 

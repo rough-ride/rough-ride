@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: 22.22.0
       - run: npm ci
-      - run: npm ci --prefix packages/rough-patch
+      - run: npm ci --prefix packages/rough-ride
       - run: npm run build
       - run: npm test
 
@@ -44,7 +44,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 20.18.1
-      - run: node packages/rough-patch/test/old-node-check.mjs
+      - run: node packages/rough-ride/test/old-node-check.mjs
 
   hooks-node18:
     name: hook scripts (Node ${{ matrix.node }})
@@ -60,7 +60,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
-      - run: node --input-type=module -e "const m = await import('./packages/rough-patch/hooks/path-check.mjs'); if (!m.checkPath('a/.ROUGH-PATCH/x', process.cwd()).blocked) process.exit(1)"
+      - run: node --input-type=module -e "const m = await import('./packages/rough-ride/hooks/path-check.mjs'); if (!m.checkPath('a/.ROUGH-RIDE/x', process.cwd()).blocked) process.exit(1)"
 
   formats:
     runs-on: ubuntu-24.04
@@ -93,7 +93,7 @@ jobs:
       - name: Telemetry flags stay in plugin.json
         run: |
           for word in no-usage-statistics no-performance-crux CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS; do
-            grep -q -- "$word" packages/rough-patch/.claude-plugin/plugin.json || { echo "plugin.json lost $word"; exit 1; }
+            grep -q -- "$word" packages/rough-ride/.claude-plugin/plugin.json || { echo "plugin.json lost $word"; exit 1; }
           done
 
   pack-contents:
@@ -106,7 +106,7 @@ jobs:
         with:
           node-version: 22.22.0
       - run: npm ci
-      - run: npm ci --prefix packages/rough-patch
+      - run: npm ci --prefix packages/rough-ride
       - run: npm run build
       - run: node scripts/pack-contents.mjs
 
@@ -121,7 +121,7 @@ jobs:
         with:
           node-version: 22.22.0
       - run: npm ci
-      - run: npm ci --prefix packages/rough-patch
+      - run: npm ci --prefix packages/rough-ride
       - run: npm run build
       # On a PR, a frozen editions entry must match the base branch's.
       - if: github.event_name == 'pull_request'
@@ -165,7 +165,7 @@ jobs:
           node-version: 22.22.0
       - run: npm ci
       - run: node scripts/workflow-template.mjs template-checks
-      - run: node --test packages/rough-patch/test/workflow-template.test.mjs
+      - run: node --test packages/rough-ride/test/workflow-template.test.mjs
 
   # actionlint at a fixed release, fetched through the Go module proxy, whose
   # checksum database verifies it. The runner image ships Go and shellcheck.
@@ -179,7 +179,7 @@ jobs:
         run: |
           go_bin="$(command -v go || ls -d /opt/hostedtoolcache/go/*/x64/bin/go | sort -V | tail -n 1)"
           GOBIN="$RUNNER_TEMP/bin" "$go_bin" install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
-      - run: '"$RUNNER_TEMP/bin/actionlint" packages/rough-patch/templates/github-actions/rough-patch.yml'
+      - run: '"$RUNNER_TEMP/bin/actionlint" packages/rough-ride/templates/github-actions/rough-ride.yml'
 
   bench:
     name: bench (${{ matrix.os }})
@@ -219,7 +219,7 @@ jobs:
           node-version: 22.22.0
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
       - run: npm ci
-      - run: npm ci --prefix packages/rough-patch
+      - run: npm ci --prefix packages/rough-ride
       - run: npm run build
       # Materialises the base into a fresh repository, changes one page, and runs quick --start.
       - run: node scripts/release-step5.mjs --work-dir "${{ runner.temp }}"
@@ -240,6 +240,6 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm ci
-      - run: npm ci --prefix packages/rough-patch
+      - run: npm ci --prefix packages/rough-ride
       - run: npm run build
       - run: npm test
