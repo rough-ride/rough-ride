@@ -216,6 +216,44 @@ export function planCandidates(catalogue: Catalogue, scope: PlanScope): Omit<Can
 // reads only their ids and flows, and attack builds them from fresh runs.
 const named = (flow: string, id: string): PlannedAttack => ({ id, flow } as PlannedAttack);
 
+// runs/<id>/catalogue.json: what plan entries can name, with no bad-input
+// values. For any plan, planCandidates(fromRecord(toRecord(c, s))) gives the
+// same ids and the same refusals as planCandidates(c, s).
+export interface CatalogueRecord {
+  format: 1;
+  tier: TierName;
+  flows: FlowEntry[];
+  fieldOwner: [string, string][];
+  selected: string[];
+  aboveFlows: string[];
+}
+
+export function toRecord(catalogue: Catalogue, scope: PlanScope): CatalogueRecord {
+  const c = inside.get(catalogue)!;
+  return { format: 1, tier: c.tier, flows: [...c.flows.values()], fieldOwner: [...c.fieldOwner], selected: [...scope.selected], aboveFlows: [...new Set(scope.aboveFlows)] };
+}
+
+// The recorded catalogue and its scope, or null when the file isn't one.
+export function fromRecord(value: unknown): { catalogue: Catalogue; scope: { selected: string[]; aboveFlows: string[] } } | null {
+  const r = value as Partial<CatalogueRecord> | null;
+  const str = (x: unknown): x is string => typeof x === 'string';
+  const strings = (x: unknown): x is string[] => Array.isArray(x) && x.every(str);
+  if (!r || typeof r !== 'object' || r.format !== 1 || (r.tier !== 'quick' && r.tier !== 'standard')) return null;
+  if (!strings(r.selected) || !strings(r.aboveFlows) || !Array.isArray(r.fieldOwner) || !r.fieldOwner.every((p) => strings(p) && p.length === 2)) return null;
+  if (!Array.isArray(r.flows)) return null;
+  const flows = new Map<string, FlowEntry>();
+  for (const f of r.flows as unknown[]) {
+    const e = f as Partial<FlowEntry> | null;
+    if (!e || !str(e.name) || typeof e.baseline !== 'boolean' || !Array.isArray(e.faults) || !Array.isArray(e.inputs) || flows.has(e.name)) return null;
+    if (!e.faults.every((x) => x && str(x.id) && str(x.key) && str(x.fault) && typeof x.sticky === 'boolean')) return null;
+    if (!e.inputs.every((x) => x && str(x.id) && str(x.fieldKey) && (x.carrying === null || str(x.carrying)) && str(x.formName))) return null;
+    flows.set(e.name, { name: e.name, baseline: e.baseline, faults: e.faults, inputs: e.inputs });
+  }
+  const catalogue: Catalogue = { tier: r.tier, share: [], skipped: [], fieldsNotAttacked: [] };
+  inside.set(catalogue, { tier: r.tier, flows, fieldOwner: new Map(r.fieldOwner as [string, string][]), fresh: null });
+  return { catalogue, scope: { selected: r.selected, aboveFlows: r.aboveFlows } };
+}
+
 export type TestResolution = { attack: PlannedAttack } | { stale: string } | { pass: string };
 
 // A regression test's or repro's attack point in this baseline run, never

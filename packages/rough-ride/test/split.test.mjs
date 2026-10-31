@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { checkDigest, checkRun, LIMITS, SELECTION } from '../dist/runcheck.mjs';
+import { CATALOGUE, checkDigest, checkRun, LIMITS, SELECTION } from '../dist/runcheck.mjs';
 import { StopError } from '../dist/exit.mjs';
 import { checkRootEntry, ensureFolder } from '../dist/folder.mjs';
 import { Manifest } from '../dist/manifest.mjs';
@@ -22,11 +22,15 @@ function planned(over = {}) {
   const state = { runId: ID, runner: '0.1.0', tier: 'standard', digest: 'd1', base: { given: null }, planMs: 5000, attacks: [], flows: [], limits: { tier: 'standard', ...LIMITS.standard }, ...over };
   writeFileSync(path.join(dir, ...SELECTION), JSON.stringify(state));
   writeFileSync(path.join(dir, 'diff-map.json'), '{"files":[]}');
+  writeFileSync(path.join(dir, CATALOGUE), JSON.stringify(CATALOGUE_RECORD));
   const manifest = new Manifest(root);
   manifest.recordRun(ID, SELECTION.join('/'), state);
   manifest.recordRun(ID, 'diff-map.json', { files: [] });
+  manifest.recordRun(ID, CATALOGUE, CATALOGUE_RECORD);
   return { root, folder, dir, manifest };
 }
+
+const CATALOGUE_RECORD = { format: 1, tier: 'standard', flows: [], fieldOwner: [], selected: [], aboveFlows: [] };
 
 const stopOf = (fn) => {
   try {
@@ -50,6 +54,16 @@ test('run-id stops: no run, already attacked, another version, an edited selecti
   writeFileSync(path.join(p.dir, 'record.json'), '{"phase":"attacked"}');
   assert.deepEqual(stopOf(() => checkRun(p.folder, ID, info, p.manifest)).lines, [`Run ${ID} was already attacked. Run /rough-ride:standard again.`]);
   assert.deepEqual(stopOf(() => checkDigest({ digest: 'd1' }, 'd2')), { kind: 'retry', code: 'code-changed', lines: ['The code changed since the plan was made. Plan again.'] });
+});
+
+test('the recorded Attack catalogue comes back with the plan; an edited or missing copy stops as an altered read-back file', () => {
+  const p = planned();
+  assert.deepEqual(checkRun(p.folder, ID, info, p.manifest).catalogue, CATALOGUE_RECORD);
+  writeFileSync(path.join(p.dir, CATALOGUE), JSON.stringify({ ...CATALOGUE_RECORD, aboveFlows: ['search-notes'] }));
+  assert.deepEqual(stopOf(() => checkRun(p.folder, ID, info, p.manifest)), { kind: 'retry', code: 'refused-run-output', lines: [`Refused: run ${ID}'s catalogue.json changed after rough-ride wrote it, or this worktree has no record of it. Run /rough-ride:standard again.`] });
+  const missing = planned();
+  rmSync(path.join(missing.dir, CATALOGUE));
+  assert.equal(stopOf(() => checkRun(missing.folder, ID, info, missing.manifest)).code, 'refused-run-output');
 });
 
 test('limits follow 42.7 row order', () => {

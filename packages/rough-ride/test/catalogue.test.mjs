@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildCatalogue, planCandidates, resolveTest } from '../dist/catalogue.mjs';
+import { buildCatalogue, fromRecord, planCandidates, resolveTest, toRecord } from '../dist/catalogue.mjs';
 import { validatePlan } from '../dist/plan.mjs';
 import { noteFlow, noteRun, req, signInFlow, signInRun } from './fixtures/catalogue-flows.mjs';
 
@@ -146,6 +146,40 @@ test('bad-input entries: the next inputs not already selected, named by carrying
   const none = validatePlan({ attacks: [entry({ flow: 'never-ran', badInputs: 1, form: 'POST /api/notes' }), entry({ flow: 'never-ran', fault: '500', request: 'POST /api/notes #1' }), entry({ flow: 'never-ran', viewport: 375 })] }, planCandidates(runless, { selected: [], aboveFlows: ['never-ran'] }));
   assert.deepEqual(none.lines, ['Rejected plan entry: attacks[0] (never-ran has no baseline run)', 'Rejected plan entry: attacks[1] (POST /api/notes #1 is not an attack point of never-ran)']);
   assert.deepEqual(none.kept.map((a) => a.id), ['never-ran/viewport-375']);
+});
+
+// Every kind of entry on every flow, including ones that name nothing.
+const everyEntry = () => {
+  const out = [];
+  for (const flow of ['create-note', 'quick-note', 'sign-in', 'never-ran', 'missing']) {
+    for (const request of ['POST /api/notes #1', 'GET /api/notes #1', 'POST /api/login #1', 'POST /api/note #1']) {
+      for (const fault of ['500', '400', '401', '429', 'malformed-json', 'empty-200', 'reset', 'hang', 'delay-3s']) {
+        out.push(entry({ flow, fault, request }), entry({ flow, fault, request, oneShot: true }));
+      }
+    }
+    for (const form of ['POST /api/notes', 'POST /api/login', 'POST /api/x', { submit: { role: 'button', name: 'Save' } }, { submit: { label: 'x' } }]) out.push(entry({ flow, badInputs: 12, form }));
+    out.push(entry({ flow, viewport: 375 }));
+  }
+  return out;
+};
+
+test('round trip: a recorded catalogue resolves every entry to the same ids and refusals as the fresh one, and holds no bad-input value', () => {
+  for (const tier of ['quick', 'standard']) {
+    const fresh = buildCatalogue({ tier, flows: [...flows(), { flow: noteFlow('never-ran'), runs: [], passed: false }], docs: [], hosts: { allowed: [], remoteTarget: null }, today: TODAY });
+    const scope = { selected: fresh.share.map((a) => a.id), aboveFlows: [...new Set(fresh.share.map((a) => a.flow)), 'never-ran'] };
+    const text = JSON.stringify(toRecord(fresh, scope));
+    for (const value of fresh.share.map((a) => a.badInput?.value ?? '').filter((v) => v.length >= 20)) assert.ok(!text.includes(value.slice(0, 20)), 'no bad-input value is recorded');
+    if (tier === 'standard') assert.ok(fresh.share.some((a) => a.badInput?.value.length === 10_000));
+    const recorded = fromRecord(JSON.parse(text));
+    assert.deepEqual(recorded.scope, scope);
+    const plain = (r) => ({ lines: r.lines, entries: r.entries, kept: r.kept.map((a) => [a.id, a.flow]) });
+    for (const one of everyEntry()) {
+      // One entry at a time, so the cap never decides.
+      assert.deepEqual(plain(validatePlan({ attacks: [one] }, planCandidates(recorded.catalogue, recorded.scope))), plain(validatePlan({ attacks: [one] }, planCandidates(fresh, scope))), JSON.stringify(one));
+    }
+    assert.deepEqual(plain(validatePlan({ attacks: everyEntry() }, planCandidates(recorded.catalogue, recorded.scope))), plain(validatePlan({ attacks: everyEntry() }, planCandidates(fresh, scope))));
+  }
+  for (const bad of [null, [], { format: 2 }, { format: 1, tier: 'quick', flows: [{ name: 'a' }], fieldOwner: [], selected: [], aboveFlows: [] }]) assert.equal(fromRecord(bad), null);
 });
 
 // regress and repro: one flow's catalogue from this invocation's baseline run (25.3).

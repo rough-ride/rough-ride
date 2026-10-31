@@ -51,6 +51,8 @@ export interface PlanState {
   routes?: string[] | null;
   apiKeys?: string[];
   flowPages?: { name: string; passed: boolean; pages: { path: string; entry: string }[]; requests: string[] }[];
+  // runs/<id>/catalogue.json as read back and verified, never part of selection.json.
+  catalogue?: unknown;
 }
 
 // How many calls of `command` this run already made (42.7's per-run limits).
@@ -64,6 +66,8 @@ export function callCount(folder: FolderState, runId: string, command: string): 
 }
 
 export const SELECTION = ['adversary', 'selection.json'];
+// The Attack catalogue plan recorded, which attack --check resolves entries against (45.3).
+export const CATALOGUE = 'catalogue.json';
 
 // The Bash tool kills a command at 600 s. With a plugin data folder, counted
 // from process start: no new flow run after 500 s, runs still going stopped at
@@ -109,7 +113,9 @@ export function checkRun(folder: FolderState, runId: string, info: RunnerInfo, m
   manifest.verifyRun(runId, SELECTION.join('/'), plan, SELECTION.join('/'), again);
   const map = readJson(path.join(dir, 'diff-map.json'));
   manifest.verifyRun(runId, 'diff-map.json', map, 'diff-map.json', again);
-  return plan!;
+  const catalogue = readJson(path.join(dir, CATALOGUE));
+  manifest.verifyRun(runId, CATALOGUE, catalogue, CATALOGUE, again);
+  return { ...plan!, catalogue };
 }
 
 export function checkDigest(plan: PlanState, digest: string): void {

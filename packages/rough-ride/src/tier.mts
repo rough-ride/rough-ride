@@ -25,9 +25,9 @@ import { asciiJson, instructionNotes, needsFlowItems, patchRanges, readSpecs, wr
 import { parseDotenv } from './session.mjs';
 import { readSaved } from './flowsave.mjs';
 import { cutPlanned, parsePlan, validatePlan, type ParsedPlan, type PlanResult } from './plan.mjs';
-import { buildCatalogue, planCandidates } from './catalogue.mjs';
+import { buildCatalogue, planCandidates, toRecord, type CatalogueRecord } from './catalogue.mjs';
 import { readLinks } from './link.mjs';
-import { adversaryCallTime, bashBlocksStart, bashDeadline, LIMITS, SELECTION, type PlanState } from './runcheck.mjs';
+import { adversaryCallTime, bashBlocksStart, bashDeadline, CATALOGUE, LIMITS, SELECTION, type PlanState } from './runcheck.mjs';
 import { blockLines, blockWithHints, changedDuringRun, compareProtected, type ProtectedResult, extraNodeCodeNote, protectedJson, reportLines as protectedReport, summaryLines as protectedSummary } from './protected.mjs';
 import { Manifest } from './manifest.mjs';
 import { buildTest } from './regression.mjs';
@@ -228,6 +228,8 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   const fieldsNotAttacked: string[] = [];
   let tierTests: ProtectedResult['tests'] = [];
   let testsOverBudget: string[] = [];
+  // plan: the Attack catalogue attack --check resolves entries against (45.3).
+  let catalogueRecord: CatalogueRecord | null = null;
   const testFirst = new Map<string, FirstRun>();
   const underTestOf = new Map<Group, string>();
   const testResults: { name: string; outcome: TestOutcome; reason: string | null; failed: string[]; accepted?: string[] }[] = [];
@@ -540,13 +542,18 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       ...eligible.filter((t) => openNames.has(t.name)).sort((a, b) => cmp(a.name, b.name)),
       ...eligible.filter((t) => !openNames.has(t.name)).sort((a, b) => reachedOrder.indexOf(String(a.value.flow)) - reachedOrder.indexOf(String(b.value.flow)) || cmp(a.name, b.name)),
     ];
+    const testFlows = orderedTests.slice(0, spec.tests).map((t) => String(t.value.flow));
+    if (ctx.mode === 'plan') {
+      const above = cut.items.filter((x) => x.aboveCut);
+      catalogueRecord = toRecord(catalogue, { selected: above.map((x) => x.attack.id), aboveFlows: [...above.map((x) => x.attack.flow), ...testFlows] });
+    }
 
     // attack --plan -: validated against these fresh footprints; it can only add (45.2, 45.4, 45.5).
     if (ctx.mode === 'attack' && typeof ctx.planText === 'string') {
       planParsed = parsePlan(ctx.planText, tierName);
       if (planParsed.refused === null) {
         const selectedAbove = cut.items.filter((x) => x.aboveCut);
-        const aboveFlows = new Set([...selectedAbove.map((x) => x.attack.flow), ...orderedTests.slice(0, spec.tests).map((t) => String(t.value.flow)), ...addedFlows]);
+        const aboveFlows = new Set([...selectedAbove.map((x) => x.attack.flow), ...testFlows, ...addedFlows]);
         planResult = validatePlan(planParsed.input!, {
           ...planCandidates(catalogue, { selected: selectedAbove.map((x) => x.attack.id), aboveFlows }),
           // App-specific checks against the spec read again and these fresh baseline runs (45.8).
@@ -1058,6 +1065,8 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
     // ASCII; the manifest hash is key-order free.
     writeAtomic(folder, ['runs', run.id, ...SELECTION], asciiJson(JSON.stringify(state, null, 2)) + '\n');
     manifest.recordRun(run.id, SELECTION.join('/'), JSON.parse(redactSecrets(canonicalJson(state))));
+    writeAtomic(folder, ['runs', run.id, CATALOGUE], canonicalJson(catalogueRecord));
+    manifest.recordRun(run.id, CATALOGUE, JSON.parse(redactSecrets(canonicalJson(catalogueRecord))));
   }
   writeAtomic(folder, ['runs', run.id, 'diff-map.json'], canonicalJson(map));
   // Read-back run output gets its hash in the manifest in the same step (27.2).
