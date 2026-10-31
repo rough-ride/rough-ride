@@ -7,17 +7,15 @@ import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import { printed } from '../hooks/path-check.mjs';
 import { nonFinding, runAttack, type AttackOutcome, type PlannedAttack } from './attacks.mjs';
-import { chooseBrowser, installedOnThisMachine, launchBrowser, type BrowserName, type Launched } from './browser.mjs';
+import type { BrowserName, Launched } from './browser.mjs';
 import { inlineChecks } from './appchecks.mjs';
 import { buildCatalogue, resolveTest } from './catalogue.mjs';
 import { checkRank } from './checks.mjs';
 import { stopWith } from './exit.mjs';
-import { checkCommittedFiles, wroteFile } from './files.mjs';
+import { checkCommittedFiles } from './files.mjs';
 import { ensureFolder, type FolderState } from './folder.mjs';
-import { runFlow, type Flow, type FlowRunResult, type RunFlowOptions } from './flowrun.mjs';
-import { allowedSuffix, LocalhostGuard } from './guard.mjs';
-import { hostPolicy, type HostPolicy } from './hosts.mjs';
-import { takeFlowLock } from './lock.mjs';
+import { runFlow, type Flow, type FlowRunResult } from './flowrun.mjs';
+import { allowedSuffix } from './guard.mjs';
 import { Manifest } from './manifest.mjs';
 import { fetchOpenApi, rekey, type OpenApiDoc } from './openapi.mjs';
 import { canonicalJson, formatDuration, type Note } from './output.mjs';
@@ -25,12 +23,10 @@ import { capSections } from './summary.mjs';
 import { blockLines, blockWithHints, compareProtected, protectedJson, reportLines as protectedReport, summaryLines as protectedSummary } from './protected.mjs';
 import { ciMode, environmentRecord, followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
 import { acceptedEntries, testAcceptedNotes } from './accepted.mjs';
-import { bashBlocksStart, bashDeadline } from './runcheck.mjs';
-import { createRunFolder, pruneRuns, type RunFolder } from './runs.mjs';
-import { credentialStrings } from './secrets.mjs';
-import { checkSignInEnv, envReader, runReset, signIn } from './session.mjs';
-import { findTarget } from './target.mjs';
-import { apiOrigins, inLanes, lanesFor, PRE_RELEASE, readyWaitFor } from './tier.mjs';
+import type { RunFolder } from './runs.mjs';
+import { checkSignInEnv } from './session.mjs';
+import { apiOrigins, inLanes, lanesFor, PRE_RELEASE } from './tier.mjs';
+import { openTargetSession, type FlowRunDefaults } from './targetsession.mjs';
 import { writeAtomic } from './write.mjs';
 
 export type TestOutcome = 'pass' | 'fail' | 'flaky' | 'stale';
@@ -87,7 +83,7 @@ export async function runTestOnce(
   flow: Flow,
   baseline: FlowRunResult,
   docs: OpenApiDoc[],
-  options: Omit<RunFlowOptions, 'flow'> & { hosts: HostPolicy },
+  options: FlowRunDefaults,
 ): Promise<FirstRun> {
   const own = Intl.DateTimeFormat().resolvedOptions();
   const pin = value.context && (value.context.timezone !== own.timeZone || value.context.locale !== own.locale) ? value.context : undefined;
@@ -179,33 +175,19 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
   const config = prot.config;
   const flows = prot.flows.map((f) => f.flow);
   checkSignInEnv(flows, folder, ctx.env);
-  const target = await findTarget({ root, config, configSchema: files.config?.schema?.text ?? null, start: ctx.start, pluginData: info.pluginData?.path ?? null, againCommand: '/rough-ride:quick', notes: ctx.notes });
-  wroteFile(files, info, root, target.nuxtRoot?.rel ?? null, ctx.argv);
-  const lock = takeFlowLock(root, ctx.notes);
-  const run = createRunFolder(folder, 'regress');
-  pruneRuns(folder, lock, run.id);
-  const hosts = hostPolicy(config?.allow);
-  const choice = chooseBrowser(ctx.browserFlag, config?.browser ?? null, installedOnThisMachine(ctx.env));
-  const launched = ctx.launch ? await ctx.launch(choice.name) : await launchBrowser(choice, ctx.notes);
-  const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, hosts) : undefined;
+  const session = await openTargetSession({
+    root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, config, flows,
+    start: ctx.start, againCommand: '/rough-ride:quick', browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
+    elapsed: ctx.elapsed, run: { create: 'regress' }, reset: true,
+  });
+  const { target, hosts } = session;
+  const run = session.run!;
   const results: TestResult[] = [];
   const startedAt = new Date().toISOString();
-  const processStart = Date.now() - ctx.elapsed();
   try {
-    await runReset(config, root);
-    const read = envReader(folder, ctx.env);
-    const ready = readyWaitFor(target, config);
-    const exclude = config?.exclude ?? [];
-    const bashStop = bashDeadline(!!info.pluginData, processStart);
-    const bashBlocks = () => bashBlocksStart(!!info.pluginData, processStart, Date.now());
-    let signInOutcome = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, deadline: bashStop, waitUntil: target.apiWaitUntil });
-    let credentials = credentialStrings(signInOutcome.storageState);
+    await session.reset();
+    const signInOutcome = await session.signIn();
     const lanes = lanesFor(availableParallelism());
-    const base = (f: Flow) => ({
-      browser: launched.browser, baseURL: target.url, env: read, ready, exclude, hosts,
-      storageState: f.signedIn ? signInOutcome.storageState : undefined, credentials, guard,
-      ...(info.pluginData ? { deadline: bashDeadline(true, processStart) } : {}),
-    });
     // Each flow the tests use: one baseline run, two with neither a reviewed version nor a saved copy (25.2).
     const usedFlows = [...new Set(tests.map((t) => String(t.value.flow)))];
     const baselines = new Map<string, FlowRunResult | null>();
@@ -218,11 +200,11 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
       const times = eff && (eff.reviewed || eff.used === 'saved-copy') ? 1 : 2;
       let last: FlowRunResult | null = null;
       for (let i = 0; i < times; i++) {
-        if (bashBlocks()) {
+        if (session.bashBlocks()) {
           bashSkipped.add(name);
           return baselines.set(name, null);
         }
-        const r = await runFlow({ ...base(flow), flow, shots: 'all' });
+        const r = await runFlow({ ...session.defaults(flow), flow, shots: 'all' });
         if (!r.passed) return baselines.set(name, null);
         last = r;
       }
@@ -236,23 +218,19 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
     const runTest = async (t: (typeof tests)[number]) => {
       const name = String(t.value.flow);
       const flow = flows.find((f) => f.name === name);
-      if (bashBlocksStart(!!info.pluginData, processStart, Date.now())) return first.set(t.name, { judgement: null, stale: 'stopped by the Bash time limit', pass: null, attack: null, outcome: null });
+      if (session.bashBlocks()) return first.set(t.name, { judgement: null, stale: 'stopped by the Bash time limit', pass: null, attack: null, outcome: null });
       if (!flow) return first.set(t.name, { judgement: null, stale: `flow ${name} is missing or invalid`, pass: null, attack: null, outcome: null });
       if (flow.signedIn && !signInOutcome.ran) return first.set(t.name, { judgement: null, stale: 'no sign-in flow', pass: null, attack: null, outcome: null });
       if (flow.signedIn && !signInOutcome.passed) return first.set(t.name, { judgement: null, stale: 'sign-in failed', pass: null, attack: null, outcome: null });
       const baseline = baselines.get(name);
       if (!baseline) return first.set(t.name, { judgement: null, stale: bashSkipped.has(name) ? 'stopped by the Bash time limit' : `${name} failed its baseline run`, pass: null, attack: null, outcome: null });
-      first.set(t.name, await runTestOnce(t.value as unknown as TestValue, flow, baseline, docs, base(flow)));
+      first.set(t.name, await runTestOnce(t.value as unknown as TestValue, flow, baseline, docs, session.defaults(flow)));
     };
     await inLanes(lanes, tests.filter((t) => t.value.flow !== 'sign-in').map((t) => () => runTest(t)));
     await inLanes(lanes, tests.filter((t) => t.value.flow === 'sign-in').map((t) => () => runTest(t)));
     let refreshFailed = false;
     if (tests.some((t) => t.value.flow === 'sign-in') && signInOutcome.ran) {
-      const again = bashBlocks() ? { passed: false, storageState: null } : await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, deadline: bashStop });
-      if (again.passed) {
-        signInOutcome = { ...signInOutcome, storageState: again.storageState };
-        credentials = credentialStrings(again.storageState);
-      } else refreshFailed = true;
+      if (session.bashBlocks() || !(await session.refreshSignIn())) refreshFailed = true;
     }
     for (const t of tests) {
       const f = first.get(t.name)!;
@@ -262,8 +240,8 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
       if (f.judgement && f.judgement.state !== 'pass' && f.attack) {
         const flow = flows.find((x) => x.name === value.flow)!;
         if (refreshFailed && flow.signedIn) second = { state: 'stale', reason: 'sign-in failed', failed: [], alsoFailed: [] };
-        else if (bashBlocksStart(!!info.pluginData, processStart, Date.now())) second = { state: 'stale', reason: 'stopped by the Bash time limit', failed: [], alsoFailed: [] };
-        else second = judgeRun(value.checks, await runAttack(f.attack, flow, baselines.get(String(value.flow))!, { ...base(flow), ...(f.pin ? { pin: f.pin } : {}) }, docs, inlineChecks(value.checks)));
+        else if (session.bashBlocks()) second = { state: 'stale', reason: 'stopped by the Bash time limit', failed: [], alsoFailed: [] };
+        else second = judgeRun(value.checks, await runAttack(f.attack, flow, baselines.get(String(value.flow))!, { ...session.defaults(flow), ...(f.pin ? { pin: f.pin } : {}) }, docs, inlineChecks(value.checks)));
       }
       if (f.stale || f.pass) {
         results.push({ name: t.name, flow: String(value.flow), outcome: f.pass ? 'pass' : 'stale', reason: f.pass ?? f.stale, checks: listed, failed: [], alsoFailed: [], note: null, accepted: [] });
@@ -279,10 +257,7 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
       results.push({ name: t.name, flow: String(value.flow), outcome, reason, checks: listed, failed, alsoFailed: f.judgement!.alsoFailed, note, accepted: testAcceptedNotes(acceptedList, f.outcome, flows.find((x) => x.name === value.flow), failed) });
     }
   } finally {
-    guard?.close();
-    await launched.browser.close().catch(() => {});
-    target.children?.stop();
-    lock.release();
+    await session.close();
   }
 
   // Each test's last outcome in the manifest (25.7); tests themselves are never written.

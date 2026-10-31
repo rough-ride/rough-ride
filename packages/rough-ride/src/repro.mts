@@ -8,29 +8,25 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Browser, BrowserContext } from 'playwright-core';
 import { runAttack } from './attacks.mjs';
-import { chooseBrowser, installedOnThisMachine, launchBrowser, type BrowserName, type Launched } from './browser.mjs';
+import type { BrowserName, Launched } from './browser.mjs';
 import { inlineChecks } from './appchecks.mjs';
 import { buildCatalogue, resolveTest } from './catalogue.mjs';
 import { checkRank, checkSeverity } from './checks.mjs';
 import { stopWith } from './exit.mjs';
-import { checkCommittedFiles, wroteFile } from './files.mjs';
+import { checkCommittedFiles } from './files.mjs';
 import { ensureFolder, type FolderState } from './folder.mjs';
 import type { Flow } from './flowrun.mjs';
 import { runFlow } from './flowrun.mjs';
 import { SEVERITY_TEXT } from './groups.mjs';
-import { LocalhostGuard } from './guard.mjs';
-import { hostPolicy } from './hosts.mjs';
-import { takeFlowLock } from './lock.mjs';
 import { Manifest } from './manifest.mjs';
 import { fetchOpenApi, rekey } from './openapi.mjs';
 import { escapeName, formatDuration, type Note } from './output.mjs';
 import { compareProtected } from './protected.mjs';
 import { followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
-import { createRunFolder, pruneRuns, RUN_ID, type RunFolder } from './runs.mjs';
-import { credentialStrings } from './secrets.mjs';
-import { checkSignInEnv, envReader, runReset, signIn } from './session.mjs';
-import { findTarget } from './target.mjs';
-import { apiOrigins, readyWaitFor } from './tier.mjs';
+import { RUN_ID, type RunFolder } from './runs.mjs';
+import { checkSignInEnv } from './session.mjs';
+import { apiOrigins } from './tier.mjs';
+import { openTargetSession } from './targetsession.mjs';
 
 export interface ReproContext {
   root: string;
@@ -111,30 +107,22 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
   // The flow's effective version (13.7), not the copy in the record.
   const flow = flows.find((f) => f.name === rec.flow.name) ?? rec.flow.parsed;
   checkSignInEnv(flows, folder, ctx.env);
-  const target = await findTarget({ root, config, configSchema: files.config?.schema?.text ?? null, start: ctx.start, pluginData: info.pluginData?.path ?? null, againCommand: tierCmd, notes: ctx.notes });
-  wroteFile(files, info, root, target.nuxtRoot?.rel ?? null, ctx.argv);
-  const lock = takeFlowLock(root, ctx.notes);
-  const run = createRunFolder(folder, 'repro');
-  pruneRuns(folder, lock, run.id);
-  const hosts = hostPolicy(config?.allow);
-  const choice = chooseBrowser(ctx.browserFlag, config?.browser ?? null, installedOnThisMachine(ctx.env));
-  const launched = ctx.launch ? await ctx.launch(choice.name) : await launchBrowser(choice, ctx.notes);
-  const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, hosts) : undefined;
+  // repro's flow runs have never had the Bash limits, though 50.4 names every call with a plugin data folder.
+  const session = await openTargetSession({
+    root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, config, flows,
+    start: ctx.start, againCommand: tierCmd, browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
+    elapsed: ctx.elapsed, run: { create: 'repro' }, reset: true, bashLimits: false,
+  });
+  const { target, hosts } = session;
+  const run = session.run!;
   const lead = [...rec.failedChecks].map((c) => c.id).sort((a, b) => checkRank(a) - checkRank(b))[0] ?? null;
   let verdict: 'reproduced' | 'did not reproduce' | string = 'did not reproduce';
   let exitCode: 0 | 1 | 2 = 0;
   const openLines: string[] = [];
   try {
-    await runReset(config, root);
-    const read = envReader(folder, ctx.env);
-    const ready = readyWaitFor(target, config);
-    const exclude = config?.exclude ?? [];
-    const signedIn = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, waitUntil: target.apiWaitUntil });
-    const credentials = credentialStrings(signedIn.storageState);
-    const base = {
-      browser: launched.browser, baseURL: target.url, env: read, ready, exclude, hosts,
-      storageState: flow.signedIn ? signedIn.storageState : undefined, credentials, guard,
-    };
+    await session.reset();
+    const signedIn = await session.signIn();
+    const base = session.defaults(flow);
     const baseline = flow.name === 'sign-in' && signedIn.result ? signedIn.result : await runFlow({ ...base, flow, shots: 'all' });
     if (!baseline.passed) {
       verdict = `could not apply: ${flow.name} failed its baseline run`;
@@ -161,10 +149,7 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
       }
     }
   } finally {
-    guard?.close();
-    await launched.browser.close().catch(() => {});
-    target.children?.stop();
-    lock.release();
+    await session.close();
   }
   const sev = lead ? SEVERITY_TEXT[checkSeverity(lead)] : 'LOW ';
   const lines = [
