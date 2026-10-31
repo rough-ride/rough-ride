@@ -24,12 +24,12 @@ const TEST = 'schema: 0.1.0\nflow: save\nattack: {fault: "500", sticky: true, re
 
 // A repository whose save flow reaches the changed src/save.js on the fixture
 // site, so quick finds a missing error message.
-function findingRepo({ config = '', tests = {} } = {}) {
+function findingRepo({ config = '', tests = {}, url = site.url } = {}) {
   const root = gitRepo();
   sh(root, 'checkout', '-q', '-b', 'main');
   mkdirSync(path.join(root, '.rough-ride', 'flows'), { recursive: true });
   mkdirSync(path.join(root, 'src'));
-  writeFileSync(path.join(root, '.rough-ride', 'config.yaml'), `schema: 0.1.0\ntarget:\n  url: ${site.url}\n${config}`);
+  writeFileSync(path.join(root, '.rough-ride', 'config.yaml'), `schema: 0.1.0\ntarget:\n  url: ${url}\n${config}`);
   writeFileSync(path.join(root, '.rough-ride', 'flows', 'save.yaml'), SAVE_FLOW);
   if (Object.keys(tests).length > 0) mkdirSync(path.join(root, '.rough-ride', 'tests'));
   for (const [name, text] of Object.entries(tests)) writeFileSync(path.join(root, '.rough-ride', 'tests', `${name}.yaml`), text);
@@ -190,6 +190,38 @@ test('repro and flow save: a stop after the run folder exists names that run; un
   assert.deepEqual([code, underRun.stop.code, underRun.runId], [78, 'reset-failed', plan.runId]);
   assert.equal(runFile(root, plan.runId, path.join('adversary', 'summary.txt')), stderr);
   assert.equal(runFile(root, plan.runId, 'summary.json'), planSummary);
+});
+
+test('--run calls: a stop before the target session opens still names the run and lands its block there; a run-id stop leaves the run alone', async () => {
+  const own = await startCiSite();
+  const root = findingRepo({ url: own.url });
+  const data = scratchDir();
+  const plan = await call(root, ['plan', 'quick', '--plugin-data', data]);
+  assert.equal(plan.status, 'planned');
+  const planSummary = runFile(root, plan.runId, 'summary.json');
+  // Nothing answers on target.url from here on, so each call stops in findTarget.
+  await new Promise((resolve) => {
+    own.server.close(resolve);
+    own.server.closeAllConnections();
+  });
+
+  const input = 'signedIn: false\nsteps:\n  - goto: /\n';
+  for (const args of [['flow', 'save', 'sign-in'], ['snapshot'], ['attack']]) {
+    const { code, stdout, stderr } = await runAsync([...args, '--run', plan.runId, '--plugin-data', data, '--json'], { cwd: root, env: LOCAL, input });
+    const doc = JSON.parse(stdout);
+    assert.deepEqual([args[0], code, doc.stop?.code, doc.runId], [args[0], 78, 'nothing-running', plan.runId]);
+    assert.match(doc.summaryLines[1], new RegExp(`\\| run ${plan.runId} \\| stopped$`));
+    assert.equal(runFile(root, plan.runId, path.join('adversary', 'summary.txt')), stderr);
+    assert.equal(runFile(root, plan.runId, 'summary.json'), planSummary);
+  }
+
+  // The digest stop is a run-id stop (42.4): it names no run and writes nothing there.
+  const block = runFile(root, plan.runId, path.join('adversary', 'summary.txt'));
+  writeFileSync(path.join(root, 'src', 'save.js'), SAVE_JS + '// changed again\n');
+  const { code, stdout } = await runAsync(['attack', '--run', plan.runId, '--plugin-data', data, '--json'], { cwd: root, env: LOCAL });
+  const changed = JSON.parse(stdout);
+  assert.deepEqual([code, changed.stop?.code, changed.runId], [75, 'code-changed', null]);
+  assert.equal(runFile(root, plan.runId, path.join('adversary', 'summary.txt')), block);
 });
 
 test('outcomes without a run folder: a usage stop and nothing to attack write nothing under runs/', async () => {

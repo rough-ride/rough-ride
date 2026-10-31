@@ -127,6 +127,7 @@ export function runLink(ctx: LinkContext): { lines: string[]; document: Record<s
   const folder = ensureFolder(ctx.folder);
   const manifest = new Manifest(root);
   const plan = checkRun(folder, ctx.runId, info, manifest);
+  ctx.report.namedRun({ id: ctx.runId, dir: path.join(folder.dir, 'runs', ctx.runId) }, false);
   let protLines: string[] = [];
   const finish = (body: string[], exitCode: 0 | 2) => {
     const header = ['rough-ride link', formatDuration(ctx.elapsed()), `run ${ctx.runId}`].join(' | ');

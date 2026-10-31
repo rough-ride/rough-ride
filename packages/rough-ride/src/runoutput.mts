@@ -26,6 +26,9 @@ import { writeAtomic } from './write.mjs';
 export interface RunReport {
   // A run folder this invocation made: an interrupt writes its files there (51.13).
   madeRun(run: RunFolder): void;
+  // The run a --run call works in, once its run-id stops passed (42.4); a later
+  // stop names it. `ownsFiles` (attack) also writes its run files there.
+  namedRun(run: RunFolder, ownsFiles: boolean): void;
   // The invocation's protected-file comparison (53.2).
   protectedFiles(result: ProtectedResult): void;
   // The contract status this invocation detected or carried from its plan (resolution 103).
@@ -52,12 +55,11 @@ export interface RunOutput extends RunReport {
   readonly interrupted: boolean;
   located(root: string): void;
   diffed(diff: Diff): void;
-  // The run a --run call works in. `ownsFiles` (attack) also writes its run files there.
-  namedRun(run: RunFolder, ownsFiles: boolean): void;
   finish(outcome: Outcome): void;
-  // A stop names the run it carries, so its block lands in that run (46.5), and
-  // writes its summary files there when this invocation made that run; `tail` is
-  // reset or --start output, printed in place of the tail placeholder only.
+  // A stop names the run it carries, or else the run a --run call works in, so
+  // its block lands in that run (46.5), and writes its summary files there when
+  // this invocation made that run; `tail` is reset or --start output, printed in
+  // place of the tail placeholder only.
   stop(stop: Stop, options?: { run?: RunFolder | null; tail?: string[] | null }): void;
   // Writes the run's files and the stdout document, before the exit that ends
   // the browser and the --start children (51.13).
@@ -105,7 +107,8 @@ interface Finish {
   tail?: string[] | null;
 }
 
-const RUN_ID_STOPS = new Set(['run-not-found', 'run-attacked', 'run-other-version', 'refused-run-output']);
+// 42.4's run-id stops, the digest stop included: none touches the run it refused.
+const RUN_ID_STOPS = new Set(['run-not-found', 'run-attacked', 'run-other-version', 'refused-run-output', 'code-changed']);
 
 export function createRunOutput(options: RunOutputOptions): RunOutput {
   const { args, info, cwd, env, elapsed } = options;
@@ -240,7 +243,7 @@ export function createRunOutput(options: RunOutputOptions): RunOutput {
     },
     stop(stop, { run = null, tail = null } = {}) {
       if (interrupted) return;
-      current = run;
+      current = run ?? (named !== null && !RUN_ID_STOPS.has(stop.code) ? named.run : null);
       // In CI mode the tail placeholder points at the job log (52.4).
       if (ciMode(env, info)) {
         stop = { ...stop, lines: stop.lines.map((l) => (l.startsWith(TAIL_PLACEHOLDER) ? l.replace(/: printed only\)$/, ': in the job log)') : l)) };

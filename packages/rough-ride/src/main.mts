@@ -106,8 +106,10 @@ export async function main(argv: string[]): Promise<void> {
       planText = args.planInput ? readStdin() : null;
       if (args.check) {
         // --check validates against plan's data and runs no flow (45.3).
+        // Past the folder, only run-id stops come before its own check.
+        const folder = ensureFolder(entry(root));
         output.namedRun(runIn(root, args.runId!), false);
-        const result = runPlanCheck({ folder: ensureFolder(entry(root)), root, info, runId: args.runId!, stdin: planText ?? '', elapsed });
+        const result = runPlanCheck({ folder, root, info, runId: args.runId!, stdin: planText ?? '', elapsed });
         return output.finish({ status: result.status === 'stopped' ? 'incomplete' : result.status, exitCode: result.exitCode, lines: result.lines, document: result.document });
       }
       planState = checkRun(ensureFolder(entry(root)), args.runId!, info, new Manifest(root));
@@ -166,16 +168,14 @@ export async function main(argv: string[]): Promise<void> {
     }
     if ((args.subcommand === 'snapshot' || args.subcommand === 'link') && root !== null) {
       const stdin = readStdin();
-      // The block also lands in that run's adversary/summary.txt (46.5).
-      output.namedRun(runIn(root, args.runId!), false);
+      // Once its run-id stops pass, the block also lands in that run's adversary/summary.txt (46.5).
       const call = { ...common, root, folder: entry(root), runId: args.runId!, stdin };
       const result = args.subcommand === 'snapshot' ? await runSnapshot({ ...call, browserFlag: args.browser }) : runLink(call);
       return output.finish({ status: result.status, exitCode: result.exitCode, lines: result.lines, document: result.document });
     }
     if (args.subcommand === 'flow save' && root !== null) {
       const stdin = readStdin();
-      // Under --run the block also lands in that run's adversary/summary.txt (46.5).
-      if (args.runId !== null) output.namedRun(runIn(root, args.runId), false);
+      // Under --run, once its run-id stops pass, the block also lands in that run's adversary/summary.txt (46.5).
       const result = await runFlowSave({
         ...common,
         root,

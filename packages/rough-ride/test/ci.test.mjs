@@ -235,7 +235,7 @@ async function snapshotCall(root, runId, stdin) {
     launches++;
     throw new Error('launched');
   };
-  const ctx = { root, folder: checkRootEntry(root), info: runnerInfo(null, root, env), runId, stdin, browserFlag: null, argv: ['snapshot', '--run', runId], env, notes: [], report: { madeRun() {}, protectedFiles() {}, contract() {} }, elapsed: () => 0, launch };
+  const ctx = { root, folder: checkRootEntry(root), info: runnerInfo(null, root, env), runId, stdin, browserFlag: null, argv: ['snapshot', '--run', runId], env, notes: [], report: { madeRun() {}, namedRun() {}, protectedFiles() {}, contract() {} }, elapsed: () => 0, launch };
   try {
     await runSnapshot(ctx);
     return { launches, error: null };

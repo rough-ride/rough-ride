@@ -185,6 +185,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
   const folder = ensureFolder(ctx.folder);
   // Under --run, 42.4's run-id stops come before anything else.
   const runPlan = ctx.runId !== null ? checkRun(folder, ctx.runId, info, new Manifest(root)) : null;
+  if (ctx.runId !== null) ctx.report.namedRun({ id: ctx.runId, dir: path.join(folder.dir, 'runs', ctx.runId) }, false);
   const parsedNames = ctx.names.map((n) => ({ name: n.split(':')[0]!, item: n.includes(':') ? n.slice(n.indexOf(':') + 1) : null }));
   const files = checkCommittedFiles(folder, { info, subcommand: 'flow save', argv: ctx.argv, env: ctx.env, report: ctx.report });
   ctx.notes.push(...files.notes);
