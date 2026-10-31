@@ -15,6 +15,7 @@ import type { CheckedFiles } from './files.mjs';
 import { describeLocator, type Flow, type LocatorSpec, type Step } from './flowrun.mjs';
 import { compareVersions, type FormatKind } from './formats.mjs';
 import { git } from './git.mjs';
+import { normalHost } from './hosts.mjs';
 import { fileHash, type Manifest } from './manifest.mjs';
 import { canonicalJson, type Note } from './output.mjs';
 import { normalisedText, openReviewed, type ReviewedVersions } from './reviewed.mjs';
@@ -195,7 +196,9 @@ export function effectiveConfig(working: Config | null, reviewed: Config | null,
   const rAllow = reviewed?.allow ?? {};
   const wAllow = working.allow ?? {};
   const notApplied: string[] = [];
-  const added = (wAllow.remoteWrites ?? []).filter((h) => !(rAllow.remoteWrites ?? []).includes(h));
+  // A host is the reviewed one however config.yaml spells it (10.1, 10.4).
+  const reviewedWrites = (rAllow.remoteWrites ?? []).map(normalHost);
+  const added = (wAllow.remoteWrites ?? []).filter((h) => !reviewedWrites.includes(normalHost(h)));
   if (added.length > 0) {
     config.allow = { ...config.allow, remoteWrites: (wAllow.remoteWrites ?? []).filter((h) => !added.includes(h)) };
     for (const host of added) {
@@ -203,7 +206,7 @@ export function effectiveConfig(working: Config | null, reviewed: Config | null,
       lines.push(`config.yaml: allow.remoteWrites adds ${host}, which ${refShown}'s config doesn't have. Not applied until merged; browser writes there are still aborted.`);
     }
   }
-  if (wAllow.remoteTarget && wAllow.remoteTarget !== rAllow.remoteTarget) {
+  if (wAllow.remoteTarget && (!rAllow.remoteTarget || normalHost(wAllow.remoteTarget) !== normalHost(rAllow.remoteTarget))) {
     const allow = { ...config.allow };
     if (rAllow.remoteTarget) allow.remoteTarget = rAllow.remoteTarget;
     else delete allow.remoteTarget;
