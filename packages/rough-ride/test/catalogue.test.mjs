@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildCatalogue, fromRecord, planCandidates, resolveTest, toRecord } from '../dist/catalogue.mjs';
 import { validatePlan } from '../dist/plan.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 import { noteFlow, noteRun, req, signInFlow, signInRun } from './fixtures/catalogue-flows.mjs';
 
 const TODAY = new Date('2026-10-25');
@@ -13,7 +14,7 @@ const flows = () => [
   { flow: noteFlow('quick-note'), runs: [noteRun()], passed: true, reached: true },
   { flow: signInFlow, runs: [signInRun()], passed: true, reached: true },
 ];
-const build = (tier, over = {}) => buildCatalogue({ tier, flows: flows(), docs: [], hosts: { allowed: [], remoteTarget: null }, today: TODAY, ...over });
+const build = (tier, over = {}) => buildCatalogue({ tier, flows: flows(), docs: [], hosts: LOOPBACK_ONLY, today: TODAY, ...over });
 
 const faults = (flow, request, list) => list.map((f) => `${flow}/${request}/${f}`);
 
@@ -90,7 +91,7 @@ test('a field shared by two flows is attacked through the first only; unreached,
       { flow: noteFlow('never-ran'), runs: [], passed: false, reached: true },
     ],
     docs: [],
-    hosts: { allowed: [], remoteTarget: null },
+    hosts: LOOPBACK_ONLY,
     today: TODAY,
   });
   assert.deepEqual([others.share, others.skipped, others.fieldsNotAttacked], [[], [], []]);
@@ -142,7 +143,7 @@ test('bad-input entries: the next inputs not already selected, named by carrying
   ]);
   assert.equal(r.lines.at(-1), 'Rejected plan entry: attacks[3] (POST /api/other is not a form of create-note)');
   assert.ok(r.kept.every((a) => a.rank === 8 && a.badInput));
-  const runless = buildCatalogue({ tier: 'quick', flows: [{ flow: noteFlow('never-ran'), runs: [], passed: false }], docs: [], hosts: { allowed: [], remoteTarget: null }, today: TODAY });
+  const runless = buildCatalogue({ tier: 'quick', flows: [{ flow: noteFlow('never-ran'), runs: [], passed: false }], docs: [], hosts: LOOPBACK_ONLY, today: TODAY });
   const none = validatePlan({ attacks: [entry({ flow: 'never-ran', badInputs: 1, form: 'POST /api/notes' }), entry({ flow: 'never-ran', fault: '500', request: 'POST /api/notes #1' }), entry({ flow: 'never-ran', viewport: 375 })] }, planCandidates(runless, { selected: [], aboveFlows: ['never-ran'] }));
   assert.deepEqual(none.lines, ['Rejected plan entry: attacks[0] (never-ran has no baseline run)', 'Rejected plan entry: attacks[1] (POST /api/notes #1 is not an attack point of never-ran)']);
   assert.deepEqual(none.kept.map((a) => a.id), ['never-ran/viewport-375']);
@@ -165,7 +166,7 @@ const everyEntry = () => {
 
 test('round trip: a recorded catalogue resolves every entry to the same ids and refusals as the fresh one, and holds no bad-input value', () => {
   for (const tier of ['quick', 'standard']) {
-    const fresh = buildCatalogue({ tier, flows: [...flows(), { flow: noteFlow('never-ran'), runs: [], passed: false }], docs: [], hosts: { allowed: [], remoteTarget: null }, today: TODAY });
+    const fresh = buildCatalogue({ tier, flows: [...flows(), { flow: noteFlow('never-ran'), runs: [], passed: false }], docs: [], hosts: LOOPBACK_ONLY, today: TODAY });
     const scope = { selected: fresh.share.map((a) => a.id), aboveFlows: [...new Set(fresh.share.map((a) => a.flow)), 'never-ran'] };
     const text = JSON.stringify(toRecord(fresh, scope));
     for (const value of fresh.share.map((a) => a.badInput?.value ?? '').filter((v) => v.length >= 20)) assert.ok(!text.includes(value.slice(0, 20)), 'no bad-input value is recorded');
@@ -183,7 +184,7 @@ test('round trip: a recorded catalogue resolves every entry to the same ids and 
 });
 
 // regress and repro: one flow's catalogue from this invocation's baseline run (25.3).
-const testOn = (run) => buildCatalogue({ tier: 'standard', flows: [{ flow: noteFlow('create-note'), runs: [run], passed: true }], docs: [], hosts: { allowed: [], remoteTarget: null }, today: TODAY });
+const testOn = (run) => buildCatalogue({ tier: 'standard', flows: [{ flow: noteFlow('create-note'), runs: [run], passed: true }], docs: [], hosts: LOOPBACK_ONLY, today: TODAY });
 const resolve = (run, attack) => resolveTest(testOn(run), 'create-note', attack);
 const fault = { fault: '500', sticky: true, request: 'POST /api/notes #1', page: '/notes/new' };
 

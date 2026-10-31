@@ -18,7 +18,8 @@ import { ensureFolder, type FolderState } from './folder.mjs';
 import type { Flow } from './flowrun.mjs';
 import { runFlow } from './flowrun.mjs';
 import { SEVERITY_TEXT } from './groups.mjs';
-import { LocalhostGuard, type GuardPolicy } from './guard.mjs';
+import { LocalhostGuard } from './guard.mjs';
+import { hostPolicy } from './hosts.mjs';
 import { takeFlowLock } from './lock.mjs';
 import { Manifest } from './manifest.mjs';
 import { fetchOpenApi, rekey } from './openapi.mjs';
@@ -115,11 +116,10 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
   const lock = takeFlowLock(root, ctx.notes);
   const run = createRunFolder(folder, 'repro');
   pruneRuns(folder, lock, run.id);
-  const policy: GuardPolicy = { remoteTarget: config?.allow?.remoteTarget ?? null, remoteWrites: config?.allow?.remoteWrites ?? [] };
-  const allowed = [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h);
+  const hosts = hostPolicy(config?.allow);
   const choice = chooseBrowser(ctx.browserFlag, config?.browser ?? null, installedOnThisMachine(ctx.env));
   const launched = ctx.launch ? await ctx.launch(choice.name) : await launchBrowser(choice, ctx.notes);
-  const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, policy) : undefined;
+  const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, hosts) : undefined;
   const lead = [...rec.failedChecks].map((c) => c.id).sort((a, b) => checkRank(a) - checkRank(b))[0] ?? null;
   let verdict: 'reproduced' | 'did not reproduce' | string = 'did not reproduce';
   let exitCode: 0 | 1 | 2 = 0;
@@ -132,7 +132,7 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
     const signedIn = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, waitUntil: target.apiWaitUntil });
     const credentials = credentialStrings(signedIn.storageState);
     const base = {
-      browser: launched.browser, baseURL: target.url, env: read, ready, exclude, allowedHosts: allowed,
+      browser: launched.browser, baseURL: target.url, env: read, ready, exclude, hosts,
       storageState: flow.signedIn ? signedIn.storageState : undefined, credentials, guard,
     };
     const baseline = flow.name === 'sign-in' && signedIn.result ? signedIn.result : await runFlow({ ...base, flow, shots: 'all' });
@@ -142,7 +142,7 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
     } else {
       const docs = await fetchOpenApi(apiOrigins(target, [baseline]), [baseline]);
       rekey(baseline, docs);
-      const catalogue = buildCatalogue({ tier: 'standard', flows: [{ flow, runs: [baseline], passed: true }], docs, hosts: { allowed, remoteTarget: policy.remoteTarget }, today: new Date() });
+      const catalogue = buildCatalogue({ tier: 'standard', flows: [{ flow, runs: [baseline], passed: true }], docs, hosts, today: new Date() });
       const resolved = resolveTest(catalogue, flow.name, rec.attack);
       if ('stale' in resolved || 'pass' in resolved) {
         verdict = `could not apply: ${'stale' in resolved ? resolved.stale : resolved.pass}`;

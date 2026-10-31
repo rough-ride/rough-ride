@@ -15,7 +15,8 @@ import { stopWith } from './exit.mjs';
 import { checkCommittedFiles, wroteFile } from './files.mjs';
 import { ensureFolder, type FolderState } from './folder.mjs';
 import { runFlow, type Flow, type FlowRunResult, type RunFlowOptions } from './flowrun.mjs';
-import { allowedSuffix, LocalhostGuard, type GuardPolicy } from './guard.mjs';
+import { allowedSuffix, LocalhostGuard } from './guard.mjs';
+import { hostPolicy, type HostPolicy } from './hosts.mjs';
 import { takeFlowLock } from './lock.mjs';
 import { Manifest } from './manifest.mjs';
 import { fetchOpenApi, rekey, type OpenApiDoc } from './openapi.mjs';
@@ -86,8 +87,7 @@ export async function runTestOnce(
   flow: Flow,
   baseline: FlowRunResult,
   docs: OpenApiDoc[],
-  options: Omit<RunFlowOptions, 'flow'>,
-  resolve: { allowed: string[]; remoteTarget: string | null },
+  options: Omit<RunFlowOptions, 'flow'> & { hosts: HostPolicy },
 ): Promise<FirstRun> {
   const own = Intl.DateTimeFormat().resolvedOptions();
   const pin = value.context && (value.context.timezone !== own.timeZone || value.context.locale !== own.locale) ? value.context : undefined;
@@ -98,7 +98,7 @@ export async function runTestOnce(
     rekey(pinned, docs);
     base = pinned;
   }
-  const catalogue = buildCatalogue({ tier: 'standard', flows: [{ flow, runs: [base], passed: true }], docs, hosts: resolve, today: new Date() });
+  const catalogue = buildCatalogue({ tier: 'standard', flows: [{ flow, runs: [base], passed: true }], docs, hosts: options.hosts, today: new Date() });
   const resolved = resolveTest(catalogue, flow.name, value.attack);
   if ('stale' in resolved) return { judgement: null, stale: resolved.stale, pass: null, attack: null, outcome: null };
   if ('pass' in resolved) return { judgement: null, stale: null, pass: resolved.pass, attack: null, outcome: null };
@@ -184,11 +184,10 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
   const lock = takeFlowLock(root, ctx.notes);
   const run = createRunFolder(folder, 'regress');
   pruneRuns(folder, lock, run.id);
-  const policy: GuardPolicy = { remoteTarget: config?.allow?.remoteTarget ?? null, remoteWrites: config?.allow?.remoteWrites ?? [] };
-  const allowed = [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h);
+  const hosts = hostPolicy(config?.allow);
   const choice = chooseBrowser(ctx.browserFlag, config?.browser ?? null, installedOnThisMachine(ctx.env));
   const launched = ctx.launch ? await ctx.launch(choice.name) : await launchBrowser(choice, ctx.notes);
-  const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, policy) : undefined;
+  const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, hosts) : undefined;
   const results: TestResult[] = [];
   const startedAt = new Date().toISOString();
   const processStart = Date.now() - ctx.elapsed();
@@ -203,7 +202,7 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
     let credentials = credentialStrings(signInOutcome.storageState);
     const lanes = lanesFor(availableParallelism());
     const base = (f: Flow) => ({
-      browser: launched.browser, baseURL: target.url, env: read, ready, exclude, allowedHosts: allowed,
+      browser: launched.browser, baseURL: target.url, env: read, ready, exclude, hosts,
       storageState: f.signedIn ? signInOutcome.storageState : undefined, credentials, guard,
       ...(info.pluginData ? { deadline: bashDeadline(true, processStart) } : {}),
     });
@@ -243,7 +242,7 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
       if (flow.signedIn && !signInOutcome.passed) return first.set(t.name, { judgement: null, stale: 'sign-in failed', pass: null, attack: null, outcome: null });
       const baseline = baselines.get(name);
       if (!baseline) return first.set(t.name, { judgement: null, stale: bashSkipped.has(name) ? 'stopped by the Bash time limit' : `${name} failed its baseline run`, pass: null, attack: null, outcome: null });
-      first.set(t.name, await runTestOnce(t.value as unknown as TestValue, flow, baseline, docs, base(flow), { allowed, remoteTarget: policy.remoteTarget }));
+      first.set(t.name, await runTestOnce(t.value as unknown as TestValue, flow, baseline, docs, base(flow)));
     };
     await inLanes(lanes, tests.filter((t) => t.value.flow !== 'sign-in').map((t) => () => runTest(t)));
     await inLanes(lanes, tests.filter((t) => t.value.flow === 'sign-in').map((t) => () => runTest(t)));
@@ -328,7 +327,7 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
   const report = [
     head1,
     `started ${startedAt}`,
-    `target: ${target.url}${allowedSuffix(policy)}`,
+    `target: ${target.url}${allowedSuffix(hosts)}`,
     '',
     ...ctx.notes.map((n) => n.text),
     ...protectedReport(prot),

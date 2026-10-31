@@ -5,11 +5,12 @@
 // so are regression tests and repros (part 6 section 25.3). plan records it, so
 // the attack invocation and `attack --check` name the same attacks.
 
-import { attackPoints, badInputAttack, doubleSubmitPoints, outOfOrderPoints, ownHostFor, pageTimingPoints, viewportAttack, type PlannedAttack } from './attacks.mjs';
+import { attackPoints, badInputAttack, doubleSubmitPoints, outOfOrderPoints, pageTimingPoints, viewportAttack, type PlannedAttack } from './attacks.mjs';
 import { planBadInputs, tierInputs } from './badinputs.mjs';
 import { attackId, type FaultId } from './faults.mjs';
 import { findForms, type Form } from './forms.mjs';
-import { describeLocator, isLoopbackHostname, stepKind, type Flow, type FlowRunResult, type LocatorSpec } from './flowrun.mjs';
+import { describeLocator, stepKind, type Flow, type FlowRunResult, type LocatorSpec } from './flowrun.mjs';
+import type { HostPolicy } from './hosts.mjs';
 import type { OpenApiDoc } from './openapi.mjs';
 import type { Candidates } from './plan.mjs';
 import type { TierName } from './tiers.mjs';
@@ -39,8 +40,7 @@ export interface CatalogueInput {
   flows: CatalogueFlowInput[];
   changedEndpoints?: Set<string>;
   docs: OpenApiDoc[];
-  // Requests to these hosts are the target's own; body faults forward only to loopback and remoteTarget.
-  hosts: { allowed: string[]; remoteTarget: string | null };
+  hosts: HostPolicy;
   // The session holds no credential: no signed-out-reload in the share.
   noCredential?: boolean;
   today: Date;
@@ -82,8 +82,7 @@ interface Inside {
     flows: Map<string, FreshFlow>;
     docs: OpenApiDoc[];
     changed: Set<string>;
-    ownHost: (url: string) => boolean;
-    forwardable: (url: string) => boolean;
+    hosts: HostPolicy;
     today: Date;
   } | null;
 }
@@ -92,15 +91,8 @@ interface Inside {
 const inside = new WeakMap<Catalogue, Inside>();
 
 export function buildCatalogue(input: CatalogueInput): Catalogue {
-  const ownHost = ownHostFor(input.hosts.allowed);
-  const forwardable = (url: string) => {
-    try {
-      const host = new URL(url).hostname;
-      return isLoopbackHostname(host) || host === input.hosts.remoteTarget;
-    } catch {
-      return false;
-    }
-  };
+  const { hosts } = input;
+  const ownHost = hosts.ownHost;
   const changed = input.changedEndpoints ?? new Set<string>();
   const share: PlannedAttack[] = [];
   const skipped: string[] = [];
@@ -117,7 +109,7 @@ export function buildCatalogue(input: CatalogueInput): Catalogue {
     const reachesByRule = f.reachesByRule ?? false;
     const forms = f.forms ?? (baseline ? findForms(f.flow, baseline, ownHost, changed) : []);
     // A plan entry may name any fault kind on any flow with a baseline run (45.4).
-    const faults = baseline ? attackPoints(f.flow, baseline, ownHost, changed, firstLoad, { tier: 'standard', signInFlow: signIn, forwardable, docs: input.docs }) : [];
+    const faults = baseline ? attackPoints(f.flow, baseline, hosts, changed, firstLoad, { tier: 'standard', signInFlow: signIn, docs: input.docs }) : [];
     // validatePlan refuses bad inputs on the sign-in flow before asking for them.
     const allInputs = baseline ? planBadInputs(f.flow, baseline, forms, input.docs, { signInFlow: false, today: input.today }) : null;
     const inputs = (allInputs?.inputs ?? []).map((p) => badInputAttack(name, p, 2, firstLoad));
@@ -130,7 +122,7 @@ export function buildCatalogue(input: CatalogueInput): Catalogue {
     freshFlows.set(name, { faults, inputs, viewport: signIn ? null : viewportAttack(f.flow, reachesByRule), flow: f.flow, runs: f.runs, forms, firstLoad, reachesByRule });
 
     if (!f.reached || !f.passed || !baseline) continue;
-    const points = input.tier === 'standard' ? faults : attackPoints(f.flow, baseline, ownHost, changed, firstLoad, { tier: input.tier, signInFlow: signIn, forwardable, docs: input.docs });
+    const points = input.tier === 'standard' ? faults : attackPoints(f.flow, baseline, hosts, changed, firstLoad, { tier: input.tier, signInFlow: signIn, docs: input.docs });
     skipped.push(...(points.skipped ?? []));
     // double-submit in both tiers (32.9), and one viewport attack per reached flow (22.3); neither on the sign-in flow.
     const doubles = doubleSubmitPoints(f.flow, baseline, ownHost, changed, firstLoad, signIn);
@@ -159,7 +151,7 @@ export function buildCatalogue(input: CatalogueInput): Catalogue {
     tier: input.tier,
     flows,
     fieldOwner,
-    fresh: { flows: freshFlows, docs: input.docs, changed, ownHost, forwardable, today: input.today },
+    fresh: { flows: freshFlows, docs: input.docs, changed, hosts, today: input.today },
   });
   return catalogue;
 }
@@ -306,7 +298,7 @@ export function resolveTest(catalogue: Catalogue, name: string, a: Record<string
   if (a.viewport !== undefined) return { attack: viewportAttack(flow, f.reachesByRule) };
   if (a.timing === 'double-submit') {
     const request = String(a.request);
-    const found = doubleSubmitPoints(flow, baseline, fresh.ownHost, fresh.changed, firstLoad, signIn).find((p) => p.key === request);
+    const found = doubleSubmitPoints(flow, baseline, fresh.hosts.ownHost, fresh.changed, firstLoad, signIn).find((p) => p.key === request);
     if (found) return found.page === a.page ? { attack: found } : { stale: `attack point moved (${request} is now sent on ${found.page ?? '?'}, was ${String(a.page)})` };
     const q = baseline.requests.find((r) => r.key === request);
     if (q) {
@@ -317,7 +309,7 @@ export function resolveTest(catalogue: Catalogue, name: string, a: Record<string
     return { stale: `fault never fired (${request} not sent)` };
   }
   if (a.timing === 'out-of-order') {
-    const found = outOfOrderPoints(flow, baseline, forms, fresh.ownHost, fresh.changed, firstLoad, signIn).find((p) => p.template === a.request && p.outOfOrder?.fieldKey === a.field);
+    const found = outOfOrderPoints(flow, baseline, forms, fresh.hosts.ownHost, fresh.changed, firstLoad, signIn).find((p) => p.template === a.request && p.outOfOrder?.fieldKey === a.field);
     return found ? { attack: found } : { stale: 'field not found' };
   }
   if (a.timing === 'refresh' || a.timing === 'back' || a.timing === 'signed-out-reload') {

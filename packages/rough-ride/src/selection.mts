@@ -6,7 +6,8 @@ import { account, type Accounting, type AttackLink, type FlowInfo } from './acco
 import { traceBackend, type BackendResult } from './backend.mjs';
 import type { Diff } from './diff.mjs';
 import { findForms, flowClass, orderFlows, type FlowClass, type Form } from './forms.mjs';
-import { isFrameworkInternal, isLoopbackHostname, type Flow, type FlowRunResult } from './flowrun.mjs';
+import { isFrameworkInternal, type Flow, type FlowRunResult } from './flowrun.mjs';
+import type { HostPolicy } from './hosts.mjs';
 import { apiOrigins, fetchOpenApi, rekey, type OpenApiDoc } from './openapi.mjs';
 import { repoFiles, reachedVia, traceReach, type TracingResult } from './tracing.mjs';
 
@@ -41,8 +42,7 @@ export async function select(options: {
   root: string;
   nuxtRoot: string | null;
   noProvenRoot: boolean;
-  remoteTarget: string | null;
-  allowedHosts: string[];
+  hosts: HostPolicy;
   diff: Diff;
   flows: FlowRuns[];
   signIn: 'none' | 'passed' | 'failed';
@@ -51,7 +51,7 @@ export async function select(options: {
   tier: string;
 }): Promise<Selection> {
   const results = options.flows.flatMap((f) => f.runs);
-  const docs = await fetchOpenApi(apiOrigins(results, options.remoteTarget), results);
+  const docs = await fetchOpenApi(apiOrigins(results, options.hosts), results);
   for (const r of results) rekey(r, docs);
   const files = repoFiles(options.root);
   const backend = traceBackend({
@@ -77,14 +77,7 @@ export async function select(options: {
   }
 
   const changedEndpoints = new Set(backend.endpoints.map((e) => e.endpoint));
-  const ownHost = (url: string) => {
-    try {
-      const host = new URL(url).hostname;
-      return isLoopbackHostname(host) || options.allowedHosts.includes(host);
-    } catch {
-      return false;
-    }
-  };
+  const ownHost = options.hosts.ownHost;
   const via = reachedVia(tracing, options.diff.files);
   const formsByFlow = new Map<string, Form[]>();
   const flowInfo: FlowInfo[] = [];

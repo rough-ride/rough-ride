@@ -1,6 +1,7 @@
 // OpenAPI documents and request keys (spec part 4 section 16.4).
 
-import { isFrameworkInternal, isLoopbackHostname, type FlowRunResult } from './flowrun.mjs';
+import { isFrameworkInternal, type FlowRunResult } from './flowrun.mjs';
+import type { HostPolicy } from './hosts.mjs';
 
 export interface OpenApiDoc {
   origin: string;
@@ -15,19 +16,13 @@ export interface OpenApiDoc {
 
 const METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'];
 
-// The loopback origins (and the allowed remote target) the footprints sent
-// fetch or XHR requests to.
-export function apiOrigins(results: FlowRunResult[], remoteTarget: string | null): string[] {
+// The origins on forwardable hosts (loopback and the allowed remote target)
+// the footprints sent fetch or XHR requests to: the only ones the runner asks.
+export function apiOrigins(results: FlowRunResult[], hosts: HostPolicy): string[] {
   const origins = new Set<string>();
   for (const r of results) {
     for (const q of r.requests) {
-      if (q.resourceType !== 'fetch' && q.resourceType !== 'xhr') continue;
-      try {
-        const u = new URL(q.url);
-        if (isLoopbackHostname(u.hostname) || u.hostname === remoteTarget) origins.add(u.origin);
-      } catch {
-        // Not a URL with an origin.
-      }
+      if ((q.resourceType === 'fetch' || q.resourceType === 'xhr') && hosts.forwardable(q.url)) origins.add(new URL(q.url).origin);
     }
   }
   return [...origins].sort();

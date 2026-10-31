@@ -17,7 +17,8 @@ import { ensureFolder, folderNotes, nestedFoldersNote, readFolderFile, type Fold
 import { DELAY_MS, holdMsFor, RETRY_AFTER } from './faults.mjs';
 import { describeLocator, envNames, runFlow, S, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type ReadyWait } from './flowrun.mjs';
 import { FORMATS, type FormatsReport } from './formats.mjs';
-import { allowedSuffix, LocalhostGuard, type GuardPolicy } from './guard.mjs';
+import { allowedSuffix, LocalhostGuard } from './guard.mjs';
+import { hostPolicy } from './hosts.mjs';
 import { takeFlowLock } from './lock.mjs';
 import { canonicalJson, formatDuration, type Note } from './output.mjs';
 import { ciMode, environmentRecord, followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
@@ -45,7 +46,7 @@ import { findTarget, type Target } from './target.mjs';
 import { reachedVia } from './tracing.mjs';
 import { reachCounts, select, type Selection } from './selection.mjs';
 import { account, notAttackedLines, nothingAttackedLine, reportNotAttacked, SCOPE_LINE } from './accounting.mjs';
-import { attackLink, groupLines, nonFinding, orderAttacks, timingDedupeKey, ownHostFor, runAttack, symptom as symptomOf, type AttackOutcome, type PlannedAttack } from './attacks.mjs';
+import { attackLink, groupLines, nonFinding, orderAttacks, timingDedupeKey, runAttack, symptom as symptomOf, type AttackOutcome, type PlannedAttack } from './attacks.mjs';
 import { baselineFailures, checkLabel } from './checks.mjs';
 import { baselineGate, inlineChecks, probeFor, shapeOf, specFacts, type AppCheck, type PointProbe } from './appchecks.mjs';
 import { cmp, confirmGroups, groupFindings, memberOf, SEVERITY_TEXT, type Group } from './groups.mjs';
@@ -206,11 +207,11 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   const patchBytes = diffPatch(root, diff);
   writeAtomic(folder, ['runs', run.id, 'diff.patch'], patchBytes);
 
-  const policy: GuardPolicy = { remoteTarget: config?.allow?.remoteTarget ?? null, remoteWrites: config?.allow?.remoteWrites ?? [] };
+  const hosts = hostPolicy(config?.allow);
   const choice = chooseBrowser(ctx.browserFlag, config?.browser ?? null, installedOnThisMachine(ctx.env));
   ctx.progress('Starting the browser');
   const launched = ctx.launch ? await ctx.launch(choice.name) : await launchBrowser(choice, ctx.notes);
-  const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, policy) : undefined;
+  const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, hosts) : undefined;
   let signInOutcome: SignInOutcome;
   let outcomes: BaselineOutcome[] = [];
   let selection: Selection | undefined;
@@ -324,7 +325,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
           env: read,
           ready,
           exclude,
-          allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
+          hosts,
           storageState: f.signedIn ? signInOutcome.storageState : undefined,
           credentials,
           guard,
@@ -362,7 +363,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
             env: read,
             ready,
             exclude,
-            allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
+            hosts,
             storageState: flow.signedIn ? signInOutcome.storageState : undefined,
             credentials,
             guard,
@@ -394,8 +395,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       root,
       nuxtRoot: target.nuxtRoot?.rel ?? null,
       noProvenRoot: target.proof === 'config' && target.nuxtRoot === null,
-      remoteTarget: policy.remoteTarget,
-      allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
+      hosts,
       diff,
       flows: [
         ...(signInOutcome.result ? [{ flow: flows.find((f) => f.name === 'sign-in')!, passed: signInOutcome.passed, excluded: signInOutcome.result.excluded !== null, runs: [signInOutcome.result] }] : []),
@@ -409,7 +409,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
 
     // Attacks: flow by flow in selection order, the sign-in flow's last (17.7).
     const sel0 = selection;
-    const ownHost = ownHostFor([policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h));
+    const ownHost = hosts.ownHost;
     const changedFiles = new Set(diff.files.map((f) => f.path));
     const runsOf = (name: string) => (name === 'sign-in' ? (signInOutcome.result ? [signInOutcome.result] : []) : outcomes.find((o) => o.flow.name === name)?.runs ?? []);
     // attack: flows kept in this run go after every saved flow, so planned attacks keep
@@ -442,7 +442,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       }),
       changedEndpoints: sel0.changedEndpoints,
       docs: sel0.docs,
-      hosts: { allowed: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h), remoteTarget: policy.remoteTarget },
+      hosts,
       noCredential: credentials.length === 0 && (signInOutcome.storageState?.cookies ?? []).filter((c) => ownHost(`http://${c.domain.replace(/^\./, '')}/`)).length === 0,
       today: new Date(),
     });
@@ -653,7 +653,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
           env: read,
           ready,
           exclude,
-          allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
+          hosts,
           storageState: flow.signedIn ? signInOutcome.storageState : undefined,
           credentials,
           guard,
@@ -737,7 +737,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       testsOverBudget = orderedTests.slice(spec.tests).map((t) => t.name);
       const attackBase = (flow: Flow) => ({
         browser: launched.browser, baseURL: target.url, env: read, ready, exclude,
-        allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
+        hosts,
         storageState: flow.signedIn ? signInOutcome.storageState : undefined, credentials, guard, deadline: hardStopAt,
       });
       const runTest = async (t: (typeof tierTests)[number]) => {
@@ -751,7 +751,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
           testFirst.set(t.name, { judgement: null, stale: flow ? `${flow.name} failed its baseline run` : `flow ${String(t.value.flow)} is missing or invalid`, pass: null, attack: null, outcome: null });
           return;
         }
-        testFirst.set(t.name, await runTestOnce(t.value as unknown as TestValue, flow, baseline, sel0.docs, attackBase(flow), { allowed: attackBase(flow).allowedHosts, remoteTarget: policy.remoteTarget }));
+        testFirst.set(t.name, await runTestOnce(t.value as unknown as TestValue, flow, baseline, sel0.docs, attackBase(flow)));
       };
       await inLanes(lanesNow(), tierTests.filter((t) => t.value.flow !== 'sign-in').map((t) => () => runTest(t)));
       const above = cut.items.filter((x) => x.aboveCut);
@@ -847,7 +847,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
           env: read,
           ready,
           exclude,
-          allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
+          hosts,
           storageState: flow.signedIn ? signInOutcome.storageState : undefined,
           credentials,
           guard,
@@ -1091,7 +1091,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   const proof = target.proof === 'nuxt-lock' ? 'proven Nuxt dev server' : 'target.url in config.yaml';
   const header3 = `target: ${target.url} (${proof}${target.started ? ', started by --start' : ''})` +
     (origins.length > 0 ? ` | API ${origins.join(', ')}` : '') +
-    ` | ${SHORT_TITLES[launched.name]} ${launched.version}${allowedSuffix(policy)}`;
+    ` | ${SHORT_TITLES[launched.name]} ${launched.version}${allowedSuffix(hosts)}`;
   const header = [header1.join(' | '), headerLine2(diff) + reachCounts(sel), header3];
 
   // Flows.
@@ -1134,7 +1134,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
     const outside = !selection!.ordered.some((o) => o.name === name);
     const flow = flows.find((x) => x.name === name);
     for (const f of baselineFailures(r)) {
-      if (flow && acceptsBaseline(acceptedList, baselineKey(flow, r, f.step, f.page, ownHostFor([policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h))), f.id, `fails with no attack: ${name} step ${f.step}`)) continue;
+      if (flow && acceptsBaseline(acceptedList, baselineKey(flow, r, f.step, f.page, hosts.ownHost), f.id, `fails with no attack: ${name} step ${f.step}`)) continue;
       failsNoAttack.push({ flow: name, check: f.id, step: f.step, page: f.page, outside });
     }
   }
@@ -1408,7 +1408,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       started: target.started,
       apiOrigins: origins,
       browser: { channel: launched.name, version: launched.version },
-      allowed: { remoteTarget: policy.remoteTarget, remoteWrites: policy.remoteWrites },
+      allowed: { remoteTarget: hosts.remoteTarget, remoteWrites: hosts.remoteWrites },
     },
     flows: {
       signIn: !signInOutcome!.ran ? 'none' : signInOutcome!.passed ? 'passed' : 'failed',

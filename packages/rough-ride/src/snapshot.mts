@@ -12,7 +12,8 @@ import { checkCommittedFiles, wroteFile } from './files.mjs';
 import { ensureFolder, type FolderState } from './folder.mjs';
 import { runFlow, type Flow, type Step } from './flowrun.mjs';
 import { splitDocuments, staticRefusal, MAX_INPUT } from './flowsave.mjs';
-import { LocalhostGuard, type GuardPolicy } from './guard.mjs';
+import { LocalhostGuard } from './guard.mjs';
+import { hostPolicy } from './hosts.mjs';
 import { takeFlowLock } from './lock.mjs';
 import { Manifest } from './manifest.mjs';
 import { formatDuration, type Note } from './output.mjs';
@@ -127,11 +128,10 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
     const target = await findTarget({ root, config, configSchema: files.config?.schema?.text ?? null, start: false, pluginData: info.pluginData?.path ?? null, againCommand: tierCommand(info, plan.tier), notes: ctx.notes });
     wroteFile(files, info, root, target.nuxtRoot?.rel ?? null, ctx.argv);
     const lock = takeFlowLock(root, ctx.notes);
-    const policy: GuardPolicy = { remoteTarget: config?.allow?.remoteTarget ?? null, remoteWrites: config?.allow?.remoteWrites ?? [] };
-    const allowed = [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h);
+    const hosts = hostPolicy(config?.allow);
     const choice = chooseBrowser(ctx.browserFlag, config?.browser ?? null, installedOnThisMachine(ctx.env));
     const launched = ctx.launch ? await ctx.launch(choice.name) : await launchBrowser(choice, ctx.notes);
-    const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, policy) : undefined;
+    const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, hosts) : undefined;
     const processStart = Date.now() - ctx.elapsed();
     const bashStop = bashDeadline(!!info.pluginData, processStart);
     try {
@@ -160,7 +160,7 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
           writeAtomic(folder, ['runs', ctx.runId, 'adversary', 'snapshots', `${d.k}.json`], snap.text);
         };
         const result = await runFlow({
-          browser: launched.browser, baseURL: target.url, flow, env: read, ready, exclude, allowedHosts: allowed, guard, unique,
+          browser: launched.browser, baseURL: target.url, flow, env: read, ready, exclude, hosts, guard, unique,
           storageState: flow.signedIn ? session?.storageState ?? undefined : undefined,
           untrusted: true,
           deadline: bashStop,

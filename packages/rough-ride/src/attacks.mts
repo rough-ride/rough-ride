@@ -8,10 +8,11 @@ import { fieldKind, requestKey, type BadInputPlan } from './badinputs.mjs';
 import { judgeAppChecks, matchesWhen, probeFor, type AppCheck } from './appchecks.mjs';
 import { baselineFailures, checkLabel, checkSeverity, judgeBadInput, judgeFault, judgeOutOfOrder, judgePageTiming, judgeTiming, judgeViewport, leadCheck, TOGGLE_HINT, type CheckResult } from './checks.mjs';
 import { SEVERITY_TEXT, type Group } from './groups.mjs';
+import { LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
 import { membersText } from './summary.mjs';
 import { attackId, emptyForm, FAULT_PHRASE, isJsonMedia, kindsFor, responseSchema, type BodyKind, type FaultId } from './faults.mjs';
 import type { Form } from './forms.mjs';
-import { describeLocator, isFrameworkInternal, isLoopbackHostname, runFlow, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type RequestRecord, type RunFlowOptions, type Served } from './flowrun.mjs';
+import { describeLocator, isFrameworkInternal, runFlow, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type RequestRecord, type RunFlowOptions, type Served } from './flowrun.mjs';
 import { matchTemplate, type OpenApiDoc } from './openapi.mjs';
 
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -65,17 +66,6 @@ export interface AttackOutcome extends PlannedAttack {
   run: FlowRunResult;
 }
 
-export function ownHostFor(allowed: string[]) {
-  return (url: string) => {
-    try {
-      const host = new URL(url).hostname;
-      return isLoopbackHostname(host) || allowed.includes(host);
-    } catch {
-      return false;
-    }
-  };
-}
-
 // Templates the baseline run repeated at a steady interval in one step: polling.
 export function pollingKeys(run: FlowRunResult): Set<string> {
   const out = new Set<string>();
@@ -98,8 +88,6 @@ export interface PointOptions {
   tier?: string;
   // The flow is the sign-in flow.
   signInFlow?: boolean;
-  // Body faults forward only to loopback and allow.remoteTarget (resolution 4).
-  forwardable?: (url: string) => boolean;
   docs?: OpenApiDoc[];
 }
 
@@ -121,12 +109,13 @@ export function bodyKindOf(q: RequestRecord, template: string, docs: OpenApiDoc[
 }
 
 // Each own-origin fetch or XHR request of the baseline run is an attack point;
-// the tier's fault kinds that apply to it become attacks (20.2, 20.12).
-// Kinds that can't apply give `Skipped: <fault> on <request key> (<reason>)`.
+// the tier's fault kinds that apply to it become attacks (20.2, 20.12). Body
+// faults forward only to forwardable hosts (resolution 4). Kinds that can't
+// apply give `Skipped: <fault> on <request key> (<reason>)`.
 export function attackPoints(
   flow: Flow,
   baseline: FlowRunResult,
-  ownHost: (url: string) => boolean,
+  hosts: HostPolicy,
   changed: Set<string>,
   firstLoadOfChange: number | null,
   options: PointOptions = {},
@@ -134,17 +123,10 @@ export function attackPoints(
   const out: PlannedAttack[] & { skipped?: string[] } = [];
   const skipped: string[] = [];
   const kinds = kindsFor(options.tier ?? 'quick');
-  const forwardable = options.forwardable ?? ((url: string) => {
-    try {
-      return isLoopbackHostname(new URL(url).hostname);
-    } catch {
-      return false;
-    }
-  });
   const seenInStep = new Map<string, number>();
   for (const q of baseline.requests) {
     if (q.resourceType !== 'fetch' && q.resourceType !== 'xhr') continue;
-    if (!ownHost(q.url) || isFrameworkInternal(q.url) || q.step === 0) continue;
+    if (!hosts.ownHost(q.url) || isFrameworkInternal(q.url) || q.step === 0) continue;
     const template = q.key.replace(/ #\d+$/, '');
     const stepKey = `${q.step}|${template}`;
     const k = (seenInStep.get(stepKey) ?? 0) + 1;
@@ -174,7 +156,7 @@ export function attackPoints(
           break;
         case 'json-gets':
         case 'empty-form-gets': {
-          const why = bodyFaultSkip(q, forwardable);
+          const why = bodyFaultSkip(q, hosts.forwardable);
           if (why) {
             skip(kind.fault, why);
             continue;
@@ -479,7 +461,7 @@ export async function runAttack(
   if (matching.length === 0) return runJudged(attack, flow, baseline, base, docs);
   const probe = probeFor(matching);
   const o = await runJudged(attack, flow, baseline, { ...base, onPoint: probe.onPoint }, docs);
-  const results = judgeAppChecks(matching, attack, flow, o.run, probe.probes, o.verdict, ownHostFor(base.allowedHosts ?? []));
+  const results = judgeAppChecks(matching, attack, flow, o.run, probe.probes, o.verdict, (base.hosts ?? LOOPBACK_ONLY).ownHost);
   return { ...o, checks: [...o.checks, ...results], verdict: o.verdict === 'passed' && results.some((r) => r.result === 'fail') ? 'failed' : o.verdict };
 }
 
@@ -591,7 +573,7 @@ async function runJudged(
   }
   if (attack.kind === 'timing') {
     const run = await runFlow({ ...base, flow, timing: { kind: 'double-submit', step: attack.step }, templateOf, pollingKeys: pollingKeys(baseline), shots: [attack.step] });
-    const own = ownHostFor(base.allowedHosts ?? []);
+    const own = (base.hosts ?? LOOPBACK_ONLY).ownHost;
     const judged = judgeTiming(run, baseline, attack.step, skipped, own);
     const writes = run.requests.filter((q) => q.step === attack.step && WRITES.has(q.method) && (q.resourceType === 'fetch' || q.resourceType === 'xhr') && own(q.url));
     return {

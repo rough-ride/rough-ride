@@ -5,6 +5,7 @@ import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/br
 import { runFlow } from '../dist/flowrun.mjs';
 import { attackKey } from '../dist/record.mjs';
 import { startPageSite } from './fixtures/page-site.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 
 let browser;
 let site;
@@ -17,7 +18,7 @@ after(async () => {
   site?.close();
 });
 
-const base = (extra = {}) => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, allowedHosts: [], ...extra });
+const base = (extra = {}) => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY, ...extra });
 const newFlow = (mode, signedIn = false) => ({ name: 'create-note', signedIn, steps: [{ goto: `/?mode=${mode}` }, { click: { role: 'link', name: 'New' } }, { expect: { role: 'heading', name: 'New' } }] });
 const check = (o, id) => o.checks.find((c) => c.id === id);
 

@@ -10,6 +10,7 @@ import type { Config } from './config.mjs';
 import { makeStop, StopError, stopWith } from './exit.mjs';
 import { readFolderFile, type FolderState } from './folder.mjs';
 import type { LocalhostGuard } from './guard.mjs';
+import type { HostPolicy } from './hosts.mjs';
 import { envNames, runFlow, type Flow, type FlowRunResult, type ReadyWait, type RunFlowOptions } from './flowrun.mjs';
 import { addSecret, addSessionSecrets } from './secrets.mjs';
 import { redact, runToEnd } from './start.mjs';
@@ -138,9 +139,9 @@ export async function signIn(options: {
   exclude?: string[];
   // The Bash tool's 550 s stop, with a plugin data folder.
   deadline?: number;
-  // flow save's own sign-in flow runs untrusted (44.5), with the guard and allowed hosts.
+  // flow save's own sign-in flow runs untrusted (44.5), with the guard and the host rules.
   untrusted?: boolean;
-  allowedHosts?: string[];
+  hosts?: HostPolicy;
   guard?: LocalhostGuard;
   // App-specific checks' baseline probe (45.8 gate 6).
   onPoint?: RunFlowOptions['onPoint'];
@@ -161,7 +162,7 @@ export async function signIn(options: {
     shots: 'all',
     ...(options.deadline !== undefined && options.deadline !== Infinity ? { deadline: options.deadline } : {}),
     ...(options.untrusted ? { untrusted: true } : {}),
-    ...(options.allowedHosts ? { allowedHosts: options.allowedHosts } : {}),
+    ...(options.hosts ? { hosts: options.hosts } : {}),
     ...(options.guard ? { guard: options.guard } : {}),
     ...(options.onPoint ? { onPoint: options.onPoint } : {}),
   });

@@ -13,9 +13,10 @@ import { parseCommitted } from './committed.mjs';
 import { stopWith } from './exit.mjs';
 import { checkCommittedFiles, wroteFile, writeProtected } from './files.mjs';
 import { ensureFolder, type FolderState } from './folder.mjs';
-import { envNames, isFrameworkInternal, isLoopbackHostname, runFlow, type Flow, type FlowRunResult, type Step } from './flowrun.mjs';
+import { envNames, isFrameworkInternal, runFlow, type Flow, type FlowRunResult, type Step } from './flowrun.mjs';
 import { FORMATS } from './formats.mjs';
-import { LocalhostGuard, type GuardPolicy } from './guard.mjs';
+import { LocalhostGuard } from './guard.mjs';
+import { hostPolicy } from './hosts.mjs';
 import { takeFlowLock } from './lock.mjs';
 import { Manifest } from './manifest.mjs';
 import { formatDuration, type Note } from './output.mjs';
@@ -314,11 +315,10 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
       runDir = createRunFolder(folder, 'flow');
       pruneRuns(folder, lock, runDir.id);
     }
-    const policy: GuardPolicy = { remoteTarget: config?.allow?.remoteTarget ?? null, remoteWrites: config?.allow?.remoteWrites ?? [] };
-    const allowed = [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h);
+    const hosts = hostPolicy(config?.allow);
     const choice = chooseBrowser(ctx.browserFlag, config?.browser ?? null, installedOnThisMachine(ctx.env));
     const launched = ctx.launch ? await ctx.launch(choice.name) : await launchBrowser(choice, ctx.notes);
-    const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, policy) : undefined;
+    const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, hosts) : undefined;
     const run = runDir;
     try {
       await runReset(config, root);
@@ -330,7 +330,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
       const processStart = Date.now() - ctx.elapsed();
       const bashStop = bashDeadline(!!info.pluginData, processStart);
       const bashBlocks = () => bashBlocksStart(!!info.pluginData, processStart, Date.now());
-      const signInOutcome = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, deadline: bashStop, waitUntil: target.apiWaitUntil, ...(newSignIn ? { untrusted: true, allowedHosts: allowed, guard } : {}) });
+      const signInOutcome = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, deadline: bashStop, waitUntil: target.apiWaitUntil, ...(newSignIn ? { untrusted: true, hosts, guard } : {}) });
       if (newSignIn) {
         if (!signInOutcome.passed) {
           const stop = (signInOutcome.result as { untrustedStop?: string | null } | null)?.untrustedStop;
@@ -343,7 +343,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
           // 44.5: destructive writes and other sites are aborted in these runs.
           untrusted: true,
           ...(info.pluginData ? { deadline: bashStop } : {}),
-          browser: launched.browser, baseURL: target.url, flow, env: read, ready, exclude, allowedHosts: allowed, guard,
+          browser: launched.browser, baseURL: target.url, flow, env: read, ready, exclude, hosts, guard,
           storageState: flow.signedIn ? signInOutcome.storageState ?? undefined : undefined,
           onFailure: async (page) => {
             const text = await page.locator('body').ariaSnapshot().catch(() => '');
@@ -437,7 +437,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
           if (plan.kind === 'new' && signInOutcome.passed) {
             if (bashBlocks()) d.refused = bashLine;
             else {
-              const again = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, deadline: bashStop, untrusted: true, allowedHosts: allowed, guard });
+              const again = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, deadline: bashStop, untrusted: true, hosts, guard });
               const stop = (again.result as { untrustedStop?: string | null } | null)?.untrustedStop;
               if (!again.passed) d.refused = stop ? `Not saved: sign-in (${stop})` : failedLine(d.name, again.result, null);
             }
@@ -475,7 +475,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
         if (runPlan) {
           // 44.3: the saved flow's attack points, for the adversary and for attack.
           const last = runs.at(-1);
-          const points = [...new Set((last?.requests ?? []).filter((q) => (q.resourceType === 'fetch' || q.resourceType === 'xhr') && !isFrameworkInternal(q.url) && isLoopbackOrAllowed(q.url, allowed)).map((q) => q.key))];
+          const points = [...new Set((last?.requests ?? []).filter((q) => (q.resourceType === 'fetch' || q.resourceType === 'xhr') && !isFrameworkInternal(q.url) && hosts.ownHost(q.url)).map((q) => q.key))];
           const forms = [...new Set((last?.requests ?? []).filter((q) => q.method === 'POST' && (q.resourceType === 'fetch' || q.resourceType === 'xhr') && !isFrameworkInternal(q.url)).map((q) => q.key.replace(/ #\d+$/, '')))];
           d.points = `  points: ${points.join(', ') || 'none'}${forms.length > 0 ? `; forms: ${forms.join(', ')}` : ''}`;
           const before = prior.get(d.name);
@@ -540,15 +540,6 @@ export function readSaved(folder: FolderState, runId: string): SavedRecord[] {
       return [];
     }
   });
-}
-
-function isLoopbackOrAllowed(url: string, allowed: string[]): boolean {
-  try {
-    const host = new URL(url).hostname;
-    return isLoopbackHostname(host) || allowed.includes(host);
-  } catch {
-    return false;
-  }
 }
 
 // Why a new flow does not reach its item, or null (16.8): it reaches it when a

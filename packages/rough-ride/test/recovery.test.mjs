@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { attackPoints, nonFinding, ownHostFor, runAttack } from '../dist/attacks.mjs';
+import { attackPoints, nonFinding, runAttack } from '../dist/attacks.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/browser.mjs';
 import { CHECK_SEVERITY } from '../dist/checks.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
 import { startRecoverySite } from './fixtures/recovery-site.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 
 let browser;
 let site;
@@ -17,8 +18,7 @@ after(async () => {
   site?.close();
 });
 
-const own = ownHostFor([]);
-const base = () => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, allowedHosts: [] });
+const base = () => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY });
 const formFlow = (mode, extra = []) => ({
   name: 'create-note',
   signedIn: false,
@@ -36,7 +36,7 @@ const result = (o, id) => o.checks.find((c) => c.id === id);
 async function attack(flow, fault = '500', sticky = true, tier = 'standard') {
   const baseline = await runFlow({ ...base(), flow });
   assert.ok(baseline.passed, JSON.stringify(baseline.failure));
-  const point = attackPoints(flow, baseline, own, new Set(), null, { tier }).find((p) => p.fault === fault && p.sticky === sticky);
+  const point = attackPoints(flow, baseline, LOOPBACK_ONLY, new Set(), null, { tier }).find((p) => p.fault === fault && p.sticky === sticky);
   assert.ok(point, `no ${fault} point`);
   const hits = site.hits.save;
   const o = await runAttack(point, flow, baseline, base(), []);

@@ -6,6 +6,7 @@ import { randomInt } from 'node:crypto';
 import type { Browser, BrowserContext, CDPSession, Locator, Page, Request, Route } from 'playwright-core';
 import { DELAY_MS, fixedResponse, holdMsFor, isJsonMedia, malformedBody, MAX_BODY, sha256, type BodyKind, type FaultId } from './faults.mjs';
 import { abortedHint, type AbortedWrite, type LocalhostGuard } from './guard.mjs';
+import { LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
 import { hasCredentialHeader } from './secrets.mjs';
 
 export const S = 10_000;
@@ -100,11 +101,6 @@ export function matchesExclude(pattern: string, pagePath: string): boolean {
     return j < segs.length && segMatch(pat[i]!, segs[j]!) && go(i + 1, j + 1);
   };
   return go(0, 0);
-}
-
-export function isLoopbackHostname(hostname: string): boolean {
-  const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  return h === 'localhost' || h.endsWith('.localhost') || h === '::1' || /^127\./.test(h);
 }
 
 export type ReadyWait = { kind: 'nuxt' } | { kind: 'load' } | { kind: 'expression'; expression: string };
@@ -343,8 +339,8 @@ export interface RunFlowOptions {
   env: (name: string) => string | undefined;
   ready: ReadyWait;
   exclude?: string[];
-  // Origins the target owns besides loopback (the applied allow hosts).
-  allowedHosts?: string[];
+  // The Target's host rules; only loopback is its own without them.
+  hosts?: HostPolicy;
   unique?: string;
   keepStorageState?: boolean;
   // Called at the failing step, with the page still open (baseline screenshots).
@@ -719,14 +715,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
   const loadTimeout = options.timeouts?.C ?? C;
   const unique = options.unique ?? newUnique();
   const resolve = (text: string) => resolvePlaceholders(text, unique, options.env);
-  const ownHost = (url: string) => {
-    try {
-      const host = new URL(url).hostname;
-      return isLoopbackHostname(host) || (options.allowedHosts ?? []).includes(host);
-    } catch {
-      return false;
-    }
-  };
+  const ownHost = (options.hosts ?? LOOPBACK_ONLY).ownHost;
 
   const result: FlowRunResult = {
     passed: false,

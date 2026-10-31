@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { doubleSubmitPoints, findingLines, nonFinding, ownHostFor, runAttack, severityOf, symptom, timingDedupeKey } from '../dist/attacks.mjs';
+import { doubleSubmitPoints, findingLines, nonFinding, runAttack, severityOf, symptom, timingDedupeKey } from '../dist/attacks.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/browser.mjs';
 import { sameShapeExceptBooleans } from '../dist/checks.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
 import { startTimingSite } from './fixtures/timing-site.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 
 let browser;
 let site;
@@ -17,8 +18,8 @@ after(async () => {
   site?.close();
 });
 
-const own = ownHostFor([]);
-const base = () => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, allowedHosts: [] });
+const own = LOOPBACK_ONLY.ownHost;
+const base = () => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY });
 const SAVE = { click: { role: 'button', name: 'Save' } };
 const flowOf = (path, step = SAVE, rest = []) => ({ name: 'create-note', signedIn: false, steps: [{ goto: path }, step, ...rest] });
 const oneWrite = (o) => o.checks.find((c) => c.id === 'one-write');
