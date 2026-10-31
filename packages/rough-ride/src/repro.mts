@@ -10,6 +10,7 @@ import type { Browser, BrowserContext } from 'playwright-core';
 import { runAttack } from './attacks.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser, type BrowserName, type Launched } from './browser.mjs';
 import { inlineChecks } from './appchecks.mjs';
+import { buildCatalogue, resolveTest } from './catalogue.mjs';
 import { checkRank, checkSeverity } from './checks.mjs';
 import { stopWith } from './exit.mjs';
 import { checkCommittedFiles, wroteFile } from './files.mjs';
@@ -23,7 +24,6 @@ import { Manifest } from './manifest.mjs';
 import { fetchOpenApi, rekey } from './openapi.mjs';
 import { escapeName, formatDuration, type Note } from './output.mjs';
 import { compareProtected } from './protected.mjs';
-import { resolveTest, type TestValue } from './regress.mjs';
 import { followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
 import { createRunFolder, pruneRuns, RUN_ID, type RunFolder } from './runs.mjs';
 import { credentialStrings } from './secrets.mjs';
@@ -142,7 +142,8 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
     } else {
       const docs = await fetchOpenApi(apiOrigins(target, [baseline]), [baseline]);
       rekey(baseline, docs);
-      const resolved = resolveTest({ flow: flow.name, attack: rec.attack, checks: rec.failedChecks.map((c) => c.id) } as TestValue, flow, baseline, docs, { allowed, remoteTarget: policy.remoteTarget, signInFlow: flow.name === 'sign-in', today: new Date() });
+      const catalogue = buildCatalogue({ tier: 'standard', flows: [{ flow, runs: [baseline], passed: true }], docs, hosts: { allowed, remoteTarget: policy.remoteTarget }, today: new Date() });
+      const resolved = resolveTest(catalogue, flow.name, rec.attack);
       if ('stale' in resolved || 'pass' in resolved) {
         verdict = `could not apply: ${'stale' in resolved ? resolved.stale : resolved.pass}`;
         exitCode = 2;

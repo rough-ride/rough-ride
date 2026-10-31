@@ -67,6 +67,53 @@ test('the cap: 8 in quick, 20 in standard; bad inputs past it are cut with the c
   assert.deepEqual(n.lines, ['adversary: no flow ("A drag and drop journey.")']);
 });
 
+test('unchecked entries: a callback that cannot tell leaves the entry unchecked, counted toward the cap at the most it can add', () => {
+  const later = { unchecked: 'flow fresh-note was saved after the plan; attack checks its points' };
+  const c = cands({
+    aboveFlows: new Set(['create-note', 'fresh-note']),
+    allFlows: new Set(['create-note', 'fresh-note']),
+    fault: (flow, request, fault) => (flow === 'fresh-note' ? later : attack(flow, `${flow}/${request}/${fault}`)),
+    badInputs: (flow) => (flow === 'fresh-note' ? later : Array.from({ length: 12 }, (_, i) => attack(flow, `${flow}/f/in-${i}`))),
+    viewport: (flow) => (flow === 'fresh-note' ? later : attack(flow, `${flow}/viewport-375`)),
+  });
+  const r = validatePlan({ attacks: [
+    entry({ flow: 'fresh-note', badInputs: 4, form: 'POST /api/notes' }),
+    entry({ badInputs: 3, form: 'POST /api/notes' }),
+    entry({ fault: '400', request: 'POST /api/notes #1' }),
+    entry({ badInputs: 6, form: 'POST /api/notes' }),
+    entry({ flow: 'fresh-note', viewport: 375 }),
+    entry({ viewport: 375 }),
+    entry({ badInputs: 2, form: 'POST /api/notes' }),
+    entry({ viewport: 375 }),
+  ] }, c);
+  assert.deepEqual(r.lines, [
+    'Unchecked plan entry: attacks[0] (flow fresh-note was saved after the plan; attack checks its points)',
+    'Unchecked plan entry: attacks[3] (over the plan cap of 8; at most 4 of 6 bad inputs kept, fewer if attack keeps more for attacks[0])',
+    'Unchecked plan entry: attacks[4] (flow fresh-note was saved after the plan; attack checks its points)',
+    'Unchecked plan entry: attacks[5] (over the plan cap of 8 unless attack keeps fewer for attacks[0], attacks[3], attacks[4])',
+    'Unchecked plan entry: attacks[6] (which inputs come next depends on attacks[3])',
+    'Unchecked plan entry: attacks[7] (already selected if attack keeps attacks[5])',
+  ]);
+  // 3 + 1 kept for sure fit beside the 4 attacks[0] could add; attacks[3] could add 4 more.
+  assert.deepEqual(r.entries.map((e) => [e.path, e.status, e.attackIds.length]), [
+    ['attacks[0]', 'unchecked', 0],
+    ['attacks[1]', 'kept', 3],
+    ['attacks[2]', 'kept', 1],
+    ['attacks[3]', 'unchecked', 4],
+    ['attacks[4]', 'unchecked', 0],
+    ['attacks[5]', 'unchecked', 1],
+    ['attacks[6]', 'unchecked', 0],
+    ['attacks[7]', 'unchecked', 1],
+  ]);
+  assert.deepEqual(r.kept.map((a) => a.id), ['create-note/f/in-0', 'create-note/f/in-1', 'create-note/f/in-2', 'create-note/POST /api/notes #1/400']);
+});
+
+test('unchecked entries: once the entries known kept fill the cap, an unchecked entry is rejected, as attack would reject it', () => {
+  const c = cands({ allFlows: new Set(['create-note', 'fresh-note']), aboveFlows: new Set(['create-note', 'fresh-note']), viewport: (flow) => (flow === 'fresh-note' ? { unchecked: 'saved after the plan' } : attack(flow, `${flow}/viewport-375`)) });
+  const r = validatePlan({ attacks: [entry({ badInputs: 8, form: 'POST /api/notes' }), entry({ flow: 'fresh-note', viewport: 375 }), entry({ flow: 'fresh-note', badInputs: 2, form: 'POST /api/notes' })] }, { ...c, badInputs: (flow) => (flow === 'fresh-note' ? { unchecked: 'saved after the plan' } : c.badInputs(flow)) });
+  assert.deepEqual(r.lines, ['Rejected plan entry: attacks[1] (over the plan cap of 8)', 'Rejected plan entry: attacks[2] (over the plan cap of 8; 0 of 2 bad inputs kept)']);
+});
+
 test('the planned cut: planned attacks go after selected ones, and the first that overruns the window is cut with every later one', () => {
   const sel = [{ flow: 'a', nominalMs: 10_000 }, { flow: 'b', nominalMs: 10_000 }, { flow: 'sign-in', nominalMs: 10_000 }];
   const planned = Array.from({ length: 6 }, () => ({ flow: 'a', nominalMs: 10_000 }));

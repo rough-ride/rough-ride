@@ -51,6 +51,8 @@ export interface FlowInfo {
   reach: Map<string, string>;
   // module-rule file -> the step that first loaded it.
   firstLoad: Map<string, number>;
+  // Reaches a changed file through the module or page rule.
+  reachesByRule: boolean;
   // Request templates (without #n) the flow sent from the browser.
   sent: Set<string>;
   pages: FlowRunResult['pages'];

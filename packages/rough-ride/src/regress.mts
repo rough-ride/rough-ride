@@ -5,17 +5,15 @@
 
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
-import { attackPoints, badInputAttack, doubleSubmitPoints, nonFinding, outOfOrderPoints, ownHostFor, pageTimingPoints, runAttack, viewportAttack, type AttackOutcome, type PlannedAttack } from './attacks.mjs';
-import { planBadInputs } from './badinputs.mjs';
+import { nonFinding, runAttack, type AttackOutcome, type PlannedAttack } from './attacks.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser, type BrowserName, type Launched } from './browser.mjs';
 import { inlineChecks } from './appchecks.mjs';
+import { buildCatalogue, resolveTest } from './catalogue.mjs';
 import { checkRank } from './checks.mjs';
 import { stopWith } from './exit.mjs';
-import { attackId, type FaultId } from './faults.mjs';
 import { checkCommittedFiles, wroteFile } from './files.mjs';
 import { ensureFolder, type FolderState } from './folder.mjs';
-import { findForms } from './forms.mjs';
-import { isLoopbackHostname, runFlow, stepKind, type Flow, type FlowRunResult, type RunFlowOptions } from './flowrun.mjs';
+import { runFlow, type Flow, type FlowRunResult, type RunFlowOptions } from './flowrun.mjs';
 import { allowedSuffix, LocalhostGuard, type GuardPolicy } from './guard.mjs';
 import { takeFlowLock } from './lock.mjs';
 import { Manifest } from './manifest.mjs';
@@ -51,76 +49,6 @@ export interface RunJudgement {
 }
 
 const checkId = (c: unknown): string => (typeof c === 'string' ? c : String((c as { id?: string })?.id ?? ''));
-
-// Finds the test's attack point in this invocation's baseline run, never retargeting (25.3).
-export function resolveTest(test: TestValue, flow: Flow, baseline: FlowRunResult, docs: OpenApiDoc[], options: { allowed: string[]; remoteTarget: string | null; signInFlow: boolean; today: Date }): { attack: PlannedAttack } | { stale: string } | { pass: string } {
-  const a = test.attack;
-  const ownHost = ownHostFor(options.allowed);
-  const forwardable = (url: string) => {
-    try {
-      const host = new URL(url).hostname;
-      return isLoopbackHostname(host) || host === options.remoteTarget;
-    } catch {
-      return false;
-    }
-  };
-  const forms = findForms(flow, baseline, ownHost, new Set());
-  const requestOf = (key: string) => baseline.requests.find((q) => q.key === key && (q.resourceType === 'fetch' || q.resourceType === 'xhr'));
-  const fullLoadOf = (page: unknown) => baseline.pages.some((p) => p.path === page && p.entry === 'full-load');
-  if (typeof a.fault === 'string') {
-    const request = String(a.request);
-    const q = requestOf(request);
-    if (!q) {
-      if (fullLoadOf(a.page)) return { stale: `fault never fired: ${request.replace(/ #\d+$/, '')} is no longer sent from the browser on ${String(a.page)} (the flow enters it by full page load)` };
-      return { stale: `fault never fired (${request} not sent)` };
-    }
-    if (a.page !== undefined && q.pagePath !== a.page) return { stale: `attack point moved (${request} is now sent on ${q.pagePath ?? '?'}, was ${String(a.page)})` };
-    const points = attackPoints(flow, baseline, ownHost, new Set(), null, { tier: 'standard', signInFlow: options.signInFlow, forwardable, docs });
-    const exact = points.find((p) => p.key === request && p.fault === a.fault && p.sticky === a.sticky);
-    if (exact) return { attack: exact };
-    const any = points.find((p) => p.key === request);
-    if (!any) return { stale: `fault never fired (${request} can't take ${String(a.fault)})` };
-    const fault = a.fault as FaultId;
-    return { attack: { ...any, fault, sticky: a.sticky === true, id: attackId(flow.name, request, fault, a.sticky === true) } };
-  }
-  if (typeof a.badInput === 'string') {
-    const plan = planBadInputs(flow, baseline, forms, docs, { signInFlow: options.signInFlow, today: options.today });
-    const field = a.field as string | { name: string; kind: string } | null;
-    const matches = (i: (typeof plan.inputs)[number]) =>
-      i.inputId === a.badInput && i.page === a.page && (typeof field === 'string' ? i.field.key === field : !!field && i.field.name === field.name && i.field.kind === field.kind);
-    const input = plan.inputs.find(matches);
-    if (input) return { attack: badInputAttack(flow.name, input, 1, null) };
-    const blocked = plan.skipped.find((l) => l.includes(`: ${String(a.badInput)} (blocked by the browser's validation: `));
-    if (blocked) return { pass: `pass (${/\((blocked by the browser's validation: [^)]*)\)/.exec(blocked)?.[1] ?? 'blocked by the browser'})` };
-    return { stale: 'field not found' };
-  }
-  if (a.viewport !== undefined) return { attack: viewportAttack(flow, false) };
-  if (a.timing === 'double-submit') {
-    const request = String(a.request);
-    const found = doubleSubmitPoints(flow, baseline, ownHost, new Set(), null, options.signInFlow).find((p) => p.key === request);
-    if (found) return found.page === a.page ? { attack: found } : { stale: `attack point moved (${request} is now sent on ${found.page ?? '?'}, was ${String(a.page)})` };
-    const q = baseline.requests.find((r) => r.key === request);
-    if (q) {
-      const kind = stepKind(flow.steps[q.step - 1] ?? { goto: '/' });
-      if (kind !== 'click' && kind !== 'press') return { stale: `attack point moved (${request} is no longer sent by a click or press step)` };
-      return { stale: `attack point moved (${request} is now sent on ${q.pagePath ?? '?'}, was ${String(a.page)})` };
-    }
-    return { stale: `fault never fired (${request} not sent)` };
-  }
-  if (a.timing === 'out-of-order') {
-    const found = outOfOrderPoints(flow, baseline, forms, ownHost, new Set(), null, options.signInFlow).find((p) => p.template === a.request && p.outOfOrder?.fieldKey === a.field);
-    return found ? { attack: found } : { stale: 'field not found' };
-  }
-  if (a.timing === 'refresh' || a.timing === 'back' || a.timing === 'signed-out-reload') {
-    const found = pageTimingPoints(flow, [baseline], new Set(), null, options.signInFlow).find((p) => p.timing === a.timing && p.page === a.page && p.entry?.k === a.entry);
-    if (found) return { attack: found };
-    const entries = baseline.pages.filter((p) => p.path === a.page);
-    const entry = entries[Number(a.entry) - 1];
-    if (entry?.entry === 'full-load') return { stale: `attack point moved (${String(a.page)} #${String(a.entry)} is now entered by full page load)` };
-    return { stale: `fault never fired (the flow no longer enters ${String(a.page)})` };
-  }
-  return { stale: 'unknown attack' };
-}
 
 // One flow run judged by the test's listed checks only (25.6).
 export function judgeRun(listed: unknown[], o: AttackOutcome): RunJudgement {
@@ -169,7 +97,8 @@ export async function runTestOnce(
     rekey(pinned, docs);
     base = pinned;
   }
-  const resolved = resolveTest(value, flow, base, docs, { ...resolve, signInFlow: flow.name === 'sign-in', today: new Date() });
+  const catalogue = buildCatalogue({ tier: 'standard', flows: [{ flow, runs: [base], passed: true }], docs, hosts: resolve, today: new Date() });
+  const resolved = resolveTest(catalogue, flow.name, value.attack);
   if ('stale' in resolved) return { judgement: null, stale: resolved.stale, pass: null, attack: null, outcome: null };
   if ('pass' in resolved) return { judgement: null, stale: null, pass: resolved.pass, attack: null, outcome: null };
   const o = await runAttack(resolved.attack, flow, base, { ...options, ...(pin ? { pin } : {}) }, docs, inlineChecks(value.checks));

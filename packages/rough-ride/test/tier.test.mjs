@@ -124,3 +124,28 @@ test('only a new flow file changed: two baseline runs and the Flows checked line
   );
   assert.ok(doc.summaryLines.some((l) => l.startsWith('Baseline failed: shaky at step 2')));
 });
+
+// 45.5: a flow above the cut has a selected attack or a test inside the cut.
+test('attack: a flow whose only claim to the tier is an open regression test takes planned attacks', async () => {
+  const root = project({ home: PASSING });
+  mkdirSync(path.join(root, '.rough-ride', 'tests'), { recursive: true });
+  writeFileSync(path.join(root, '.rough-ride', 'tests', 'home-viewport-000001.yaml'), 'schema: 0.1.0\nflow: home\nattack: {viewport: 375}\nchecks: [no-uncaught-error]\ncontext: {timezone: UTC, locale: en-US}\nfound: {finding: x, run: 20261028-101010-quick-ab12, runner: 0.1.0, date: 2026-10-28}\n');
+  sh(root, 'add', '.rough-ride/tests');
+  sh(root, 'commit', '-q', '-m', 'test');
+  // The test failed last time, so it is open and the tier runs it whether or not the diff reaches home.
+  const gitDir = sh(root, 'rev-parse', '--absolute-git-dir').trim();
+  mkdirSync(path.join(gitDir, '.rough-ride'), { recursive: true });
+  writeFileSync(path.join(gitDir, '.rough-ride', 'manifest.json'), JSON.stringify({ version: 1, saved: [], runs: {}, tests: { 'home-viewport-000001': { outcome: 'fail', run: 'x', at: '2026-10-28T00:00:00.000Z' } } }));
+  const planned = JSON.parse((await run(['plan', 'quick', '--json'], { cwd: root })).stdout);
+  assert.equal(planned.status, 'planned', planned.summaryLines?.join('\n'));
+  const plan = 'attacks:\n  - {flow: home, because: the open test runs on it, viewport: 375}\n';
+  // --check resolves against the catalogue plan recorded, and agrees with attack.
+  const checked = await run(['attack', '--run', planned.runId, '--plan', '-', '--check', '--json'], { cwd: root, input: plan });
+  assert.equal(checked.code, 0, checked.stdout);
+  assert.ok(JSON.parse(checked.stdout).summaryLines.includes('Plan check: 1 entry valid, 1 planned attack'), checked.stdout);
+  const attacked = await run(['attack', '--run', planned.runId, '--plan', '-', '--json'], { cwd: root, input: plan });
+  const doc = JSON.parse(attacked.stdout);
+  assert.ok(!doc.summaryLines.some((l) => l.startsWith('Rejected plan entry')), doc.summaryLines.join('\n'));
+  const planFile = JSON.parse(readFileSync(path.join(root, '.rough-ride', 'runs', planned.runId, 'plan.json'), 'utf8'));
+  assert.deepEqual(planFile.entries.map((e) => [e.path, e.status, e.attackIds]), [['attacks[0]', 'kept', ['home/viewport-375']]]);
+});
