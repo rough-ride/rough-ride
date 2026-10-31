@@ -378,8 +378,6 @@ export interface RunFlowOptions {
   context?: BrowserContext;
   keepArmed?: boolean;
   keepDialogs?: boolean;
-  // refresh, back or signed-out-reload at a page entry (32.5 to 32.7).
-  pageTiming?: { kind: 'refresh' | 'back' | 'signed-out-reload'; step: number; previous: string | null };
   // flow save baseline runs and snapshot steps (44.5): abort writes to records this
   // run did not create and main-frame navigations to other sites.
   untrusted?: boolean;
@@ -416,6 +414,30 @@ export interface Acted {
   value?: string;
 }
 
+// A step's Observation window once it ended.
+export interface StepWindow {
+  before: Snapshot;
+  samples: TextSample[];
+  after: Snapshot;
+  // The main frame's page key when the step ended.
+  path: string | null;
+}
+
+// How the attack goes on after a step's window (23.6): the flow goes on, the
+// attack ends there, or these steps run as its recovery (23.7).
+export type WindowEnd =
+  | { then: 'continue' }
+  | { then: 'end' }
+  | { then: 'recover'; steps: { index: number; step: Step }[]; action: string };
+
+// The attack could not be applied: the engine ends the flow run there, and the
+// kind's notApplied hook records the reason.
+export class NotApplied extends Error {
+  constructor(readonly reason: string) {
+    super(reason);
+  }
+}
+
 // The points of a flow run where a kind's rules apply. Step hooks run only
 // until a recovery starts; recovery steps are the flow's own.
 export interface KindHooks {
@@ -426,6 +448,13 @@ export interface KindHooks {
   wantsShot?(after: Snapshot): boolean;
   // Facts the kind adds to the step record when the step's window ends.
   stepFacts?(after: Snapshot): Partial<StepRecord>;
+  // After a step's window ended and its page entry was recorded.
+  afterWindow?(at: StepAt, window: StepWindow): Promise<WindowEnd>;
+  // The reason of a NotApplied thrown from a hook.
+  notApplied?(reason: string): void;
+  // An own-origin request that failed without the page aborting it, which
+  // otherwise voids the run as target unstable: whether the kind caused it.
+  excusesFailure?(record: RequestRecord | undefined): boolean;
   // A later step failed: whether that stops the flow after the attack
   // (`Faulted; flow stopped at step <n>`) rather than failing the flow run.
   stopsFlow?(index: number): boolean;
@@ -436,8 +465,30 @@ export interface FlowRunEngine {
   // The kind writes only its own slots.
   readonly result: FlowRunResult;
   readonly page: Page;
+  readonly context: BrowserContext;
   // The step timeout S, the action and expect timeout, and the load timeout C.
   readonly timeouts: { step: number; action: number; load: number };
+  readonly readyKind: ReadyWait['kind'];
+  // Credential strings from the sign-in session (20.6).
+  readonly credentials: string[];
+  ownHost(url: string): boolean;
+  // The method of the request that loaded the document now showing.
+  documentMethod(): string;
+  // Deletes the cookies of the Target's own hosts.
+  clearOwnCookies(): Promise<void>;
+  // Adds a route handler on this run's context, consulted before the ones
+  // added earlier; the returned function removes this handler only.
+  route(handler: (route: Route, request: Request) => Promise<unknown>): Promise<() => Promise<void>>;
+  // The runner's own reload, back or forward at step `index` (32.2), settled
+  // like an action step and recorded as its own step. `arrived` sees the
+  // navigation's outcome once it committed, before the ready wait and settle.
+  navigate(index: number, what: 'reload' | 'back' | 'forward', notes: NavigationNotes): Promise<{ path: string | null; ready: boolean }>;
+}
+
+export interface NavigationNotes {
+  // A beforeunload dialog the navigation raised was accepted.
+  beforeUnload(): void;
+  arrived(nav: { status: number | null; error: string | null; redirected: string | null; path: string | null }): void;
 }
 
 export interface PageTimingResult {
@@ -788,7 +839,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     timing: null,
     stoppedAt: null,
     recovery: null,
-    pageTiming: options.pageTiming ? { notApplied: null, events: [], documentStatus: null, navigationError: null, removed: 0, served401: 0 } : null,
+    pageTiming: null,
     outOfOrder: options.outOfOrder ? { notApplied: null, aborted: false, releasedAt: null, linesBefore: [], olderOnly: null, newerOnly: null } : null,
     badInput: options.badInput ? { notApplied: null, held: null, linesBefore: [], reference: [], after: [], submitDisabled: false, submittedAt: null, outcome: null, carrying: null } : null,
     shots: new Map(),
@@ -916,13 +967,15 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       }
     });
   });
-  let ownNavigation = false;
+  let hooks: KindHooks = {};
+  // Set while the runner's own reload, back or forward runs.
+  let ownNavigation: NavigationNotes | null = null;
   // The method of the request that loaded the document now showing.
   let documentMethod = 'GET';
   page.on('dialog', (dialog) => {
     // A beforeunload raised by the runner's own reload, back or forward is accepted (32.2).
     if (ownNavigation && dialog.type() === 'beforeunload') {
-      result.pageTiming?.events.push({ at: Date.now(), event: 'beforeunload accepted' });
+      ownNavigation.beforeUnload();
       dialog.accept().catch(() => {});
       return;
     }
@@ -1042,9 +1095,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     }
     // An unfaulted request to the target that failed without the page aborting it.
     const afterBadFill = options.badInput !== undefined && (record?.step ?? 0) >= options.badInput.step;
-    // The runner's own reload, back or forward failing is judged by no-uncaught-error, never a void.
-    const ownNavFailure = options.pageTiming !== undefined && (record?.navigation ?? false);
-    if (!faulted.has(request) && !afterBadFill && !ownNavFailure && ownHost(request.url()) && !/ERR_ABORTED|ERR_CONNECTION_REFUSED|ERR_BLOCKED_BY_CLIENT/.test(failure)) {
+    if (!faulted.has(request) && !afterBadFill && !hooks.excusesFailure?.(record) && ownHost(request.url()) && !/ERR_ABORTED|ERR_CONNECTION_REFUSED|ERR_BLOCKED_BY_CLIENT/.test(failure)) {
       result.voided ??= 'target unstable';
     }
   });
@@ -1216,8 +1267,25 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       }
     });
   }
-  const engine: FlowRunEngine = { result, page, timeouts: { step: stepTimeout, action: actionTimeout, load: loadTimeout } };
-  const hooks: KindHooks = options.kind ? await options.kind.start(engine) : {};
+  const engine: FlowRunEngine = {
+    result,
+    page,
+    context,
+    timeouts: { step: stepTimeout, action: actionTimeout, load: loadTimeout },
+    readyKind: options.ready.kind,
+    credentials: options.credentials ?? [],
+    ownHost,
+    documentMethod: () => documentMethod,
+    clearOwnCookies,
+    route: async (handler) => {
+      // Its own matcher, so unrouting it never removes another handler.
+      const matcher = () => true;
+      await context.route(matcher, handler);
+      return () => context.unroute(matcher, handler).catch(() => {});
+    },
+    navigate: (index, what, notes) => runnerNavigation(index, what, notes),
+  };
+  if (options.kind) hooks = await options.kind.start(engine);
   // Untrusted runs (44.5). A predicate matcher, so an attack's unroute('**/*') keeps it.
   if (options.untrusted) {
     // A path segment, with or without its extension, that an earlier response returned.
@@ -1339,6 +1407,50 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       if (at - sFrom > stepTimeout && graceDone && held.size === 0) return { settled: false, ms: at - from, unsettled: why, after: now };
       if (at - stepStart > loadTimeout) return { settled: false, ms: at - from, unsettled: why, after: now };
     }
+  };
+
+  const runnerNavigation = async (index: number, what: 'reload' | 'back' | 'forward', notes: NavigationNotes): Promise<{ path: string | null; ready: boolean }> => {
+    const before = await snapshot();
+    ownNavigation = notes;
+    navigated = false;
+    const navStart = Date.now();
+    let response: Awaited<ReturnType<Page['reload']>> = null;
+    let error: string | null = null;
+    try {
+      response = what === 'reload' ? await page.reload({ waitUntil: 'commit', timeout: loadTimeout })
+        : what === 'back' ? await page.goBack({ waitUntil: 'commit', timeout: loadTimeout })
+        : await page.goForward({ waitUntil: 'commit', timeout: loadTimeout });
+    } catch (e) {
+      const text = String((e as Error).message ?? e).split('\n')[0]!;
+      if (!/ERR_ABORTED/.test(text)) error = (/net::[A-Z_]+/.exec(text)?.[0]) ?? text.slice(0, 120);
+    }
+    ownNavigation = null;
+    let redirected: string | null = null;
+    if (response) {
+      let first = response.request();
+      while (first.redirectedFrom()) first = first.redirectedFrom()!;
+      if (first !== response.request()) {
+        const firstResponse = await first.response().catch(() => null);
+        redirected = `${firstResponse?.status() ?? '?'} ${pagePath(response.url()) ?? ''}`;
+      }
+    }
+    const path = pagePath(page.url());
+    notes.arrived({ status: response?.status() ?? null, error, redirected, path });
+    let ready = true;
+    if (navigated) {
+      try {
+        await readyWait(navStart);
+      } catch {
+        ready = false;
+      }
+    }
+    const samples: TextSample[] = [];
+    const done = ready
+      ? await settle(before, Date.now(), navStart, samples)
+      : { settled: false, ms: Date.now() - navStart, unsettled: `${NOT_READY_PREFIX}${loadTimeout / 1000} s after the ${what === 'reload' ? 'reload' : `${what} step`}`, after: await snapshot() };
+    const observation: Observation = { before, samples, after: done.after, unsettled: done.unsettled, windowEndedAt: Date.now(), startedAt: navStart };
+    result.steps.push({ index, label: what === 'reload' ? RELOAD_LABEL : `${GO_LABEL_PREFIX}${what}`, observation, settled: done.settled, settleMs: done.ms, path });
+    return { path, ready };
   };
 
   const fail = async (index: number, label: string, message: string) => {
@@ -1687,97 +1799,15 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
             method: navigated ? navigationMethod : null,
           });
         }
-        // refresh, back or signed-out-reload after the entry step settles (32.5 to 32.7).
-        const pt = options.pageTiming;
-        if (pt && index === pt.step && !isRecovery && result.pageTiming!.events.length === 0) {
-          const r = result.pageTiming!;
-          const ev = (event: string, detail?: string) => r.events.push({ at: Date.now(), event, ...(detail ? { detail } : {}) });
-          const entryPath = pathAfter;
-          const stop = (why: string) => {
-            r.notApplied = why;
-            throw new BadInputStop();
-          };
-          // The runner's own navigation: a reload, back or forward step, settled like an action step.
-          const ownNav = async (what: 'reload' | 'back' | 'forward') => {
-            // Reloading a page that a form post produced would resend the write (32.2).
-            if (what === 'reload' && documentMethod !== 'GET') {
-              ev('form post blocked');
-              stop('the reload would resend a form post');
-            }
-            const before2 = await snapshot();
-            ownNavigation = true;
-            navigated = false;
-            const navStart = Date.now();
-            let response: Awaited<ReturnType<Page['reload']>> = null;
-            try {
-              response = what === 'reload' ? await page.reload({ waitUntil: 'commit', timeout: loadTimeout })
-                : what === 'back' ? await page.goBack({ waitUntil: 'commit', timeout: loadTimeout })
-                : await page.goForward({ waitUntil: 'commit', timeout: loadTimeout });
-            } catch (error) {
-              const text = String((error as Error).message ?? error).split('\n')[0]!;
-              if (!/ERR_ABORTED/.test(text)) r.navigationError = (/net::[A-Z_]+/.exec(text)?.[0]) ?? text.slice(0, 120);
-            }
-            ownNavigation = false;
-            if (response) {
-              r.documentStatus = response.status();
-              let first = response.request();
-              while (first.redirectedFrom()) first = first.redirectedFrom()!;
-              if (first !== response.request()) {
-                const firstResponse = await first.response().catch(() => null);
-                ev(`redirected ${firstResponse?.status() ?? '?'} ${pagePath(response.url()) ?? ''}`);
-              }
-            }
-            const path = pagePath(page.url());
-            if (what === 'reload') ev(`reloaded ${r.documentStatus ?? r.navigationError ?? 'no response'}`);
-            else ev(`went ${what} ${path ?? ''}`);
-            let ready = true;
-            if (navigated) {
-              try {
-                await readyWait(navStart);
-              } catch {
-                ready = false;
-              }
-            }
-            const samples2: TextSample[] = [];
-            const done = ready
-              ? await settle(before2, Date.now(), navStart, samples2)
-              : { settled: false, ms: Date.now() - navStart, unsettled: `${NOT_READY_PREFIX}${loadTimeout / 1000} s after the ${what === 'reload' ? 'reload' : `${what} step`}`, after: await snapshot() };
-            const obs: Observation = { before: before2, samples: samples2, after: done.after, unsettled: done.unsettled, windowEndedAt: Date.now(), startedAt: navStart };
-            result.steps.push({ index, label: what === 'reload' ? RELOAD_LABEL : `${GO_LABEL_PREFIX}${what}`, observation: obs, settled: done.settled, settleMs: done.ms, path });
-            return { path, ready };
-          };
-          if (pt.kind === 'signed-out-reload') {
-            // The 401 fault's session loss, exactly (20.6), then a reload; the attack ends there.
-            const creds = options.credentials ?? [];
-            const cookies = (await context.cookies()).filter((c) => ownHost(`http://${c.domain.replace(/^\./, '')}/`));
-            r.removed = cookies.filter((c) => creds.includes(c.value)).length;
-            await clearOwnCookies();
-            ev(`cookies deleted ${cookies.length}`);
-            await context.route('**/*', async (route, request) => {
-              const t = request.resourceType();
-              if ((t !== 'fetch' && t !== 'xhr') || !ownHost(request.url())) return route.fallback();
-              const headers = await request.allHeaders().catch(() => ({}) as Record<string, string>);
-              if (!hasCredentialHeader(headers, creds)) return route.fallback();
-              r.served401++;
-              ev('served 401');
-              const fixed = fixedResponse('401', false);
-              return route.fulfill({ status: fixed.status, headers: fixed.headers, body: fixed.body }).catch(() => {});
-            });
-            const { ready } = await ownNav('reload');
-            if (!ready && options.ready.kind === 'expression') stop('the ready expression stayed false after signing out');
-            if (r.removed === 0 && r.served401 === 0) stop('no credential was removed or refused');
-            result.endedAfterWindow = true;
-            break;
-          }
-          if (pt.kind === 'refresh') {
-            await ownNav('reload');
-          } else {
-            const back = await ownNav('back');
-            if (back.path === entryPath) stop(`the page stayed on ${entryPath}`);
-            if (back.path !== pt.previous) stop(`the back step went to ${back.path}, not ${pt.previous}`);
-            const forward = await ownNav('forward');
-            if (forward.path !== entryPath) stop(`the forward step went to ${forward.path}, not ${entryPath}`);
-          }
+        const end = !recovering && hooks.afterWindow ? await hooks.afterWindow({ index, step, kind, label }, { before, samples, after: settled.after, path: pathAfter }) : null;
+        if (end?.then === 'end') {
+          result.endedAfterWindow = true;
+          break;
+        }
+        if (end?.then === 'recover') {
+          recovering = true;
+          queue.unshift(...end.steps.map((x) => ({ ...x, recovery: true })));
+          result.recovery = { action: end.action, passed: true, detail: null };
         }
         // out-of-order ran its own submit step; the flow goes on after it.
         if (ooo && index === ooo.step && ooo.submitStep !== ooo.step && queue[0]?.index === ooo.submitStep) queue.shift();
@@ -1865,6 +1895,11 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           }
         }
       } catch (error) {
+        if (error instanceof NotApplied) {
+          hooks.notApplied?.(error.reason);
+          result.endedAfterWindow = true;
+          break;
+        }
         if (error instanceof BadInputStop) {
           result.endedAfterWindow = true;
           break;
@@ -1883,7 +1918,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
         if (attack && index > attack.step && result.fault?.fired) result.stoppedAt = index;
         if (bad && index > bad.submitStep && result.badInput?.outcome === 'accepted') result.stoppedAt = index;
         if (ooo && index > ooo.step && result.outOfOrder?.releasedAt !== null) result.stoppedAt = index;
-        if (options.pageTiming && index > options.pageTiming.step && (result.pageTiming?.events.length ?? 0) > 0) result.stoppedAt = index;
         break;
       }
     }

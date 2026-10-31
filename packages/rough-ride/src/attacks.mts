@@ -6,7 +6,7 @@
 import type { AttackLink } from './accounting.mjs';
 import { fieldKind, requestKey, type BadInputPlan } from './badinputs.mjs';
 import { judgeAppChecks, matchesWhen, probeFor, type AppCheck } from './appchecks.mjs';
-import { baselineFailures, checkLabel, checkSeverity, judgeBadInput, judgeFault, judgeOutOfOrder, judgePageTiming, leadCheck, type CheckResult } from './checks.mjs';
+import { baselineFailures, checkLabel, checkSeverity, judgeBadInput, judgeFault, judgeOutOfOrder, leadCheck, type CheckResult } from './checks.mjs';
 import { TOGGLE_HINT } from './kind-double-submit.mjs';
 import { SEVERITY_TEXT, type Group } from './groups.mjs';
 import { LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
@@ -520,33 +520,6 @@ async function runJudged(
       voided: run.voided,
       served: null,
       notApplied: run.badInput?.notApplied ?? null,
-      givenUp: false,
-      run,
-    };
-  }
-  if (attack.kind === 'timing' && attack.entry && attack.timing && attack.timing !== 'double-submit' && attack.timing !== 'out-of-order') {
-    const run = await runFlow({
-      ...base,
-      flow,
-      templateOf,
-      pollingKeys: pollingKeys(baseline),
-      shots: [attack.step],
-      pageTiming: { kind: attack.timing, step: attack.step, previous: attack.entry.previous },
-    });
-    // Errors that a baseline full load of the same page template also got never count.
-    const fullLoad = baseline.pages.filter((p) => p.path === attack.page && p.entry === 'full-load');
-    const fullLoadErrors = fullLoad.flatMap((p) => baseline.pageEvents.filter((e) => e.step === p.step).map((e) => e.text));
-    const judged = judgePageTiming(run, baseline, skipped, fullLoadErrors);
-    return {
-      ...attack,
-      verdict: judged.verdict,
-      checks: judged.checks,
-      page: attack.page ?? null,
-      control: controlOf(flow, attack.step),
-      events: (run.pageTiming?.events ?? []).map((e) => ({ offsetMs: e.at - (run.pageTiming!.events[0]?.at ?? e.at), event: e.event, ...(e.detail ? { detail: e.detail } : {}) })),
-      voided: run.voided,
-      served: null,
-      notApplied: run.pageTiming?.notApplied ?? null,
       givenUp: false,
       run,
     };

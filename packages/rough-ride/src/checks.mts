@@ -1,7 +1,7 @@
 // The generic checks ticket 18 brings (spec part 5 sections 22.1 to 22.4):
 // no-uncaught-error, settles, visible-error-message and no-broken-text.
 
-import { GO_LABEL_PREFIX, NOT_READY_PREFIX, RELOAD_LABEL, type FlowRunResult, type PageEvent, type PageTimingResult, type StepRecord } from './flowrun.mjs';
+import { NOT_READY_PREFIX, type FlowRunResult, type PageEvent, type StepRecord } from './flowrun.mjs';
 import { escapeName } from './output.mjs';
 import { redactSecrets } from './secrets.mjs';
 
@@ -93,10 +93,6 @@ function settlesEvidence(step: StepRecord): string {
   const why = step.observation?.unsettled ?? 'did not settle';
   return why.startsWith(NOT_READY_PREFIX) ? `${step.label}: ${why}` : `${step.label}: ${why} after ${Math.round(step.settleMs / 100) / 10} s`;
 }
-
-// The runner's own reload, back and forward steps (32.2). They share the entry
-// step's index, so the baseline run's step at that index is a different step.
-const runnerNavigation = (step: StepRecord): boolean => step.label === RELOAD_LABEL || step.label.startsWith(GO_LABEL_PREFIX);
 
 // no-uncaught-error, settles and no-broken-text (22.3) are judged only here: for
 // every attack kind against its baseline run, and for a baseline run against nothing.
@@ -355,23 +351,5 @@ export function judgeOutOfOrder(run: FlowRunResult, baseline: FlowRunResult, ste
       }
       push('latest-response-wins', latest);
     },
-  });
-}
-
-// refresh, back and signed-out-reload (32.8): no-uncaught-error with the
-// document additions, settles with the runner's own steps, and no-broken-text.
-// Errors a baseline run's full load of the same page template also got don't count.
-export function judgePageTiming(run: FlowRunResult, baseline: FlowRunResult, skipped: Set<string>, fullLoadErrors: string[]): Judged {
-  const r = run.pageTiming;
-  const expected = new Set(fullLoadErrors);
-  const documentError = (p: PageTimingResult): string | null =>
-    p.documentStatus !== null && p.documentStatus >= 500 && !expected.has(`document ${p.documentStatus}`) ? `the document answered ${p.documentStatus} after the runner's navigation`
-    : p.navigationError && !expected.has(p.navigationError) ? `the navigation failed with ${p.navigationError}`
-    : null;
-  return judgeAttack(run, baseline, skipped, {
-    name: 'page-timing',
-    gate: !r || r.notApplied !== null ? 'not-applied' : r.events.length === 0 ? 'fault-never-fired' : null,
-    adjust: { ignoreEvent: (e) => expected.has(e.text), leadingError: r ? documentError(r) : null, ownStep: runnerNavigation },
-    order: ['no-uncaught-error', 'settles', 'no-broken-text'],
   });
 }
