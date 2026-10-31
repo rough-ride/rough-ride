@@ -160,6 +160,14 @@ test('which test runs: each rung of 26.6 against one reviewed version', () => {
   assert.deepEqual(testCase(TEST, {}), { tests: ['t working-tree false 2'], lines: [] });
 });
 
+test('a checkout with CRLF endings or a BOM is not a change: nothing is listed (27.3, core.autocrlf)', () => {
+  const crlf = (text) => '﻿' + text.replace(/\n/g, '\r\n');
+  const files = { 'flows/f.yaml': FLOW, 'tests/t.yaml': TEST, 'config.yaml': CONFIG };
+  const out = compareIn({ working: Object.fromEntries(Object.entries(files).map(([p, t]) => [p, crlf(t)])), merge: files });
+  assert.deepEqual(lines(out), []);
+  assert.deepEqual(out.flows.map((f) => f.used), ['working-tree']);
+});
+
 test('accepted.yaml and config.yaml: entries and safety values only from the reviewed version', () => {
   const entry = (check) => `  - {page: /notes/new, step: click, action: POST /api/notes, check: ${check}, because: on purpose}\n`;
   const out = compareIn({

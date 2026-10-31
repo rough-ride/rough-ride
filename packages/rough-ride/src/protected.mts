@@ -14,7 +14,7 @@ import { compareVersions, FORMATS, type FormatKind } from './formats.mjs';
 import { git } from './git.mjs';
 import { fileHash, type Manifest } from './manifest.mjs';
 import { canonicalJson, type Note } from './output.mjs';
-import { openReviewed, type ReviewedVersions } from './reviewed.mjs';
+import { normalisedText, openReviewed, type ReviewedVersions } from './reviewed.mjs';
 import { isCi } from './runner.mjs';
 
 export type Used = 'working-tree' | 'reviewed' | 'saved-copy' | 'none';
@@ -89,7 +89,7 @@ export type FlowChange =
 
 // Rule 1 (expects and top-level fields), then rules 2 and 3.
 export function compareFlow(working: Record<string, unknown>, reviewed: Record<string, unknown>, workingText = '', reviewedText = ''): FlowChange {
-  if (canon(working) === canon(reviewed)) return { kind: 'same', reformatted: workingText !== reviewedText };
+  if (canon(working) === canon(reviewed)) return { kind: 'same', reformatted: normalisedText(workingText) !== normalisedText(reviewedText) };
   const fields = new Set([...Object.keys(working), ...Object.keys(reviewed)].filter((k) => k !== 'steps' && k !== 'schema'));
   for (const f of [...fields].sort()) {
     if (canon(working[f]) !== canon(reviewed[f])) return { kind: 'weakened', text: `changes ${f}` };
@@ -334,7 +334,7 @@ export function compareProtected(options: CompareOptions): ProtectedResult {
     const c = compareTest(w!.value as Record<string, unknown>, r.value as Record<string, unknown>);
     if (c.asWritten) {
       tests.push({ name, value: w!.value as Record<string, unknown>, used: 'working-tree', pending: false });
-      if (canon(w!.value) !== canon(r.value) || w!.text !== r.text) add({ change: c.text, weakening: false, used: 'working-tree', notApplied: [], outcome: 'ran this version' });
+      if (canon(w!.value) !== canon(r.value) || normalisedText(w!.text) !== normalisedText(r.text)) add({ change: c.text, weakening: false, used: 'working-tree', notApplied: [], outcome: 'ran this version' });
     } else {
       tests.push({ name, value: r.value as Record<string, unknown>, used: 'reviewed', pending: true });
       add({ change: c.text, weakening: true, used: 'reviewed', notApplied: [], outcome: `ran the ${refShown} version (pending until merged)` });
@@ -358,7 +358,7 @@ export function compareProtected(options: CompareOptions): ProtectedResult {
   const rConfig = reviewedValues('config.yaml').find((x) => isObject(x.value));
   const cfg = effectiveConfig((files.config?.value ?? null) as Config | null, (rConfig?.value ?? null) as Config | null, refShown);
   for (const e of cfg.entries) entries.push({ path: 'config.yaml', kind: 'config', by: null, ...e });
-  if (files.config && rConfig && canon(files.config.value) === canon(rConfig.value) && files.config.text !== rConfig.text) {
+  if (files.config && rConfig && canon(files.config.value) === canon(rConfig.value) && normalisedText(files.config.text) !== normalisedText(rConfig.text)) {
     entries.push({ path: 'config.yaml', kind: 'config', by: null, change: 'reformatted (same content)', weakening: false, used: 'working-tree', notApplied: [], outcome: 'applied' });
   }
 
