@@ -23,6 +23,7 @@ import { fetchOpenApi, rekey } from './openapi.mjs';
 import { escapeName, formatDuration, type Note } from './output.mjs';
 import { compareProtected } from './protected.mjs';
 import { followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
+import type { RunReport } from './runoutput.mjs';
 import { RUN_ID, type RunFolder } from './runs.mjs';
 import { checkSignInEnv } from './session.mjs';
 import { apiOrigins } from './tier.mjs';
@@ -39,6 +40,8 @@ export interface ReproContext {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Where the run reports its run folder, protected comparison and contract.
+  report: RunReport;
   elapsed: () => number;
   progress: (line: string) => void;
   launch?: (name: BrowserName) => Promise<Launched>;
@@ -101,6 +104,7 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
 
   const files = checkCommittedFiles(folder, { info, subcommand: 'repro', argv: ctx.argv, env: ctx.env });
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, mode: 'regress' });
+  ctx.report.protectedFiles(prot);
   ctx.notes.push(...files.notes, ...prot.notes);
   const config = prot.config;
   const flows = prot.flows.map((f) => f.flow);
@@ -109,7 +113,7 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
   checkSignInEnv(flows, folder, ctx.env);
   // repro's flow runs have never had the Bash limits, though 50.4 names every call with a plugin data folder.
   const session = await openTargetSession({
-    root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, config, flows,
+    root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
     start: ctx.start, againCommand: tierCmd, browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
     elapsed: ctx.elapsed, run: { create: 'repro' }, reset: true, bashLimits: false,
   });

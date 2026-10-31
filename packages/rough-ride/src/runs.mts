@@ -41,13 +41,6 @@ export interface RunFolder {
   dir: string;
 }
 
-// The run folder this invocation created, so an interrupt can write its
-// summary there (51.13). One CLI process runs one invocation.
-let created: RunFolder | null = null;
-export function lastRunFolder(): RunFolder | null {
-  return created;
-}
-
 // A non-recursive mkdir; on EEXIST a new suffix is drawn, up to 5 times.
 export function createRunFolder(
   folder: FolderState,
@@ -71,8 +64,7 @@ export function createRunFolder(
     const dir = path.join(runs, id);
     try {
       mkdirSync(dir);
-      created = { id, dir };
-      return created;
+      return { id, dir };
     } catch (error) {
       lastCode = (error as NodeJS.ErrnoException).code ?? 'error';
       if (lastCode !== 'EEXIST') break;

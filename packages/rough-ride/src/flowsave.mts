@@ -20,6 +20,7 @@ import { formatDuration, type Note } from './output.mjs';
 import { blockLines, blockWithHints, compareFlow, compareProtected, summaryLines as protectedSummary } from './protected.mjs';
 import type { Section } from './summary.mjs';
 import { runnerBlock, type RunnerInfo } from './runner.mjs';
+import type { RunReport } from './runoutput.mjs';
 import type { RunFolder } from './runs.mjs';
 import { loadSchema } from './schema.mjs';
 import { checkEnv, checkSignInEnv, envReader } from './session.mjs';
@@ -56,6 +57,8 @@ export interface FlowSaveContext {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Where the run reports its run folder, protected comparison and contract.
+  report: RunReport;
   elapsed: () => number;
   progress: (line: string) => void;
   launch?: (name: BrowserName) => Promise<Launched>;
@@ -187,6 +190,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
   ctx.notes.push(...files.notes);
   const manifest = new Manifest(root);
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest });
+  ctx.report.protectedFiles(prot);
   ctx.notes.push(...prot.notes);
   const read = envReader(folder, ctx.env);
 
@@ -309,7 +313,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
     const flows = [...prot.flows.map((e) => e.flow).filter((f) => !(newSignIn && f.name === 'sign-in')), ...(newSignIn ? [toFlow('sign-in', newSignIn.value!)] : [])];
     // Under --run the run folder exists already, and flow save prunes nothing.
     const session = await openTargetSession({
-      root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, config, flows,
+      root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
       start: ctx.start, againCommand: 'flow save', browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
       elapsed: ctx.elapsed, run: runDir ? { existing: runDir, prune: false } : { create: 'flow' }, reset: true, read,
     });

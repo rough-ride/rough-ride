@@ -50,8 +50,9 @@ function options(over = {}) {
     reset: 'node -e "require(\'fs\').writeFileSync(\'reset-ran\', \'\')"',
     allow: { remoteWrites: ['writes.example'] },
   };
+  const made = [];
   return {
-    root, folder, files, info, argv: ['quick'], env, notes: [], config, flows: [SIGN_IN],
+    root, folder, files, info, argv: ['quick'], env, notes: [], report: { madeRun: (run) => made.push(run) }, made, config, flows: [SIGN_IN],
     start: false, againCommand: '/rough-ride:quick', browserFlag: null, elapsed: () => 0,
     run: { create: 'quick' }, reset: true, ...over,
   };
@@ -67,6 +68,8 @@ test('the session opens the target, the flow lock and the run folder before the 
   const session = await openTargetSession(o);
   try {
     assert.deepEqual(seen, [{ lock: true, runs: [session.run.id] }]);
+    // The run output hears of the run folder before anything can stop or interrupt the run.
+    assert.deepEqual(o.made, [session.run]);
     assert.equal(session.target.url, o.config.target.url);
     // The guard enforces the same host rules every flow run gets.
     assert.equal(session.guard.policy, session.hosts);
@@ -110,7 +113,7 @@ test('a browser that fails to launch releases the flow lock, and the run folder 
   const o = options({ launch: async () => { throw new Error('no browser'); } });
   await assert.rejects(openTargetSession(o), /no browser/);
   assert.equal(existsSync(lockPath(o.root)), false);
-  assert.equal(readdirSync(path.join(o.folder.dir, 'runs')).length, 1);
+  assert.deepEqual(readdirSync(path.join(o.folder.dir, 'runs')), o.made.map((run) => run.id));
 });
 
 test('a stop after the run folder exists names the run; other errors and named stops pass unchanged', async () => {
@@ -135,6 +138,7 @@ test('with no run folder and no reset (snapshot), sign-in needs no reset and sto
   try {
     assert.equal(session.run, null);
     assert.equal(readdirSync(o.folder.dir).includes('runs'), false);
+    assert.deepEqual(o.made, []);
     assert.equal((await session.signIn()).ran, false);
     const stop = new StopError(makeStop('nothing-running', ['Nothing answers.']));
     assert.equal(session.withRun(stop), stop);

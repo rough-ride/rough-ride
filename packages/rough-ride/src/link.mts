@@ -13,6 +13,7 @@ import { Manifest } from './manifest.mjs';
 import { formatDuration, type Note } from './output.mjs';
 import { compareProtected, summaryLines as protectedSummary } from './protected.mjs';
 import { runnerBlock, type RunnerInfo } from './runner.mjs';
+import type { RunReport } from './runoutput.mjs';
 import { callCount, checkRun, recordCall, tierCommand, type PlanState } from './runcheck.mjs';
 import type { Section } from './summary.mjs';
 import { routeMatches, samePage } from './tracing.mjs';
@@ -116,6 +117,8 @@ export interface LinkContext {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Where the run reports its run folder, protected comparison and contract.
+  report: RunReport;
   elapsed: () => number;
 }
 
@@ -133,6 +136,7 @@ export function runLink(ctx: LinkContext): { lines: string[]; document: Record<s
   if (callCount(folder, ctx.runId, 'link') >= 2) return finish([`Not run: link (run ${ctx.runId} already made 2 link calls)`], 2);
   const files = checkCommittedFiles(folder, { info, subcommand: 'link', argv: ctx.argv, env: ctx.env });
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest });
+  ctx.report.protectedFiles(prot);
   protLines = protectedSummary(prot);
   ctx.notes.push(...files.notes, ...prot.notes);
 

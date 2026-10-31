@@ -22,6 +22,7 @@ import { canonicalJson, formatDuration, type Note } from './output.mjs';
 import { capSections } from './summary.mjs';
 import { blockLines, blockWithHints, compareProtected, protectedJson, reportLines as protectedReport, summaryLines as protectedSummary } from './protected.mjs';
 import { ciMode, environmentRecord, followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
+import type { RunReport } from './runoutput.mjs';
 import { acceptedEntries, testAcceptedNotes } from './accepted.mjs';
 import type { RunFolder } from './runs.mjs';
 import { checkSignInEnv } from './session.mjs';
@@ -124,6 +125,8 @@ export interface RegressContext {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Where the run reports its run folder, protected comparison and contract.
+  report: RunReport;
   elapsed: () => number;
   progress: (line: string) => void;
   launch?: (name: BrowserName) => Promise<Launched>;
@@ -156,6 +159,7 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
   ctx.notes.push(...files.notes);
   const manifest = new Manifest(root);
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, mode: 'regress' });
+  ctx.report.protectedFiles(prot);
   ctx.notes.push(...prot.notes);
   const acceptedList = acceptedEntries(files.accepted, prot.accepted, info.version, ctx.notes);
   const block = runnerBlock(info);
@@ -176,7 +180,7 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
   const flows = prot.flows.map((f) => f.flow);
   checkSignInEnv(flows, folder, ctx.env);
   const session = await openTargetSession({
-    root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, config, flows,
+    root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
     start: ctx.start, againCommand: '/rough-ride:quick', browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
     elapsed: ctx.elapsed, run: { create: 'regress' }, reset: true,
   });

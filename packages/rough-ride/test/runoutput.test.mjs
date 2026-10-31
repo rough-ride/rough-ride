@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
+import { parseArgs } from '../dist/args.mjs';
+import { makeStop } from '../dist/exit.mjs';
+import { runnerBlock as runnerBlockOf, runnerInfo } from '../dist/runner.mjs';
+import { createRunOutput } from '../dist/runoutput.mjs';
+import { BLOCK_END, BLOCK_START } from '../dist/summary.mjs';
 import { SAVE_JS, startCiSite } from './fixtures/ci-site.mjs';
 import { gitRepo, runAsync, scratchDir, sh } from './helpers.mjs';
 
@@ -171,4 +176,112 @@ test('outcomes without a run folder: a usage stop and nothing to attack write no
   assert.equal(nothing.status, 'nothing-to-attack');
   assert.equal(nothing.runId, null);
   assert.equal(existsSync(path.join(root, '.rough-ride', 'runs')), false);
+});
+
+// ---- The Run output module in this process, against a temp folder.
+
+// A run output for `argv` in a fresh repository with one run folder, its
+// streams and exit code captured.
+function inProcess(argv, env = LOCAL) {
+  const root = gitRepo();
+  const run = { id: '20261031-120000-quick-ab12', dir: path.join(root, '.rough-ride', 'runs', '20261031-120000-quick-ab12') };
+  mkdirSync(run.dir, { recursive: true });
+  const seen = { stdout: '', stderr: '', exitCode: null, drained: 0 };
+  const streams = {
+    stdout: (t) => (seen.stdout += t),
+    stderr: (t) => (seen.stderr += t),
+    exitCode: (code) => (seen.exitCode = code),
+    drain: async () => void seen.drained++,
+  };
+  const args = parseArgs(argv);
+  const info = runnerInfo(args.pluginData, root, env);
+  const output = createRunOutput({ args, info, cwd: root, env, elapsed: () => 1200, streams });
+  output.located(root);
+  return { root, run, seen, output, info, doc: () => JSON.parse(seen.stdout) };
+}
+const PROTECTED = { base: null, entries: [], config: null, flows: [], notRun: [], tests: [], accepted: null, notes: [], texts: new Map(), compareLine: null, reviewedHashes: new Map() };
+const MISSING = { status: 'missing', file: null, edition: null, current: 1 };
+
+test('a finished run writes summary.txt, record.json and summary.json last, and prints the same document', async () => {
+  const { root, run, seen, output, doc } = inProcess(['quick', '--json']);
+  output.notes.push({ id: 'root', text: 'root: x' });
+  output.finish({ status: 'findings', exitCode: 1, lines: ['rough-ride quick | 1.2s', 'body'], document: { tier: 'quick', extra: 1 }, run, record: { environment: { ci: false } } });
+  assert.equal(seen.exitCode, 1);
+  assert.equal(seen.stderr, 'rough-ride quick | 1.2s\nbody\n');
+  const printed = doc();
+  assert.deepEqual([printed.runId, printed.status, printed.extra, printed.notes], [run.id, 'findings', 1, [{ id: 'root', text: 'root: x' }]]);
+  assert.deepEqual(files(root, run.id), ['record.json', 'summary.json', 'summary.txt']);
+  assertSummaryFiles(root, printed);
+  assert.deepEqual(JSON.parse(runFile(root, run.id, 'record.json')), { ...printed, environment: { ci: false } });
+  const written = (name) => statSync(path.join(run.dir, name)).mtimeMs;
+  assert.ok(written('summary.json') >= Math.max(written('summary.txt'), written('record.json')));
+});
+
+test('an outcome with no run folder of its own writes no summary files; under --run its block still lands in adversary/summary.txt', () => {
+  const data = scratchDir();
+  const { root, run, seen, output } = inProcess(['snapshot', '--run', '20261031-120000-quick-ab12', '--plugin-data', data]);
+  output.namedRun(run, false);
+  output.finish({ status: 'passed', exitCode: 0, lines: ['rough-ride snapshot | 1.2s | run ' + run.id] });
+  assert.equal(seen.stdout, `${BLOCK_START}\nrough-ride snapshot | 1.2s | run ${run.id}\n${BLOCK_END}\n`);
+  assert.deepEqual(files(root, run.id), ['adversary']);
+  assert.equal(runFile(root, run.id, path.join('adversary', 'summary.txt')), seen.stdout);
+});
+
+test('a stop reports what the run reported before it, and names the run it carries', () => {
+  const { root, run, output, doc } = inProcess(['quick', '--json']);
+  output.protectedFiles(PROTECTED);
+  output.contract(MISSING);
+  output.stop(makeStop('reset-failed', ['reset failed.']), { run });
+  const stopped = doc();
+  assert.equal(stopped.summaryLines[0], `rough-ride quick | 1.2s | run ${run.id} | stopped`);
+  assert.deepEqual([stopped.status, stopped.exitCode, stopped.stop.code, stopped.runId], ['stopped', 78, 'reset-failed', run.id]);
+  assert.deepEqual([stopped.protected, stopped.protectedLines, stopped.contract], [[], [], MISSING]);
+  assert.deepEqual(files(root, run.id), []);
+});
+
+test('a run-id stop never touches the run it refused', () => {
+  const data = scratchDir();
+  const { root, run, seen, output } = inProcess(['attack', '--run', '20261031-120000-quick-ab12', '--plugin-data', data]);
+  output.namedRun(run, true);
+  output.stop(makeStop('run-attacked', ['Run was already attacked.']), { run });
+  assert.equal(seen.exitCode, 75);
+  assert.deepEqual(files(root, run.id), []);
+});
+
+test('an interrupt writes summary.txt, report.txt, record.json and summary.json into the run folder it made, prints, drains, and ends the output', async () => {
+  const { root, run, seen, output, info, doc } = inProcess(['regress', '--json']);
+  output.notes.push({ id: 'root', text: 'root: x' });
+  output.madeRun(run);
+  await output.interrupt('SIGINT');
+  const printed = doc();
+  assert.equal(printed.summaryLines[0], `rough-ride regress | 1.2s | run ${run.id} | interrupted`);
+  assert.deepEqual([printed.status, printed.exitCode, seen.exitCode, seen.drained, output.interrupted], ['interrupted', 130, 130, 1, true]);
+  assert.deepEqual(files(root, run.id), ['record.json', 'report.txt', 'summary.json', 'summary.txt']);
+  assertSummaryFiles(root, printed);
+  assert.equal(JSON.parse(runFile(root, run.id, 'record.json')).environment.mode, 'terminal');
+  assert.equal(runFile(root, run.id, 'report.txt'), text([printed.summaryLines[0], '', 'Notes', 'root: x', '', ...printed.summaryLines.slice(1)]));
+  assert.ok(printed.summaryLines.slice(1).every((l, i) => l === runnerBlockOf(info)[i]));
+
+  // Nothing after the first signal writes or prints.
+  const before = seen.stdout;
+  output.finish({ status: 'passed', exitCode: 0, lines: ['late'], run });
+  output.stop(makeStop('reset-failed', ['late']), { run });
+  await output.interrupt('SIGTERM');
+  assert.equal(seen.stdout, before);
+  assert.equal(seen.exitCode, 130);
+  assert.equal(JSON.parse(runFile(root, run.id, 'summary.json')).status, 'interrupted');
+});
+
+test("an interrupted attack writes into its plan's run; other calls that name a run, or made none, write no files", async () => {
+  const attack = inProcess(['attack', '--run', '20261031-120000-quick-ab12', '--json']);
+  attack.output.namedRun(attack.run, true);
+  await attack.output.interrupt('SIGTERM');
+  assert.equal(attack.doc().exitCode, 143);
+  assert.deepEqual(files(attack.root, attack.run.id), ['record.json', 'report.txt', 'summary.json', 'summary.txt']);
+
+  const snapshot = inProcess(['snapshot', '--run', '20261031-120000-quick-ab12', '--json']);
+  snapshot.output.namedRun(snapshot.run, false);
+  await snapshot.output.interrupt('SIGINT');
+  assert.equal(snapshot.doc().summaryLines[0], 'rough-ride snapshot | 1.2s | interrupted');
+  assert.deepEqual(files(snapshot.root, snapshot.run.id), []);
 });

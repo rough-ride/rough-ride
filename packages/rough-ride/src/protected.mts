@@ -356,13 +356,6 @@ const REMOVE_HINT = 'To remove it for good, delete the file, then in your own te
 
 const PROTECTED = /^(config\.yaml|accepted\.yaml|flows\/[^/]+\.yaml|tests\/[^/]+\.yaml)$/;
 
-// The invocation's comparison, so a stop after it still reports the block in
-// its JSON (53.2). One CLI process runs one invocation.
-let last: ProtectedResult | null = null;
-export function lastProtected(): ProtectedResult | null {
-  return last;
-}
-
 export function compareProtected(options: CompareOptions): ProtectedResult {
   const { root, files } = options;
   const rel = printed(path.relative(root, options.folderDir));
@@ -502,8 +495,7 @@ export function compareProtected(options: CompareOptions): ProtectedResult {
   }
   const texts = new Map<string, string | null>([...working].map(([p, w]) => [p, w.text]));
   const reviewedHashes = new Map([...reviewed].map(([p, texts]) => [p, texts.map(fileHash)]));
-  last = { base, entries, config: cfg.config, flows, notRun, tests, accepted, notes, texts, compareLine, reviewedHashes };
-  return last;
+  return { base, entries, config: cfg.config, flows, notRun, tests, accepted, notes, texts, compareLine, reviewedHashes };
 }
 
 // CI inputs changed since the merge base (26.12): workflows, and the package

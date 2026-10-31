@@ -16,6 +16,7 @@ import { Manifest } from './manifest.mjs';
 import { formatDuration, type Note } from './output.mjs';
 import { compareProtected, summaryLines as protectedSummary } from './protected.mjs';
 import { runnerBlock, type RunnerInfo } from './runner.mjs';
+import type { RunReport } from './runoutput.mjs';
 import { callCount, checkRun, recordCall, tierCommand } from './runcheck.mjs';
 import { redactSecrets } from './secrets.mjs';
 import { checkEnv, checkSignInEnv, envReader } from './session.mjs';
@@ -82,6 +83,8 @@ export interface SnapshotContext {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Where the run reports its run folder, protected comparison and contract.
+  report: RunReport;
   elapsed: () => number;
   launch?: (name: BrowserName) => Promise<Launched>;
 }
@@ -101,6 +104,7 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
   const files = checkCommittedFiles(folder, { info, subcommand: 'snapshot', argv: ctx.argv, env: ctx.env });
   ctx.notes.push(...files.notes);
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest });
+  ctx.report.protectedFiles(prot);
   protLines = protectedSummary(prot);
   ctx.notes.push(...prot.notes);
 
@@ -122,7 +126,7 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
   if (runnable.length > 0) {
     const config = prot.config;
     const session = await openTargetSession({
-      root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, config, flows: prot.flows.map((e) => e.flow),
+      root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows: prot.flows.map((e) => e.flow),
       start: false, againCommand: tierCommand(info, plan.tier), browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
       elapsed: ctx.elapsed, run: null, reset: false, read,
     });

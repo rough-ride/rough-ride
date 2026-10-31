@@ -18,6 +18,7 @@ import { FORMATS, type FormatsReport } from './formats.mjs';
 import { allowedSuffix } from './guard.mjs';
 import { canonicalJson, formatDuration, type Note } from './output.mjs';
 import { ciMode, environmentRecord, followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
+import type { RunReport } from './runoutput.mjs';
 import type { RunFolder } from './runs.mjs';
 import { asciiJson, instructionNotes, needsFlowItems, patchRanges, readSpecs, specCandidates, writeAdversaryFolder } from './adversary.mjs';
 import { openReviewed } from './reviewed.mjs';
@@ -50,7 +51,7 @@ import { cmp, confirmGroups, groupFindings, memberOf, SEVERITY_TEXT, type Group 
 import { acceptedEntries, acceptedRecord, acceptedReport, acceptsBaseline, applyAccepted, baselineKey, testAcceptedNotes } from './accepted.mjs';
 import { moduleFiles, repoFiles } from './tracing.mjs';
 import { writeAtomic } from './write.mjs';
-import { CONTRACT_FILES, contractJson, contractLine, detectContract, setLastContract, summaryContractLine } from './contract.mjs';
+import { CONTRACT_FILES, contractJson, contractLine, detectContract, summaryContractLine } from './contract.mjs';
 
 export const PRE_RELEASE = '0.x pre-release: detection and false-alarm rates not measured yet';
 
@@ -99,6 +100,8 @@ export interface TierContext {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Where the run reports its run folder, protected comparison and contract.
+  report: RunReport;
   elapsed: () => number;
   progress: (line: string) => void;
   cpus?: number;
@@ -157,10 +160,11 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   if (ctx.mode !== 'attack') reviewed.want(CONTRACT_FILES);
   if (ctx.mode === 'plan') reviewed.want(specCandidates(folder).paths);
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, reviewed });
+  ctx.report.protectedFiles(prot);
   ctx.notes.push(...prot.notes);
   // The contract status: detected here, before reset or target.start; attack carries its plan's (resolution 37).
   const contract = ctx.mode === 'attack' ? ctx.plan?.contract ?? null : detectContract(root, reviewed.atMergeBase(CONTRACT_FILES), prot.base);
-  setLastContract(contract);
+  ctx.report.contract(contract);
   const acceptedList = acceptedEntries(files.accepted, prot.accepted, info.version, ctx.notes);
   // Only plan reads specs and lists changed instruction files (43.1, 43.6).
   const baseShown = prot.base?.shown ?? 'the base branch';
@@ -177,7 +181,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   checkSignInEnv(flows, folder, ctx.env);
 
   const session = await openTargetSession({
-    root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, config, flows,
+    root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
     start: ctx.start, againCommand: `/rough-ride:${ctx.subcommand}`, browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
     elapsed: ctx.elapsed, progress: ctx.progress, noteUnfinishedRun: true, reset: true,
     run: ctx.mode === 'attack'

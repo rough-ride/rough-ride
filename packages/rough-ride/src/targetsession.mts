@@ -16,6 +16,7 @@ import { hostPolicy, type HostPolicy } from './hosts.mjs';
 import { takeFlowLock, type FlowLock } from './lock.mjs';
 import type { Note } from './output.mjs';
 import type { RunnerInfo } from './runner.mjs';
+import type { RunReport } from './runoutput.mjs';
 import { bashBlocksStart, bashDeadline } from './runcheck.mjs';
 import { createRunFolder, pruneRuns, unfinishedRunNote, type RunFolder } from './runs.mjs';
 import { credentialStrings } from './secrets.mjs';
@@ -35,6 +36,8 @@ export interface TargetSessionOptions {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Told about the run folder the session makes, so an interrupt writes there (51.13).
+  report: Pick<RunReport, 'madeRun'>;
   config: Config | null;
   // The flows sign-in picks its flow from: the effective ones, or flow save's new sign-in.
   flows: Flow[];
@@ -128,6 +131,7 @@ export async function openTargetSession(options: TargetSessionOptions): Promise<
     }
     if (options.run && 'create' in options.run) {
       run = createRunFolder(folder, options.run.create);
+      options.report.madeRun(run);
       pruneRuns(folder, lock, run.id);
     } else if (options.run) {
       run = options.run.existing;
