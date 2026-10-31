@@ -1,10 +1,12 @@
-// Steps 1, 2, 3 and 5 of checking a committed YAML file under .rough-ride/
-// (spec part 2 sections 7.5 and 7.6). Step 4, the schema range, follows them.
+// Checking a committed YAML file under .rough-ride/ (spec part 2 sections 7.5
+// and 7.6): steps 1, 2, 3 and 5 in parseCommitted, and step 4, the schema
+// range, in checkVersion. Every version of a protected file gets the same
+// check: the working copy, a reviewed version and a saved copy.
 
 import { isMap, isScalar, LineCounter, parseAllDocuments, Scalar, type Document } from 'yaml';
-import { FORMATS, SCHEMA_VERSION, type FormatKind, type Formats } from './formats.mjs';
+import { compareVersions, FORMATS, SCHEMA_VERSION, type FormatKind, type Formats } from './formats.mjs';
 import { escapeName } from './output.mjs';
-import { validate, type JsonSchema, type SchemaError } from './schema.mjs';
+import { loadSchema, validate, type JsonSchema, type SchemaError } from './schema.mjs';
 
 export interface CommittedFile {
   // `.rough-ride/config.yaml`, as printed.
@@ -16,6 +18,33 @@ export interface CommittedFile {
   // Failures of steps 1 to 3, and of step 5, as printed lines.
   problems: string[];
   step5: string[];
+}
+
+export type CommittedKind = Exclude<FormatKind, 'plan'>;
+
+const SCHEMA_FILES: Record<CommittedKind, string> = {
+  config: 'config.schema.json',
+  flow: 'flow.schema.json',
+  tests: 'test.schema.json',
+  accepted: 'accepted.schema.json',
+};
+
+const schemas = new Map<CommittedKind, JsonSchema>();
+
+export interface CheckedVersion extends CommittedFile {
+  // Step 4: null without a schema line, else where it falls against this
+  // runner's floor for the kind and its own version.
+  range: 'in-range' | 'older' | 'newer' | null;
+}
+
+// Steps 1 to 5 for one version of a committed file, against the kind's schema.
+export function checkVersion(text: string, shown: string, kind: CommittedKind, runner: string, formats: Formats = FORMATS): CheckedVersion {
+  let schemaFile = schemas.get(kind);
+  if (!schemaFile) schemas.set(kind, (schemaFile = loadSchema(SCHEMA_FILES[kind])));
+  const file = parseCommitted(text, shown, kind, schemaFile, formats);
+  const schema = file.schema?.text;
+  const range = schema === undefined ? null : compareVersions(schema, runner) > 0 ? 'newer' : compareVersions(schema, formats[kind].floor) < 0 ? 'older' : 'in-range';
+  return { ...file, range };
 }
 
 const KIND_WORDS: Record<FormatKind, string> = {
