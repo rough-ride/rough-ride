@@ -1,7 +1,7 @@
 // The generic checks ticket 18 brings (spec part 5 sections 22.1 to 22.4):
 // no-uncaught-error, settles, visible-error-message and no-broken-text.
 
-import type { ControlFacts, FlowRunResult, PageEvent, PageTimingResult, RequestRecord, StepRecord } from './flowrun.mjs';
+import { GO_LABEL_PREFIX, NOT_READY_PREFIX, RELOAD_LABEL, type ControlFacts, type FlowRunResult, type PageEvent, type PageTimingResult, type RequestRecord, type StepRecord } from './flowrun.mjs';
 import { escapeName } from './output.mjs';
 import { redactSecrets } from './secrets.mjs';
 
@@ -91,12 +91,12 @@ export function brokenTextIn(lines: string[], fills: string[], known: Set<string
 // A ready wait that timed out already states its time (32.2), so it gets no second one.
 function settlesEvidence(step: StepRecord): string {
   const why = step.observation?.unsettled ?? 'did not settle';
-  return why.startsWith('not ready ') ? `${step.label}: ${why}` : `${step.label}: ${why} after ${Math.round(step.settleMs / 100) / 10} s`;
+  return why.startsWith(NOT_READY_PREFIX) ? `${step.label}: ${why}` : `${step.label}: ${why} after ${Math.round(step.settleMs / 100) / 10} s`;
 }
 
 // The runner's own reload, back and forward steps (32.2). They share the entry
 // step's index, so the baseline run's step at that index is a different step.
-const runnerNavigation = (step: StepRecord): boolean => step.label === 'reload' || step.label.startsWith('go ');
+const runnerNavigation = (step: StepRecord): boolean => step.label === RELOAD_LABEL || step.label.startsWith(GO_LABEL_PREFIX);
 
 // no-uncaught-error, settles and no-broken-text (22.3) are judged only here: for
 // every attack kind against its baseline run, and for a baseline run against nothing.
