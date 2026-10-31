@@ -4,7 +4,6 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
-import { canon } from '../hooks/path-check.mjs';
 import { contractLine } from '../dist/contract.mjs';
 import { checkRootEntry } from '../dist/folder.mjs';
 import { ciMode, environmentRecord, isCi, runnerInfo } from '../dist/runner.mjs';
@@ -12,7 +11,7 @@ import { pullRequestLine } from '../dist/session.mjs';
 import { runSnapshot } from '../dist/snapshot.mjs';
 import { PAGE as LATE_PAGE } from './fixtures/late-api.mjs';
 import { SAVE_JS, startCiSite } from './fixtures/ci-site.mjs';
-import { CLI, fixture, gitRepo, runAsync, scratchDir, sh } from './helpers.mjs';
+import { canonical, CLI, fixture, gitRepo, runAsync, scratchDir, sh } from './helpers.mjs';
 
 const posix = { skip: process.platform === 'win32' && 'Windows has no catchable SIGTERM and kills with exit 1' };
 // Every run sets both variables, so the machine running the tests can't put it in CI mode.
@@ -87,7 +86,7 @@ test('CI=true, run from frontend/: the candidate stays in run output, the lines 
   assert.ok(runFile(root, id, 'report.txt').split('\n').some((l) => l.startsWith('Resilience contract: not in')));
   // The root note still prints in CI mode (resolution 121), in the runner's
   // canonical spelling: forward slashes and long names on Windows.
-  assert.ok(lines.includes(`root: ${canon(root)}`), lines.join('\n'));
+  assert.ok(lines.includes(`root: ${canonical(root)}`), lines.join('\n'));
   assert.equal(runFile(root, id, 'summary.txt'), lines.map((l) => l + '\n').join(''));
 });
 
