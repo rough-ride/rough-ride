@@ -1,15 +1,18 @@
 // Every attack kind's observable facts on the fixture sites: the flow run's
 // kind facts, the verdict and checks, the run record's kind fields, the
-// regression key, the non-finding line and the symptom.
+// regression key, the non-finding line, the symptom, and the group key, attack
+// link and app check id the run and plan read from the kind.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { after, before, test } from 'node:test';
-import { attackPoints, badInputAttack, doubleSubmitPoints, nonFinding, outOfOrderPoints, pageTimingPoints, runAttack, symptom, viewportAttack } from '../dist/attacks.mjs';
+import { matchesWhen } from '../dist/appchecks.mjs';
+import { attackLink, attackPoints, badInputAttack, doubleSubmitPoints, nonFinding, outOfOrderPoints, pageTimingPoints, runAttack, symptom, viewportAttack } from '../dist/attacks.mjs';
 import { planBadInputs } from '../dist/badinputs.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/browser.mjs';
 import { findForms } from '../dist/forms.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
 import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
+import { keyOf } from '../dist/groups.mjs';
 import { fetchOpenApi } from '../dist/openapi.mjs';
 import { attackKey, attackRecord } from '../dist/record.mjs';
 import { startBadSite } from './fixtures/bad-site.mjs';
@@ -78,6 +81,10 @@ function facts(o, flow) {
     key: attackKey(o),
     nonFinding: nonFinding(o, 12_000)?.text ?? null,
     symptom: o.verdict === 'failed' ? symptom(o) : null,
+    groupKey: keyOf(o, flow),
+    link: (({ kind, endpoints }) => ({ kind, endpoints }))(attackLink(o, [])),
+    // The ids an app check's when.ids matches the attack by.
+    ids: [o.badInput?.inputId, o.timing, o.fault, 'none'].filter((id) => id && matchesWhen({ id: 'app-x', when: { ids: [id] } }, o, flow)),
   };
 }
 
@@ -204,3 +211,24 @@ const PINNED = {
   badKept: {"verdict": "not-applied", "checks": [], "step": 4, "page": "/notes/new", "control": "button \"Save\"", "notApplied": "the field kept the flow's own value", "givenUp": false, "events": [], "run": {"passed": true, "failure": null, "stoppedAt": null, "endedAfterWindow": true, "recovery": null, "timing": null, "fault": null, "badInput": {"notApplied": "the field kept the flow's own value", "outcome": null, "submitDisabled": false, "submitted": false, "reference": 0, "after": 0, "carrying": null}, "outOfOrder": null, "pageTiming": null, "values": null, "steps": ["1 goto /notes/new?mode=plain true", "2 fill label \"Title\" true value"], "shots": []}, "record": {"kind": "bad-input", "step": {"index": 4, "kind": "click", "locator": "button \"Save\""}, "page": "/notes/new", "verdict": "not-applied", "stoppedAt": null, "failedChecks": [], "badInput": {"id": "long", "field": {"name": "label \"Body\"", "kind": "textarea", "key": "body"}, "preview": "long \"Some body-abcdefghi-abcdefghi-abcdefg...\" (10000 chars)", "length": 10000, "held": {"length": 9, "cutBy": null}, "outcome": null}}, "key": {"badInput": "long", "page": "/notes/new", "request": "POST /api/notes", "field": "body"}, "nonFinding": "Not applied: create-note/label \"Body\"/long (the field kept the flow's own value)", "symptom": null},
   viewport: {"verdict": "failed", "checks": ["no-uncaught-error pass", "settles pass", "no-broken-text pass", "no-overflow-375 fail"], "step": 1, "page": "/", "control": "viewport 375", "notApplied": null, "givenUp": false, "events": [], "run": {"passed": true, "failure": null, "stoppedAt": null, "endedAfterWindow": false, "recovery": null, "timing": null, "fault": null, "badInput": null, "outOfOrder": null, "pageTiming": null, "values": null, "steps": ["1 goto / true overflow 2", "2 click button \"Show\" true overflow 2"], "shots": [1]}, "record": {"kind": "viewport", "step": {"index": 1, "kind": "goto", "locator": null}, "page": "/", "verdict": "failed", "stoppedAt": null, "failedChecks": ["no-overflow-375"], "viewport": {"width": 375, "height": 800}}, "key": {"viewport": 375}, "nonFinding": null, "symptom": "/ scrolls sideways at 375px"},
 };
+
+// The group key, attack link and app check ids, taken from the code before
+// these moved into the kind modules.
+const SEAM = {
+  fault500: {"groupKey": {"page": "/form", "step": "click", "action": "POST /api/save"}, "link": {"kind": "fault", "endpoints": ["POST /api/save"]}, "ids": ["500"]},
+  keepArmed: {"groupKey": {"page": "/form", "step": "click", "action": "POST /api/save"}, "link": {"kind": "fault", "endpoints": ["POST /api/save"]}, "ids": ["500"]},
+  malformed: {"groupKey": {"page": "/list", "step": "click", "action": "GET /api/list"}, "link": {"kind": "fault", "endpoints": ["GET /api/list"]}, "ids": ["malformed-json"]},
+  double: {"groupKey": {"page": "/noguard", "step": "click", "action": "POST /api/notes"}, "link": {"kind": "timing", "endpoints": ["POST /api/notes"]}, "ids": ["double-submit"]},
+  doubleStopped: {"groupKey": {"page": "/dup500", "step": "click", "action": "POST /api/once"}, "link": {"kind": "timing", "endpoints": ["POST /api/once"]}, "ids": ["double-submit"]},
+  oooStale: {"groupKey": {"page": "/search", "step": "fill", "action": "field /search GET /api/search q"}, "link": {"kind": "timing", "endpoints": ["GET /api/search"]}, "ids": ["out-of-order"]},
+  oooSame: {"groupKey": {"page": "/search", "step": "fill", "action": "field /search GET /api/search q"}, "link": {"kind": "timing", "endpoints": ["GET /api/search"]}, "ids": ["out-of-order"]},
+  refresh: {"groupKey": {"page": "/new", "step": "click", "action": "refresh page /new"}, "link": {"kind": "timing", "endpoints": ["refresh page /new"]}, "ids": ["refresh"]},
+  back: {"groupKey": {"page": "/new", "step": "click", "action": "back page /new"}, "link": {"kind": "timing", "endpoints": ["back page /new"]}, "ids": ["back"]},
+  signedOut: {"groupKey": {"page": "/me", "step": "goto", "action": "signed-out-reload page /me"}, "link": {"kind": "timing", "endpoints": ["signed-out-reload page /me"]}, "ids": ["signed-out-reload"]},
+  refreshPost: {"groupKey": {"page": "/posted", "step": "click", "action": "refresh page /new"}, "link": {"kind": "timing", "endpoints": ["refresh page /new"]}, "ids": ["refresh"]},
+  badRejected: {"groupKey": {"page": "/notes/new", "step": "click", "action": "POST /api/notes"}, "link": {"kind": "bad-input", "endpoints": ["POST /api/notes"]}, "ids": ["spaces"]},
+  badCrashed: {"groupKey": {"page": "/notes/new", "step": "click", "action": "POST /api/notes"}, "link": {"kind": "bad-input", "endpoints": ["POST /api/notes"]}, "ids": ["spaces"]},
+  badKept: {"groupKey": {"page": "/notes/new", "step": "click", "action": "POST /api/notes"}, "link": {"kind": "bad-input", "endpoints": ["POST /api/notes"]}, "ids": ["long"]},
+  viewport: {"groupKey": {"page": "/", "step": "goto", "action": "viewport 375"}, "link": {"kind": "viewport", "endpoints": []}, "ids": []},
+};
+for (const [name, seam] of Object.entries(SEAM)) Object.assign(PINNED[name], seam);

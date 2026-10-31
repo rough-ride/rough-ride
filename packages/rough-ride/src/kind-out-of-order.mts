@@ -235,6 +235,11 @@ export const outOfOrderKind: KindModule = {
   what: (o) => `an older answer arrived after a newer one on ${o.controlName ?? o.control}`,
   key: (o) => ({ timing: 'out-of-order', page: o.page, request: o.template, field: o.outOfOrder?.fieldKey ?? null }),
   record: (o) => ({ timing: { timing: o.timing, key: o.key, control: o.controlName ?? null, page: o.page }, events: o.events }),
+  appId: (attack) => attack.timing ?? null,
+  link: (attack) => ({ kind: 'timing', endpoints: attack.writeKeys ?? [attack.template] }),
+  // A later failing step fails latest-response-wins through (c), so a stopped flow gets no line.
+  nonFinding: (o, lines) => (o.verdict === 'not-applied' ? lines.notApplied() : lines.byVerdict()),
+  groupKey: (o) => ({ page: o.page ?? '/', action: `field ${o.page ?? '/'} ${o.template} ${o.outOfOrder?.fieldKey ?? ''}` }),
   async run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome> {
     const x = attack.outOfOrder!;
     const run = await runFlow({

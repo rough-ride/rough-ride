@@ -108,6 +108,10 @@ export const pageTimingKind: KindModule = {
   what: (o) => (o.timing === 'refresh' ? `a reload of ${o.page}` : o.timing === 'back' ? `back then forward to ${o.page}` : `a signed-out reload of ${o.page}`),
   key: (o) => ({ timing: o.timing, page: o.page, entry: o.entry?.k }),
   record: (o) => ({ timing: { timing: o.timing, key: o.key, control: o.controlName ?? null, page: o.page }, events: o.events }),
+  appId: (attack) => attack.timing ?? null,
+  link: (attack) => ({ kind: 'timing', endpoints: attack.writeKeys ?? [attack.template] }),
+  nonFinding: (o, lines) => (o.verdict === 'not-applied' ? lines.notApplied() : lines.flowStopped() ?? lines.byVerdict()),
+  groupKey: (o) => ({ page: o.page ?? '/', action: o.template }),
   async run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome> {
     const run = await runFlow({ ...ctx.options, shots: [attack.step], kind: flowRunKind(attack.timing as PageKind, attack.step, attack.entry?.previous ?? null) });
     // Errors that a baseline full load of the same page template also got never count.

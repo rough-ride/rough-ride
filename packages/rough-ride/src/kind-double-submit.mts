@@ -101,6 +101,11 @@ export const doubleSubmitKind: KindModule = {
   },
   key: (o) => ({ timing: o.timing, request: o.key, page: o.page }),
   record: (o) => ({ timing: { timing: o.timing, key: o.key, control: o.controlName ?? null, page: o.page }, events: o.events }),
+  appId: (attack) => attack.timing ?? null,
+  link: (attack) => ({ kind: 'timing', endpoints: attack.writeKeys ?? [attack.template] }),
+  nonFinding: (o, lines) => (o.verdict === 'not-applied' ? lines.notApplied() : lines.flowStopped() ?? lines.byVerdict()),
+  // The page when the write was sent and its request's template.
+  groupKey: (o, { request, suffixes }) => ({ page: o.page ?? request?.pagePath ?? '/', action: `${o.template}${suffixes(false)}` }),
   async run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome> {
     const run = await runFlow({ ...ctx.options, kind: flowRunKind(attack.step), shots: [attack.step] });
     const own = ctx.options.hosts.ownHost;

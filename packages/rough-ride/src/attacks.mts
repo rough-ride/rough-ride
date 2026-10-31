@@ -14,7 +14,7 @@ import { membersText } from './summary.mjs';
 import { attackId, emptyForm, isJsonMedia, kindsFor, responseSchema, type BodyKind, type FaultId } from './faults.mjs';
 import type { Form } from './forms.mjs';
 import { describeLocator, isFrameworkInternal, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type RequestRecord, type RunFlowOptions, type Served } from './flowrun.mjs';
-import { kindFor } from './kinds.mjs';
+import { kindFor, type LinkedAttack } from './kinds.mjs';
 import { matchTemplate, type OpenApiDoc } from './openapi.mjs';
 
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -540,36 +540,39 @@ export function groupLines(g: Group, repro: string): string[] {
   ];
 }
 
-export function attackLink(o: Pick<AttackOutcome, 'flow' | 'verdict' | 'kind' | 'step' | 'page' | 'template' | 'writeKeys'>, loaded: string[]): AttackLink {
-  const verdict = o.verdict;
-  if (o.kind === 'viewport') return { flow: o.flow, verdict, kind: 'viewport', step: o.step, page: o.page, endpoints: [], loaded };
-  if (o.kind === 'bad-input') return { flow: o.flow, verdict, kind: 'bad-input', step: o.step, page: o.page, endpoints: o.template ? [o.template] : [], loaded };
-  if (o.kind === 'timing') return { flow: o.flow, verdict, kind: 'timing', step: o.step, page: o.page, endpoints: o.writeKeys ?? [o.template], loaded };
-  return { flow: o.flow, verdict, kind: 'fault', step: o.step, page: o.page, endpoints: [o.template], loaded };
+export function attackLink(o: Pick<AttackOutcome, 'flow' | 'verdict' | 'step' | 'page'> & LinkedAttack, loaded: string[]): AttackLink {
+  const { kind, endpoints } = kindFor(o).link(o);
+  return { flow: o.flow, verdict: o.verdict, kind, step: o.step, page: o.page, endpoints, loaded };
 }
 
-// Lines that are never findings (20.15), typed by kind for the run record.
-export function nonFinding(o: AttackOutcome, holdMs: number): { kind: string; text: string; refs: string[] } | null {
-  if (o.kind === 'timing' && o.verdict === 'not-applied') return { kind: 'not-applied', text: `Not applied: ${o.id} (${o.notApplied ?? 'unknown'})`, refs: [o.id] };
-  if (o.kind === 'bad-input') {
-    const r = o.run.badInput;
-    if (o.verdict === 'not-applied') return { kind: 'not-applied', text: `Not applied: ${o.id} (${o.notApplied ?? 'unknown'})`, refs: [o.id] };
-    if (o.verdict === 'inconclusive') return { kind: 'inconclusive', text: `Inconclusive: ${o.id} (${r?.carrying?.status ?? '?'} on ${r?.carrying?.method ?? ''} ${r?.carrying?.path ?? ''})`, refs: [o.id] };
-    if (o.run.stoppedAt !== null) return { kind: 'accepted-flow-stopped', text: `Accepted; flow stopped at step ${o.run.stoppedAt}: ${o.id}`, refs: [o.id] };
-  }
-  // In out-of-order a later failing step fails latest-response-wins through (c), so no line here.
-  if (o.run.stoppedAt !== null && o.timing !== 'out-of-order') return { kind: 'faulted-flow-stopped', text: `Faulted; flow stopped at step ${o.run.stoppedAt}: ${o.id}`, refs: [o.id] };
-  if (o.run.fault?.pending) return { kind: 'pending', text: `Pending: ${o.id} (no response for ${holdMs / 1000} s and the page did not give up)`, refs: [o.id] };
-  switch (o.verdict) {
-    case 'not-applied':
-      return { kind: 'not-applied', text: `Not applied: ${o.id} (${o.notApplied ?? 'unknown'})`, refs: [o.id] };
-    case 'pending':
-      return { kind: 'pending', text: `Pending: ${o.id} (no response for ${holdMs / 1000} s and the page did not give up)`, refs: [o.id] };
-    case 'fault-never-fired':
-      return { kind: 'fault-never-fired', text: `${o.id}: fault never fired`, refs: [o.id] };
-    case 'void':
-      return { kind: 'void', text: `${o.id}: void (${o.voided ?? 'void'})`, refs: [o.id] };
-    default:
-      return null;
-  }
+// A line that is never a finding (20.15), typed by kind for the run record.
+export interface NonFinding {
+  kind: string;
+  text: string;
+  refs: string[];
+}
+
+// The attack's non-finding line, or null: its kind picks which shared lines apply and in what order.
+export function nonFinding(o: AttackOutcome, holdMs: number): NonFinding | null {
+  const pending = (): NonFinding => ({ kind: 'pending', text: `Pending: ${o.id} (no response for ${holdMs / 1000} s and the page did not give up)`, refs: [o.id] });
+  const notApplied = (): NonFinding => ({ kind: 'not-applied', text: `Not applied: ${o.id} (${o.notApplied ?? 'unknown'})`, refs: [o.id] });
+  return kindFor(o).nonFinding(o, {
+    notApplied,
+    flowStopped: () => (o.run.stoppedAt !== null ? { kind: 'faulted-flow-stopped', text: `Faulted; flow stopped at step ${o.run.stoppedAt}: ${o.id}`, refs: [o.id] } : null),
+    byVerdict: () => {
+      if (o.run.fault?.pending) return pending();
+      switch (o.verdict) {
+        case 'not-applied':
+          return notApplied();
+        case 'pending':
+          return pending();
+        case 'fault-never-fired':
+          return { kind: 'fault-never-fired', text: `${o.id}: fault never fired`, refs: [o.id] };
+        case 'void':
+          return { kind: 'void', text: `${o.id}: void (${o.voided ?? 'void'})`, refs: [o.id] };
+        default:
+          return null;
+      }
+    },
+  });
 }

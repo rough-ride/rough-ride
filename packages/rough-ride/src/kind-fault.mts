@@ -368,6 +368,11 @@ export const faultKind: KindModule = {
     return { fault: o.fault, sticky: o.sticky, request: o.key, page: q?.pagePath ?? o.page };
   },
   record: (o) => ({ fault: { id: o.fault, sticky: o.sticky, events: o.events, served: o.served } }),
+  appId: (attack) => attack.fault,
+  link: (attack) => ({ kind: 'fault', endpoints: [attack.template] }),
+  nonFinding: (_o, lines) => lines.flowStopped() ?? lines.byVerdict(),
+  // The page that sent the request and the request's template; the judged control when the run sent none.
+  groupKey: (o, { request, suffixes }) => ({ page: request?.pagePath ?? o.page ?? '/', action: request ? `${o.template}${suffixes(true)}` : `control ${o.control}` }),
   appOutcome: (attack, run) => {
     if (!run.fault?.fired || run.fault.pending) return { cls: null, shown: 'none' };
     if (run.fault.absorbed) return { cls: null, shown: 'absorbed' };

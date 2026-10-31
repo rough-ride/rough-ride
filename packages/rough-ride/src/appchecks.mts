@@ -383,7 +383,7 @@ export function matchesWhen(c: AppCheck, a: MatchedAttack, flow: Flow): boolean 
     if (!loc || !sameLocator(loc, w.field)) return false;
   }
   if (w.ids !== undefined) {
-    const id = a.badInput?.inputId ?? a.timing ?? a.fault;
+    const id = kindFor(a).appId(a);
     if (!id || !w.ids.includes(id)) return false;
   }
   return true;

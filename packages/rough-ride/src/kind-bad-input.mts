@@ -209,6 +209,17 @@ export const badInputKind: KindModule = {
       },
     };
   },
+  appId: (attack) => attack.badInput?.inputId ?? null,
+  link: (attack) => ({ kind: 'bad-input', endpoints: attack.template ? [attack.template] : [] }),
+  nonFinding: (o, lines) => {
+    if (o.verdict === 'not-applied') return lines.notApplied();
+    const c = o.run.badInput?.carrying;
+    if (o.verdict === 'inconclusive') return { kind: 'inconclusive', text: `Inconclusive: ${o.id} (${c?.status ?? '?'} on ${c?.method ?? ''} ${c?.path ?? ''})`, refs: [o.id] };
+    if (o.run.stoppedAt !== null) return { kind: 'accepted-flow-stopped', text: `Accepted; flow stopped at step ${o.run.stoppedAt}: ${o.id}`, refs: [o.id] };
+    return lines.byVerdict();
+  },
+  // The page when the bad fill ran; the carrying request, or the submit control when none carried the value.
+  groupKey: (o, { suffixes }) => ({ page: o.page ?? '/', action: o.template ? `${o.template}${suffixes(true)}` : `control ${o.control}` }),
   appOutcome: (_attack, run) => {
     const o = run.badInput?.outcome ?? null;
     if (o === null) return { cls: null, shown: 'none' };

@@ -5,6 +5,7 @@
 import type { AttackOutcome } from './attacks.mjs';
 import { checkRank, checkSeverity, type CheckResult } from './checks.mjs';
 import { stepKind, type Flow, type RequestRecord } from './flowrun.mjs';
+import { kindFor } from './kinds.mjs';
 import type { FlowClass } from './forms.mjs';
 
 export type Severity = 'high' | 'medium' | 'low';
@@ -75,18 +76,14 @@ function actionSuffixes(o: AttackOutcome, q: RequestRecord | null, entry: boolea
   return out;
 }
 
-// Section 34's key fields: the judged step's page, kind and action.
+// Section 34's key fields: the judged step's page, kind and action; the page
+// and action come from the attack's kind.
 export function keyOf(o: AttackOutcome, flow: Flow): GroupKey {
   const s = flow.steps[o.step - 1];
   const step = s ? stepKind(s) : 'goto';
-  if (o.kind === 'viewport') return { page: o.page ?? '/', step, action: 'viewport 375' };
-  const q = attackRequest(o);
-  // A bad input's page is the path when the bad fill ran; its action is the carrying request or the submit control.
-  if (o.kind === 'bad-input') return { page: o.page ?? '/', step, action: o.template ? `${o.template}${actionSuffixes(o, q, true)}` : `control ${o.control}` };
-  if (o.timing === 'refresh' || o.timing === 'back' || o.timing === 'signed-out-reload') return { page: o.page ?? '/', step, action: o.template };
-  if (o.timing === 'out-of-order') return { page: o.page ?? '/', step, action: `field ${o.page ?? '/'} ${o.template} ${o.outOfOrder?.fieldKey ?? ''}` };
-  if (o.kind === 'timing') return { page: o.page ?? q?.pagePath ?? '/', step, action: `${o.template}${actionSuffixes(o, q, false)}` };
-  return { page: q?.pagePath ?? o.page ?? '/', step, action: q ? `${o.template}${actionSuffixes(o, q, true)}` : `control ${o.control}` };
+  const request = attackRequest(o);
+  const { page, action } = kindFor(o).groupKey(o, { request, suffixes: (entry) => actionSuffixes(o, request, entry) });
+  return { page, step, action };
 }
 
 // Another flow run's ${unique} token in a failed check's evidence or in new text on the judged page.
