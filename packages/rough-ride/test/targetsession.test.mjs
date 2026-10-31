@@ -147,11 +147,11 @@ test('with no run folder and no reset (snapshot), sign-in needs no reset and sto
   }
 });
 
-test('with a plugin data folder the Bash limits bound every flow run, unless the session has none', async () => {
+test('with a plugin data folder the Bash limits bound every flow run; without one there are none', async () => {
   const late = { elapsed: () => 501_000, launch: noBrowser };
-  for (const [over, limited] of [[{}, true], [{ bashLimits: false }, false]]) {
-    const o = options({ ...late, ...over });
-    o.info = { ...o.info, pluginData: { path: scratchDir() } };
+  for (const limited of [true, false]) {
+    const o = options(late);
+    o.info = { ...o.info, pluginData: limited ? { path: scratchDir() } : null };
     const before = Date.now();
     const session = await openTargetSession(o);
     try {

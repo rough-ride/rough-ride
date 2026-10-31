@@ -58,6 +58,7 @@ export interface ReproResult {
 }
 
 const HOLD_MS = 30 * 60 * 1000;
+const BASH_LIMIT = 'stopped by the Bash time limit';
 
 interface ReproRecord {
   runId: string;
@@ -111,11 +112,10 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
   // The flow's effective version (13.7), not the copy in the record.
   const flow = flows.find((f) => f.name === rec.flow.name) ?? rec.flow.parsed;
   checkSignInEnv(flows, folder, ctx.env);
-  // repro's flow runs have never had the Bash limits, though 50.4 names every call with a plugin data folder.
   const session = await openTargetSession({
     root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
     start: ctx.start, againCommand: tierCmd, browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
-    elapsed: ctx.elapsed, run: { create: 'repro' }, reset: true, bashLimits: false,
+    elapsed: ctx.elapsed, run: { create: 'repro' }, reset: true,
   });
   const { target, hosts } = session;
   const run = session.run!;
@@ -127,8 +127,12 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
     await session.reset();
     const signedIn = await session.signIn();
     const base = session.defaults(flow);
-    const baseline = flow.name === 'sign-in' && signedIn.result ? signedIn.result : await runFlow({ ...base, flow, shots: 'all' });
-    if (!baseline.passed) {
+    // With a plugin data folder no flow run starts after 500 s (50.4).
+    const baseline = flow.name === 'sign-in' && signedIn.result ? signedIn.result : session.bashBlocks() ? null : await runFlow({ ...base, flow, shots: 'all' });
+    if (!baseline) {
+      verdict = `could not apply: ${BASH_LIMIT}`;
+      exitCode = 2;
+    } else if (!baseline.passed) {
       verdict = `could not apply: ${flow.name} failed its baseline run`;
       exitCode = 2;
     } else {
@@ -138,6 +142,9 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
       const resolved = resolveTest(catalogue, flow.name, rec.attack);
       if ('stale' in resolved || 'pass' in resolved) {
         verdict = `could not apply: ${'stale' in resolved ? resolved.stale : resolved.pass}`;
+        exitCode = 2;
+      } else if (session.bashBlocks()) {
+        verdict = `could not apply: ${BASH_LIMIT}`;
         exitCode = 2;
       } else {
         const o = await runAttack(resolved.attack, flow, baseline, base, docs, inlineChecks(rec.failedChecks.flatMap((c) => (c.check ? [c.check] : []))));

@@ -58,8 +58,6 @@ export interface TargetSessionOptions {
   reset: boolean;
   // Notes an earlier run that stopped before its report, before this run's folder exists (tiers).
   noteUnfinishedRun?: boolean;
-  // Whether the Bash limits (50.4) bound this session's flow runs; repro has none.
-  bashLimits?: boolean;
   // The reader the subcommand already checked its flows' variables with.
   read?: EnvReader;
 }
@@ -154,7 +152,7 @@ export async function openTargetSession(options: TargetSessionOptions): Promise<
   const ready = readyWaitFor(target, config);
   const exclude = config?.exclude ?? [];
   // The Bash limits count from process start and cover every flow run (50.4).
-  const limited = (options.bashLimits ?? true) && !!info.pluginData;
+  const limited = !!info.pluginData;
   const processStart = Date.now() - options.elapsed();
   const bashStop = bashDeadline(limited, processStart);
   let read = options.read;
