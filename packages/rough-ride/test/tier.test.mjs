@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
+import { formatDuration } from '../dist/output.mjs';
 import { capSection, inLanes, lanesFor, orderNotes } from '../dist/tier.mjs';
 import { startSite } from './fixtures/test-site.mjs';
 import { gitRepo, runAsync as run, sh } from './helpers.mjs';
@@ -123,6 +124,38 @@ test('only a new flow file changed: two baseline runs and the Flows checked line
     'Nothing attacked: the diff changes no app code. Flows checked: fresh (new, passed twice), shaky (new, failed at step 2).',
   );
   assert.ok(doc.summaryLines.some((l) => l.startsWith('Baseline failed: shaky at step 2')));
+});
+
+// 47.1 and 47.3: reset and attack setup are timed, not budgeted; attack's limit is B - P.
+test('the time line and meta.budget: quick and plan budget against B with reset apart, attack against B - P after its setup', async () => {
+  const root = project({ home: PASSING }, 'reset: node -e "setTimeout(() => {}, 300)"\n');
+  const reportOf = (doc) => readFileSync(path.join(doc.runDir, 'report.txt'), 'utf8');
+  const esc = (ms) => formatDuration(ms).replace('.', '\\.');
+  const fields = (doc) => {
+    const { budgetedMs, lanes, cpus, nominalPlanMs, windowMs, ...rest } = doc.meta.budget;
+    assert.ok(budgetedMs > 0 && budgetedMs <= doc.meta.durationMs, `budgetedMs ${budgetedMs} of ${doc.meta.durationMs}`);
+    return rest;
+  };
+
+  const quick = JSON.parse((await run(['quick', '--json'], { cwd: root })).stdout);
+  const q = fields(quick);
+  assert.ok(q.resetMs >= 300, `resetMs ${q.resetMs}`);
+  assert.deepEqual(q, { tier: 'quick', budgetMs: 120_000, overMs: 0, planMs: null, adversaryCallsMs: 0, attackSetupMs: 0, resetMs: q.resetMs, startMs: 0 });
+  assert.equal(quick.meta.budgetMs, 120_000);
+  assert.match(reportOf(quick), new RegExp(`^time: runner [\\dm.]+s = budgeted [\\dm.]+s of 2m00s \\+ reset ${esc(q.resetMs)} \\| app start 0\\.0s$`, 'm'));
+
+  const planned = JSON.parse((await run(['plan', 'quick', '--json'], { cwd: root })).stdout);
+  const p = fields(planned);
+  const P = JSON.parse(readFileSync(path.join(planned.runDir, 'diff-map.json'), 'utf8')).meta.planMs;
+  assert.ok(P > 0 && P <= planned.meta.budget.budgetedMs, `planMs ${P}`);
+  assert.deepEqual(p, { tier: 'quick', budgetMs: 120_000, overMs: 0, planMs: P, adversaryCallsMs: 0, attackSetupMs: 0, resetMs: p.resetMs, startMs: 0 });
+  assert.match(reportOf(planned), /^time: runner [\dm.]+s = budgeted [\dm.]+s of 2m00s \+ reset [\d.]+s \| app start 0\.0s$/m);
+
+  const attacked = JSON.parse((await run(['attack', '--run', planned.runId, '--json'], { cwd: root })).stdout);
+  const a = fields(attacked);
+  assert.ok(a.attackSetupMs >= a.resetMs && a.resetMs >= 300, `setup ${a.attackSetupMs}, reset ${a.resetMs}`);
+  assert.deepEqual(a, { tier: 'quick', budgetMs: 120_000, overMs: 0, planMs: P, adversaryCallsMs: 0, attackSetupMs: a.attackSetupMs, resetMs: a.resetMs, startMs: 0 });
+  assert.match(reportOf(attacked), new RegExp(`^time: runner [\\dm.]+s = attack setup ${esc(a.attackSetupMs)} \\(timed, not budgeted\\) \\+ budgeted [\\dm.]+s of ${esc(120_000 - P)} \\(the quick budget less plan ${esc(P)}\\); adversary calls 0\\.0s \\(timed, not budgeted\\) \\| app start 0\\.0s$`, 'm'));
 });
 
 // 45.5: a flow above the cut has a selected attack or a test inside the cut.
