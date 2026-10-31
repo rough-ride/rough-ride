@@ -125,7 +125,8 @@ export function detectSource(cliPath: string, pluginData: string | null, cwd: st
 }
 
 // A cache copy's data folder: <plugins root>/data/<plugin>-<marketplace>/,
-// every character outside [A-Za-z0-9_-] made '-'. Null for an in-place load.
+// every character outside [A-Za-z0-9_-] made '-', with forward slashes like
+// every other path the runner prints. Null for an in-place load.
 export function derivedPluginData(cliPath: string): string | null {
   const parts = cliPath.split(/[\\/]/);
   const cache = parts.lastIndexOf('cache');
@@ -133,7 +134,7 @@ export function derivedPluginData(cliPath: string): string | null {
   const plugin = parts[cache + 2];
   if (cache <= 0 || parts[cache - 1] !== 'plugins' || !marketplace || !plugin || parts.length < cache + 5) return null;
   const name = `${plugin}-${marketplace}`.replace(/[^A-Za-z0-9_-]/g, '-');
-  return [...parts.slice(0, cache), 'data', name].join(path.sep) || path.sep;
+  return [...parts.slice(0, cache), 'data', name].join('/') || '/';
 }
 
 function samePath(a: string, b: string, platform: NodeJS.Platform): boolean {
