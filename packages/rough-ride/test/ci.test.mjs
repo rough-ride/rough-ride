@@ -344,10 +344,13 @@ test('--start with an API that listens 20 s after the start command: the retried
   const doc = JSON.parse(stdout);
   assert.equal(doc.flows.signIn, 'passed');
   const { startMs, budgetedMs } = doc.meta.budget;
-  assert.ok(startMs >= 19_000, `startMs ${startMs}`);
+  // App start leaves out the runner's own reset and browser launch between
+  // the web answering and the first sign-in run: about 2 s on Windows runners.
+  // Without the retried runs it would be under 2 s.
+  assert.ok(startMs >= 15_000, `startMs ${startMs}`);
   assert.ok(budgetedMs < 15_000, `budgetedMs ${budgetedMs}`);
   assert.ok(doc.summaryLines[2].includes(`API http://127.0.0.1:${api}`), doc.summaryLines[2]);
-  assert.match(runFile(root, doc.runId, 'report.txt'), /\| app start (19|2\d)(\.\d)?s\n/);
+  assert.match(runFile(root, doc.runId, 'report.txt'), /\| app start (1[5-9]|2\d)(\.\d)?s\n/);
 });
 
 test('--start with an API that never listens stops with Nothing answers once target.startTimeout has passed', async () => {
