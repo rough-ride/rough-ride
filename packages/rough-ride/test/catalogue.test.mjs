@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildCatalogue, planCandidates } from '../dist/catalogue.mjs';
+import { buildCatalogue, planCandidates, resolveTest } from '../dist/catalogue.mjs';
 import { validatePlan } from '../dist/plan.mjs';
-import { noteFlow, noteRun, signInFlow, signInRun } from './fixtures/catalogue-flows.mjs';
+import { noteFlow, noteRun, req, signInFlow, signInRun } from './fixtures/catalogue-flows.mjs';
 
 const TODAY = new Date('2026-10-25');
 
@@ -146,4 +146,41 @@ test('bad-input entries: the next inputs not already selected, named by carrying
   const none = validatePlan({ attacks: [entry({ flow: 'never-ran', badInputs: 1, form: 'POST /api/notes' }), entry({ flow: 'never-ran', fault: '500', request: 'POST /api/notes #1' }), entry({ flow: 'never-ran', viewport: 375 })] }, planCandidates(runless, { selected: [], aboveFlows: ['never-ran'] }));
   assert.deepEqual(none.lines, ['Rejected plan entry: attacks[0] (never-ran has no baseline run)', 'Rejected plan entry: attacks[1] (POST /api/notes #1 is not an attack point of never-ran)']);
   assert.deepEqual(none.kept.map((a) => a.id), ['never-ran/viewport-375']);
+});
+
+// regress and repro: one flow's catalogue from this invocation's baseline run (25.3).
+const testOn = (run) => buildCatalogue({ tier: 'standard', flows: [{ flow: noteFlow('create-note'), runs: [run], passed: true }], docs: [], hosts: { allowed: [], remoteTarget: null }, today: TODAY });
+const resolve = (run, attack) => resolveTest(testOn(run), 'create-note', attack);
+const fault = { fault: '500', sticky: true, request: 'POST /api/notes #1', page: '/notes/new' };
+
+test('a fault test finds its request, or reads stale: not sent, moved to another page, or no longer sent from the browser', () => {
+  assert.equal(resolve(noteRun({ requests: [req({})] }), fault).attack.id, 'create-note/POST /api/notes #1/500!');
+  assert.deepEqual(resolve(noteRun({ requests: [] }), fault), { stale: 'fault never fired (POST /api/notes #1 not sent)' });
+  assert.deepEqual(resolve(noteRun({ requests: [req({ pagePath: '/notes' })] }), fault), { stale: 'attack point moved (POST /api/notes #1 is now sent on /notes, was /notes/new)' });
+  const get = { fault: '500', sticky: true, request: 'GET /api/notes #1', page: '/notes' };
+  assert.deepEqual(resolve(noteRun({ requests: [] }), get), { stale: 'fault never fired: GET /api/notes is no longer sent from the browser on /notes (the flow enters it by full page load)' });
+});
+
+test('a fault test on a form the point no longer takes keeps its own fault and stickiness; a request with no point reads stale', () => {
+  const once = resolve(noteRun({ requests: [req({})] }), { ...fault, fault: '429', sticky: false });
+  assert.deepEqual([once.attack.id, once.attack.fault, once.attack.sticky], ['create-note/POST /api/notes #1/429', '429', false]);
+  assert.deepEqual(resolve(noteRun({ requests: [req({ url: 'https://elsewhere.example/api/notes' })] }), fault), { stale: "fault never fired (POST /api/notes #1 can't take 500)" });
+});
+
+test('timing tests: a POST now sent by a fill step, and a page now entered by full load, read stale', () => {
+  const ds = { timing: 'double-submit', request: 'POST /api/notes #1', page: '/notes/new' };
+  assert.deepEqual(resolve(noteRun({ requests: [req({ step: 3 })] }), ds), { stale: 'attack point moved (POST /api/notes #1 is no longer sent by a click or press step)' });
+  const refresh = { timing: 'refresh', page: '/notes/new', entry: 1 };
+  const fullLoad = noteRun({ requests: [], pages: [{ path: '/notes/new', step: 1, entry: 'full-load', requests: [], previous: null, method: 'GET' }] });
+  assert.deepEqual(resolve(fullLoad, refresh), { stale: 'attack point moved (/notes/new #1 is now entered by full page load)' });
+  assert.deepEqual(resolve(noteRun({ requests: [], pages: [] }), refresh), { stale: 'fault never fired (the flow no longer enters /notes/new)' });
+});
+
+test("a bad-input test finds its field and input, passes when the browser's validation blocks the input, or reads stale", () => {
+  const empty = { badInput: 'empty', page: '/notes/new', field: 'title' };
+  const found = resolve(noteRun(), empty).attack;
+  assert.deepEqual([found.id, found.rank], ['create-note/label "Title"/empty', 2]);
+  const native = { ...noteRun(), formEvents: { submits: [{ step: 4, novalidate: false, formnovalidate: false }], invalids: [] } };
+  assert.deepEqual(resolve(native, empty), { pass: "pass (blocked by the browser's validation: valueMissing)" });
+  assert.deepEqual(resolve(noteRun(), { ...empty, field: 'body' }), { stale: 'field not found' });
 });

@@ -8,7 +8,7 @@ import { attackPoints, badInputAttack, doubleSubmitPoints, outOfOrderPoints, own
 import { planBadInputs, tierInputs } from './badinputs.mjs';
 import { attackId, type FaultId } from './faults.mjs';
 import { findForms, type Form } from './forms.mjs';
-import { describeLocator, isLoopbackHostname, type Flow, type FlowRunResult, type LocatorSpec } from './flowrun.mjs';
+import { describeLocator, isLoopbackHostname, stepKind, type Flow, type FlowRunResult, type LocatorSpec } from './flowrun.mjs';
 import type { OpenApiDoc } from './openapi.mjs';
 import type { Candidates } from './plan.mjs';
 import type { TierName } from './tiers.mjs';
@@ -215,3 +215,70 @@ export function planCandidates(catalogue: Catalogue, scope: PlanScope): Omit<Can
 // A recorded catalogue names attacks without building them: attack --check
 // reads only their ids and flows, and attack builds them from fresh runs.
 const named = (flow: string, id: string): PlannedAttack => ({ id, flow } as PlannedAttack);
+
+export type TestResolution = { attack: PlannedAttack } | { stale: string } | { pass: string };
+
+// A regression test's or repro's attack point in this baseline run, never
+// retargeting (25.3): a point that moved or went reads stale.
+export function resolveTest(catalogue: Catalogue, name: string, a: Record<string, unknown>): TestResolution {
+  const fresh = inside.get(catalogue)?.fresh;
+  const f = fresh?.flows.get(name);
+  const baseline = f?.runs[0];
+  if (!fresh || !f || !baseline) throw new Error(`no baseline run of ${name} in this catalogue`);
+  const { flow, forms, firstLoad } = f;
+  const signIn = name === 'sign-in';
+  const requestOf = (key: string) => baseline.requests.find((q) => q.key === key && (q.resourceType === 'fetch' || q.resourceType === 'xhr'));
+  const fullLoadOf = (page: unknown) => baseline.pages.some((p) => p.path === page && p.entry === 'full-load');
+  if (typeof a.fault === 'string') {
+    const request = String(a.request);
+    const q = requestOf(request);
+    if (!q) {
+      if (fullLoadOf(a.page)) return { stale: `fault never fired: ${request.replace(/ #\d+$/, '')} is no longer sent from the browser on ${String(a.page)} (the flow enters it by full page load)` };
+      return { stale: `fault never fired (${request} not sent)` };
+    }
+    if (a.page !== undefined && q.pagePath !== a.page) return { stale: `attack point moved (${request} is now sent on ${q.pagePath ?? '?'}, was ${String(a.page)})` };
+    const exact = f.faults.find((p) => p.key === request && p.fault === a.fault && p.sticky === a.sticky);
+    if (exact) return { attack: exact };
+    const any = f.faults.find((p) => p.key === request);
+    if (!any) return { stale: `fault never fired (${request} can't take ${String(a.fault)})` };
+    const fault = a.fault as FaultId;
+    return { attack: { ...any, fault, sticky: a.sticky === true, id: attackId(name, request, fault, a.sticky === true) } };
+  }
+  if (typeof a.badInput === 'string') {
+    const plan = planBadInputs(flow, baseline, forms, fresh.docs, { signInFlow: signIn, today: fresh.today });
+    const field = a.field as string | { name: string; kind: string } | null;
+    const matches = (i: (typeof plan.inputs)[number]) =>
+      i.inputId === a.badInput && i.page === a.page && (typeof field === 'string' ? i.field.key === field : !!field && i.field.name === field.name && i.field.kind === field.kind);
+    const input = plan.inputs.find(matches);
+    if (input) return { attack: badInputAttack(name, input, 1, firstLoad) };
+    const blocked = plan.skipped.find((l) => l.includes(`: ${String(a.badInput)} (blocked by the browser's validation: `));
+    if (blocked) return { pass: `pass (${/\((blocked by the browser's validation: [^)]*)\)/.exec(blocked)?.[1] ?? 'blocked by the browser'})` };
+    return { stale: 'field not found' };
+  }
+  if (a.viewport !== undefined) return { attack: viewportAttack(flow, f.reachesByRule) };
+  if (a.timing === 'double-submit') {
+    const request = String(a.request);
+    const found = doubleSubmitPoints(flow, baseline, fresh.ownHost, fresh.changed, firstLoad, signIn).find((p) => p.key === request);
+    if (found) return found.page === a.page ? { attack: found } : { stale: `attack point moved (${request} is now sent on ${found.page ?? '?'}, was ${String(a.page)})` };
+    const q = baseline.requests.find((r) => r.key === request);
+    if (q) {
+      const kind = stepKind(flow.steps[q.step - 1] ?? { goto: '/' });
+      if (kind !== 'click' && kind !== 'press') return { stale: `attack point moved (${request} is no longer sent by a click or press step)` };
+      return { stale: `attack point moved (${request} is now sent on ${q.pagePath ?? '?'}, was ${String(a.page)})` };
+    }
+    return { stale: `fault never fired (${request} not sent)` };
+  }
+  if (a.timing === 'out-of-order') {
+    const found = outOfOrderPoints(flow, baseline, forms, fresh.ownHost, fresh.changed, firstLoad, signIn).find((p) => p.template === a.request && p.outOfOrder?.fieldKey === a.field);
+    return found ? { attack: found } : { stale: 'field not found' };
+  }
+  if (a.timing === 'refresh' || a.timing === 'back' || a.timing === 'signed-out-reload') {
+    const found = pageTimingPoints(flow, [baseline], fresh.changed, firstLoad, signIn).find((p) => p.timing === a.timing && p.page === a.page && p.entry?.k === a.entry);
+    if (found) return { attack: found };
+    const entries = baseline.pages.filter((p) => p.path === a.page);
+    const entry = entries[Number(a.entry) - 1];
+    if (entry?.entry === 'full-load') return { stale: `attack point moved (${String(a.page)} #${String(a.entry)} is now entered by full page load)` };
+    return { stale: `fault never fired (the flow no longer enters ${String(a.page)})` };
+  }
+  return { stale: 'unknown attack' };
+}
