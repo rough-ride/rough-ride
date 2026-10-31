@@ -78,6 +78,14 @@ test('a weakened working copy runs the saved copy; an unchanged one is labelled 
   assert.equal(new Manifest(root).label('tests/t.yaml', TEST + '#x\n'), 'changed outside rough-ride');
 });
 
+test('a saved copy gets the working copy\'s check: one this runner can\'t read never runs', async () => {
+  const root = repo();
+  new Manifest(root).saveCopy('tests/t.yaml', TEST.replace('schema: 0.1.0', 'schema: 0.0.9'), 'runner', 'run-1', '0.1.0');
+  const out = await compare(root, new Manifest(root));
+  assert.deepEqual(out.tests, []);
+  assert.deepEqual(out.entries, []);
+});
+
 test('detached HEAD with an empty manifest prints no saved-copies note, in or out of CI mode', async () => {
   const root = repo();
   writeFileSync(path.join(root, '.rough-ride', 'tests', 't.yaml'), TEST);

@@ -160,6 +160,57 @@ test('which test runs: each rung of 26.6 against one reviewed version', () => {
   assert.deepEqual(testCase(TEST, {}), { tests: ['t working-tree false 2'], lines: [] });
 });
 
+test('every reviewed version gets the working copy\'s check: one below the floor, written for a newer runner or invalid is not compared, and the working copy is used', () => {
+  const OLD = (t) => t.replace('schema: 0.1.0', 'schema: 0.0.9');
+  const NEWER = (t) => t.replace('schema: 0.1.0', 'schema: 9.0.0');
+  const used = (schema) => `the origin/main version is in a format this runner can't read (schema ${schema}), so this version is used`;
+  const flowWith = (r) => compareIn({ working: { 'flows/f.yaml': NO_EXPECT }, merge: { 'flows/f.yaml': r } });
+  for (const [r, change] of [[OLD(FLOW), used('0.0.9')], [NEWER(FLOW), used('9.0.0')], [FLOW + 'extra: 1\n', "the origin/main version doesn't pass this runner's checks, so this version is used"]]) {
+    const out = flowWith(r);
+    assert.deepEqual(out.flows.map((f) => `${f.used} ${f.flow.steps.length}`), ['working-tree 3']);
+    assert.deepEqual(lines(out), [`flows/f.yaml: ${change} -> ran this version [working-tree]`]);
+  }
+  const test = compareIn({ working: { 'tests/t.yaml': TEST }, merge: { 'tests/t.yaml': OLD(TEST) } });
+  assert.deepEqual(test.tests.map((t) => `${t.used} ${t.pending}`), ['working-tree false']);
+  assert.deepEqual(lines(test), [`tests/t.yaml: ${used('0.0.9')} -> ran this version [working-tree]`]);
+  const entry = (check) => `  - {page: /notes/new, step: click, action: POST /api/notes, check: ${check}, because: on purpose}\n`;
+  const both = compareIn({
+    working: { 'accepted.yaml': 'schema: 0.1.0\naccepted:\n' + entry('settles'), 'config.yaml': CONFIG.replace('[api.example.com]', '[api.example.com, new.example.com]') },
+    merge: { 'accepted.yaml': 'schema: 0.0.9\naccepted: []\n', 'config.yaml': OLD(CONFIG) },
+  });
+  assert.deepEqual(both.accepted.map((e) => e.check), ['settles']);
+  assert.deepEqual(both.config.allow.remoteWrites, ['api.example.com', 'new.example.com']);
+  assert.deepEqual(lines(both), [`accepted.yaml: ${used('0.0.9')} -> applied [working-tree]`, `config.yaml: ${used('0.0.9')} -> applied [working-tree]`]);
+});
+
+test('a reviewed version this runner can\'t read never runs: with an invalid working copy too, the flow is listed and not run', () => {
+  const out = compareIn({ working: { 'flows/f.yaml': FLOW + 'extra: 1\n' }, merge: { 'flows/f.yaml': FLOW.replace('schema: 0.1.0', 'schema: 0.0.9') } });
+  assert.deepEqual(out.flows, []);
+  assert.deepEqual(out.notRun, ['f']);
+  assert.deepEqual(lines(out), ["flows/f.yaml: invalid; the origin/main version is in a format this runner can't read (schema 0.0.9) -> not run [none]"]);
+});
+
+test('content equal to either reviewed version counts as reviewed, for tests, accepted entries and config as for flows (26.3)', () => {
+  const entry = (check) => `  - {page: /notes/new, step: click, action: POST /api/notes, check: ${check}, because: on purpose}\n`;
+  const later = {
+    'tests/t.yaml': TEST.replace('[visible-error-message, settles]', '[settles]'),
+    'accepted.yaml': 'schema: 0.1.0\naccepted:\n' + entry('settles'),
+    'config.yaml': CONFIG.replace('[api.example.com]', '[api.example.com, new.example.com]'),
+  };
+  const out = compareIn({ working: later, merge: { 'tests/t.yaml': TEST, 'config.yaml': CONFIG }, ref: later });
+  assert.deepEqual(out.tests.map((t) => `${t.used} ${t.pending} ${t.value.checks.length}`), ['working-tree false 1']);
+  assert.deepEqual(out.accepted.map((e) => e.check), ['settles']);
+  assert.deepEqual(out.config.allow.remoteWrites, ['api.example.com', 'new.example.com']);
+  assert.deepEqual(lines(out), []);
+});
+
+test('an invalid flow with no reviewed version or saved copy is listed and not run, as an invalid test is (26.5 rule 4)', () => {
+  const out = compareIn({ working: { 'flows/f.yaml': FLOW + 'extra: 1\n' } });
+  assert.deepEqual(out.flows, []);
+  assert.deepEqual(out.notRun, ['f']);
+  assert.deepEqual(lines(out), ['flows/f.yaml: invalid, no reviewed version -> not run [none]']);
+});
+
 test('a checkout with CRLF endings or a BOM is not a change: nothing is listed (27.3, core.autocrlf)', () => {
   const crlf = (text) => '﻿' + text.replace(/\n/g, '\r\n');
   const files = { 'flows/f.yaml': FLOW, 'tests/t.yaml': TEST, 'config.yaml': CONFIG };
