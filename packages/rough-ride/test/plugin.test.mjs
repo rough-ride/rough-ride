@@ -1,19 +1,18 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
 import { fixture, scratchDir } from './helpers.mjs';
+import { DUPLICATE, FLOOR, INLINE, OLD_NODE, PACKAGES, pluginsHome as home } from './fixtures/hook-rows.mjs';
 
 const PKG = fileURLToPath(new URL('..', import.meta.url));
 const PREFLIGHT_RULE = 'node "${CLAUDE_PLUGIN_ROOT}/hooks/preflight.mjs" "${CLAUDE_PLUGIN_DATA}"';
 const PREFLIGHT_LINE = '!`' + PREFLIGHT_RULE + '`';
 const EDIT_GUARD_OFF =
   "Edit guard: not running in this session. rough-ride's hooks did not start (hooks turned off by settings or policy, another copy holds the name, or node is missing for hooks), so edits under .rough-ride/ are not blocked.";
-const FLOOR = (v) =>
-  `rough-ride ${v} needs Claude Code 2.1.299 or later; this session runs 2.1.250. Older versions let a failed edit-blocking hook through. Update with claude update, restart Claude Code, then run /rough-ride:quick again.`;
 const VERSION = JSON.parse(readFileSync(path.join(PKG, 'package.json'), 'utf8')).version;
 
 function frontmatter(file) {
@@ -77,31 +76,7 @@ test('hooks.json registers the SessionStart hook in exec form', () => {
   ]);
 });
 
-// A plugins root with a copy of this package installed under `ids`, as
-// Claude Code lays it out. Returns the paths a hook sees.
-function pluginsHome({ ids = [], withPackages = true } = {}) {
-  const home = scratchDir();
-  const plugins = path.join(home, 'plugins');
-  const records = {};
-  let first = null;
-  for (const [id, version] of ids) {
-    const [plugin, marketplace] = id.split('@');
-    const dir = path.join(plugins, 'cache', marketplace, plugin, version);
-    mkdirSync(path.join(dir, '.claude-plugin'), { recursive: true });
-    writeFileSync(path.join(dir, '.claude-plugin', 'plugin.json'), JSON.stringify({ name: 'rough-ride', version }));
-    cpSync(path.join(PKG, 'hooks'), path.join(dir, 'hooks'), { recursive: true });
-    cpSync(path.join(PKG, 'package.json'), path.join(dir, 'package.json'));
-    if (withPackages) {
-      mkdirSync(path.join(dir, 'node_modules', 'playwright-core'), { recursive: true });
-      writeFileSync(path.join(dir, 'node_modules', 'playwright-core', 'package.json'), '{"version":"1.64.1"}');
-    }
-    records[id] = [{ scope: 'user', installPath: dir, version }];
-    first ??= { root: dir, data: path.join(plugins, 'data', `${plugin}-${marketplace}`) };
-  }
-  mkdirSync(plugins, { recursive: true });
-  writeFileSync(path.join(plugins, 'installed_plugins.json'), JSON.stringify({ version: 2, plugins: records }));
-  return { home, plugins, ...first };
-}
+const pluginsHome = (opts) => home(PKG, opts);
 
 const CLEAN_ENV = { AI_AGENT: '', CLAUDE_CODE_EXECPATH: '', CLAUDE_CODE_SESSION_ID: '', CLAUDE_PLUGIN_ROOT: '', CLAUDE_PLUGIN_DATA: '' };
 
@@ -145,7 +120,7 @@ test('session-start: each condition prints its exact message as systemMessage, a
   const two = pluginsHome({ ids: [['rough-ride@rough-ride', '0.9.3'], ['rough-ride@claude-plugins-official', '1.0.0']] });
   assert.equal(
     message(hook('session-start.mjs', { ...two, stdin: '{"session_id":"s"}' }).stdout),
-    "rough-ride is installed twice: rough-ride@rough-ride 0.9.3 and rough-ride@claude-plugins-official 1.0.0. Only one copy's hooks run, and each copy keeps its own data folder. Remove one: /plugin uninstall rough-ride@rough-ride",
+    DUPLICATE,
   );
   // A copy turned off in the user's settings doesn't count.
   writeFileSync(path.join(two.home, 'settings.json'), JSON.stringify({ enabledPlugins: { 'rough-ride@claude-plugins-official': false } }));
@@ -153,19 +128,19 @@ test('session-start: each condition prints its exact message as systemMessage, a
 
   const one = pluginsHome({ ids: [['rough-ride@rough-ride', VERSION]] });
   const inline = hook('session-start.mjs', { root: PKG, data: one.data, stdin: '{"session_id":"s"}' });
-  assert.equal(message(inline.stdout), `rough-ride is loaded from ${PKG.replace(/\/$/, '')} for this session (--plugin-dir) and replaces the installed copy.`);
+  assert.equal(message(inline.stdout), INLINE(PKG));
 
   assert.equal(message(hook('session-start.mjs', { ...one, stdin: '{}', env: { AI_AGENT: 'claude-code_2-1-250_agent' } }).stdout), FLOOR(VERSION));
 
   const bare = pluginsHome({ ids: [['rough-ride@rough-ride', VERSION]], withPackages: false });
   assert.equal(
     message(hook('session-start.mjs', { ...bare, stdin: '{}' }).stdout),
-    "rough-ride's packages are not installed: Claude Code's install of them did not finish (60-second limit). Run in your shell: claude plugin update rough-ride@rough-ride",
+    PACKAGES('rough-ride@rough-ride'),
   );
 
   const old = hook('session-start.mjs', { ...one, stdin: '{}', preload: fixture('fake-node-20.mjs') });
   assert.equal(old.code, 0);
-  assert.equal(message(old.stdout), `rough-ride's hooks run on Node 20.18.1 (${process.execPath}); the runner needs 22.22 or later.`);
+  assert.equal(message(old.stdout), OLD_NODE('20.18.1', process.execPath));
 });
 
 test('session-start: unreadable input prints nothing and exits 0', () => {

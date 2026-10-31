@@ -2,7 +2,7 @@
 // Usage: node scripts/test-tarball.mjs <rough-ride-x.y.z.tgz> [--step5]
 //   1. install the tarball into a scratch project; `npx --no -- rough-ride --version`
 //   2. unpack it, `npm ci --omit=dev --ignore-scripts`, `claude plugin validate --strict` (when claude is on PATH)
-//   3. hook scripts with fixture stdin (once hooks/hooks.json exists, ticket 37)
+//   3. hook scripts with fixture stdin (scripts/hook-fixtures.mjs)
 //   4. the MCP entry answers `initialize`
 //   5. with --step5: `quick` against the dev-split Nuxt app (scripts/release-step5.mjs)
 import { spawnSync } from 'node:child_process';
@@ -65,6 +65,7 @@ step('3. hook scripts with fixture stdin', () => {
   }
   const result = sh(process.execPath, [path.join(ROOT, 'scripts', 'hook-fixtures.mjs'), path.join(unpacked, 'package')], ROOT, { allowFail: true });
   process.stdout.write(result.stdout);
+  process.stderr.write(result.stderr);
   if (result.status !== 0) throw new Error('hook fixtures failed');
 });
 

@@ -57,10 +57,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The runtime packages install on the runner's Node, as Claude Code's install would.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.0
+      - run: npm ci --omit=dev --ignore-scripts --prefix packages/rough-ride
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
       - run: node --input-type=module -e "const m = await import('./packages/rough-ride/hooks/path-check.mjs'); if (!m.checkPath('a/.ROUGH-RIDE/x', process.cwd()).blocked) process.exit(1)"
+      # The same fixtures as test-tarball step 3.
+      - run: node scripts/hook-fixtures.mjs packages/rough-ride
 
   formats:
     runs-on: ubuntu-24.04
