@@ -85,10 +85,9 @@ function prepareFolders(target: WriteTarget, folders: string[]): void {
   }
 }
 
-export function writeAtomic(target: WriteTarget, parts: string[], data: string | Uint8Array): void {
-  const shown = ['.rough-ride', ...parts].join('/');
-  const refused = refusedName(parts);
-  if (refused !== null) throw new Error(`refused write of ${shown}: ${refused}`);
+// The atomic write itself, bytes as given. It throws, so each caller picks
+// its failure: writeAtomic stops, and the checksum manifest only warns (27.5).
+export function replaceAtomic(target: WriteTarget, parts: string[], data: string | Uint8Array): void {
   const file = path.join(target.dir, ...parts);
   const tmp = path.join(path.dirname(file), `tmp-${randomBytes(4).toString('hex')}${path.extname(file)}`);
   try {
@@ -102,7 +101,7 @@ export function writeAtomic(target: WriteTarget, parts: string[], data: string |
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    writeFileSync(tmp, typeof data === 'string' ? redactSecrets(data) : data, { flag: 'wx' });
+    writeFileSync(tmp, data, { flag: 'wx' });
     renameWithRetry(tmp, file);
   } catch (error) {
     try {
@@ -110,6 +109,17 @@ export function writeAtomic(target: WriteTarget, parts: string[], data: string |
     } catch {
       // The temporary file was never made, or is already gone.
     }
+    throw error;
+  }
+}
+
+export function writeAtomic(target: WriteTarget, parts: string[], data: string | Uint8Array): void {
+  const shown = ['.rough-ride', ...parts].join('/');
+  const refused = refusedName(parts);
+  if (refused !== null) throw new Error(`refused write of ${shown}: ${refused}`);
+  try {
+    replaceAtomic(target, parts, typeof data === 'string' ? redactSecrets(data) : data);
+  } catch (error) {
     stopWith('write-failed', `Can't write ${shown}: ${(error as NodeJS.ErrnoException).code ?? 'error'}.`);
   }
 }

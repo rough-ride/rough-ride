@@ -3,14 +3,15 @@
 // it as copies/<sha256>.yaml. A failed write is a warning, never a stop, and
 // nothing under the git dir outside .rough-ride/ is ever touched.
 
-import { createHash, randomBytes } from 'node:crypto';
-import { lstatSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { lstatSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { canon } from '../hooks/path-check.mjs';
 import { stopWith } from './exit.mjs';
 import { git } from './git.mjs';
 import { canonicalJson, type Note } from './output.mjs';
 import { normalisedText } from './reviewed.mjs';
+import { refusedName, replaceAtomic } from './write.mjs';
 
 export interface SavedEntry {
   branch: string;
@@ -100,38 +101,18 @@ export class Manifest {
     }
   }
 
-  private writeFile(name: string, data: string): boolean {
+  // Through write.mts's atomic write, its no-link and name rules and its
+  // Windows rename retry; a failure turns the manifest off with a warning.
+  private writeFile(parts: string[], data: string): boolean {
     if (!this.dir || !this.writable) return false;
     try {
-      try {
-        lstatSync(this.dir);
-      } catch {
-        mkdirSync(this.dir);
-      }
-      if (!plain(this.dir, true)) {
-        const error = new Error('not a real folder') as NodeJS.ErrnoException;
-        error.code = 'ELINK';
+      const refused = refusedName(parts);
+      if (refused !== null) {
+        const error = new Error(refused) as NodeJS.ErrnoException;
+        error.code = 'EREFUSED';
         throw error;
       }
-      const target = path.join(this.dir, name);
-      try {
-        if (lstatSync(target).isSymbolicLink()) {
-          const error = new Error('a link') as NodeJS.ErrnoException;
-          error.code = 'ELINK';
-          throw error;
-        }
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      }
-      mkdirSync(path.dirname(target), { recursive: true });
-      const tmp = path.join(path.dirname(target), `tmp-${randomBytes(4).toString('hex')}${path.extname(target)}`);
-      writeFileSync(tmp, data, { flag: 'wx' });
-      try {
-        renameSync(tmp, target);
-      } catch (error) {
-        unlinkSync(tmp);
-        throw error;
-      }
+      replaceAtomic({ dir: this.dir }, parts, data);
       return true;
     } catch (error) {
       this.writable = false;
@@ -141,7 +122,7 @@ export class Manifest {
   }
 
   save(): void {
-    this.writeFile('manifest.json', JSON.stringify(this.data, null, 2) + '\n');
+    this.writeFile(['manifest.json'], JSON.stringify(this.data, null, 2) + '\n');
   }
 
   // A read-back run-output file's hash, in the same step as its write.
@@ -161,7 +142,7 @@ export class Manifest {
   saveCopy(rel: string, text: string, by: SavedEntry['by'], run: string, runner: string): void {
     if (!this.branch) return;
     const sha = fileHash(text);
-    if (!this.writeFile(path.join('copies', `${sha}.yaml`), normalisedText(text))) return;
+    if (!this.writeFile(['copies', `${sha}.yaml`], normalisedText(text))) return;
     this.data.saved = this.data.saved.filter((e) => !(e.branch === this.branch && e.path === rel));
     this.data.saved.push({ branch: this.branch, path: rel, sha256: sha, by, run, runner, at: new Date().toISOString() });
     this.save();
