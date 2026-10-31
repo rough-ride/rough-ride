@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { canon, checkPath, fold, isFolderName, samePath } from './path-check.mjs';
+import { canon, checkPath, couldBeInside, fold, isFolderName, samePath } from './path-check.mjs';
 import { ownVersion, validSession } from './plugin-checks.mjs';
 
 const ADVERSARY = 'rough-ride:adversary';
@@ -39,7 +39,6 @@ const GIT_EXCEPTION = /^\s*git\s+(add|diff|log|show|status|ls-files)(\s[^;&|<>$`
 const HEREDOC = " <<'RP_END'";
 // Outside the heredoc body, rule 7's command holds none of these.
 const SHELL_CHARS = /[;&|<>`$(){}\r\n]/;
-const CASELESS = process.platform === 'darwin' || process.platform === 'win32';
 
 const pluginRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -222,12 +221,7 @@ function rule5Reason() {
 
 function samePlace(given, own, platform) {
   const mod = platform === 'win32' ? path.win32 : path.posix;
-  if (!mod.isAbsolute(given)) return false;
-  if (attempt(() => samePath(given, own), false)) return true;
-  const a = attempt(() => canon(given, platform), null);
-  const b = attempt(() => canon(own, platform), null);
-  if (a === null || b === null) return false;
-  return CASELESS ? a.toLowerCase() === b.toLowerCase() : a === b;
+  return mod.isAbsolute(given) && attempt(() => samePath(given, own, platform), false);
 }
 
 function argsMatch(words) {
@@ -332,12 +326,6 @@ function preToolUse(input, pluginData) {
 
 // ---- Handler C ----
 
-function inside(child, parent) {
-  const c = CASELESS ? child.toLowerCase() : child;
-  const p = (CASELESS ? parent.toLowerCase() : parent).replace(/\/+$/, '');
-  return c === p || c.startsWith(p + '/');
-}
-
 const DENIED_FOLDERS = new Set(['.claude', '.git', '.ssh', '.aws']);
 const DENIED_FILES = new Set(['claude.md', 'claude.local.md', 'agents.md', '.npmrc', '.netrc']);
 
@@ -356,12 +344,8 @@ function readDenied(p, cwd, transcriptDir) {
   const given = p === '~' || p.startsWith('~/') ? path.join(os.homedir(), p.slice(1)) : p;
   const lexical = path.resolve(cwd, given);
   const forms = [lexical, attempt(() => canon(lexical), null)].filter(Boolean).map((f) => f.replace(/\\/g, '/'));
-  const transcript = transcriptDir ? [transcriptDir, attempt(() => canon(transcriptDir), null)].filter(Boolean).map((f) => f.replace(/\\/g, '/')) : [];
-  for (const form of forms) {
-    if (deniedSegments(form.split('/').filter((s) => s !== ''))) return true;
-    if (transcript.some((t) => inside(form, t))) return true;
-  }
-  return false;
+  if (forms.some((form) => deniedSegments(form.split('/').filter((s) => s !== '')))) return true;
+  return transcriptDir !== null && couldBeInside(lexical, transcriptDir);
 }
 
 function readGuard(input) {
