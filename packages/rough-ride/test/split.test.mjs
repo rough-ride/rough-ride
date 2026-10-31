@@ -6,7 +6,7 @@ import { CATALOGUE, checkDigest, checkRun, LIMITS, SELECTION } from '../dist/run
 import { StopError } from '../dist/exit.mjs';
 import { checkRootEntry, ensureFolder } from '../dist/folder.mjs';
 import { Manifest } from '../dist/manifest.mjs';
-import { gitRepo, run, sh } from './helpers.mjs';
+import { gitRepo, run, scratchDir, sh } from './helpers.mjs';
 
 const info = { version: '0.1.0', cliPath: '/x/dist/cli.mjs', source: { kind: 'plugin', detail: 'rough-ride@rough-ride', resolved: null }, pluginId: 'rough-ride@rough-ride', pluginData: { path: '/d', verified: true }, node: '22.22.1', playwright: '1.64.1', claudeCode: { version: null, floorChecked: false }, editGuard: 'on', versionSkew: null };
 const ID = '20261028-101010-plan-ab12';
@@ -108,10 +108,9 @@ test('an attack that started but never finished still counts: attacks.jsonl alon
 });
 
 test('with a plugin data folder and a session id, a call writes adversary-runs/<session>.json with the block and its sha256', async () => {
-  const { readFileSync, mkdtempSync } = await import('node:fs');
-  const { tmpdir } = await import('node:os');
+  const { readFileSync } = await import('node:fs');
   const { createHash } = await import('node:crypto');
-  const data = mkdtempSync(path.join(tmpdir(), 'rp-data-'));
+  const data = scratchDir();
   const repo = gitRepo();
   const r = run(['bogus', '--plugin-data', data], { cwd: repo, env: { CLAUDE_CODE_SESSION_ID: 'sess-77' } });
   const file = JSON.parse(readFileSync(path.join(data, 'adversary-runs', 'sess-77.json'), 'utf8'));

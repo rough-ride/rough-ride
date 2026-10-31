@@ -77,17 +77,80 @@ export function canon(p, platform = process.platform) {
   return cleanString(tail.length ? mod.join(head, ...tail) : head);
 }
 
-// Two existing paths are the same when their canonical strings match or their
-// (dev, ino) match, which covers macOS's /System/Volumes/Data spelling.
-export function samePath(a, b) {
-  if (canon(a) === canon(b)) return true;
+// The form every printed path takes: forward slashes. Only Windows turns '\'
+// into '/'; elsewhere '\' is a file-name character and stays.
+export function printed(p, platform = process.platform) {
+  return platform === 'win32' ? p.replace(/\\/g, '/') : p;
+}
+
+function foldsCase(platform) {
+  return platform === 'darwin' || platform === 'win32';
+}
+
+function identity(p) {
   try {
-    const sa = fs.statSync(a, { bigint: true });
-    const sb = fs.statSync(b, { bigint: true });
-    return sa.dev === sb.dev && sa.ino === sb.ino;
-  } catch (error) {
-    return false;
+    return fs.statSync(p, { bigint: true });
+  } catch (_) {
+    return null;
   }
+}
+
+function spelling(p, platform) {
+  try {
+    return canon(p, platform);
+  } catch (_) {
+    return cleanString((platform === 'win32' ? path.win32 : path.posix).resolve(p));
+  }
+}
+
+// Two paths are the same place when their canonical strings match, or both
+// exist and their (dev, ino) match, which covers macOS's /System/Volumes/Data
+// spelling. For a folder that exists, the file system decides letter case:
+// canon already returns its stored case. Only when neither exists, such as a
+// data folder not created yet, is case ignored on macOS and Windows, whose
+// volumes ignore it by default (spec part 2 section 6.10).
+// A path canon cannot read (EACCES, ELOOP) is compared as written: resolved
+// and cleaned, never run through realpath. The function does not throw.
+export function samePath(a, b, platform = process.platform) {
+  const ca = spelling(a, platform);
+  const cb = spelling(b, platform);
+  if (ca === cb) return true;
+  const sa = identity(a);
+  const sb = identity(b);
+  if (sa || sb) return Boolean(sa && sb && sa.dev === sb.dev && sa.ino === sb.ino);
+  return foldsCase(platform) && ca.toLowerCase() === cb.toLowerCase();
+}
+
+function under(child, parent, caseless) {
+  const c = caseless ? child.toLowerCase() : child;
+  const p = caseless ? parent.toLowerCase() : parent;
+  return c === p || c.startsWith(p.endsWith('/') ? p : p + '/');
+}
+
+// True when `child` is `parent` or below it, both canonical, so a link out of
+// `parent` is outside. Letter case follows samePath: ignored on macOS and
+// Windows only when `parent` does not exist.
+export function inside(child, parent, platform = process.platform) {
+  return under(canon(child, platform), canon(parent, platform), foldsCase(platform) && !identity(parent));
+}
+
+// For deny checks, which must over-match rather than miss: `child` as written
+// or canonical is `parent` as written or canonical, or below it, with letter
+// case ignored on macOS and Windows even where the file system tells case
+// apart. A form whose canon fails is left out.
+export function couldBeInside(child, parent, platform = process.platform) {
+  const mod = platform === 'win32' ? path.win32 : path.posix;
+  const forms = (p) => {
+    const out = [printed(mod.resolve(p), platform)];
+    try {
+      out.push(canon(p, platform));
+    } catch (_) {
+      // Compared as written only.
+    }
+    return out;
+  };
+  const parents = forms(parent);
+  return forms(child).some((c) => parents.some((p) => under(c, p, foldsCase(platform))));
 }
 
 function stripWindowsPrefix(p) {

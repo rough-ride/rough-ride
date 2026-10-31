@@ -1,10 +1,12 @@
-// The plugin-copy checks the session-start hook and the preflight share (spec
-// part 1 sections 4 and 5). Hand-written, not tsc output: Node 18 syntax and
-// APIs only, no dependencies, because hooks run on whatever Node Claude Code
-// finds. Every check returns null when its inputs are unreadable.
+// Which plugin copy is running, and the checks on it (spec part 1 sections 4
+// and 5): the session-start hook, the preflight, the guard and the runner all
+// import it. Hand-written, not tsc output: Node 18 syntax and APIs only, no
+// dependencies, because hooks run on whatever Node Claude Code finds. Every
+// check returns null when its inputs are unreadable.
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { printed, samePath } from './path-check.mjs';
 
 export const CLAUDE_FLOOR = '2.1.299';
 export const NODE_FLOOR = '22.22.0';
@@ -29,42 +31,31 @@ function readJson(file) {
   }
 }
 
-function slashes(p) {
-  return p.split(path.sep).join('/');
-}
-
-function samePath(a, b) {
-  const norm = (p) => {
-    let s = path.resolve(p);
-    try {
-      s = fs.realpathSync.native(s);
-    } catch (_) {
-      // Compared as written.
-    }
-    s = s.split(/[\\/]+/).join('/').replace(/\/$/, '');
-    return process.platform === 'darwin' || process.platform === 'win32' ? s.toLowerCase() : s;
-  };
-  return norm(a) === norm(b);
-}
-
-function inside(child, parent) {
-  const rel = path.relative(path.resolve(parent), path.resolve(child));
-  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
-}
-
 export function ownVersion(pluginRoot) {
   const pkg = readJson(path.join(pluginRoot, 'package.json'));
   return pkg && typeof pkg.version === 'string' ? pkg.version : null;
 }
 
-// This copy's id, from <plugins root>/cache/<marketplace>/<plugin>/<version>/.
-export function copyId(pluginRoot) {
-  const parts = path.resolve(pluginRoot).split(/[\\/]/);
+// Claude Code keeps a cache copy at <plugins root>/cache/<marketplace>/<plugin>/<version>/
+// and its data folder at <plugins root>/data/<plugin>-<marketplace>/, every
+// character outside [A-Za-z0-9_-] made '-'. `p` is the copy's root or a path
+// inside it. Paths come back with forward slashes; null when `p` is not in a
+// cache copy.
+export function cacheCopy(p) {
+  const parts = String(p).split(/[\\/]/);
   const cache = parts.lastIndexOf('cache');
-  if (cache > 0 && parts[cache - 1] === 'plugins' && parts[cache + 1] && parts[cache + 2]) {
-    return `${parts[cache + 2]}@${parts[cache + 1]}`;
-  }
-  return 'rough-ride';
+  const marketplace = parts[cache + 1];
+  const plugin = parts[cache + 2];
+  if (cache <= 0 || parts[cache - 1] !== 'plugins' || !marketplace || !plugin || !parts[cache + 3]) return null;
+  const pluginsRoot = parts.slice(0, cache).join('/');
+  const name = `${plugin}-${marketplace}`.replace(/[^A-Za-z0-9_-]/g, '-');
+  return { id: `${plugin}@${marketplace}`, pluginsRoot, dataFolder: `${pluginsRoot}/data/${name}` };
+}
+
+// This copy's id; 'rough-ride' for a copy outside the cache.
+export function copyId(pluginRoot) {
+  const copy = cacheCopy(path.resolve(pluginRoot));
+  return copy ? copy.id : 'rough-ride';
 }
 
 export function claudeCodeVersion(env) {
@@ -74,12 +65,15 @@ export function claudeCodeVersion(env) {
   return /^\d+\.\d+\.\d+$/.test(last) ? last : null;
 }
 
+// The stop when Claude Code is below the floor; `tier` names the skill to run again.
+export function floorStop(own, claudeVersion, tier) {
+  if (claudeVersion === null || compareSemver(claudeVersion, CLAUDE_FLOOR) >= 0) return null;
+  return `rough-ride ${own} needs Claude Code ${CLAUDE_FLOOR} or later; this session runs ${claudeVersion}.` +
+    ` Older versions let a failed edit-blocking hook through. Update with claude update, restart Claude Code, then run /rough-ride:${tier} again.`;
+}
+
 export function floorMessage(pluginRoot, env) {
-  const version = claudeCodeVersion(env);
-  if (version === null || compareSemver(version, CLAUDE_FLOOR) >= 0) return null;
-  const own = ownVersion(pluginRoot) || '';
-  return `rough-ride ${own} needs Claude Code ${CLAUDE_FLOOR} or later; this session runs ${version}.` +
-    ' Older versions let a failed edit-blocking hook through. Update with claude update, restart Claude Code, then run /rough-ride:quick again.';
+  return floorStop(ownVersion(pluginRoot) || '', claudeCodeVersion(env), 'quick');
 }
 
 export function packagesMessage(pluginRoot) {
@@ -156,11 +150,13 @@ export function duplicateMessage(copies) {
 
 export function inlineMessage(pluginRoot, pluginsRoot, copies) {
   if (!copies || copies.length === 0) return null;
-  if (inside(pluginRoot, path.join(pluginsRoot, 'cache'))) return null;
-  return `rough-ride is loaded from ${slashes(path.resolve(pluginRoot))} for this session (--plugin-dir) and replaces the installed copy.`;
+  const copy = cacheCopy(path.resolve(pluginRoot));
+  if (copy && samePath(copy.pluginsRoot, pluginsRoot)) return null;
+  return `rough-ride is loaded from ${printed(path.resolve(pluginRoot))} for this session (--plugin-dir) and replaces the installed copy.`;
 }
 
-// The non-blocking duplicate and inline lines, from the plugin data folder.
+// The non-blocking duplicate and inline lines, from the plugin data folder,
+// which sits at <plugins root>/data/<name>/.
 export function copyMessages(pluginRoot, pluginData, cwd) {
   if (!pluginData) return [];
   const pluginsRoot = path.dirname(path.dirname(path.resolve(pluginData)));

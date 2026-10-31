@@ -160,8 +160,7 @@ function sessionStart() {
 function guard() {
   const w = guardWorld(dir);
   const opts = { data: w.data, cwd: w.repo, env: { CLAUDE_PROJECT_DIR: w.projectDir } };
-  const caseless = process.platform === 'darwin' || process.platform === 'win32';
-  const rows = caseless ? [...w.ROWS, ...w.CASE_ROWS] : w.ROWS;
+  const rows = [...w.ROWS, ...w.CASE_ROWS];
 
   // Handler B gets every row written for it; handler A, which has no data
   // folder, the ones written for it and the file-tool rows of rule 1.

@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { lstatSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { printed } from '../hooks/path-check.mjs';
 import type { Diff } from './diff.mjs';
 import type { FolderState } from './folder.mjs';
 import type { Note } from './output.mjs';
@@ -86,7 +87,7 @@ export function readSpecs(root: string, folder: FolderState, reviewed: string[],
     }
     candidates.push(name);
   }
-  const rel = path.relative(root, dir).split(path.sep).join('/');
+  const rel = printed(path.relative(root, dir));
   const blobs = blobsAt(root, reviewed, candidates.map((n) => `${rel}/${n}`));
   const parts: SpecPart[] = [];
   let total = 0;

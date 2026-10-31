@@ -5,7 +5,7 @@
 // source tree or an unpacked tarball. Node 18 syntax: CI's hook job runs it
 // on Node 18.
 import { createHash } from 'node:crypto';
-import { cpSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { scratchDir } from '../helpers.mjs';
@@ -158,11 +158,13 @@ export function guardWorld(pkg) {
     ['rule 7: Edit to the folder is still rule 1', tool('Write', { file_path: path.join(repo, '.rough-ride', 'flows', 'x.yaml') }, adv), `deny: ${RULE1}`, B],
   ];
 
-  // For case-insensitive file systems only.
-  const CASE_ROWS = [
+  // Only where the volumes ignore letter case, which the file system answers:
+  // the guard asks it, not the platform, about folders that exist.
+  const caseless = existsSync(other(pkg)) && existsSync(other(data));
+  const CASE_ROWS = caseless ? [
     ['rule 7: the plugin root in other letter case', bash(cli('plan quick', { root: other(pkg) }), adv), 'allow', B],
     ['rule 7: the data folder in other letter case', bash(cli('plan quick', { folder: other(data) }), adv), 'allow', B],
-  ];
+  ] : [];
 
   // Handler C: [name, stdin, expected verdict for the adversary]. Without the
   // adversary's agent_type every one of them prints nothing.

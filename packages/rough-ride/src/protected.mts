@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse } from 'yaml';
+import { printed } from '../hooks/path-check.mjs';
 import type { Config } from './config.mjs';
 import { reflogMessage, reviewedBase, type ReviewedBase } from './diff.mjs';
 import type { CheckedFiles } from './files.mjs';
@@ -249,7 +250,7 @@ export function lastProtected(): ProtectedResult | null {
 
 export function compareProtected(options: CompareOptions): ProtectedResult {
   const { root, files } = options;
-  const rel = path.relative(root, options.folderDir).split(path.sep).join('/');
+  const rel = printed(path.relative(root, options.folderDir));
   const base = reviewedBase(root, options.env, options.pluginData, options.mode);
   const notes: Note[] = [];
   const working = new Map<string, { text: string; value: unknown; kind: FormatKind; step5: string[] }>();

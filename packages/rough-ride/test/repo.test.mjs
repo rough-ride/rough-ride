@@ -2,9 +2,8 @@ import assert from 'node:assert/strict';
 import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { canon } from '../hooks/path-check.mjs';
 import { classifyRevParse } from '../dist/git.mjs';
-import { caseSensitive, gitRepo, run, scratchDir, sh } from './helpers.mjs';
+import { canonical, caseSensitive, gitRepo, run, scratchDir, sh } from './helpers.mjs';
 
 const json = (result) => ({ ...result, doc: JSON.parse(result.stdout) });
 
@@ -12,11 +11,11 @@ test('from the root, frontend/ and backend/ the runner uses the same git root', 
   const root = gitRepo();
   for (const sub of ['', 'frontend', 'backend']) {
     const { doc } = json(run(['quick', '--json'], { cwd: path.join(root, sub) }));
-    assert.equal(doc.root, canon(root));
-    assert.equal(doc.cwd, canon(path.join(root, sub)));
+    assert.equal(doc.root, canonical(root));
+    assert.equal(doc.cwd, canonical(path.join(root, sub)));
     const rootNote = doc.notes.find((n) => n.id === 'root');
     if (sub === '') assert.equal(rootNote, undefined);
-    else assert.deepEqual(rootNote, { id: 'root', text: `root: ${canon(root)}` });
+    else assert.deepEqual(rootNote, { id: 'root', text: `root: ${canonical(root)}` });
   }
 });
 
@@ -43,7 +42,7 @@ test('another rev-parse failure stops with exit 69 and git\'s first line', () =>
   const { code, doc } = json(run(['quick', '--json'], { cwd: inside }));
   assert.equal(code, 69);
   assert.equal(doc.stop.code, 'git-failed');
-  assert.match(doc.stop.lines[0], new RegExp(`^git rev-parse failed in ${canon(inside)}: fatal: `));
+  assert.match(doc.stop.lines[0], new RegExp(`^git rev-parse failed in ${canonical(inside)}: fatal: `));
 });
 
 test('the home folder as the root stops with exit 64', () => {
@@ -52,7 +51,7 @@ test('the home folder as the root stops with exit 64', () => {
   assert.equal(code, 64);
   assert.equal(doc.stop.code, 'home-root');
   assert.deepEqual(doc.stop.lines, [
-    `The git repository here is your home folder (${canon(root)}). Run rough-ride inside the app's own repository.`,
+    `The git repository here is your home folder (${canonical(root)}). Run rough-ride inside the app's own repository.`,
   ]);
 });
 
@@ -60,6 +59,14 @@ test('on Windows a non-Windows path from git stops with exit 69', () => {
   const result = classifyRevParse({ status: 0, stdout: '/c/repo\n', stderr: '' }, 'C:/repo', 'win32', 'C:/Users/u');
   assert.equal(result.stop.code, 'git-not-windows');
   assert.deepEqual(result.stop.lines, ["git printed /c/repo, which isn't a Windows path. Use Git for Windows."]);
+});
+
+test('on Windows the home folder in another spelling is still the home folder', () => {
+  const result = classifyRevParse({ status: 0, stdout: 'c:/users/u\n', stderr: '' }, 'C:/Users/u', 'win32', 'C:\\Users\\U\\');
+  assert.equal(result.stop.code, 'home-root');
+  // On a Windows host, canon finds C:\Users in its stored case.
+  assert.match(result.stop.lines[0], /^The git repository here is your home folder \(C:\/users\/u\)\. Run rough-ride inside the app's own repository\.$/i);
+  assert.deepEqual(classifyRevParse({ status: 0, stdout: 'C:/Users/u/app\n', stderr: '' }, 'C:/Users/u/app', 'win32', 'C:\\Users\\u'), { root: 'C:/Users/u/app' });
 });
 
 test('a case variant of the folder at the root stops with exit 78', () => {

@@ -5,6 +5,7 @@
 
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
+import { printed } from '../hooks/path-check.mjs';
 import { nonFinding, runAttack, type AttackOutcome, type PlannedAttack } from './attacks.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser, type BrowserName, type Launched } from './browser.mjs';
 import { inlineChecks } from './appchecks.mjs';
@@ -312,7 +313,7 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
   } else if (ctx.only.length > 0 && count('pass') === results.length && !ci) {
     commands.push(info.pluginData ? 'Next: /rough-ride:quick attacks what the fix changed.' : `Next: ${followUpCommand(info, ['quick'])}`);
   }
-  const reportPath = path.join(folder.dir, 'runs', run.id, 'report.txt').split(path.sep).join('/');
+  const reportPath = printed(path.join(folder.dir, 'runs', run.id, 'report.txt'));
   const head1 = [`rough-ride regress`, formatDuration(ctx.elapsed()), `run ${run.id}`, ...(info.version.startsWith('0.') ? [PRE_RELEASE] : [])].join(' | ');
   const sections = capSections([
     { id: 'header', lines: [head1] },

@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import type { Page, Locator } from 'playwright-core';
+import { printed } from '../hooks/path-check.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser, SHORT_TITLES, type BrowserName, type Launched } from './browser.mjs';
 import type { Config } from './config.mjs';
 import { diffMap, diffPatch, headerLine2, type Diff } from './diff.mjs';
@@ -1268,9 +1269,9 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
     const above = planList.filter((x) => x.aboveCut);
     const flowsAbove = new Set(above.map((x) => x.attack.flow)).size;
     attacksLine = null;
-    nothing = `Planned: ${above.length} selected ${above.length === 1 ? 'attack' : 'attacks'} on ${flowsAbove} ${flowsAbove === 1 ? 'flow' : 'flows'} (${planList.length - above.length} below the ${ctx.subcommand} cut). Nothing attacked yet; run files: ${path.join(folder.dir, 'runs', run.id, 'adversary').split(path.sep).join('/')}`;
+    nothing = `Planned: ${above.length} selected ${above.length === 1 ? 'attack' : 'attacks'} on ${flowsAbove} ${flowsAbove === 1 ? 'flow' : 'flows'} (${planList.length - above.length} below the ${ctx.subcommand} cut). Nothing attacked yet; run files: ${printed(path.join(folder.dir, 'runs', run.id, 'adversary'))}`;
   }
-  const reportPath = path.join(folder.dir, 'runs', run.id, 'report.txt').split(path.sep).join('/');
+  const reportPath = printed(path.join(folder.dir, 'runs', run.id, 'report.txt'));
   const contractLineText = contractLine(contract, { version: info.version, ci });
   const naShown = lines_.map((l) => l.text);
   const scope = lines_.length > 0 || sel.accounting.fullLoad.length > 0 ? SCOPE_LINE : null;

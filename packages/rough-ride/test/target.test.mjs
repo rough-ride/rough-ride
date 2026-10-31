@@ -5,10 +5,9 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { canon } from '../hooks/path-check.mjs';
 import { StopError } from '../dist/exit.mjs';
 import { findTarget, isLoopbackHost, lockUrlPath, nuxtCandidates, proveLock, readLock } from '../dist/target.mjs';
-import { gitRepo, scratchDir } from './helpers.mjs';
+import { canonical, gitRepo, scratchDir } from './helpers.mjs';
 
 const FAKE = fileURLToPath(new URL('./fixtures/fake-nuxt.mjs', import.meta.url));
 const TREE = fileURLToPath(new URL('./fixtures/tree.mjs', import.meta.url));
@@ -156,11 +155,11 @@ test('no lock and no --start stops with nothing-running and the detected start c
   let { stop } = await stopOf(findTarget(options(root)));
   assert.deepEqual([stop.code, stop.lines], [
     'nothing-running',
-    [`Nothing answers at http://localhost:3731. Start the app (pnpm run dev in ${canon(root)}), or run again with --start.`],
+    [`Nothing answers at http://localhost:3731. Start the app (pnpm run dev in ${canonical(root)}), or run again with --start.`],
   ]);
   ({ stop } = await stopOf(findTarget(options(root, { pluginData: '/data' }))));
   assert.deepEqual(stop.lines, [
-    `Nothing answers at http://localhost:3731. Start the app in a background shell (pnpm run dev in ${canon(root)}), then run /rough-ride:quick again.`,
+    `Nothing answers at http://localhost:3731. Start the app in a background shell (pnpm run dev in ${canonical(root)}), then run /rough-ride:quick again.`,
   ]);
 });
 
@@ -169,7 +168,7 @@ test('without a root dev script, the Nuxt folder\'s own runs there with its pack
   const dir = nuxtApp(root, 'frontend');
   writeFileSync(path.join(dir, 'package-lock.json'), '{}');
   const { stop } = await stopOf(findTarget(options(root)));
-  assert.equal(stop.lines[0], `Nothing answers at http://localhost:3000. Start the app (npm run dev in ${canon(dir)}), or run again with --start.`);
+  assert.equal(stop.lines[0], `Nothing answers at http://localhost:3000. Start the app (npm run dev in ${canonical(dir)}), or run again with --start.`);
 });
 
 test('two candidates: attach to the one running; ask when none or both run, or when there is none', async (t) => {

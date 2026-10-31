@@ -5,6 +5,7 @@
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import type { Page } from 'playwright-core';
+import { printed } from '../hooks/path-check.mjs';
 import { asciiJson } from './adversary.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser, type BrowserName, type Launched } from './browser.mjs';
 import { checkCommittedFiles, wroteFile } from './files.mjs';
@@ -166,7 +167,7 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
           onFailure: async (page) => take(page),
           onFinish: take,
         } as Parameters<typeof runFlow>[0]);
-        out.push(`Snapshot ${d.k}: ${file.split(path.sep).join('/')} (${nodes} nodes)`);
+        out.push(`Snapshot ${d.k}: ${printed(file)} (${nodes} nodes)`);
         if (result.failure) {
           const msg = result.failure.message.startsWith(`${result.failure.label}: `) ? result.failure.message.slice(result.failure.label.length + 2) : result.failure.message;
           out.push(`  step ${result.failure.step} failed: ${asciiJson(JSON.stringify(msg.split('\n')[0]!.slice(0, 300)))}`);

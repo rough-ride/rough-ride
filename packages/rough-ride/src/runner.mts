@@ -1,11 +1,13 @@
 // Which copy of the runner is running, and how to print commands that run it
 // again (part 1 sections 4 and 5).
 
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { release as osRelease } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { printed, samePath } from '../hooks/path-check.mjs';
+import { cacheCopy, CLAUDE_FLOOR, claudeCodeVersion, compareSemver, EDIT_GUARD_OFF, floorStop, sessionMarker, validSession } from '../hooks/plugin-checks.mjs';
 
 export type SourceKind = 'plugin' | 'devDependency' | 'npx' | 'other';
 
@@ -38,11 +40,6 @@ export interface VersionSkew {
   line: string;
 }
 
-export const CLAUDE_FLOOR = '2.1.299';
-export const EDIT_GUARD_OFF =
-  'Edit guard: not running in this session. rough-ride\'s hooks did not start (hooks turned off by settings or policy,' +
-  ' another copy holds the name, or node is missing for hooks), so edits under .rough-ride/ are not blocked.';
-
 const REGISTRY_TARBALL = /^https:\/\/registry\.npmjs\.org\/rough-ride\/-\/rough-ride-[^/]+\.tgz$/;
 
 export function ownVersion(): string {
@@ -60,31 +57,20 @@ export function playwrightVersion(): string | null {
   }
 }
 
-export function claudeCodeVersion(env: NodeJS.ProcessEnv): string | null {
-  const agent = /^claude-code_(\d+)-(\d+)-(\d+)/.exec(env.AI_AGENT ?? '');
-  if (agent) return `${agent[1]}.${agent[2]}.${agent[3]}`;
-  const last = path.basename(env.CLAUDE_CODE_EXECPATH ?? '');
-  return /^\d+\.\d+\.\d+$/.test(last) ? last : null;
-}
-
-function slashes(p: string): string {
-  return p.split(path.sep).join('/');
-}
-
 // Repo-relative when the path sits inside a git work tree, else absolute.
 function displayPath(file: string, cwd: string): string {
   let dir = cwd;
   for (;;) {
     if (existsSync(path.join(dir, '.git'))) {
       const rel = path.relative(dir, file);
-      if (!rel.startsWith('..') && !path.isAbsolute(rel)) return slashes(rel);
+      if (!rel.startsWith('..') && !path.isAbsolute(rel)) return printed(rel);
       break;
     }
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;
   }
-  return slashes(file);
+  return printed(file);
 }
 
 function lockfileResolved(projectDir: string): string | null {
@@ -100,17 +86,8 @@ function lockfileResolved(projectDir: string): string | null {
 }
 
 export function detectSource(cliPath: string, pluginData: string | null, cwd: string): RunnerSource {
+  if (pluginData !== null) return { kind: 'plugin', detail: cacheCopy(cliPath)?.id ?? 'rough-ride', resolved: null };
   const parts = cliPath.split(/[\\/]/);
-  if (pluginData !== null) {
-    // Claude Code installs plugins at <...>/plugins/cache/<marketplace>/<plugin>/<version>/.
-    const cache = parts.lastIndexOf('cache');
-    const marketplace = parts[cache + 1];
-    const plugin = parts[cache + 2];
-    const id = cache > 0 && parts[cache - 1] === 'plugins' && marketplace && plugin
-      ? `${plugin}@${marketplace}`
-      : 'rough-ride';
-    return { kind: 'plugin', detail: id, resolved: null };
-  }
   const nm = parts.lastIndexOf('node_modules');
   if (nm > 0 && parts[nm + 1] === 'rough-ride') {
     if (parts.includes('_npx')) return { kind: 'npx', detail: null, resolved: null };
@@ -121,34 +98,13 @@ export function detectSource(cliPath: string, pluginData: string | null, cwd: st
       resolved: lockfileResolved(projectDir),
     };
   }
-  return { kind: 'other', detail: slashes(cliPath), resolved: null };
+  return { kind: 'other', detail: printed(cliPath), resolved: null };
 }
 
-// A cache copy's data folder: <plugins root>/data/<plugin>-<marketplace>/,
-// every character outside [A-Za-z0-9_-] made '-', with forward slashes like
-// every other path the runner prints. Null for an in-place load.
+// A cache copy's data folder, with forward slashes like every other path the
+// runner prints. Null for an in-place load.
 export function derivedPluginData(cliPath: string): string | null {
-  const parts = cliPath.split(/[\\/]/);
-  const cache = parts.lastIndexOf('cache');
-  const marketplace = parts[cache + 1];
-  const plugin = parts[cache + 2];
-  if (cache <= 0 || parts[cache - 1] !== 'plugins' || !marketplace || !plugin || parts.length < cache + 5) return null;
-  const name = `${plugin}-${marketplace}`.replace(/[^A-Za-z0-9_-]/g, '-');
-  return [...parts.slice(0, cache), 'data', name].join('/') || '/';
-}
-
-function samePath(a: string, b: string, platform: NodeJS.Platform): boolean {
-  const norm = (p: string) => {
-    let real = p;
-    try {
-      real = realpathSync.native(p);
-    } catch {
-      // A folder not created yet compares as written.
-    }
-    const s = real.split(/[\\/]+/).join('/').replace(/\/$/, '');
-    return platform === 'darwin' || platform === 'win32' ? s.toLowerCase() : s;
-  };
-  return norm(a) === norm(b);
+  return cacheCopy(cliPath)?.dataFolder ?? null;
 }
 
 // The stop line when --plugin-data names another folder than this cache
@@ -161,24 +117,13 @@ export function pluginDataMismatch(info: RunnerInfo, platform: NodeJS.Platform =
 }
 
 export function claudeFloorStop(info: RunnerInfo, tier: string): string | null {
-  const version = info.claudeCode.version;
-  if (info.pluginData === null || version === null || compareSemver(version, CLAUDE_FLOOR) >= 0) return null;
-  return `rough-ride ${info.version} needs Claude Code ${CLAUDE_FLOOR} or later; this session runs ${version}.` +
-    ` Older versions let a failed edit-blocking hook through. Update with claude update, restart Claude Code, then run /rough-ride:${tier} again.`;
-}
-
-export function compareSemver(a: string, b: string): number {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return (pa[i] ?? 0) - (pb[i] ?? 0);
-  return 0;
+  return info.pluginData === null ? null : floorStop(info.version, info.claudeCode.version, tier);
 }
 
 function editGuardOf(pluginData: string | null, env: NodeJS.ProcessEnv): 'on' | 'off' | 'n/a' {
   if (pluginData === null) return 'n/a';
   const session = env.CLAUDE_CODE_SESSION_ID;
-  if (!session || !/^[A-Za-z0-9_-]+$/.test(session)) return 'off';
-  return existsSync(path.join(pluginData, 'sessions', session)) ? 'on' : 'off';
+  return validSession(session) && existsSync(sessionMarker(pluginData, session)) ? 'on' : 'off';
 }
 
 export function runnerInfo(pluginData: string | null, cwd: string, env: NodeJS.ProcessEnv): RunnerInfo {
@@ -220,7 +165,7 @@ export function runnerLine(info: RunnerInfo): string {
   // version is said out loud.
   if (info.claudeCode.version) parts.push(`Claude Code ${info.claudeCode.version}`);
   else if (info.source.kind === 'plugin') parts.push(`Claude Code: unknown (floor ${CLAUDE_FLOOR} not checked)`);
-  if (info.pluginData && !info.pluginData.verified) parts.push(`plugin data: ${slashes(info.pluginData.path)} (from --plugin-data, not verified)`);
+  if (info.pluginData && !info.pluginData.verified) parts.push(`plugin data: ${printed(info.pluginData.path)} (from --plugin-data, not verified)`);
   return parts.join(' | ');
 }
 
@@ -310,13 +255,13 @@ export function followUpCommand(info: RunnerInfo, args: string[]): string {
   switch (info.source.kind) {
     case 'plugin':
       if (args.length === 1 && TIERS.has(args[0]!)) return `/rough-ride:${args[0]}`;
-      return `node "${slashes(info.cliPath)}" ${rest} --plugin-data "${slashes(info.pluginData!.path)}"`;
+      return `node "${printed(info.cliPath)}" ${rest} --plugin-data "${printed(info.pluginData!.path)}"`;
     case 'devDependency':
       return `npx --no rough-ride ${rest}`;
     case 'npx':
       return `npx -y rough-ride@${info.version} ${rest}`;
     case 'other':
-      return `node "${slashes(info.cliPath)}" ${rest}`;
+      return `node "${printed(info.cliPath)}" ${rest}`;
   }
 }
 

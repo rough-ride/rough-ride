@@ -14,7 +14,6 @@ import { ADV, RUN, guardWorld, verdict } from './fixtures/hook-rows.mjs';
 
 const PKG = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 const GUARD = path.join(PKG, 'hooks', 'guard.mjs');
-const caseless = process.platform === 'darwin' || process.platform === 'win32';
 
 // The rows, the repository and the data folder, shared with scripts/hook-fixtures.mjs.
 const { repo, projectDir, data, B, adv, tool, bash, ROWS, CASE_ROWS, READ_ROWS, BLOCK, record, stopInput, sessionFile } = guardWorld(PKG);
@@ -49,7 +48,7 @@ test('handlers A and B: rules 1 to 7, table-driven', () => {
   check(ROWS);
 });
 
-test('rule 7: a plugin root or data folder in other letter case', { skip: !caseless && 'case-sensitive file system' }, () => {
+test('rule 7: a plugin root or data folder in other letter case', { skip: CASE_ROWS.length === 0 && 'case-sensitive file system' }, () => {
   check(CASE_ROWS);
 });
 
