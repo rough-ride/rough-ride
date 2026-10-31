@@ -101,9 +101,16 @@ function identity(p) {
 // canon already returns its stored case. Only when neither exists, such as a
 // data folder not created yet, is case ignored on macOS and Windows, whose
 // volumes ignore it by default (spec part 1 section 4, part 11 section 46.2).
+// A path canon cannot read (EACCES, ELOOP) is not the same place as anything.
 export function samePath(a, b, platform = process.platform) {
-  const ca = canon(a, platform);
-  const cb = canon(b, platform);
+  let ca;
+  let cb;
+  try {
+    ca = canon(a, platform);
+    cb = canon(b, platform);
+  } catch (_) {
+    return false;
+  }
   if (ca === cb) return true;
   const sa = identity(a);
   const sb = identity(b);

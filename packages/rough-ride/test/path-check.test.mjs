@@ -2,7 +2,7 @@
 // Acceptance). Rows that need one OS run only there and say why elsewhere.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { linkSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, linkSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -182,6 +182,19 @@ test('samePath: the file system decides for folders that exist', () => {
     assert.equal(samePath(path.join(dir, 'Data'), path.join(dir, 'DATA'), 'darwin'), false);
   } else {
     assert.ok(samePath(path.join(dir, 'DATA'), path.join(dir, 'Data')));
+  }
+});
+
+test('samePath: a path that cannot be read is not the same place, and does not throw', { skip: win && 'POSIX permissions' }, () => {
+  const dir = scratchDir();
+  const locked = path.join(dir, 'locked');
+  mkdirSync(path.join(locked, 'inner'), { recursive: true });
+  chmodSync(locked, 0o000);
+  try {
+    assert.equal(samePath(path.join(locked, 'inner'), dir), false);
+    assert.equal(samePath(dir, path.join(locked, 'inner')), false);
+  } finally {
+    chmodSync(locked, 0o700);
   }
 });
 

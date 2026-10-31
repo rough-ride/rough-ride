@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -157,6 +157,22 @@ test('session-start: a project-scope copy counts only for its own project, in an
   assert.equal(asProject(scratchDir()), null);
   assert.equal(asProject(cwd + path.sep), DUPLICATE);
   if (process.platform === 'darwin') assert.equal(asProject(path.join('/System/Volumes/Data', cwd)), DUPLICATE);
+});
+
+test('session-start: an install record whose projectPath cannot be read is skipped, not the whole list', { skip: process.platform === 'win32' && 'POSIX permissions' }, () => {
+  const three = pluginsHome({ ids: [['rough-ride@rough-ride', '0.9.3'], ['rough-ride@claude-plugins-official', '1.0.0'], ['rough-ride@third', '1.0.0']] });
+  const file = path.join(three.plugins, 'installed_plugins.json');
+  const doc = JSON.parse(readFileSync(file, 'utf8'));
+  const locked = path.join(scratchDir(), 'locked');
+  mkdirSync(path.join(locked, 'project'), { recursive: true });
+  doc.plugins['rough-ride@third'][0] = { ...doc.plugins['rough-ride@third'][0], scope: 'project', projectPath: path.join(locked, 'project') };
+  writeFileSync(file, JSON.stringify(doc));
+  chmodSync(locked, 0o000);
+  try {
+    assert.equal(message(hook('session-start.mjs', { ...three, stdin: JSON.stringify({ session_id: 's', cwd: scratchDir() }) }).stdout), DUPLICATE);
+  } finally {
+    chmodSync(locked, 0o700);
+  }
 });
 
 test('session-start: unreadable input prints nothing and exits 0', () => {
