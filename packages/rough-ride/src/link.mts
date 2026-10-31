@@ -13,6 +13,7 @@ import { Manifest } from './manifest.mjs';
 import { formatDuration, type Note } from './output.mjs';
 import { compareProtected, summaryLines as protectedSummary } from './protected.mjs';
 import { runnerBlock, type RunnerInfo } from './runner.mjs';
+import type { RunReport } from './runoutput.mjs';
 import { callCount, checkRun, recordCall, tierCommand, type PlanState } from './runcheck.mjs';
 import type { Section } from './summary.mjs';
 import { routeMatches, samePage } from './tracing.mjs';
@@ -116,6 +117,8 @@ export interface LinkContext {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Where the run reports its run folder, protected comparison and contract.
+  report: RunReport;
   elapsed: () => number;
 }
 
@@ -124,6 +127,7 @@ export function runLink(ctx: LinkContext): { lines: string[]; document: Record<s
   const folder = ensureFolder(ctx.folder);
   const manifest = new Manifest(root);
   const plan = checkRun(folder, ctx.runId, info, manifest);
+  ctx.report.namedRun({ id: ctx.runId, dir: path.join(folder.dir, 'runs', ctx.runId) }, false);
   let protLines: string[] = [];
   const finish = (body: string[], exitCode: 0 | 2) => {
     const header = ['rough-ride link', formatDuration(ctx.elapsed()), `run ${ctx.runId}`].join(' | ');
@@ -131,8 +135,9 @@ export function runLink(ctx: LinkContext): { lines: string[]; document: Record<s
     return { lines: sections.flatMap((x) => x.lines), document: { sections }, status: exitCode === 0 ? 'passed' as const : 'incomplete' as const, exitCode };
   };
   if (callCount(folder, ctx.runId, 'link') >= 2) return finish([`Not run: link (run ${ctx.runId} already made 2 link calls)`], 2);
-  const files = checkCommittedFiles(folder, { info, subcommand: 'link', argv: ctx.argv, env: ctx.env });
+  const files = checkCommittedFiles(folder, { info, subcommand: 'link', argv: ctx.argv, env: ctx.env, report: ctx.report });
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest });
+  ctx.report.protectedFiles(prot);
   protLines = protectedSummary(prot);
   ctx.notes.push(...files.notes, ...prot.notes);
 

@@ -3,12 +3,13 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 const cli = fileURLToPath(new URL('../dist/cli.mjs', import.meta.url));
 import { after, before, test } from 'node:test';
-import { attackPoints, orderAttacks, ownHostFor, runAttack, nonFinding } from '../dist/attacks.mjs';
+import { attackPoints, orderAttacks, runAttack, nonFinding } from '../dist/attacks.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/browser.mjs';
 import { emptyForm, FAULT_KINDS, fixedResponse, holdMsFor, kindsFor, malformedBody, sha256 } from '../dist/faults.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
 import { credentialStrings, hasCredentialHeader } from '../dist/secrets.mjs';
 import { startFaultSite } from './fixtures/fault-site.mjs';
+import { hostPolicy, LOOPBACK_ONLY } from '../dist/hosts.mjs';
 
 let browser;
 let site;
@@ -21,8 +22,7 @@ after(async () => {
   site?.close();
 });
 
-const own = ownHostFor([]);
-const base = (extra = {}) => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, allowedHosts: [], ...extra });
+const base = (extra = {}) => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY, ...extra });
 const SEND = [{ click: { role: 'button', name: 'Send' } }];
 const probe = (u, query = '') => ({ name: 'f', signedIn: false, steps: [{ goto: `/probe?u=${encodeURIComponent(u)}${query}` }, ...SEND] });
 const shown = (o) => o.run.steps.find((s) => s.index === o.step).observation.after.lines.slice(2).join(' ');
@@ -31,7 +31,7 @@ const result = (o, id) => o.checks.find((c) => c.id === id)?.result;
 async function attack(flow, fault, { sticky, tier = 'standard', baseOptions = {}, before: beforeAttack, template } = {}) {
   const baseline = await runFlow({ ...base(baseOptions), flow });
   assert.ok(baseline.passed, JSON.stringify(baseline.failure));
-  const points = attackPoints(flow, baseline, own, new Set(), null, { tier });
+  const points = attackPoints(flow, baseline, LOOPBACK_ONLY, new Set(), null, { tier });
   const point = points.find((p) => p.fault === fault && (sticky === undefined || p.sticky === sticky) && (!template || p.template === template));
   assert.ok(point, `no ${fault} point: ${points.map((p) => p.id).join(', ')} | ${(points.skipped ?? []).join('; ')}`);
   beforeAttack?.();
@@ -95,7 +95,7 @@ test('attack points: quick and standard kinds, ids, skip reasons for body faults
     rec({ key: 'GET /api/remote #1', url: 'https://writes.example/api/remote' }),
   ] };
   const flow = { name: 'f', signedIn: true, steps: [{ goto: '/' }, { click: { text: 'x' } }] };
-  const ownAll = ownHostFor(['writes.example']);
+  const ownAll = hostPolicy({ remoteWrites: ['writes.example'] });
   const quick = attackPoints(flow, run, ownAll, new Set(), null, { tier: 'quick' });
   assert.deepEqual(quick.filter((p) => p.key === 'GET /api/list #1').map((p) => p.id), ['f/GET /api/list #1/500!', 'f/GET /api/list #1/empty-200!']);
   assert.deepEqual(quick.filter((p) => p.key === 'POST /api/list #1').map((p) => p.id), ['f/POST /api/list #1/500!', 'f/POST /api/list #1/reset!']);
@@ -115,11 +115,11 @@ test('attack points: quick and standard kinds, ids, skip reasons for body faults
   ]);
   assert.ok(standard.skipped.includes('Skipped: 401 on GET /api/list #1 (not credentialed)'));
   const credentialed = { requests: [rec({ credentialed: true })] };
-  assert.ok(attackPoints(flow, credentialed, own, new Set(), null, { tier: 'standard' }).some((p) => p.id === 'f/GET /api/list #1/401!'));
-  const signIn = attackPoints({ ...flow, name: 'sign-in' }, credentialed, own, new Set(), null, { tier: 'standard', signInFlow: true });
+  assert.ok(attackPoints(flow, credentialed, LOOPBACK_ONLY, new Set(), null, { tier: 'standard' }).some((p) => p.id === 'f/GET /api/list #1/401!'));
+  const signIn = attackPoints({ ...flow, name: 'sign-in' }, credentialed, LOOPBACK_ONLY, new Set(), null, { tier: 'standard', signInFlow: true });
   assert.ok(!signIn.some((p) => p.fault === '401'));
   assert.ok(signIn.skipped.includes('Skipped: 401 on GET /api/list #1 (sign-in flow)'));
-  assert.deepEqual(attackPoints({ ...flow, name: 'sign-in' }, credentialed, own, new Set(), null, { tier: 'quick', signInFlow: true }).map((p) => p.rank), [4, 5]);
+  assert.deepEqual(attackPoints({ ...flow, name: 'sign-in' }, credentialed, LOOPBACK_ONLY, new Set(), null, { tier: 'quick', signInFlow: true }).map((p) => p.rank), [4, 5]);
 });
 
 test('400, 401 envelope, 429 and 500 send exact bytes same-origin and cross-origin; the server sees no faulted request', async () => {
@@ -227,18 +227,16 @@ test('hang: Pending at H with two checks judged; a page that gives up gets fast-
 });
 
 test('delay-3s: the server gets the unchanged request at least 3,000 ms after the route event; timeouts grow by 3 s', async () => {
-  const { o } = await attack(probe('/api/list'), 'delay-3s');
+  const { o, baseline, points } = await attack(probe('/api/list'), 'delay-3s');
   const received = site.log.filter((l) => l.key === 'GET /api/list').at(-1);
   assert.ok(received.at - o.run.fault.firedAt >= 3000, `${received.at - o.run.fault.firedAt}`);
   assert.match(shown(o), /^200\|application\/json\|\[\{"id":7/);
   assert.deepEqual(o.events.map((e) => e.event), ['released after 3000 ms', 'cleared']);
   assert.equal(result(o, 'visible-error-message'), 'not-evaluated');
-  const missing = await runFlow({
-    ...base({ timeouts: { S: 1500 } }),
-    flow: { name: 'f', signedIn: false, steps: [{ goto: '/probe?u=/api/list' }, { click: { role: 'button', name: 'Nope' } }] },
-    attack: { fault: 'delay-3s', sticky: false, template: 'GET /api/list', k: 1, step: 2 },
-  });
-  assert.match(missing.failure.message, /not found after 4\.5 s/);
+  // The attacked step's control is missing, so its click times out at S plus the delay.
+  const missingFlow = { name: 'f', signedIn: false, steps: [{ goto: '/probe?u=/api/list' }, { click: { role: 'button', name: 'Nope' } }] };
+  const missing = await runAttack(points.find((p) => p.fault === 'delay-3s'), missingFlow, baseline, base({ timeouts: { S: 1500 } }), []);
+  assert.match(missing.run.failure.message, /not found after 4\.5 s/);
 });
 
 test('a service worker and a cacheable GET give the same requests and #n in two baselines and the attack', async () => {
@@ -248,7 +246,7 @@ test('a service worker and a cacheable GET give the same requests and #n in two 
   const b = await runFlow({ ...base(), flow });
   assert.deepEqual(keys(a), keys(b));
   assert.deepEqual(keys(a), ['1 GET /api/cacheable #1', '1 GET /api/cacheable #2', '2 GET /api/cacheable #3']);
-  const point = attackPoints(flow, a, own, new Set(), null, { tier: 'quick' }).find((p) => p.key === 'GET /api/cacheable #3' && p.fault === '500');
+  const point = attackPoints(flow, a, LOOPBACK_ONLY, new Set(), null, { tier: 'quick' }).find((p) => p.key === 'GET /api/cacheable #3' && p.fault === '500');
   const o = await runAttack(point, flow, a, base(), []);
   assert.deepEqual(keys(o.run).slice(0, 3), keys(a), 'the recovery click adds #4 after the window');
 });

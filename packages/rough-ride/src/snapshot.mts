@@ -7,23 +7,21 @@ import path from 'node:path';
 import type { Page } from 'playwright-core';
 import { printed } from '../hooks/path-check.mjs';
 import { asciiJson } from './adversary.mjs';
-import { chooseBrowser, installedOnThisMachine, launchBrowser, type BrowserName, type Launched } from './browser.mjs';
-import { checkCommittedFiles, wroteFile } from './files.mjs';
+import type { BrowserName, Launched } from './browser.mjs';
+import { checkCommittedFiles } from './files.mjs';
 import { ensureFolder, type FolderState } from './folder.mjs';
 import { runFlow, type Flow, type Step } from './flowrun.mjs';
 import { splitDocuments, staticRefusal, MAX_INPUT } from './flowsave.mjs';
-import { LocalhostGuard, type GuardPolicy } from './guard.mjs';
-import { takeFlowLock } from './lock.mjs';
 import { Manifest } from './manifest.mjs';
 import { formatDuration, type Note } from './output.mjs';
 import { compareProtected, summaryLines as protectedSummary } from './protected.mjs';
 import { runnerBlock, type RunnerInfo } from './runner.mjs';
-import { bashBlocksStart, bashDeadline, callCount, checkRun, recordCall, tierCommand } from './runcheck.mjs';
+import type { RunReport } from './runoutput.mjs';
+import { callCount, checkRun, recordCall, tierCommand } from './runcheck.mjs';
 import { redactSecrets } from './secrets.mjs';
-import { checkEnv, checkSignInEnv, envReader, signIn } from './session.mjs';
+import { checkEnv, checkSignInEnv, envReader } from './session.mjs';
 import type { Section } from './summary.mjs';
-import { findTarget } from './target.mjs';
-import { readyWaitFor } from './tier.mjs';
+import { openTargetSession } from './targetsession.mjs';
 import { writeAtomic } from './write.mjs';
 
 const MAX_DOCS = 5;
@@ -85,6 +83,8 @@ export interface SnapshotContext {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Where the run reports its run folder, protected comparison and contract.
+  report: RunReport;
   elapsed: () => number;
   launch?: (name: BrowserName) => Promise<Launched>;
 }
@@ -94,6 +94,7 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
   const folder = ensureFolder(ctx.folder);
   const manifest = new Manifest(root);
   const plan = checkRun(folder, ctx.runId, info, manifest);
+  ctx.report.namedRun({ id: ctx.runId, dir: path.join(folder.dir, 'runs', ctx.runId) }, false);
   let protLines: string[] = [];
   const finish = (body: string[], exitCode: 0 | 2) => {
     const header = ['rough-ride snapshot', formatDuration(ctx.elapsed()), `run ${ctx.runId}`].join(' | ');
@@ -101,9 +102,10 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
     return { lines: sections.flatMap((x) => x.lines), document: { sections }, status: exitCode === 0 ? 'passed' as const : 'incomplete' as const, exitCode };
   };
   if (callCount(folder, ctx.runId, 'snapshot') >= 3) return finish([`Not run: snapshot (run ${ctx.runId} already made 3 snapshot calls)`], 2);
-  const files = checkCommittedFiles(folder, { info, subcommand: 'snapshot', argv: ctx.argv, env: ctx.env });
+  const files = checkCommittedFiles(folder, { info, subcommand: 'snapshot', argv: ctx.argv, env: ctx.env, report: ctx.report });
   ctx.notes.push(...files.notes);
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest });
+  ctx.report.protectedFiles(prot);
   protLines = protectedSummary(prot);
   ctx.notes.push(...prot.notes);
 
@@ -124,30 +126,22 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
   if (runnable.some((d) => d.value!.signedIn)) checkSignInEnv(prot.flows.map((e) => e.flow), folder, ctx.env);
   if (runnable.length > 0) {
     const config = prot.config;
-    const target = await findTarget({ root, config, configSchema: files.config?.schema?.text ?? null, start: false, pluginData: info.pluginData?.path ?? null, againCommand: tierCommand(info, plan.tier), notes: ctx.notes });
-    wroteFile(files, info, root, target.nuxtRoot?.rel ?? null, ctx.argv);
-    const lock = takeFlowLock(root, ctx.notes);
-    const policy: GuardPolicy = { remoteTarget: config?.allow?.remoteTarget ?? null, remoteWrites: config?.allow?.remoteWrites ?? [] };
-    const allowed = [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h);
-    const choice = chooseBrowser(ctx.browserFlag, config?.browser ?? null, installedOnThisMachine(ctx.env));
-    const launched = ctx.launch ? await ctx.launch(choice.name) : await launchBrowser(choice, ctx.notes);
-    const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, policy) : undefined;
-    const processStart = Date.now() - ctx.elapsed();
-    const bashStop = bashDeadline(!!info.pluginData, processStart);
+    const session = await openTargetSession({
+      root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows: prot.flows.map((e) => e.flow),
+      start: false, againCommand: tierCommand(info, plan.tier), browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
+      elapsed: ctx.elapsed, run: null, reset: false, read,
+    });
     try {
-      const ready = readyWaitFor(target, config);
-      const exclude = config?.exclude ?? [];
-      const flows = prot.flows.map((e) => e.flow);
       // The sign-in flow once per call, only when a document is signed in; no reset (44.1).
-      const session = runnable.some((d) => d.value!.signedIn) ? await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, deadline: bashStop }) : null;
+      const signedIn = runnable.some((d) => d.value!.signedIn) ? await session.signIn() : null;
       for (const d of runnable) {
         const flow = flowOf(d);
-        if (bashBlocksStart(!!info.pluginData, processStart, Date.now())) {
+        if (session.bashBlocks()) {
           out.push(`Not run: snapshot ${d.k} (stopped by the Bash time limit)`);
           continue;
         }
-        if (flow.signedIn && !session?.passed) {
-          out.push(`Not run: snapshot ${d.k} (${session ? 'sign-in failed' : 'no sign-in flow'})`);
+        if (flow.signedIn && !signedIn?.passed) {
+          out.push(`Not run: snapshot ${d.k} (${signedIn ? 'sign-in failed' : 'no sign-in flow'})`);
           continue;
         }
         const unique = randomBytes(6).toString('base64url').toLowerCase().replace(/[^a-z0-9]/g, '0').slice(0, 8);
@@ -160,13 +154,13 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
           writeAtomic(folder, ['runs', ctx.runId, 'adversary', 'snapshots', `${d.k}.json`], snap.text);
         };
         const result = await runFlow({
-          browser: launched.browser, baseURL: target.url, flow, env: read, ready, exclude, allowedHosts: allowed, guard, unique,
-          storageState: flow.signedIn ? session?.storageState ?? undefined : undefined,
+          ...session.defaults(flow),
+          flow,
+          unique,
           untrusted: true,
-          deadline: bashStop,
           onFailure: async (page) => take(page),
           onFinish: take,
-        } as Parameters<typeof runFlow>[0]);
+        });
         out.push(`Snapshot ${d.k}: ${printed(file)} (${nodes} nodes)`);
         if (result.failure) {
           const msg = result.failure.message.startsWith(`${result.failure.label}: `) ? result.failure.message.slice(result.failure.label.length + 2) : result.failure.message;
@@ -174,9 +168,7 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
         }
       }
     } finally {
-      guard?.close();
-      await launched.browser.close().catch(() => {});
-      lock.release();
+      await session.close();
     }
   }
   recordCall(folder, ctx.runId, 'snapshot', ctx.elapsed());

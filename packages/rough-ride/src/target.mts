@@ -11,6 +11,7 @@ import type { Config } from './config.mjs';
 import { stopWith } from './exit.mjs';
 import { configHeader, FORMATS } from './formats.mjs';
 import { git } from './git.mjs';
+import { normalHost } from './hosts.mjs';
 import type { Note } from './output.mjs';
 import { startCommands, type Started } from './start.mjs';
 
@@ -303,7 +304,7 @@ export async function findTarget(options: FindOptions): Promise<Target> {
     const url = config.target.url;
     const host = new URL(url).hostname;
     const loopback = await isLoopbackHost(host);
-    if (!loopback && config.allow?.remoteTarget !== host.replace(/^\[|\]$/g, '')) {
+    if (!loopback && !(config.allow?.remoteTarget && normalHost(config.allow.remoteTarget) === normalHost(host))) {
       stopWith(
         'target-not-loopback',
         `target.url ${url} is not on this machine (${host} does not resolve only to loopback addresses). rough-ride attacks local apps; allow.remoteTarget in .rough-ride/config.yaml can name one other host.`,

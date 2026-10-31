@@ -11,6 +11,7 @@ import { compareVersions, FORMATS, formatsReport, type FormatKind, type Formats,
 import type { Manifest, SavedEntry } from './manifest.mjs';
 import type { Note } from './output.mjs';
 import { ciMode, updateCommand, sourceText, versionSkew, type RunnerInfo } from './runner.mjs';
+import type { RunReport } from './runoutput.mjs';
 import { nuxtCandidates } from './target.mjs';
 import { createRunFolder } from './runs.mjs';
 import { redactSecrets } from './secrets.mjs';
@@ -56,6 +57,8 @@ export interface CheckContext {
   subcommand: string;
   argv: string[];
   env: NodeJS.ProcessEnv;
+  // Told about the upgrade run folder a schema-older stop makes (38).
+  report: Pick<RunReport, 'madeRun'>;
   formats?: Formats;
   upgraders?: Upgrader[];
 }
@@ -240,6 +243,7 @@ function olderStop(
 
   const ready = ensureFolder(folder);
   const run = createRunFolder(ready, ctx.subcommand);
+  ctx.report.madeRun(run);
   const rel = `.rough-ride/runs/${run.id}`;
   const applyLine = `git -C "${folder.root}" apply ${rel}/upgrade.patch`;
   const upgraded = older.map((f) =>

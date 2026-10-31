@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { badInputAttack, nonFinding, ownHostFor, runAttack, symptom } from '../dist/attacks.mjs';
+import { badInputAttack, nonFinding, runAttack, symptom } from '../dist/attacks.mjs';
 import { browserBlock, fieldKind, leapYear, planBadInputs, preview, tierInputs, valueFor } from '../dist/badinputs.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/browser.mjs';
 import { findForms } from '../dist/forms.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
 import { fetchOpenApi } from '../dist/openapi.mjs';
 import { startBadSite } from './fixtures/bad-site.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 
 let browser;
 let site;
@@ -19,8 +20,8 @@ after(async () => {
   site?.close();
 });
 
-const own = ownHostFor([]);
-const base = () => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, allowedHosts: [] });
+const own = LOOPBACK_ONLY.ownHost;
+const base = () => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY });
 const notesFlow = (mode = 'plain') => ({
   name: 'create-note',
   signedIn: false,

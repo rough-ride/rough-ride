@@ -8,7 +8,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Locator, Page } from 'playwright-core';
 import { decodeUtf8 } from './adversary.mjs';
-import { CHECK_RANK, evidence, toldFault, type CheckResult } from './checks.mjs';
+import { CHECK_RANK, evidence, type CheckResult } from './checks.mjs';
+import { kindFor } from './kinds.mjs';
 import { describeLocator, type Flow, type FlowRunResult, type LocatorSpec, type StepRecord } from './flowrun.mjs';
 import type { FolderState } from './folder.mjs';
 import { canonicalJson } from './output.mjs';
@@ -21,7 +22,6 @@ const KEY = /^[A-Z]+ \/\S*$/;
 const ATTACKS = ['fault', 'bad-input', 'timing', 'viewport'] as const;
 const AT = ['settled', 'end', 'every-step'] as const;
 const STATUS = ['2xx', '3xx', '4xx', '5xx', 'failed'] as const;
-const REFUSED = ['rejected', 'blocked-by-browser', 'blocked-by-app', 'silent-refusal'];
 // 45.8 gate 4: these follow the machine's time zone and locale.
 const DATE_TIME = [/\d{4}-\d{2}-\d{2}/, /\d{1,2}[./-]\d{1,2}[./-]\d{4}/, /\d{1,2}:\d{2}/];
 
@@ -383,7 +383,7 @@ export function matchesWhen(c: AppCheck, a: MatchedAttack, flow: Flow): boolean 
     if (!loc || !sameLocator(loc, w.field)) return false;
   }
   if (w.ids !== undefined) {
-    const id = a.badInput?.inputId ?? a.timing ?? a.fault;
+    const id = kindFor(a).appId(a);
     if (!id || !w.ids.includes(id)) return false;
   }
   return true;
@@ -391,19 +391,7 @@ export function matchesWhen(c: AppCheck, a: MatchedAttack, flow: Flow): boolean 
 
 // told, refused or accepted (45.7), or what the run was instead.
 export function outcomeOf(a: MatchedAttack, run: FlowRunResult): { cls: 'told' | 'refused' | 'accepted' | null; shown: string } {
-  if (a.kind === 'bad-input') {
-    const o = run.badInput?.outcome ?? null;
-    if (o === null) return { cls: null, shown: 'none' };
-    if (REFUSED.includes(o)) return { cls: 'refused', shown: 'refused' };
-    if (o === 'accepted') return { cls: 'accepted', shown: 'accepted' };
-    return { cls: null, shown: o };
-  }
-  if (a.kind === 'fault' && a.fault && run.fault?.fired && !run.fault.pending) {
-    if (run.fault.absorbed) return { cls: null, shown: 'absorbed' };
-    if (toldFault(a.fault, run.fault)) return { cls: 'told', shown: 'told' };
-    return { cls: 'accepted', shown: 'accepted' };
-  }
-  return { cls: null, shown: 'none' };
+  return kindFor(a).appOutcome?.(a, run) ?? { cls: null, shown: 'none' };
 }
 
 // A run that completed every step and every expect, recovery included.

@@ -11,6 +11,7 @@ import { orderFlows } from '../dist/forms.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
 import { fetchOpenApi, matchTemplate, operations, rekey } from '../dist/openapi.mjs';
 import { select } from '../dist/selection.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 import { gitRepo, sh } from './helpers.mjs';
 
 const SAMPLE_DIR = fileURLToPath(new URL('../../../.scratch/chaos-v1/prototypes/sample-app/', import.meta.url));
@@ -152,7 +153,7 @@ before(async () => {
   docs = await fetchOpenApi([API, SAMPLE], []);
   browser = (await launchBrowser(chooseBrowser(process.env.RP_TEST_BROWSER ?? null, null, installedOnThisMachine()), [])).browser;
   const signIn = await runFlow({
-    browser, baseURL: SAMPLE, ready: { kind: 'nuxt' }, keepStorageState: true, env: (n) => ({ E: 'demo@example.com', P: 'demo-password' })[n],
+    browser, baseURL: SAMPLE, ready: { kind: 'nuxt' }, hosts: LOOPBACK_ONLY, keepStorageState: true, env: (n) => ({ E: 'demo@example.com', P: 'demo-password' })[n],
     flow: { name: 'sign-in', signedIn: false, steps: [{ goto: '/login' }, { fill: { label: 'Email' }, value: '${env.E}' }, { fill: { label: 'Password' }, value: '${env.P}' }, { click: { role: 'button', name: 'Sign in' } }, { expect: { role: 'heading', name: 'Notes' } }] },
   });
   session = signIn.storageState;
@@ -202,7 +203,7 @@ test('sample app: function, schema and dependency rules, and the CORS allowlist 
 });
 
 test('sample app: list_notes selects the search flow and create-note, not a flow that only opens /notes; qualifier and form class', needsSample, async () => {
-  const go = (name, steps) => runFlow({ browser, baseURL: SAMPLE, flow: { name, signedIn: true, steps }, env: () => undefined, ready: { kind: 'nuxt' }, storageState: session });
+  const go = (name, steps) => runFlow({ browser, baseURL: SAMPLE, flow: { name, signedIn: true, steps }, env: () => undefined, ready: { kind: 'nuxt' }, hosts: LOOPBACK_ONLY, storageState: session });
   const flows = [
     { name: 'list-notes', steps: [{ goto: '/notes' }, { expect: { role: 'heading', name: 'Notes' } }] },
     { name: 'search-notes', steps: [{ goto: '/notes' }, { fill: { label: 'Search' }, value: 'gro' }, { expect: { role: 'heading', name: 'Notes' } }] },
@@ -215,7 +216,7 @@ test('sample app: list_notes selects the search flow and create-note, not a flow
   const marker = /def list_notes\([^\n]*\n/.exec(text)[0];
   edit(root, marker, `${marker}    # changed\n`);
   const diff = computeDiff({ root, given: null, env: {}, nuxtRoots: ['frontend/'] });
-  const sel = await select({ baseURL: SAMPLE, root, nuxtRoot: 'frontend/', noProvenRoot: false, remoteTarget: null, allowedHosts: [], diff, flows: runs, signIn: 'passed', attacks: [], attacksBuilt: true, tier: 'quick' });
+  const sel = await select({ baseURL: SAMPLE, root, nuxtRoot: 'frontend/', noProvenRoot: false, hosts: LOOPBACK_ONLY, diff, flows: runs, signIn: 'passed', attacks: [], attacksBuilt: true, tier: 'quick' });
   assert.deepEqual([...sel.changedEndpoints], ['GET /api/notes']);
   // The search field's GET carries the typed value, so search-notes has a diffLinked form.
   assert.deepEqual(sel.ordered.map((o) => `${o.name}:${o.cls}`), ['search-notes:form', 'create-note:read']);
@@ -226,7 +227,7 @@ test('sample app: list_notes selects the search flow and create-note, not a flow
   const root2 = sampleRepo();
   edit(root2, 'title: str = Field(min_length=1, max_length=200)', 'title: str = Field(min_length=1, max_length=100)');
   const diff2 = computeDiff({ root: root2, given: null, env: {}, nuxtRoots: ['frontend/'] });
-  const sel2 = await select({ baseURL: SAMPLE, root: root2, nuxtRoot: 'frontend/', noProvenRoot: false, remoteTarget: null, allowedHosts: [], diff: diff2, flows: runs, signIn: 'passed', attacks: [], attacksBuilt: true, tier: 'quick' });
+  const sel2 = await select({ baseURL: SAMPLE, root: root2, nuxtRoot: 'frontend/', noProvenRoot: false, hosts: LOOPBACK_ONLY, diff: diff2, flows: runs, signIn: 'passed', attacks: [], attacksBuilt: true, tier: 'quick' });
   const create = sel2.ordered.find((o) => o.name === 'create-note');
   assert.equal(create.cls, 'form');
   assert.ok(create.forms.some((f) => f.diffLinked && f.carrying === 'POST /api/notes'));

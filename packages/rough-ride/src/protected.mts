@@ -15,6 +15,7 @@ import type { CheckedFiles } from './files.mjs';
 import { describeLocator, type Flow, type LocatorSpec, type Step } from './flowrun.mjs';
 import { compareVersions, type FormatKind } from './formats.mjs';
 import { git } from './git.mjs';
+import { normalHost } from './hosts.mjs';
 import { fileHash, type Manifest } from './manifest.mjs';
 import { canonicalJson, type Note } from './output.mjs';
 import { normalisedText, openReviewed, type ReviewedVersions } from './reviewed.mjs';
@@ -195,7 +196,9 @@ export function effectiveConfig(working: Config | null, reviewed: Config | null,
   const rAllow = reviewed?.allow ?? {};
   const wAllow = working.allow ?? {};
   const notApplied: string[] = [];
-  const added = (wAllow.remoteWrites ?? []).filter((h) => !(rAllow.remoteWrites ?? []).includes(h));
+  // A host is the reviewed one however config.yaml spells it (10.1, 10.4).
+  const reviewedWrites = (rAllow.remoteWrites ?? []).map(normalHost);
+  const added = (wAllow.remoteWrites ?? []).filter((h) => !reviewedWrites.includes(normalHost(h)));
   if (added.length > 0) {
     config.allow = { ...config.allow, remoteWrites: (wAllow.remoteWrites ?? []).filter((h) => !added.includes(h)) };
     for (const host of added) {
@@ -203,7 +206,7 @@ export function effectiveConfig(working: Config | null, reviewed: Config | null,
       lines.push(`config.yaml: allow.remoteWrites adds ${host}, which ${refShown}'s config doesn't have. Not applied until merged; browser writes there are still aborted.`);
     }
   }
-  if (wAllow.remoteTarget && wAllow.remoteTarget !== rAllow.remoteTarget) {
+  if (wAllow.remoteTarget && (!rAllow.remoteTarget || normalHost(wAllow.remoteTarget) !== normalHost(rAllow.remoteTarget))) {
     const allow = { ...config.allow };
     if (rAllow.remoteTarget) allow.remoteTarget = rAllow.remoteTarget;
     else delete allow.remoteTarget;
@@ -356,13 +359,6 @@ const REMOVE_HINT = 'To remove it for good, delete the file, then in your own te
 
 const PROTECTED = /^(config\.yaml|accepted\.yaml|flows\/[^/]+\.yaml|tests\/[^/]+\.yaml)$/;
 
-// The invocation's comparison, so a stop after it still reports the block in
-// its JSON (53.2). One CLI process runs one invocation.
-let last: ProtectedResult | null = null;
-export function lastProtected(): ProtectedResult | null {
-  return last;
-}
-
 export function compareProtected(options: CompareOptions): ProtectedResult {
   const { root, files } = options;
   const rel = printed(path.relative(root, options.folderDir));
@@ -502,8 +498,7 @@ export function compareProtected(options: CompareOptions): ProtectedResult {
   }
   const texts = new Map<string, string | null>([...working].map(([p, w]) => [p, w.text]));
   const reviewedHashes = new Map([...reviewed].map(([p, texts]) => [p, texts.map(fileHash)]));
-  last = { base, entries, config: cfg.config, flows, notRun, tests, accepted, notes, texts, compareLine, reviewedHashes };
-  return last;
+  return { base, entries, config: cfg.config, flows, notRun, tests, accepted, notes, texts, compareLine, reviewedHashes };
 }
 
 // CI inputs changed since the merge base (26.12): workflows, and the package

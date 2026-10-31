@@ -5,6 +5,7 @@ import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/br
 import { runFlow } from '../dist/flowrun.mjs';
 import { attackKey } from '../dist/record.mjs';
 import { startPageSite } from './fixtures/page-site.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 
 let browser;
 let site;
@@ -17,7 +18,7 @@ after(async () => {
   site?.close();
 });
 
-const base = (extra = {}) => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, allowedHosts: [], ...extra });
+const base = (extra = {}) => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY, ...extra });
 const newFlow = (mode, signedIn = false) => ({ name: 'create-note', signedIn, steps: [{ goto: `/?mode=${mode}` }, { click: { role: 'link', name: 'New' } }, { expect: { role: 'heading', name: 'New' } }] });
 const check = (o, id) => o.checks.find((c) => c.id === id);
 
@@ -85,8 +86,10 @@ test('a page from a form post: planning skips it, and a reload there never resen
   const baseline = await runFlow({ ...base(), flow });
   const p = pageTimingPoints(flow, [baseline], new Set(), null, false);
   assert.ok(p.skipped.includes('Skipped: signed-out-reload on page /posted #1 (the page came from a form post)'), JSON.stringify(p.skipped));
+  // A refresh at the posted page, as a plan could still ask for one.
+  const refresh = { ...pageTimingPoints(newFlow('plain'), [await runFlow({ ...base(), flow: newFlow('plain') })], new Set(), null, false).find((x) => x.timing === 'refresh'), flow: 'post', step: 2, page: '/posted', entry: { k: 1, previous: '/form' } };
   const before = site.posts.count;
-  const run = await runFlow({ ...base(), flow, pageTiming: { kind: 'refresh', step: 2, previous: '/form' } });
+  const { run } = await runAttack(refresh, flow, baseline, base(), []);
   assert.equal(run.pageTiming.notApplied, 'the reload would resend a form post');
   assert.deepEqual(run.pageTiming.events.map((e) => e.event), ['form post blocked']);
   assert.equal(site.posts.count - before, 1, 'only the flow\'s own POST');

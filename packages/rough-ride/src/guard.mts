@@ -4,16 +4,11 @@
 // in the applied allow.remoteWrites are failed with BlockedByClient; every
 // other request continues, so CORS preflights stay real.
 
-import { isLoopbackHostname } from './flowrun.mjs';
+import type { HostPolicy } from './hosts.mjs';
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const RESOURCE_TYPES = ['Document', 'XHR', 'Fetch', 'Ping', 'EventSource', 'Other'];
 const FETCH_PATTERNS = RESOURCE_TYPES.map((resourceType) => ({ urlPattern: '*', resourceType, requestStage: 'Request' }));
-
-export interface GuardPolicy {
-  remoteTarget: string | null;
-  remoteWrites: string[];
-}
 
 export interface AbortedWrite {
   host: string;
@@ -22,16 +17,6 @@ export interface AbortedWrite {
   count: number;
   // The CDP browser contexts the write came from, to tie it to a flow run.
   contexts: Set<string>;
-}
-
-export function writeAllowed(url: string, policy: GuardPolicy): boolean {
-  let host: string;
-  try {
-    host = new URL(url).hostname.replace(/^\[|\]$/g, '');
-  } catch {
-    return true;
-  }
-  return isLoopbackHostname(host) || host === policy.remoteTarget || policy.remoteWrites.includes(host);
 }
 
 interface Message {
@@ -44,7 +29,7 @@ interface Message {
 }
 
 export class LocalhostGuard {
-  readonly policy: GuardPolicy;
+  readonly policy: HostPolicy;
   readonly aborted = new Map<string, AbortedWrite>();
   // Write requests that continued, counted per host.
   readonly perHost = new Map<string, number>();
@@ -57,7 +42,7 @@ export class LocalhostGuard {
   // Whether the browser-wide Fetch net is on; it then counts allowed writes.
   private net = false;
 
-  private constructor(ws: WebSocket, policy: GuardPolicy) {
+  private constructor(ws: WebSocket, policy: HostPolicy) {
     this.ws = ws;
     this.policy = policy;
     ws.addEventListener('message', (event) => this.onMessage(JSON.parse(String(event.data)) as Message));
@@ -65,7 +50,7 @@ export class LocalhostGuard {
 
   // Connects to the browser's debugging endpoint and attaches to every target
   // before it runs, popups, cross-origin iframes and workers included.
-  static async connect(debugPort: number, policy: GuardPolicy): Promise<LocalhostGuard> {
+  static async connect(debugPort: number, policy: HostPolicy): Promise<LocalhostGuard> {
     const version = (await (await fetch(`http://127.0.0.1:${debugPort}/json/version`)).json()) as { webSocketDebuggerUrl: string };
     const ws = new WebSocket(version.webSocketDebuggerUrl);
     await new Promise<void>((resolve, reject) => {
@@ -124,7 +109,7 @@ export class LocalhostGuard {
       const params = message.params as { requestId: string; request: { method: string; url: string }; frameId?: string };
       const sessionId = message.sessionId;
       const { method, url } = params.request;
-      if (WRITE_METHODS.has(method) && !writeAllowed(url, this.policy)) {
+      if (WRITE_METHODS.has(method) && !this.policy.writeAllowed(url)) {
         // On the net, only a page's or iframe's main frame maps to its context:
         // a write from a subframe of a popup that raced the guard is aborted
         // and counted, but not tied to its flow run.
@@ -193,7 +178,7 @@ export class LocalhostGuard {
 }
 
 // Header line 3's suffix, listing only the applied allow values.
-export function allowedSuffix(policy: GuardPolicy): string {
+export function allowedSuffix(policy: Pick<HostPolicy, 'remoteTarget' | 'remoteWrites'>): string {
   const parts: string[] = [];
   if (policy.remoteTarget) parts.push(`remote target ${policy.remoteTarget}`);
   if (policy.remoteWrites.length > 0) parts.push(`remote writes ${policy.remoteWrites.join(', ')}`);

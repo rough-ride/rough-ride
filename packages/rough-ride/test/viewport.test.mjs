@@ -4,6 +4,7 @@ import { after, before, test } from 'node:test';
 import { attackLink, findingLines, orderAttacks, runAttack, severityOf, viewportAttack } from '../dist/attacks.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/browser.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 
 let browser;
 let server;
@@ -24,7 +25,7 @@ after(async () => {
   server?.close();
 });
 
-const base = () => ({ browser, baseURL: url, env: () => undefined, ready: { kind: 'load' }, allowedHosts: [] });
+const base = () => ({ browser, baseURL: url, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY });
 const flowAt = (path) => ({ name: 'f', signedIn: false, steps: [{ goto: path }, { click: { role: 'button', name: 'Show' } }] });
 
 async function viewportOn(path) {

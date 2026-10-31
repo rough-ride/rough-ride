@@ -12,13 +12,14 @@ const flows = {
 
 let n = 0;
 // A failed attack outcome as the tier records it, with just the fields grouping reads.
-function outcome({ flow = 'create-note', kind = 'fault', fault = '500', sticky = true, key = 'POST /api/notes #1', step = 3, page = '/notes/new', failed = [], diffLinked = false, id, text = [] }) {
+function outcome({ flow = 'create-note', kind = 'fault', fault = '500', sticky = true, key = 'POST /api/notes #1', step = 3, page = '/notes/new', failed = [], diffLinked = false, id, text = [], badInput }) {
   n++;
   const template = key.replace(/ #\d+$/, '');
   const unique = `tok${String(n).padStart(4, '0')}`;
   return {
     id: id ?? `${flow}/${key}/${fault ?? kind}${sticky ? '!' : ''}`,
     flow, kind, fault, sticky, rank: 1, key, template, step, k: 1, diffLinked, closeness: 3, page,
+    ...(badInput ? { badInput } : {}),
     control: 'button "Save"',
     verdict: failed.length > 0 ? 'failed' : 'passed',
     checks: ['one-write', 'visible-error-message', 'settles', 'values-survive', 'retry-recovers', 'no-uncaught-error']
@@ -57,7 +58,7 @@ test('the sample app replay: stuck-spinner, cleared-form and double-submit give 
   const list = [
     ...['500', '400', '429', 'reset'].map((fault) => outcome({ flow: 'sign-in', fault, key: 'POST /api/login #1', page: '/login', failed: ['visible-error-message', 'settles', 'no-uncaught-error'] })),
     ...['500', '400', '429', 'reset'].map((fault) => outcome({ fault, failed: ['values-survive', 'retry-recovers'] })),
-    ...['spaces', 'long', 'emoji'].map((input) => outcome({ kind: 'bad-input', fault: null, sticky: false, id: `create-note/label "Title"/${input}`, failed: ['values-survive'] })),
+    ...['spaces', 'long', 'emoji'].map((input) => outcome({ kind: 'bad-input', fault: null, sticky: false, id: `create-note/label "Title"/${input}`, badInput: { inputId: input, field: { name: 'label "Title"', kind: 'text', key: 'title' } }, failed: ['values-survive'] })),
     outcome({ kind: 'timing', fault: null, sticky: false, id: 'create-note/POST /api/notes #1/double-submit', failed: ['one-write'] }),
   ];
   const groups = groupFindings(members(list), ctx);

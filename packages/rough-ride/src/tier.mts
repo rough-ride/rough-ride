@@ -8,20 +8,19 @@ import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import type { Page, Locator } from 'playwright-core';
 import { printed } from '../hooks/path-check.mjs';
-import { chooseBrowser, installedOnThisMachine, launchBrowser, SHORT_TITLES, type BrowserName, type Launched } from './browser.mjs';
-import type { Config } from './config.mjs';
+import { SHORT_TITLES, type BrowserName, type Launched } from './browser.mjs';
 import { diffMap, diffPatch, headerLine2, type Diff } from './diff.mjs';
-import { checkCommittedFiles, wroteFile, writeProtected } from './files.mjs';
-import { StopError } from './exit.mjs';
+import { checkCommittedFiles, writeProtected } from './files.mjs';
 import { ensureFolder, folderNotes, nestedFoldersNote, readFolderFile, type FolderState } from './folder.mjs';
 import { DELAY_MS, holdMsFor, RETRY_AFTER } from './faults.mjs';
-import { describeLocator, envNames, runFlow, S, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type ReadyWait } from './flowrun.mjs';
+import { describeLocator, envNames, runFlow, S, stepKind, type Flow, type FlowRunResult, type LocatorSpec } from './flowrun.mjs';
 import { FORMATS, type FormatsReport } from './formats.mjs';
-import { allowedSuffix, LocalhostGuard, type GuardPolicy } from './guard.mjs';
-import { takeFlowLock } from './lock.mjs';
+import { allowedSuffix } from './guard.mjs';
+import type { HostPolicy } from './hosts.mjs';
 import { canonicalJson, formatDuration, type Note } from './output.mjs';
 import { ciMode, environmentRecord, followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
-import { createRunFolder, pruneRuns, unfinishedRunNote, type RunFolder } from './runs.mjs';
+import type { RunReport } from './runoutput.mjs';
+import type { RunFolder } from './runs.mjs';
 import { asciiJson, instructionNotes, needsFlowItems, patchRanges, readSpecs, specCandidates, writeAdversaryFolder } from './adversary.mjs';
 import { openReviewed } from './reviewed.mjs';
 import { parseDotenv } from './session.mjs';
@@ -29,30 +28,32 @@ import { readSaved } from './flowsave.mjs';
 import { cutPlanned, parsePlan, validatePlan, type ParsedPlan, type PlanResult } from './plan.mjs';
 import { buildCatalogue, planCandidates, toRecord, type CatalogueRecord } from './catalogue.mjs';
 import { readLinks } from './link.mjs';
-import { adversaryCallTime, bashBlocksStart, bashDeadline, CATALOGUE, LIMITS, SELECTION, type PlanState } from './runcheck.mjs';
+import { adversaryCallTime, CATALOGUE, LIMITS, SELECTION, type PlanState } from './runcheck.mjs';
 import { blockLines, blockWithHints, changedDuringRun, compareProtected, type ProtectedResult, extraNodeCodeNote, protectedJson, reportLines as protectedReport, summaryLines as protectedSummary } from './protected.mjs';
 import { Manifest } from './manifest.mjs';
 import { buildTest } from './regression.mjs';
 import { combine, judgeRun, runTestOnce, type FirstRun, type RunJudgement, type TestOutcome, type TestValue } from './regress.mjs';
 import { parse as parseYaml } from 'yaml';
+import { createClock } from './clock.mjs';
 import { attackNominalMs, computeCut, flowNominalMs, orderedList, reserveMs, bandOf, type CutResult } from './budget.mjs';
 import { TIER_TABLE, tierTableSha256, type TierName } from './tiers.mjs';
 import { attackKey, attackRecord, writeRepro } from './record.mjs';
 import { orderNotes, renderSections, reproId, type SummaryView } from './summary.mjs';
-import { credentialStrings, redactSecrets } from './secrets.mjs';
-import { checkSignInEnv, envReader, refusedStop, runReset, signIn, type SignInOutcome } from './session.mjs';
-import { findTarget, type Target } from './target.mjs';
+import { redactSecrets } from './secrets.mjs';
+import { checkSignInEnv, refusedStop, type SignInOutcome } from './session.mjs';
+import type { Target } from './target.mjs';
+import { openTargetSession } from './targetsession.mjs';
 import { reachedVia } from './tracing.mjs';
 import { reachCounts, select, type Selection } from './selection.mjs';
 import { account, notAttackedLines, nothingAttackedLine, reportNotAttacked, SCOPE_LINE } from './accounting.mjs';
-import { attackLink, groupLines, nonFinding, orderAttacks, timingDedupeKey, ownHostFor, runAttack, symptom as symptomOf, type AttackOutcome, type PlannedAttack } from './attacks.mjs';
+import { attackLink, groupLines, nonFinding, orderAttacks, timingDedupeKey, runAttack, symptom as symptomOf, type AttackOutcome, type PlannedAttack } from './attacks.mjs';
 import { baselineFailures, checkLabel } from './checks.mjs';
 import { baselineGate, inlineChecks, probeFor, shapeOf, specFacts, type AppCheck, type PointProbe } from './appchecks.mjs';
 import { cmp, confirmGroups, groupFindings, memberOf, SEVERITY_TEXT, type Group } from './groups.mjs';
 import { acceptedEntries, acceptedRecord, acceptedReport, acceptsBaseline, applyAccepted, baselineKey, testAcceptedNotes } from './accepted.mjs';
 import { moduleFiles, repoFiles } from './tracing.mjs';
 import { writeAtomic } from './write.mjs';
-import { CONTRACT_FILES, contractJson, contractLine, detectContract, setLastContract, summaryContractLine } from './contract.mjs';
+import { CONTRACT_FILES, contractJson, contractLine, detectContract, summaryContractLine } from './contract.mjs';
 
 export const PRE_RELEASE = '0.x pre-release: detection and false-alarm rates not measured yet';
 
@@ -101,6 +102,8 @@ export interface TierContext {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Where the run reports its run folder, protected comparison and contract.
+  report: RunReport;
   elapsed: () => number;
   progress: (line: string) => void;
   cpus?: number;
@@ -124,12 +127,9 @@ export interface TierResult {
   exitCode: 0 | 1 | 2;
 }
 
-export function readyWaitFor(target: Target, config: Config | null): ReadyWait {
-  if (config?.target?.ready) return { kind: 'expression', expression: config.target.ready };
-  return target.nuxtRoot && target.proof === 'nuxt-lock' ? { kind: 'nuxt' } : { kind: 'load' };
-}
-
-export function apiOrigins(target: Target, results: FlowRunResult[]): string[] {
+// Origins other than the Target's own that fetch or XHR requests went to, on
+// hosts the runner itself may contact: loopback and allow.remoteTarget (resolution 4).
+export function apiOrigins(target: Target, results: FlowRunResult[], hosts: HostPolicy): string[] {
   const own = new URL(target.url).origin;
   const origins = new Set<string>();
   for (const r of results) {
@@ -137,8 +137,7 @@ export function apiOrigins(target: Target, results: FlowRunResult[]): string[] {
       if (req.resourceType !== 'fetch' && req.resourceType !== 'xhr') continue;
       try {
         const origin = new URL(req.url).origin;
-        const host = new URL(req.url).hostname;
-        if (origin !== own && /^(localhost|127\.|\[::1\]|::1)/.test(host)) origins.add(origin);
+        if (origin !== own && hosts.forwardable(req.url)) origins.add(origin);
       } catch {
         // Not a URL with an origin.
       }
@@ -152,7 +151,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   // Step 4: a writing invocation creates the folder and its .gitignore.
   const folder = ensureFolder(ctx.folder);
   // Step 5: every committed file, read once and checked before any is used.
-  const files = checkCommittedFiles(folder, { info, subcommand: ctx.subcommand, argv: ctx.argv, env: ctx.env });
+  const files = checkCommittedFiles(folder, { info, subcommand: ctx.subcommand, argv: ctx.argv, env: ctx.env, report: ctx.report });
   ctx.notes.push(...files.notes, ...folderNotes(folder, files.flows.map((f) => f.shown.split('/').at(-1)!)));
   const nested = nestedFoldersNote(root);
   if (nested) ctx.notes.push(nested);
@@ -164,10 +163,11 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   if (ctx.mode !== 'attack') reviewed.want(CONTRACT_FILES);
   if (ctx.mode === 'plan') reviewed.want(specCandidates(folder).paths);
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, reviewed });
+  ctx.report.protectedFiles(prot);
   ctx.notes.push(...prot.notes);
   // The contract status: detected here, before reset or target.start; attack carries its plan's (resolution 37).
   const contract = ctx.mode === 'attack' ? ctx.plan?.contract ?? null : detectContract(root, reviewed.atMergeBase(CONTRACT_FILES), prot.base);
-  setLastContract(contract);
+  ctx.report.contract(contract);
   const acceptedList = acceptedEntries(files.accepted, prot.accepted, info.version, ctx.notes);
   // Only plan reads specs and lists changed instruction files (43.1, 43.6).
   const baseShown = prot.base?.shown ?? 'the base branch';
@@ -183,34 +183,24 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   const notRun = prot.notRun;
   checkSignInEnv(flows, folder, ctx.env);
 
-  ctx.progress('Finding the target');
-  const target = await findTarget({
-    root,
-    config,
-    configSchema: files.config?.schema?.text ?? null,
-    start: ctx.start,
-    pluginData: info.pluginData?.path ?? null,
-    againCommand: `/rough-ride:${ctx.subcommand}`,
-    notes: ctx.notes,
+  let startedAt = '';
+  let patchBytes: Buffer = Buffer.alloc(0);
+  const session = await openTargetSession({
+    root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
+    start: ctx.start, againCommand: `/rough-ride:${ctx.subcommand}`, browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
+    elapsed: ctx.elapsed, progress: ctx.progress, noteUnfinishedRun: true, reset: true,
+    run: ctx.mode === 'attack'
+      ? { existing: { id: ctx.plan!.runId, dir: path.join(folder.dir, 'runs', ctx.plan!.runId) } as RunFolder, prune: true }
+      : { create: ctx.mode === 'plan' ? 'plan' : ctx.subcommand },
+    // The run starts with its folder, and diff.patch is written before the browser starts.
+    runReady: (made) => {
+      startedAt = new Date().toISOString();
+      patchBytes = diffPatch(root, diff);
+      writeAtomic(folder, ['runs', made.id, 'diff.patch'], patchBytes);
+    },
   });
-  wroteFile(files, info, root, target.nuxtRoot?.rel ?? null, ctx.argv);
-
-  const lock = takeFlowLock(root, ctx.notes);
-  const unfinished = unfinishedRunNote(folder, lock, null);
-  if (unfinished) ctx.notes.push(unfinished);
-  const run: RunFolder = ctx.mode === 'attack'
-    ? { id: ctx.plan!.runId, dir: path.join(folder.dir, 'runs', ctx.plan!.runId) } as RunFolder
-    : createRunFolder(folder, ctx.mode === 'plan' ? 'plan' : ctx.subcommand);
-  pruneRuns(folder, lock, run.id);
-  const startedAt = new Date().toISOString();
-  const patchBytes = diffPatch(root, diff);
-  writeAtomic(folder, ['runs', run.id, 'diff.patch'], patchBytes);
-
-  const policy: GuardPolicy = { remoteTarget: config?.allow?.remoteTarget ?? null, remoteWrites: config?.allow?.remoteWrites ?? [] };
-  const choice = chooseBrowser(ctx.browserFlag, config?.browser ?? null, installedOnThisMachine(ctx.env));
-  ctx.progress('Starting the browser');
-  const launched = ctx.launch ? await ctx.launch(choice.name) : await launchBrowser(choice, ctx.notes);
-  const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, policy) : undefined;
+  const { target, hosts, launched, guard } = session;
+  const run = session.run!;
   let signInOutcome: SignInOutcome;
   let outcomes: BaselineOutcome[] = [];
   let selection: Selection | undefined;
@@ -219,15 +209,10 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   const skippedLines: string[] = [];
   const holdMs = holdMsFor(S);
   let ordinalNext = 0;
-  // The cut, the items it or the clock left out, and the clock (47.1: it starts once reset finished).
+  // The cut and the items it or the clock left out.
   const tierName: TierName = ctx.subcommand === 'standard' ? 'standard' : 'quick';
   let cut: CutResult | null = null;
   const cutItems: { attack: PlannedAttack; nominalMs: number; reason: 'cut' | 'time' | 'bash' | 'planned' }[] = [];
-  let hardStopAt = Infinity;
-  let clockStart = Date.now();
-  let resetMs = 0;
-  let startMs = target.startMs;
-  let planEndedAt = Date.now();
   let lanes = 1;
   let laneBackOff = false;
   const signInFailedGroups = new Set<string>();
@@ -268,43 +253,27 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   let activeChecks: AppCheck[] = [];
   const checkLines: string[] = [];
   const checkStatus = new Map<string, { status: string; why?: string }>();
-  // Split tier: plan's budgeted time P, the ordered list it wrote, attack setup time.
-  let planMs = ctx.plan?.planMs ?? 0;
+  // Split tier: the ordered list plan wrote.
   let planList: PlanState['attacks'] = [];
-  let setupMs = 0;
-  const invocationStart = Date.now();
+  const clock = createClock({ mode: ctx.mode ?? 'tier', tier: tierName, planMs: ctx.plan?.planMs, appStartMs: target.startMs, bashStop: session.bashStop });
   // attack: what the adversary added between plan and attack (44.2, 44.3).
   const savedRecords = ctx.mode === 'attack' ? readSaved(folder, ctx.plan!.runId) : [];
   const savedInRun = new Set(savedRecords.filter((r) => r.kept).map((r) => r.name));
   const linkResults = ctx.mode === 'attack' ? readLinks(folder, ctx.plan!.runId, manifest, followUpCommand(info, [ctx.plan!.tier])).links : [];
-  // The Bash limits count from process start and cover every flow run (50.4).
-  const processStart = Date.now() - ctx.elapsed();
-  const bashStop = bashDeadline(!!info.pluginData, processStart);
-  const bashBlocks = () => bashBlocksStart(!!info.pluginData, processStart, Date.now());
+  const bashBlocks = () => session.bashBlocks();
   try {
-    ctx.progress('Running reset');
-    const resetStarted = Date.now();
-    await runReset(config, root);
-    resetMs = Date.now() - resetStarted;
-    clockStart = Date.now();
+    clock.resetFinished(await session.reset());
     const rewritten = changedDuringRun(folder.dir, prot.texts);
     if (rewritten) ctx.notes.push(rewritten);
-    const read = envReader(folder, ctx.env);
-    const ready = readyWaitFor(target, config);
-    const exclude = config?.exclude ?? [];
     const screenshot = (name: string) => async (page: Page, masks: Locator[]) => {
       const png = await page.screenshot({ mask: masks });
       writeAtomic(folder, ['runs', run.id, 'baseline', `${name}.png`], png);
     };
 
-    ctx.progress('Signing in');
     const signInProbe = baselineProbe();
-    signInOutcome = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, deadline: bashStop, waitUntil: target.apiWaitUntil, ...signInProbe.options });
-    // Waiting for the API is app start; the budget starts with the run that got an answer.
-    startMs += signInOutcome.waitedMs;
-    clockStart += signInOutcome.waitedMs;
+    signInOutcome = await session.signIn(signInProbe.options);
+    clock.backendAnswered(signInOutcome.waitedMs);
     if (signInOutcome.result) signInProbe.keep(signInOutcome.result);
-    let credentials = credentialStrings(signInOutcome.storageState);
     const others = flows.filter((f) => f.name !== 'sign-in');
     lanes = lanesFor(ctx.cpus ?? availableParallelism());
     ctx.progress(`Baseline runs of ${others.length} saved flows`);
@@ -318,19 +287,10 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
         const reviewedProbe = baselineProbe();
         const baselineRun = (f: Flow) => runFlow({
           ...reviewedProbe.options,
-          browser: launched.browser,
-          baseURL: target.url,
+          ...session.defaults(f),
           flow: f,
-          env: read,
-          ready,
-          exclude,
-          allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
-          storageState: f.signedIn ? signInOutcome.storageState : undefined,
-          credentials,
-          guard,
           onFailure: screenshot(f.name),
           shots: 'all',
-          deadline: bashStop,
         });
         // Steps changed: the working copy runs only if the reviewed version fails its baseline run (26.5 rule 2).
         if (effective.stepsChanged) {
@@ -356,19 +316,10 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
           const probe = baselineProbe();
           const result = await runFlow({
             ...probe.options,
-            browser: launched.browser,
-            baseURL: target.url,
+            ...session.defaults(flow),
             flow,
-            env: read,
-            ready,
-            exclude,
-            allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
-            storageState: flow.signedIn ? signInOutcome.storageState : undefined,
-            credentials,
-            guard,
             onFailure: screenshot(flow.name),
             shots: 'all',
-            deadline: bashStop,
           });
           refusedStop(result, target.url);
           probe.keep(result);
@@ -394,8 +345,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       root,
       nuxtRoot: target.nuxtRoot?.rel ?? null,
       noProvenRoot: target.proof === 'config' && target.nuxtRoot === null,
-      remoteTarget: policy.remoteTarget,
-      allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
+      hosts,
       diff,
       flows: [
         ...(signInOutcome.result ? [{ flow: flows.find((f) => f.name === 'sign-in')!, passed: signInOutcome.passed, excluded: signInOutcome.result.excluded !== null, runs: [signInOutcome.result] }] : []),
@@ -409,7 +359,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
 
     // Attacks: flow by flow in selection order, the sign-in flow's last (17.7).
     const sel0 = selection;
-    const ownHost = ownHostFor([policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h));
+    const ownHost = hosts.ownHost;
     const changedFiles = new Set(diff.files.map((f) => f.path));
     const runsOf = (name: string) => (name === 'sign-in' ? (signInOutcome.result ? [signInOutcome.result] : []) : outcomes.find((o) => o.flow.name === name)?.runs ?? []);
     // attack: flows kept in this run go after every saved flow, so planned attacks keep
@@ -442,8 +392,8 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       }),
       changedEndpoints: sel0.changedEndpoints,
       docs: sel0.docs,
-      hosts: { allowed: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h), remoteTarget: policy.remoteTarget },
-      noCredential: credentials.length === 0 && (signInOutcome.storageState?.cookies ?? []).filter((c) => ownHost(`http://${c.domain.replace(/^\./, '')}/`)).length === 0,
+      hosts,
+      noCredential: session.credentials.length === 0 && (signInOutcome.storageState?.cookies ?? []).filter((c) => ownHost(`http://${c.domain.replace(/^\./, '')}/`)).length === 0,
       today: new Date(),
     });
     skippedLines.push(...catalogue.skipped);
@@ -608,18 +558,10 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       }
     }
 
-    planEndedAt = Date.now();
-    if (ctx.mode === 'plan') {
-      planMs = planEndedAt - clockStart;
-    } else {
-      // attack: steps 1 to 4 are setup, timed and never budgeted; attack time is B - P (42.6).
-      if (ctx.mode === 'attack') {
-        setupMs = Date.now() - invocationStart;
-        clockStart = Date.now();
-      }
+    clock.selectionEnded();
+    if (ctx.mode !== 'plan') {
       // The run-time clock (50.1 to 50.4): it only stops starts, never adds an attack.
-      const B = spec.budgetMs - planMs;
-      hardStopAt = Math.min(clockStart + B + spec.serialGraceMs + 10_000, bashStop);
+      const hardStopAt = clock.hardStopAt();
       const speedOf = (name: string) => {
         const r = runsOf(name)[0];
         const nominal = flowNominalMs(flowOf(name), r);
@@ -647,18 +589,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
         const ordinal = ++ordinalNext;
         ctx.progress(`Attack ${attack.id}`);
         const started = Date.now();
-        const outcome = await runAttack(attack, flow, runsOf(attack.flow)[0]!, {
-          browser: launched.browser,
-          baseURL: target.url,
-          env: read,
-          ready,
-          exclude,
-          allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
-          storageState: flow.signedIn ? signInOutcome.storageState : undefined,
-          credentials,
-          guard,
-          deadline: hardStopAt,
-        }, sel0.docs, activeChecks);
+        const outcome = await runAttack(attack, flow, runsOf(attack.flow)[0]!, { ...session.defaults(flow), deadline: hardStopAt }, sel0.docs, activeChecks);
         attackOutcomes.push(outcome);
         meta.set(outcome, { ordinal, durationMs: Date.now() - started });
         if (outcome.voided === 'target unstable') unstable++;
@@ -701,11 +632,10 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
               writeAttacks();
               continue;
             }
-            const t = Date.now() - clockStart + heldMs;
-            const est = item.nominalMs * speedOf(attack.flow);
+            const need = heldMs + item.nominalMs * speedOf(attack.flow);
             // A planned attack starts only if the sign-in segment's selected work still fits (45.5).
             if (plannedIds.has(attack.id)) {
-              if (stopReason !== null || bashBlocks() || t + est + signInReserve() > B - reserveMs(failedDurations, tierName)) {
+              if (stopReason !== null || bashBlocks() || !clock.startFits(need + signInReserve(), reserveMs(failedDurations, tierName))) {
                 cutItems.push({ attack, nominalMs: item.nominalMs, reason: 'planned' });
                 continue;
               }
@@ -717,7 +647,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
               continue;
             }
             if (stopReason === null && bashBlocks()) stopReason = 'bash';
-            if (stopReason === null && t + est > B - reserveMs(failedDurations, tierName)) stopReason = 'time';
+            if (stopReason === null && !clock.startFits(need, reserveMs(failedDurations, tierName))) stopReason = 'time';
             if (stopReason !== null) {
               cutItems.push({ attack, nominalMs: item.nominalMs, reason: stopReason });
               continue;
@@ -735,11 +665,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       // First runs go ahead of the attacks.
       tierTests = orderedTests.slice(0, spec.tests);
       testsOverBudget = orderedTests.slice(spec.tests).map((t) => t.name);
-      const attackBase = (flow: Flow) => ({
-        browser: launched.browser, baseURL: target.url, env: read, ready, exclude,
-        allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
-        storageState: flow.signedIn ? signInOutcome.storageState : undefined, credentials, guard, deadline: hardStopAt,
-      });
+      const attackBase = (flow: Flow) => ({ ...session.defaults(flow), deadline: hardStopAt });
       const runTest = async (t: (typeof tierTests)[number]) => {
         if (bashBlocks()) {
           testFirst.set(t.name, { judgement: null, stale: 'stopped by the Bash time limit', pass: null, attack: null, outcome: null });
@@ -751,7 +677,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
           testFirst.set(t.name, { judgement: null, stale: flow ? `${flow.name} failed its baseline run` : `flow ${String(t.value.flow)} is missing or invalid`, pass: null, attack: null, outcome: null });
           return;
         }
-        testFirst.set(t.name, await runTestOnce(t.value as unknown as TestValue, flow, baseline, sel0.docs, attackBase(flow), { allowed: attackBase(flow).allowedHosts, remoteTarget: policy.remoteTarget }));
+        testFirst.set(t.name, await runTestOnce(t.value as unknown as TestValue, flow, baseline, sel0.docs, attackBase(flow)));
       };
       await inLanes(lanesNow(), tierTests.filter((t) => t.value.flow !== 'sign-in').map((t) => () => runTest(t)));
       const above = cut.items.filter((x) => x.aboveCut);
@@ -775,11 +701,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       if (attackOutcomes.some((o) => o.flow === 'sign-in') && signInOutcome.ran && bashBlocks()) refreshFailed = true;
       else if (attackOutcomes.some((o) => o.flow === 'sign-in') && signInOutcome.ran) {
         ctx.progress('Refreshing the session');
-        const again = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, deadline: hardStopAt });
-        if (again.passed) {
-          signInOutcome = { ...signInOutcome, storageState: again.storageState };
-          credentials = credentialStrings(again.storageState);
-        } else refreshFailed = true;
+        if (!(await session.refreshSignIn(hardStopAt))) refreshFailed = true;
       }
 
       // Tests that didn't pass get their second run alone, before any confirmation (49.5).
@@ -835,37 +757,21 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
           signInFailedGroups.add(o.id);
           return false;
         }
-        return Date.now() - clockStart + (meta.get(o)?.durationMs ?? 0) <= B + TIER_TABLE.tiers[tierName].serialGraceMs;
+        return clock.closingFits(meta.get(o)?.durationMs ?? 0);
       };
       await confirmGroups(groups, tierName, async (o) => {
         const flow = flows.find((f) => f.name === o.flow)!;
         const ordinal = ++ordinalNext;
         confirmOrdinals.set(o.id, ordinal);
-        const again = await runAttack(o, flow, runsOf(o.flow)[0]!, {
-          browser: launched.browser,
-          baseURL: target.url,
-          env: read,
-          ready,
-          exclude,
-          allowedHosts: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h),
-          storageState: flow.signedIn ? signInOutcome.storageState : undefined,
-          credentials,
-          guard,
-          deadline: hardStopAt,
-        }, sel0.docs, activeChecks);
+        const again = await runAttack(o, flow, runsOf(o.flow)[0]!, { ...session.defaults(flow), deadline: hardStopAt }, sel0.docs, activeChecks);
         applyAccepted(again, flow, acceptedList);
         return again;
       }, canConfirm);
     }
   } catch (error) {
-    // A stop after the run folder exists names the run, so its block lands in that run (46.5).
-    if (error instanceof StopError && error.run === null) throw new StopError(error.stop, { id: run.id, dir: run.dir }, error.tail);
-    throw error;
+    throw session.withRun(error);
   } finally {
-    guard?.close();
-    await launched.browser.close().catch(() => {});
-    target.children?.stop();
-    lock.release();
+    await session.close();
   }
   const tracing = selection!.tracing;
   // findTarget already noted a config target with no proven Nuxt root.
@@ -901,18 +807,12 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       tier: ctx.subcommand,
     });
   }
-  // The budget note (50.6): the first that applies.
-  const clockCut = cutItems.filter((c) => c.reason === 'time' || c.reason === 'bash').length;
-  const unconfirmed = groups.filter((g) => g.state === 'unchecked').length;
-  const budgetedMs = Date.now() - clockStart;
-  const B = TIER_TABLE.tiers[tierName].budgetMs;
-  if (clockCut > 0 || unconfirmed > 0) {
-    ctx.notes.push({ id: 'budget', text: `Ran slower than planned: ${clockCut} ${clockCut === 1 ? 'attack' : 'attacks'} and ${unconfirmed} confirmation ${unconfirmed === 1 ? 'run' : 'runs'} did not start before the ${ctx.subcommand} budget ran out.` });
-  } else if (budgetedMs > B) {
-    ctx.notes.push({ id: 'budget', text: `Over the ${ctx.subcommand} budget by ${formatDuration(budgetedMs - B)}: flow runs still going at ${formatDuration(B)} were allowed to finish.` });
-  } else if (planEndedAt - clockStart > B / 2) {
-    ctx.notes.push({ id: 'budget', text: `Baseline runs of ${outcomes.length} saved flows used ${formatDuration(planEndedAt - clockStart)} of the ${formatDuration(B)} ${ctx.subcommand} budget.` });
-  }
+  const budgetNote = clock.budgetNote({
+    clockCut: cutItems.filter((c) => c.reason === 'time' || c.reason === 'bash').length,
+    unconfirmed: groups.filter((g) => g.state === 'unchecked').length,
+    flows: outcomes.length,
+  });
+  if (budgetNote) ctx.notes.push({ id: 'budget', text: budgetNote });
   const voidCounts = new Map<string, number>();
   for (const o of attackOutcomes) if (o.voided) voidCounts.set(o.voided, (voidCounts.get(o.voided) ?? 0) + 1);
   for (const [why, n] of voidCounts) {
@@ -970,7 +870,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   map.budget = { nominalPlanMs: cut?.nominalPlanMs ?? null, windowMs: cut?.windowMs ?? null };
   map.selectionDigest = cut?.selectionDigest ?? null;
   map.order = sel.ordered.map((o) => o.name);
-  map.meta = { planMs: ctx.mode ? planMs : null };
+  map.meta = { planMs: clock.planMs() };
   // attack: plan.json, so a run can be replayed outside Claude Code (45.10).
   if (ctx.mode === 'attack' && ctx.plan) {
     const flowHash = (name: string) => {
@@ -1035,7 +935,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       tier: tierName,
       digest: diff.digest,
       base: { given: diff.base.given ? diff.base.ref : null },
-      planMs,
+      planMs: clock.planMs() ?? 0,
       attacks: planList,
       flows: sel.ordered.map((o) => {
         const e = flowEntries.find((f) => f.name === o.name);
@@ -1082,7 +982,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   const aborted = guard?.note();
   if (aborted) ctx.notes.push(aborted);
   const allResults = [...(signInOutcome!.result ? [signInOutcome!.result] : []), ...outcomes.flatMap((o) => o.runs)];
-  const origins = apiOrigins(target, allResults);
+  const origins = apiOrigins(target, allResults, hosts);
   const ci = ciMode(ctx.env, info);
 
   // Header (section 37).
@@ -1091,7 +991,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   const proof = target.proof === 'nuxt-lock' ? 'proven Nuxt dev server' : 'target.url in config.yaml';
   const header3 = `target: ${target.url} (${proof}${target.started ? ', started by --start' : ''})` +
     (origins.length > 0 ? ` | API ${origins.join(', ')}` : '') +
-    ` | ${SHORT_TITLES[launched.name]} ${launched.version}${allowedSuffix(policy)}`;
+    ` | ${SHORT_TITLES[launched.name]} ${launched.version}${allowedSuffix(hosts)}`;
   const header = [header1.join(' | '), headerLine2(diff) + reachCounts(sel), header3];
 
   // Flows.
@@ -1134,7 +1034,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
     const outside = !selection!.ordered.some((o) => o.name === name);
     const flow = flows.find((x) => x.name === name);
     for (const f of baselineFailures(r)) {
-      if (flow && acceptsBaseline(acceptedList, baselineKey(flow, r, f.step, f.page, ownHostFor([policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h))), f.id, `fails with no attack: ${name} step ${f.step}`)) continue;
+      if (flow && acceptsBaseline(acceptedList, baselineKey(flow, r, f.step, f.page, hosts.ownHost), f.id, `fails with no attack: ${name} step ${f.step}`)) continue;
       failsNoAttack.push({ flow: name, check: f.id, step: f.step, page: f.page, outside });
     }
   }
@@ -1349,11 +1249,9 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
     ...section(null, [
       ...header,
       `started ${startedAt}`,
-      ctx.mode === 'attack'
-        ? `time: runner ${formatDuration(ctx.elapsed())} = attack setup ${formatDuration(setupMs)} (timed, not budgeted) + budgeted ${formatDuration(Date.now() - clockStart)} of ${formatDuration(TIER_TABLE.tiers[tierName].budgetMs - planMs)} (the ${ctx.subcommand} budget less plan ${formatDuration(planMs)}); adversary calls ${formatDuration(adversaryCallsMs)} (timed, not budgeted) | app start ${formatDuration(startMs)}`
-        : `time: runner ${formatDuration(ctx.elapsed())} = budgeted ${formatDuration(Date.now() - clockStart)} of ${formatDuration(TIER_TABLE.tiers[tierName].budgetMs)} + reset ${formatDuration(resetMs)} | app start ${formatDuration(startMs)}`,
+      clock.timeLine({ runnerMs: ctx.elapsed(), adversaryCallsMs }),
       ...(ctx.mode === 'plan' ? ['Not attacked lines are provisional: attack --run decides them.'] : []),
-      ...(resetMs > 10_000 ? [`reset took ${Math.round(resetMs / 1000)}s; it is not counted in the ${ctx.subcommand} budget.`] : []),
+      ...[clock.resetLine()].filter((l): l is string => l !== null),
       ...(info.version.startsWith('0.') ? ['Pre-release (0.x): detection and false-alarm rates are not measured yet. Do not rely on its verdicts.'] : []),
     ]),
     ...section('Notes', orderNotes(ctx.notes).map((n) => n.text)),
@@ -1408,7 +1306,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       started: target.started,
       apiOrigins: origins,
       browser: { channel: launched.name, version: launched.version },
-      allowed: { remoteTarget: policy.remoteTarget, remoteWrites: policy.remoteWrites },
+      allowed: { remoteTarget: hosts.remoteTarget, remoteWrites: hosts.remoteWrites },
     },
     flows: {
       signIn: !signInOutcome!.ran ? 'none' : signInOutcome!.passed ? 'passed' : 'failed',
@@ -1451,16 +1349,10 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       budgetMs: TIER_TABLE.tiers[tierName].budgetMs,
       budget: {
         tier: tierName,
-        budgetMs: TIER_TABLE.tiers[tierName].budgetMs,
-        budgetedMs: Date.now() - clockStart,
-        overMs: Math.max(0, Date.now() - clockStart - TIER_TABLE.tiers[tierName].budgetMs),
-        planMs: ctx.mode ? planMs : null,
+        ...clock.fields(),
         nominalPlanMs: cut?.nominalPlanMs ?? null,
         windowMs: cut?.windowMs ?? null,
         adversaryCallsMs,
-        attackSetupMs: setupMs,
-        resetMs,
-        startMs,
         lanes,
         cpus: availableParallelism(),
       },

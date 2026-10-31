@@ -5,6 +5,7 @@ import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/browser.mjs';
 import { pagePath, requestTemplate, runFlow } from '../dist/flowrun.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 import { moduleFiles, routeMatches, traceReach } from '../dist/tracing.mjs';
 
 const SAMPLE_DIR = fileURLToPath(new URL('../../../.scratch/chaos-v1/prototypes/sample-app/', import.meta.url));
@@ -68,7 +69,7 @@ before(async () => {
   if (!sampleUp) return;
   browser = (await launchBrowser(chooseBrowser(process.env.RP_TEST_BROWSER ?? null, null, installedOnThisMachine()), [])).browser;
   const signIn = await runFlow({
-    browser, baseURL: SAMPLE, ready: { kind: 'nuxt' }, keepStorageState: true,
+    browser, baseURL: SAMPLE, ready: { kind: 'nuxt' }, hosts: LOOPBACK_ONLY, keepStorageState: true,
     env: (n) => ({ E: 'demo@example.com', P: 'demo-password' })[n],
     flow: { name: 'sign-in', signedIn: false, steps: [{ goto: '/login' }, { fill: { label: 'Email' }, value: '${env.E}' }, { fill: { label: 'Password' }, value: '${env.P}' }, { click: { role: 'button', name: 'Sign in' } }, { expect: { role: 'heading', name: 'Notes' } }] },
   });
@@ -77,7 +78,7 @@ before(async () => {
 after(async () => browser?.close());
 
 const flow = (name, steps, signedIn = true) => ({ name, signedIn, steps });
-const go = (f, storageState = session) => runFlow({ browser, baseURL: SAMPLE, flow: f, env: () => undefined, ready: { kind: 'nuxt' }, storageState: f.signedIn ? storageState : undefined });
+const go = (f, storageState = session) => runFlow({ browser, baseURL: SAMPLE, flow: f, env: () => undefined, ready: { kind: 'nuxt' }, hosts: LOOPBACK_ONLY, storageState: f.signedIn ? storageState : undefined });
 
 test('sample app: page entries, full load against in-app, with entry requests', needsSample, async () => {
   const create = await go(flow('create-note', [{ goto: '/notes/new' }, { fill: { label: 'Title' }, value: 'Note ${unique}' }, { click: { role: 'button', name: 'Save' } }, { expect: { text: 'Note ${unique}' } }]));

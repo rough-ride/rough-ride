@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { buildCatalogue, planCandidates, toRecord } from '../dist/catalogue.mjs';
 import { validatePlan } from '../dist/plan.mjs';
 import { checkPlan, verdictLines } from '../dist/plancheck.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 import { noteFlow, noteRun, signInFlow, signInRun } from './fixtures/catalogue-flows.mjs';
 
 const TODAY = new Date('2026-10-25');
@@ -18,7 +19,7 @@ function planned(tier) {
       { flow: signInFlow, runs: [signInRun()], passed: true, reached: true },
     ],
     docs: [],
-    hosts: { allowed: [], remoteTarget: null },
+    hosts: LOOPBACK_ONLY,
     today: TODAY,
   });
   const scope = { selected: fresh.share.map((a) => a.id), aboveFlows: [...new Set(fresh.share.map((a) => a.flow))] };

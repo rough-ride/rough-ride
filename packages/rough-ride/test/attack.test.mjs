@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { attackPoints, orderAttacks, ownHostFor, runAttack, symptom } from '../dist/attacks.mjs';
+import { attackPoints, orderAttacks, runAttack, symptom } from '../dist/attacks.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/browser.mjs';
 import { baselineFailures, brokenTextIn } from '../dist/checks.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
 import { startAttackSite } from './fixtures/attack-site.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 
 let browser;
 let site;
@@ -19,13 +20,12 @@ after(async () => {
 
 const flowFor = (path, steps) => ({ name: 'f', signedIn: false, steps: [{ goto: path }, ...steps] });
 const SAVE = [{ click: { role: 'button', name: 'Save' } }];
-const base = () => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, allowedHosts: [] });
-const own = ownHostFor([]);
+const base = () => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY });
 
 async function attackOn(path, fault = '500', steps = SAVE, key = 'POST /api/save') {
   const flow = flowFor(path, steps);
   const baseline = await runFlow({ ...base(), flow });
-  const points = attackPoints(flow, baseline, own, new Set(), null).filter((a) => a.fault === fault && a.template === key);
+  const points = attackPoints(flow, baseline, LOOPBACK_ONLY, new Set(), null).filter((a) => a.fault === fault && a.template === key);
   assert.ok(points.length > 0, `no attack point ${key} on ${path}: ${baseline.requests.map((r) => r.key).join(', ')}`);
   return { outcome: await runAttack(points[0], flow, baseline, base(), []), baseline };
 }
@@ -35,7 +35,7 @@ const result = (o, id) => o.checks.find((c) => c.id === id)?.result;
 test('attack points: own-origin fetch and XHR only; reset only on writes; ids carry the key and !', async () => {
   const flow = flowFor('/twice', [{ click: { role: 'button', name: 'Load' } }, { expect: { text: 'loaded' } }]);
   const baseline = await runFlow({ ...base(), flow });
-  const points = attackPoints(flow, baseline, own, new Set(['GET /api/item']), null);
+  const points = attackPoints(flow, baseline, LOOPBACK_ONLY, new Set(['GET /api/item']), null);
   // The poll at page load belongs to the goto step and is an attack point too.
   assert.deepEqual(points.map((p) => `${p.id} step=${p.step} k=${p.k} closeness=${p.closeness}`), [
     'f/GET /api/item #1/500! step=1 k=1 closeness=1',
@@ -43,7 +43,7 @@ test('attack points: own-origin fetch and XHR only; reset only on writes; ids ca
     'f/GET /api/item #3/500! step=2 k=2 closeness=1',
   ]);
   assert.ok(!points.some((p) => /document|\/_nuxt\/|@vite/.test(p.key)));
-  const save = attackPoints(flowFor('/save', SAVE), await runFlow({ ...base(), flow: flowFor('/save', SAVE) }), own, new Set(), null);
+  const save = attackPoints(flowFor('/save', SAVE), await runFlow({ ...base(), flow: flowFor('/save', SAVE) }), LOOPBACK_ONLY, new Set(), null);
   assert.deepEqual(orderAttacks(save).map((p) => p.id), ['f/POST /api/save #1/500!', 'f/POST /api/save #1/reset!']);
 });
 
@@ -51,7 +51,7 @@ test('500 and reset send exactly their bytes, same-origin and cross-origin, and 
   const flow = flowFor('/bytes', [{ click: { role: 'button', name: 'Send' } }]);
   const baseline = await runFlow({ ...base(), flow });
   for (const [fault, template] of [['500', 'POST /api/save'], ['500', 'POST /api/cross']]) {
-    const point = attackPoints(flow, baseline, own, new Set(), null).find((a) => a.fault === fault && a.template === template);
+    const point = attackPoints(flow, baseline, LOOPBACK_ONLY, new Set(), null).find((a) => a.fault === fault && a.template === template);
     const before = { ...site.hits };
     const o = await runAttack(point, flow, baseline, base(), []);
     const text = o.run.steps.find((s) => s.index === o.step).observation.after.lines.join(' ');
@@ -63,7 +63,7 @@ test('500 and reset send exactly their bytes, same-origin and cross-origin, and 
       assert.equal(site.hits.cross, before.cross + 1, 'only the recovery click reached the server');
     }
   }
-  const reset = attackPoints(flow, baseline, own, new Set(), null).find((a) => a.fault === 'reset' && a.template === 'POST /api/save');
+  const reset = attackPoints(flow, baseline, LOOPBACK_ONLY, new Set(), null).find((a) => a.fault === 'reset' && a.template === 'POST /api/save');
   const before = site.hits.save;
   const o = await runAttack(reset, flow, baseline, base(), []);
   assert.match(o.run.steps.find((s) => s.index === o.step).observation.after.lines.join(' '), /Send error Failed to fetch \|\| 200/);
@@ -75,7 +75,7 @@ test('arming: fires on the k-th same-template request in the attacked step; poll
   const steps = [{ click: { role: 'button', name: 'Load' } }, { expect: { text: 'loaded' } }];
   const flow = flowFor('/twice', steps);
   const baseline = await runFlow({ ...base(), flow });
-  const second = attackPoints(flow, baseline, own, new Set(), null).find((a) => a.step === 2 && a.k === 2);
+  const second = attackPoints(flow, baseline, LOOPBACK_ONLY, new Set(), null).find((a) => a.step === 2 && a.k === 2);
   const o = await runAttack(second, flow, baseline, base(), []);
   assert.match(o.run.steps.find((s) => s.index === 2).observation.after.lines.join(' '), /loaded 200 500/);
   // A step that sends fewer matching requests than k reads fault never fired.
@@ -130,7 +130,7 @@ test('a check that fails in the baseline run is reported once and skipped on the
   // In the baseline the button is disabled by the click itself, so settles fails with no attack.
   const baseline = await runFlow({ ...base(), flow, timeouts: { S: 1500 } });
   assert.deepEqual(baselineFailures(baseline).map((f) => [f.id, f.step]), [['settles', 2]]);
-  const point = attackPoints(flow, baseline, own, new Set(), null)[0];
+  const point = attackPoints(flow, baseline, LOOPBACK_ONLY, new Set(), null)[0];
   const o = await runAttack(point, flow, baseline, { ...base(), timeouts: { S: 1500 } }, []);
   assert.equal(result(o, 'settles'), 'skipped-baseline');
 });

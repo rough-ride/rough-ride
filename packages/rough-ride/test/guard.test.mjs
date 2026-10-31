@@ -3,7 +3,8 @@ import { createServer } from 'node:http';
 import { after, before, test } from 'node:test';
 import { chooseBrowser, installedOnThisMachine, launchBrowser, makeLauncher } from '../dist/browser.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
-import { allowedSuffix, LocalhostGuard, writeAllowed } from '../dist/guard.mjs';
+import { allowedSuffix, LocalhostGuard } from '../dist/guard.mjs';
+import { hostPolicy, LOOPBACK_ONLY } from '../dist/hosts.mjs';
 
 // A stand-in remote server: Chrome maps remote.test and allowed.test to it, so
 // nothing leaves the machine. It records every request and allows CORS.
@@ -24,7 +25,7 @@ let api;
 let site;
 let launched;
 let guard;
-const policy = { remoteTarget: null, remoteWrites: [] };
+const policy = hostPolicy({ remoteTarget: 'target.test', remoteWrites: ['allowed.test'] });
 
 before(async () => {
   remote = await echo();
@@ -64,29 +65,21 @@ after(async () => {
 
 const baseURL = () => `http://127.0.0.1:${site.address().port}`;
 const go = (steps, extra = {}) =>
-  runFlow({ browser: launched.browser, baseURL: baseURL(), flow: { name: 'f', signedIn: false, steps }, env: () => undefined, ready: { kind: 'load' }, guard, ...extra });
+  runFlow({ browser: launched.browser, baseURL: baseURL(), flow: { name: 'f', signedIn: false, steps }, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY, guard, ...extra });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-test('writes are allowed only to loopback, the remote target and listed remote writes', () => {
+test('header line 3 lists only the applied allow values', () => {
   const p = { remoteTarget: 'staging.example.com', remoteWrites: ['abcd.supabase.co'] };
-  assert.ok(writeAllowed('http://localhost:3000/x', p));
-  assert.ok(writeAllowed('http://[::1]:3000/x', p));
-  assert.ok(writeAllowed('https://staging.example.com/api', p));
-  assert.ok(writeAllowed('https://abcd.supabase.co/rest', p));
-  assert.ok(!writeAllowed('https://evil.supabase.co/rest', p));
-  assert.ok(!writeAllowed('http://192.168.1.5/x', p));
   assert.equal(allowedSuffix(p), ' | allowed by config.yaml: remote target staging.example.com, remote writes abcd.supabase.co');
   assert.equal(allowedSuffix({ remoteTarget: null, remoteWrites: [] }), '');
 });
 
 test('a remote GET passes, a remote POST fails in the page and never reaches the server, allowed hosts get theirs', async () => {
-  Object.assign(policy, { remoteTarget: 'target.test', remoteWrites: ['allowed.test'] });
   remote.seen.length = 0;
   const result = await go([{ goto: '/remote' }, { expect: { text: 'GET remote.test sent | POST remote.test TypeError: Failed to fetch | POST allowed.test sent | POST target.test sent' } }]);
   assert.equal(result.passed, true, JSON.stringify(result.failure));
   assert.deepEqual(remote.seen.sort(), ['GET remote.test /read', 'POST allowed.test /allowed', 'POST target.test /target']);
   assert.deepEqual(result.aborted.map((w) => `${w.method} ${w.host} ${w.path} ${w.count}`), ['POST remote.test /write 1']);
-  Object.assign(policy, { remoteTarget: null, remoteWrites: [] });
 });
 
 test('with the guard on, a CORS preflight to the loopback API reaches the API server', async () => {

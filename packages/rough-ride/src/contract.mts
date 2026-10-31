@@ -207,12 +207,3 @@ export function summaryContractLine(c: ContractStatus | null, line: string | nul
   if (c.status === 'missing' && (o.shownFindings === 0 || o.ci)) return null;
   return line;
 }
-
-// The status this process detected or carried, for documents written after a stop.
-let last: ContractStatus | null = null;
-export function setLastContract(c: ContractStatus | null): void {
-  last = c;
-}
-export function lastContract(): ContractStatus | null {
-  return last;
-}

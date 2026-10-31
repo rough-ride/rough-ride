@@ -8,31 +8,29 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseAllDocuments } from 'yaml';
 import { printed } from '../hooks/path-check.mjs';
-import { chooseBrowser, installedOnThisMachine, launchBrowser, type BrowserName, type Launched } from './browser.mjs';
+import type { BrowserName, Launched } from './browser.mjs';
 import { parseCommitted } from './committed.mjs';
 import { stopWith } from './exit.mjs';
-import { checkCommittedFiles, wroteFile, writeProtected } from './files.mjs';
+import { checkCommittedFiles, writeProtected } from './files.mjs';
 import { ensureFolder, type FolderState } from './folder.mjs';
-import { envNames, isFrameworkInternal, isLoopbackHostname, runFlow, type Flow, type FlowRunResult, type Step } from './flowrun.mjs';
+import { envNames, isFrameworkInternal, runFlow, type Flow, type FlowRunResult, type Step } from './flowrun.mjs';
 import { FORMATS } from './formats.mjs';
-import { LocalhostGuard, type GuardPolicy } from './guard.mjs';
-import { takeFlowLock } from './lock.mjs';
 import { Manifest } from './manifest.mjs';
 import { formatDuration, type Note } from './output.mjs';
 import { blockLines, blockWithHints, compareFlow, compareProtected, summaryLines as protectedSummary } from './protected.mjs';
 import type { Section } from './summary.mjs';
 import { runnerBlock, type RunnerInfo } from './runner.mjs';
-import { createRunFolder, pruneRuns, type RunFolder } from './runs.mjs';
+import type { RunReport } from './runoutput.mjs';
+import type { RunFolder } from './runs.mjs';
 import { loadSchema } from './schema.mjs';
-import { checkEnv, checkSignInEnv, envReader, runReset, signIn } from './session.mjs';
+import { checkEnv, checkSignInEnv, envReader } from './session.mjs';
 import { asciiJson } from './adversary.mjs';
 import { computeDiff } from './diff.mjs';
 import { readLinks } from './link.mjs';
 import { moduleFiles, repoFiles, samePage } from './tracing.mjs';
 import { nuxtCandidates } from './target.mjs';
-import { findTarget } from './target.mjs';
-import { readyWaitFor } from './tier.mjs';
-import { bashBlocksStart, bashDeadline, callCount, checkRun, LIMITS, recordCall, tierCommand } from './runcheck.mjs';
+import { openTargetSession } from './targetsession.mjs';
+import { callCount, checkRun, LIMITS, recordCall, tierCommand } from './runcheck.mjs';
 import { writeAtomic } from './write.mjs';
 
 export const MAX_INPUT = 24 * 1024;
@@ -59,6 +57,8 @@ export interface FlowSaveContext {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Where the run reports its run folder, protected comparison and contract.
+  report: RunReport;
   elapsed: () => number;
   progress: (line: string) => void;
   launch?: (name: BrowserName) => Promise<Launched>;
@@ -185,11 +185,13 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
   const folder = ensureFolder(ctx.folder);
   // Under --run, 42.4's run-id stops come before anything else.
   const runPlan = ctx.runId !== null ? checkRun(folder, ctx.runId, info, new Manifest(root)) : null;
+  if (ctx.runId !== null) ctx.report.namedRun({ id: ctx.runId, dir: path.join(folder.dir, 'runs', ctx.runId) }, false);
   const parsedNames = ctx.names.map((n) => ({ name: n.split(':')[0]!, item: n.includes(':') ? n.slice(n.indexOf(':') + 1) : null }));
-  const files = checkCommittedFiles(folder, { info, subcommand: 'flow save', argv: ctx.argv, env: ctx.env });
+  const files = checkCommittedFiles(folder, { info, subcommand: 'flow save', argv: ctx.argv, env: ctx.env, report: ctx.report });
   ctx.notes.push(...files.notes);
   const manifest = new Manifest(root);
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest });
+  ctx.report.protectedFiles(prot);
   ctx.notes.push(...prot.notes);
   const read = envReader(folder, ctx.env);
 
@@ -307,30 +309,21 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
     // The committed sign-in flow always runs, so its variables are checked too (51.8).
     if (!toRun.some((d) => d.name === 'sign-in')) checkSignInEnv(prot.flows.map((e) => e.flow), folder, ctx.env);
     const config = prot.config;
-    const target = await findTarget({ root, config, configSchema: files.config?.schema?.text ?? null, start: ctx.start, pluginData: info.pluginData?.path ?? null, againCommand: 'flow save', notes: ctx.notes });
-    wroteFile(files, info, root, target.nuxtRoot?.rel ?? null, ctx.argv);
-    const lock = takeFlowLock(root, ctx.notes);
-    if (runDir === null) {
-      runDir = createRunFolder(folder, 'flow');
-      pruneRuns(folder, lock, runDir.id);
-    }
-    const policy: GuardPolicy = { remoteTarget: config?.allow?.remoteTarget ?? null, remoteWrites: config?.allow?.remoteWrites ?? [] };
-    const allowed = [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h);
-    const choice = chooseBrowser(ctx.browserFlag, config?.browser ?? null, installedOnThisMachine(ctx.env));
-    const launched = ctx.launch ? await ctx.launch(choice.name) : await launchBrowser(choice, ctx.notes);
-    const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, policy) : undefined;
-    const run = runDir;
+    // Saving sign-in runs that version as the sign-in flow.
+    const newSignIn = toRun.find((d) => d.name === 'sign-in');
+    const flows = [...prot.flows.map((e) => e.flow).filter((f) => !(newSignIn && f.name === 'sign-in')), ...(newSignIn ? [toFlow('sign-in', newSignIn.value!)] : [])];
+    // Under --run the run folder exists already, and flow save prunes nothing.
+    const session = await openTargetSession({
+      root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
+      start: ctx.start, againCommand: 'flow save', browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
+      elapsed: ctx.elapsed, run: runDir ? { existing: runDir, prune: false } : { create: 'flow' }, reset: true, read,
+    });
+    const { target } = session;
+    const run = session.run!;
+    runDir = run;
     try {
-      await runReset(config, root);
-      const ready = readyWaitFor(target, config);
-      const exclude = config?.exclude ?? [];
-      // Saving sign-in runs that version as the sign-in flow.
-      const newSignIn = toRun.find((d) => d.name === 'sign-in');
-      const flows = [...prot.flows.map((e) => e.flow).filter((f) => !(newSignIn && f.name === 'sign-in')), ...(newSignIn ? [toFlow('sign-in', newSignIn.value!)] : [])];
-      const processStart = Date.now() - ctx.elapsed();
-      const bashStop = bashDeadline(!!info.pluginData, processStart);
-      const bashBlocks = () => bashBlocksStart(!!info.pluginData, processStart, Date.now());
-      const signInOutcome = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, deadline: bashStop, waitUntil: target.apiWaitUntil, ...(newSignIn ? { untrusted: true, allowedHosts: allowed, guard } : {}) });
+      await session.reset();
+      const signInOutcome = await session.signIn(newSignIn ? { untrusted: true } : {});
       if (newSignIn) {
         if (!signInOutcome.passed) {
           const stop = (signInOutcome.result as { untrustedStop?: string | null } | null)?.untrustedStop;
@@ -340,11 +333,10 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
       const once = async (flow: Flow): Promise<{ result: FlowRunResult & { untrustedStop?: string | null }; snapshot: string | null }> => {
         let snapshot: string | null = null;
         const result = await runFlow({
+          ...session.defaults(flow),
+          flow,
           // 44.5: destructive writes and other sites are aborted in these runs.
           untrusted: true,
-          ...(info.pluginData ? { deadline: bashStop } : {}),
-          browser: launched.browser, baseURL: target.url, flow, env: read, ready, exclude, allowedHosts: allowed, guard,
-          storageState: flow.signedIn ? signInOutcome.storageState ?? undefined : undefined,
           onFailure: async (page) => {
             const text = await page.locator('body').ariaSnapshot().catch(() => '');
             writeAtomic(folder, ['runs', run.id, 'snapshots', `${flow.name}.txt`], text + '\n');
@@ -361,13 +353,13 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
           continue;
         }
         const bashLine = `Not saved: ${d.name} (stopped by the Bash time limit; save it in another call)`;
-        if (bashBlocks()) {
+        if (session.bashBlocks()) {
           d.refused = bashLine;
           continue;
         }
         ctx.progress(`Baseline run: ${d.name}`);
         if (plan.kind === 'pending') {
-          if (bashBlocks()) {
+          if (session.bashBlocks()) {
             d.refused = bashLine;
             continue;
           }
@@ -420,7 +412,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
         }
         if (plan.kind === 'repair') {
           // Changed steps need the effective version to fail its baseline run in this call.
-          if (bashBlocks()) {
+          if (session.bashBlocks()) {
             d.refused = bashLine;
             continue;
           }
@@ -435,16 +427,16 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
         if (d.name === 'sign-in') {
           // The sign-in run above was this version's baseline run.
           if (plan.kind === 'new' && signInOutcome.passed) {
-            if (bashBlocks()) d.refused = bashLine;
+            if (session.bashBlocks()) d.refused = bashLine;
             else {
-              const again = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, deadline: bashStop, untrusted: true, allowedHosts: allowed, guard });
+              const again = await session.signInAgain({ untrusted: true });
               const stop = (again.result as { untrustedStop?: string | null } | null)?.untrustedStop;
               if (!again.passed) d.refused = stop ? `Not saved: sign-in (${stop})` : failedLine(d.name, again.result, null);
             }
           }
         } else {
           for (let i = 0; i < times && d.refused === null; i++) {
-            if (bashBlocks()) {
+            if (session.bashBlocks()) {
               d.refused = bashLine;
               break;
             }
@@ -475,7 +467,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
         if (runPlan) {
           // 44.3: the saved flow's attack points, for the adversary and for attack.
           const last = runs.at(-1);
-          const points = [...new Set((last?.requests ?? []).filter((q) => (q.resourceType === 'fetch' || q.resourceType === 'xhr') && !isFrameworkInternal(q.url) && isLoopbackOrAllowed(q.url, allowed)).map((q) => q.key))];
+          const points = [...new Set((last?.requests ?? []).filter((q) => (q.resourceType === 'fetch' || q.resourceType === 'xhr') && !isFrameworkInternal(q.url) && session.hosts.ownHost(q.url)).map((q) => q.key))];
           const forms = [...new Set((last?.requests ?? []).filter((q) => q.method === 'POST' && (q.resourceType === 'fetch' || q.resourceType === 'xhr') && !isFrameworkInternal(q.url)).map((q) => q.key.replace(/ #\d+$/, '')))];
           d.points = `  points: ${points.join(', ') || 'none'}${forms.length > 0 ? `; forms: ${forms.join(', ')}` : ''}`;
           const before = prior.get(d.name);
@@ -487,11 +479,10 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
           if (plan.kind === 'repair') repairCount++;
         }
       }
+    } catch (error) {
+      throw session.withRun(error);
     } finally {
-      guard?.close();
-      await launched.browser.close().catch(() => {});
-      target.children?.stop();
-      lock.release();
+      await session.close();
     }
   }
 
@@ -540,15 +531,6 @@ export function readSaved(folder: FolderState, runId: string): SavedRecord[] {
       return [];
     }
   });
-}
-
-function isLoopbackOrAllowed(url: string, allowed: string[]): boolean {
-  try {
-    const host = new URL(url).hostname;
-    return isLoopbackHostname(host) || allowed.includes(host);
-  } catch {
-    return false;
-  }
 }
 
 // Why a new flow does not reach its item, or null (16.8): it reaches it when a

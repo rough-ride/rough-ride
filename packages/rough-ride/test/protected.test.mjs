@@ -125,6 +125,15 @@ test('config: an added remote-writes host waits, a removed exclude stays, an add
   assert.deepEqual(effectiveConfig(w, null, 'origin/main').config.allow, { remoteWrites: [] });
 });
 
+test('config: an allow host spelled with other letter case or IPv6 brackets is the reviewed host, not an added one', () => {
+  const r = { schema: '0.1.0', allow: { remoteWrites: ['API.example.com', '[2001:db8::6]'], remoteTarget: 'Staging.Example' } };
+  const w = { schema: '0.1.0', allow: { remoteWrites: ['api.example.com', '2001:db8::6', 'new.example'], remoteTarget: 'staging.example' } };
+  const out = effectiveConfig(w, r, 'origin/main');
+  assert.deepEqual(out.config.allow, { remoteWrites: ['api.example.com', '2001:db8::6'], remoteTarget: 'staging.example' });
+  assert.deepEqual(out.lines, ["config.yaml: allow.remoteWrites adds new.example, which origin/main's config doesn't have. Not applied until merged; browser writes there are still aborted."]);
+  assert.deepEqual(out.entries.map((e) => `${e.change} -> ${e.outcome}`), ['allow.remoteWrites adds new.example -> not applied until merged']);
+});
+
 test('which flow runs: each rung of 26.5 against one reviewed version', () => {
   const flowCase = (working) => {
     const out = compareIn({ working: working === null ? {} : { 'flows/f.yaml': working }, merge: { 'flows/f.yaml': FLOW } });

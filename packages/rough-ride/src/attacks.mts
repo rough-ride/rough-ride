@@ -6,17 +6,19 @@
 import type { AttackLink } from './accounting.mjs';
 import { fieldKind, requestKey, type BadInputPlan } from './badinputs.mjs';
 import { judgeAppChecks, matchesWhen, probeFor, type AppCheck } from './appchecks.mjs';
-import { baselineFailures, checkLabel, checkSeverity, judgeBadInput, judgeFault, judgeOutOfOrder, judgePageTiming, judgeTiming, judgeViewport, leadCheck, TOGGLE_HINT, type CheckResult } from './checks.mjs';
+import { baselineFailures, checkLabel, checkSeverity, leadCheck, type CheckResult } from './checks.mjs';
+import { TOGGLE_HINT } from './kind-double-submit.mjs';
 import { SEVERITY_TEXT, type Group } from './groups.mjs';
+import type { HostPolicy } from './hosts.mjs';
 import { membersText } from './summary.mjs';
-import { attackId, emptyForm, FAULT_PHRASE, isJsonMedia, kindsFor, responseSchema, type BodyKind, type FaultId } from './faults.mjs';
+import { attackId, emptyForm, isJsonMedia, kindsFor, responseSchema, type BodyKind, type FaultId } from './faults.mjs';
 import type { Form } from './forms.mjs';
-import { describeLocator, isFrameworkInternal, isLoopbackHostname, runFlow, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type RequestRecord, type RunFlowOptions, type Served } from './flowrun.mjs';
+import { describeLocator, isFrameworkInternal, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type RequestRecord, type RunFlowOptions, type Served } from './flowrun.mjs';
+import { kindFor, withKind, type LinkedAttack, type NonFindingLines } from './kinds.mjs';
 import { matchTemplate, type OpenApiDoc } from './openapi.mjs';
 
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-export const VIEWPORT = { width: 375, height: 800 };
 const VIEWPORT_RANK = 7;
 
 export interface PlannedAttack {
@@ -65,17 +67,6 @@ export interface AttackOutcome extends PlannedAttack {
   run: FlowRunResult;
 }
 
-export function ownHostFor(allowed: string[]) {
-  return (url: string) => {
-    try {
-      const host = new URL(url).hostname;
-      return isLoopbackHostname(host) || allowed.includes(host);
-    } catch {
-      return false;
-    }
-  };
-}
-
 // Templates the baseline run repeated at a steady interval in one step: polling.
 export function pollingKeys(run: FlowRunResult): Set<string> {
   const out = new Set<string>();
@@ -98,8 +89,6 @@ export interface PointOptions {
   tier?: string;
   // The flow is the sign-in flow.
   signInFlow?: boolean;
-  // Body faults forward only to loopback and allow.remoteTarget (resolution 4).
-  forwardable?: (url: string) => boolean;
   docs?: OpenApiDoc[];
 }
 
@@ -121,12 +110,13 @@ export function bodyKindOf(q: RequestRecord, template: string, docs: OpenApiDoc[
 }
 
 // Each own-origin fetch or XHR request of the baseline run is an attack point;
-// the tier's fault kinds that apply to it become attacks (20.2, 20.12).
-// Kinds that can't apply give `Skipped: <fault> on <request key> (<reason>)`.
+// the tier's fault kinds that apply to it become attacks (20.2, 20.12). Body
+// faults forward only to forwardable hosts (resolution 4). Kinds that can't
+// apply give `Skipped: <fault> on <request key> (<reason>)`.
 export function attackPoints(
   flow: Flow,
   baseline: FlowRunResult,
-  ownHost: (url: string) => boolean,
+  hosts: HostPolicy,
   changed: Set<string>,
   firstLoadOfChange: number | null,
   options: PointOptions = {},
@@ -134,17 +124,10 @@ export function attackPoints(
   const out: PlannedAttack[] & { skipped?: string[] } = [];
   const skipped: string[] = [];
   const kinds = kindsFor(options.tier ?? 'quick');
-  const forwardable = options.forwardable ?? ((url: string) => {
-    try {
-      return isLoopbackHostname(new URL(url).hostname);
-    } catch {
-      return false;
-    }
-  });
   const seenInStep = new Map<string, number>();
   for (const q of baseline.requests) {
     if (q.resourceType !== 'fetch' && q.resourceType !== 'xhr') continue;
-    if (!ownHost(q.url) || isFrameworkInternal(q.url) || q.step === 0) continue;
+    if (!hosts.ownHost(q.url) || isFrameworkInternal(q.url) || q.step === 0) continue;
     const template = q.key.replace(/ #\d+$/, '');
     const stepKey = `${q.step}|${template}`;
     const k = (seenInStep.get(stepKey) ?? 0) + 1;
@@ -174,7 +157,7 @@ export function attackPoints(
           break;
         case 'json-gets':
         case 'empty-form-gets': {
-          const why = bodyFaultSkip(q, forwardable);
+          const why = bodyFaultSkip(q, hosts.forwardable);
           if (why) {
             skip(kind.fault, why);
             continue;
@@ -471,7 +454,7 @@ export async function runAttack(
   attack: PlannedAttack,
   flow: Flow,
   baseline: FlowRunResult,
-  base: Omit<RunFlowOptions, 'flow' | 'attack' | 'templateOf' | 'pollingKeys'>,
+  base: Omit<RunFlowOptions, 'flow' | 'kind' | 'templateOf' | 'pollingKeys'>,
   docs: OpenApiDoc[],
   appChecks: AppCheck[] = [],
 ): Promise<AttackOutcome> {
@@ -479,7 +462,7 @@ export async function runAttack(
   if (matching.length === 0) return runJudged(attack, flow, baseline, base, docs);
   const probe = probeFor(matching);
   const o = await runJudged(attack, flow, baseline, { ...base, onPoint: probe.onPoint }, docs);
-  const results = judgeAppChecks(matching, attack, flow, o.run, probe.probes, o.verdict, ownHostFor(base.allowedHosts ?? []));
+  const results = judgeAppChecks(matching, attack, flow, o.run, probe.probes, o.verdict, base.hosts.ownHost);
   return { ...o, checks: [...o.checks, ...results], verdict: o.verdict === 'passed' && results.some((r) => r.result === 'fail') ? 'failed' : o.verdict };
 }
 
@@ -487,7 +470,7 @@ async function runJudged(
   attack: PlannedAttack,
   flow: Flow,
   baseline: FlowRunResult,
-  base: Omit<RunFlowOptions, 'flow' | 'attack' | 'templateOf' | 'pollingKeys'>,
+  base: Omit<RunFlowOptions, 'flow' | 'kind' | 'templateOf' | 'pollingKeys'>,
   docs: OpenApiDoc[],
 ): Promise<AttackOutcome> {
   const templateOf = (method: string, url: string) => {
@@ -495,202 +478,17 @@ async function runJudged(
     return keyed ? `${method} ${keyed.template}` : null;
   };
   const skipped = new Set<string>(baselineFailures(baseline).map((f) => f.id));
-  if (attack.kind === 'bad-input' && attack.badInput) {
-    const b = attack.badInput;
-    const pathOf = (url: string) => {
-      try {
-        return new URL(url).pathname;
-      } catch {
-        return url;
-      }
-    };
-    const run = await runFlow({
-      ...base,
-      flow,
-      templateOf,
-      pollingKeys: pollingKeys(baseline),
-      shots: [b.submitStep],
-      badInput: {
-        step: b.fillStep,
-        value: b.value,
-        select: b.select,
-        noOption: b.noOption,
-        submitStep: b.submitStep,
-        formSteps: b.formSteps,
-        carrying: b.carrying,
-        carryingWrite: b.carryingWrite,
-        baseline5xx: baseline.requests.filter((q) => q.step === b.submitStep && q.status !== null && q.status >= 500).map((q) => `${q.method} ${pathOf(q.url)}`),
-      },
-    });
-    const judged = judgeBadInput(run, baseline, b.submitStep, skipped);
-    return {
-      ...attack,
-      verdict: judged.verdict,
-      checks: judged.checks,
-      page: b.page,
-      control: controlOf(flow, b.submitStep),
-      events: [],
-      voided: run.voided,
-      served: null,
-      notApplied: run.badInput?.notApplied ?? null,
-      givenUp: false,
-      run,
-    };
-  }
-  if (attack.kind === 'timing' && attack.entry && attack.timing && attack.timing !== 'double-submit' && attack.timing !== 'out-of-order') {
-    const run = await runFlow({
-      ...base,
-      flow,
-      templateOf,
-      pollingKeys: pollingKeys(baseline),
-      shots: [attack.step],
-      pageTiming: { kind: attack.timing, step: attack.step, previous: attack.entry.previous },
-    });
-    // Errors that a baseline full load of the same page template also got never count.
-    const fullLoad = baseline.pages.filter((p) => p.path === attack.page && p.entry === 'full-load');
-    const fullLoadErrors = fullLoad.flatMap((p) => baseline.pageEvents.filter((e) => e.step === p.step).map((e) => e.text));
-    const judged = judgePageTiming(run, baseline, skipped, fullLoadErrors);
-    return {
-      ...attack,
-      verdict: judged.verdict,
-      checks: judged.checks,
-      page: attack.page ?? null,
-      control: controlOf(flow, attack.step),
-      events: (run.pageTiming?.events ?? []).map((e) => ({ offsetMs: e.at - (run.pageTiming!.events[0]?.at ?? e.at), event: e.event, ...(e.detail ? { detail: e.detail } : {}) })),
-      voided: run.voided,
-      served: null,
-      notApplied: run.pageTiming?.notApplied ?? null,
-      givenUp: false,
-      run,
-    };
-  }
-  if (attack.kind === 'timing' && attack.outOfOrder) {
-    const x = attack.outOfOrder;
-    const run = await runFlow({
-      ...base,
-      flow,
-      templateOf,
-      pollingKeys: pollingKeys(baseline),
-      shots: [attack.step],
-      outOfOrder: { step: attack.step, submitStep: x.submitStep, template: attack.template, older: x.older, select: x.select, offsetMs: x.offsetMs },
-    });
-    const judged = judgeOutOfOrder(run, baseline, attack.step, skipped);
-    return {
-      ...attack,
-      verdict: judged.verdict,
-      checks: judged.checks,
-      page: attack.page ?? null,
-      control: controlOf(flow, attack.step),
-      events: (run.fault?.events ?? []).map((e) => ({ offsetMs: e.offsetMs, event: e.event, ...(e.detail ? { detail: e.detail } : {}) })),
-      voided: run.voided,
-      served: null,
-      notApplied: run.outOfOrder?.notApplied ?? null,
-      givenUp: false,
-      run,
-    };
-  }
-  if (attack.kind === 'timing') {
-    const run = await runFlow({ ...base, flow, timing: { kind: 'double-submit', step: attack.step }, templateOf, pollingKeys: pollingKeys(baseline), shots: [attack.step] });
-    const own = ownHostFor(base.allowedHosts ?? []);
-    const judged = judgeTiming(run, baseline, attack.step, skipped, own);
-    const writes = run.requests.filter((q) => q.step === attack.step && WRITES.has(q.method) && (q.resourceType === 'fetch' || q.resourceType === 'xhr') && own(q.url));
-    return {
-      ...attack,
-      verdict: judged.verdict,
-      checks: judged.checks,
-      page: attack.page ?? null,
-      control: controlOf(flow, attack.step),
-      events: run.timing
-        ? [{ offsetMs: 0, event: run.timing.action, detail: writes.map((q) => `${q.key.replace(/ #\d+$/, '')} ${q.status ?? q.failure ?? 'none'} ${q.bodySha256 ?? '-'}`).join('; ') }]
-        : [],
-      voided: run.voided,
-      served: null,
-      notApplied: null,
-      givenUp: false,
-      run,
-    };
-  }
-  if (attack.kind === 'viewport' || attack.fault === null) {
-    const run = await runFlow({ ...base, flow, viewport: VIEWPORT, templateOf, pollingKeys: pollingKeys(baseline), shots: [] });
-    const judged = judgeViewport(run, baseline, skipped);
-    const step = judged.step ?? attack.step;
-    return {
-      ...attack,
-      step,
-      verdict: judged.verdict,
-      checks: judged.checks,
-      page: run.steps.find((s) => s.index === step)?.path ?? null,
-      control: 'viewport 375',
-      events: [],
-      voided: run.voided,
-      served: null,
-      notApplied: null,
-      givenUp: false,
-      run,
-    };
-  }
-  const { schema, doc } = responseSchema(docs, attack.template.split(' ')[0]!, attack.template);
-  const run = await runFlow({
-    ...base,
-    flow,
-    attack: {
-      fault: attack.fault,
-      sticky: attack.sticky,
-      template: attack.template,
-      k: attack.k,
-      step: attack.step,
-      ...(attack.baseline ? { baseline: attack.baseline } : {}),
-      emptyFormOf: (live: unknown) => emptyForm(live, attack.template, schema, doc),
-    },
-    templateOf,
-    pollingKeys: pollingKeys(baseline),
-    baselineLabels: baseline.steps.find((s) => s.index === attack.step)?.observation?.after.labels ?? [],
-    shots: [attack.step],
-  });
-  const judged = judgeFault(run, baseline, attack.step, skipped, attack.fault);
-  return {
-    ...attack,
-    verdict: judged.verdict,
-    checks: judged.checks,
-    page: run.steps.find((s) => s.index === attack.step)?.path ?? null,
-    control: controlOf(flow, attack.step),
-    events: (run.fault?.events ?? []).map((e) => ({ offsetMs: e.offsetMs, event: e.event, ...(e.detail ? { detail: e.detail } : {}) })),
-    voided: run.voided,
-    served: run.fault?.served ?? null,
-    notApplied: run.fault?.notApplied ?? null,
-    givenUp: run.fault?.givenUp ?? false,
-    run,
-  };
+  const ctx = { flow, baseline, options: { ...base, flow, templateOf, pollingKeys: pollingKeys(baseline) }, docs, skipped, control: (step: number) => controlOf(flow, step) };
+  return withKind(attack, (kind, a) => kind.run(a, ctx));
 }
 
 // Section 37's symptom templates, by lead check.
 export function symptom(o: AttackOutcome): string {
   const lead = leadCheck(o.checks);
-  const press = o.stepKind === 'press';
-  const bad = o.badInput;
-  if (bad && lead?.id === 'no-5xx-on-bad-input') {
-    const c = o.run.badInput?.carrying;
-    return `${o.template || 'The submit'} answers ${c?.status ?? 'no response'} to bad input ${bad.inputId} in ${bad.field.name}`;
-  }
-  if (bad && lead?.id === 'visible-error-message' && o.run.badInput?.outcome === 'silent-refusal') {
-    return `${o.control} does nothing and shows no message for bad input ${bad.inputId} in ${bad.field.name}`;
-  }
-  const what = bad ? `bad input ${bad.inputId} in ${bad.field.name}`
-    : o.timing === 'out-of-order' ? `an older answer arrived after a newer one on ${o.controlName ?? o.control}`
-    : o.timing === 'refresh' ? `a reload of ${o.page}`
-    : o.timing === 'back' ? `back then forward to ${o.page}`
-    : o.timing === 'signed-out-reload' ? `a signed-out reload of ${o.page}`
-    : o.kind === 'timing' ? `a double ${press ? 'press' : 'click'} on ${o.control}`
-    : o.fault === null ? 'the 375px viewport' : `${o.template} ${FAULT_PHRASE[o.fault]}`;
+  const { own, what } = withKind(o, (kind, a) => ({ own: kind.symptom?.(a, lead) ?? null, what: kind.what(a) }));
+  if (own) return own;
   if (lead?.id.startsWith('app-')) return `App check ${lead.id} fails on ${o.page ?? 'the page'} after ${what}`;
   switch (lead?.id) {
-    case 'one-write': {
-      const n = /one-write: (\d+) successful/.exec(lead.evidence)?.[1] ?? '2';
-      const hint = lead.evidence.endsWith(TOGGLE_HINT) ? ` ${TOGGLE_HINT}` : '';
-      return `${o.control} sends ${n} successful ${o.template} on a double ${press ? 'press' : 'click'}${hint}`;
-    }
-    case 'no-overflow-375':
-      return `${o.page ?? 'the page'} scrolls sideways at 375px`;
     case 'visible-error-message':
       return `No message when ${what} (${o.control})`;
     case 'settles':
@@ -741,36 +539,40 @@ export function groupLines(g: Group, repro: string): string[] {
   ];
 }
 
-export function attackLink(o: Pick<AttackOutcome, 'flow' | 'verdict' | 'kind' | 'step' | 'page' | 'template' | 'writeKeys'>, loaded: string[]): AttackLink {
-  const verdict = o.verdict;
-  if (o.kind === 'viewport') return { flow: o.flow, verdict, kind: 'viewport', step: o.step, page: o.page, endpoints: [], loaded };
-  if (o.kind === 'bad-input') return { flow: o.flow, verdict, kind: 'bad-input', step: o.step, page: o.page, endpoints: o.template ? [o.template] : [], loaded };
-  if (o.kind === 'timing') return { flow: o.flow, verdict, kind: 'timing', step: o.step, page: o.page, endpoints: o.writeKeys ?? [o.template], loaded };
-  return { flow: o.flow, verdict, kind: 'fault', step: o.step, page: o.page, endpoints: [o.template], loaded };
+export function attackLink(o: Pick<AttackOutcome, 'flow' | 'verdict' | 'step' | 'page'> & LinkedAttack, loaded: string[]): AttackLink {
+  const { kind, endpoints } = kindFor(o).link(o);
+  return { flow: o.flow, verdict: o.verdict, kind, step: o.step, page: o.page, endpoints, loaded };
 }
 
-// Lines that are never findings (20.15), typed by kind for the run record.
-export function nonFinding(o: AttackOutcome, holdMs: number): { kind: string; text: string; refs: string[] } | null {
-  if (o.kind === 'timing' && o.verdict === 'not-applied') return { kind: 'not-applied', text: `Not applied: ${o.id} (${o.notApplied ?? 'unknown'})`, refs: [o.id] };
-  if (o.kind === 'bad-input') {
-    const r = o.run.badInput;
-    if (o.verdict === 'not-applied') return { kind: 'not-applied', text: `Not applied: ${o.id} (${o.notApplied ?? 'unknown'})`, refs: [o.id] };
-    if (o.verdict === 'inconclusive') return { kind: 'inconclusive', text: `Inconclusive: ${o.id} (${r?.carrying?.status ?? '?'} on ${r?.carrying?.method ?? ''} ${r?.carrying?.path ?? ''})`, refs: [o.id] };
-    if (o.run.stoppedAt !== null) return { kind: 'accepted-flow-stopped', text: `Accepted; flow stopped at step ${o.run.stoppedAt}: ${o.id}`, refs: [o.id] };
-  }
-  // In out-of-order a later failing step fails latest-response-wins through (c), so no line here.
-  if (o.run.stoppedAt !== null && o.timing !== 'out-of-order') return { kind: 'faulted-flow-stopped', text: `Faulted; flow stopped at step ${o.run.stoppedAt}: ${o.id}`, refs: [o.id] };
-  if (o.run.fault?.pending) return { kind: 'pending', text: `Pending: ${o.id} (no response for ${holdMs / 1000} s and the page did not give up)`, refs: [o.id] };
-  switch (o.verdict) {
-    case 'not-applied':
-      return { kind: 'not-applied', text: `Not applied: ${o.id} (${o.notApplied ?? 'unknown'})`, refs: [o.id] };
-    case 'pending':
-      return { kind: 'pending', text: `Pending: ${o.id} (no response for ${holdMs / 1000} s and the page did not give up)`, refs: [o.id] };
-    case 'fault-never-fired':
-      return { kind: 'fault-never-fired', text: `${o.id}: fault never fired`, refs: [o.id] };
-    case 'void':
-      return { kind: 'void', text: `${o.id}: void (${o.voided ?? 'void'})`, refs: [o.id] };
-    default:
-      return null;
-  }
+// A line that is never a finding (20.15), typed by kind for the run record.
+export interface NonFinding {
+  kind: string;
+  text: string;
+  refs: string[];
+}
+
+// The attack's non-finding line, or null: its kind picks which shared lines apply and in what order.
+export function nonFinding(o: AttackOutcome, holdMs: number): NonFinding | null {
+  const pending = (): NonFinding => ({ kind: 'pending', text: `Pending: ${o.id} (no response for ${holdMs / 1000} s and the page did not give up)`, refs: [o.id] });
+  const notApplied = (): NonFinding => ({ kind: 'not-applied', text: `Not applied: ${o.id} (${o.notApplied ?? 'unknown'})`, refs: [o.id] });
+  const lines: NonFindingLines = {
+    notApplied,
+    flowStopped: () => (o.run.stoppedAt !== null ? { kind: 'faulted-flow-stopped', text: `Faulted; flow stopped at step ${o.run.stoppedAt}: ${o.id}`, refs: [o.id] } : null),
+    byVerdict: () => {
+      if (o.run.fault?.pending) return pending();
+      switch (o.verdict) {
+        case 'not-applied':
+          return notApplied();
+        case 'pending':
+          return pending();
+        case 'fault-never-fired':
+          return { kind: 'fault-never-fired', text: `${o.id}: fault never fired`, refs: [o.id] };
+        case 'void':
+          return { kind: 'void', text: `${o.id}: void (${o.voided ?? 'void'})`, refs: [o.id] };
+        default:
+          return null;
+      }
+    },
+  };
+  return withKind(o, (kind, a) => kind.nonFinding(a, lines));
 }

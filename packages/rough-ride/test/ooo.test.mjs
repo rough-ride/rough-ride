@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { nonFinding, outOfOrderPoints, ownHostFor, runAttack, symptom } from '../dist/attacks.mjs';
+import { nonFinding, outOfOrderPoints, runAttack, symptom } from '../dist/attacks.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/browser.mjs';
 import { findForms } from '../dist/forms.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
 import { groupFindings, memberOf } from '../dist/groups.mjs';
 import { startOooSite } from './fixtures/ooo-site.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 
 let browser;
 let site;
@@ -18,8 +19,8 @@ after(async () => {
   site?.close();
 });
 
-const own = ownHostFor([]);
-const base = () => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, allowedHosts: [] });
+const own = LOOPBACK_ONLY.ownHost;
+const base = () => ({ browser, baseURL: site.url, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY });
 const searchFlow = (mode, extra = [{ expect: { text: 'Garden plan' } }]) => ({ name: 'search', signedIn: false, steps: [{ goto: `/search?mode=${mode}` }, { fill: { label: 'Find' }, value: 'Garden' }, ...extra] });
 const latest = (o) => o.checks.find((c) => c.id === 'latest-response-wins');
 

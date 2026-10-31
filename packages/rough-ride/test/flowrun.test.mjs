@@ -9,6 +9,7 @@ import { parseCommitted } from '../dist/committed.mjs';
 import { StopError } from '../dist/exit.mjs';
 import { checkRootEntry, ensureFolder } from '../dist/folder.mjs';
 import { describeLocator, describeStep, matchesExclude, newUnique, normalisedPath, runFlow } from '../dist/flowrun.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 import { loadSchema } from '../dist/schema.mjs';
 import { addSecret, clearSecrets, redactSecrets } from '../dist/secrets.mjs';
 import { checkEnv, envReader, parseDotenv, refusedStop, runnableFlows, runReset, signIn } from '../dist/session.mjs';
@@ -44,7 +45,7 @@ function closedPort() {
 }
 
 const flow = (steps, extra = {}) => ({ name: 'f', signedIn: false, steps, ...extra });
-const onSite = (steps, options = {}) => runFlow({ browser, baseURL: site.url, flow: flow(steps), env, ready: { kind: 'load' }, ...options });
+const onSite = (steps, options = {}) => runFlow({ browser, baseURL: site.url, flow: flow(steps), env, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY, ...options });
 
 const SIGN_IN = flow([
   { goto: '/login' },
@@ -234,12 +235,12 @@ test('sample app: sign-in runs once, its session stays in memory and signs in ev
   writeFileSync(path.join(folder.dir, '.env'), 'DEMO_EMAIL=demo@example.com\nDEMO_PASSWORD=demo-password\n');
   const read = envReader(folder, {});
   const create = flow([{ goto: '/notes/new' }, { fill: { label: 'Title' }, value: 'Note ${unique}' }, { click: { role: 'button', name: 'Save' } }, { expect: { text: 'Note ${unique}' } }], { name: 'create-note', signedIn: true });
-  const outcome = await signIn({ browser, baseURL: SAMPLE, flows: [SIGN_IN, create], read, folder, ready: { kind: 'nuxt' } });
+  const outcome = await signIn({ browser, baseURL: SAMPLE, flows: [SIGN_IN, create], read, folder, ready: { kind: 'nuxt' }, hosts: LOOPBACK_ONLY });
   assert.deepEqual([outcome.ran, outcome.passed, outcome.line], [true, true, null]);
   assert.ok(outcome.storageState.cookies.length + outcome.storageState.origins.length > 0);
 
   // A fill right after goto keeps its value with no wait step; Save's late GET belongs to Save.
-  const result = await runFlow({ browser, baseURL: SAMPLE, flow: create, env: read, ready: { kind: 'nuxt' }, storageState: outcome.storageState });
+  const result = await runFlow({ browser, baseURL: SAMPLE, flow: create, env: read, ready: { kind: 'nuxt' }, hosts: LOOPBACK_ONLY, storageState: outcome.storageState });
   assert.equal(result.passed, true, JSON.stringify(result.failure));
   const api = result.requests.filter((r) => r.url.includes(':8731/api/notes'));
   assert.deepEqual(api.map((r) => `${r.step} ${r.key}`), ['3 POST /api/notes #1', '3 GET /api/notes #1']);
@@ -255,11 +256,11 @@ test('sample app: a failing sign-in gives the Sign-in failed line; no sign-in fl
   const folder = ensureFolder(checkRootEntry(gitRepo()));
   const wrong = (name) => ({ DEMO_EMAIL: 'demo@example.com', DEMO_PASSWORD: 'wrong-password' })[name];
   const failing = flow(SIGN_IN.steps, { name: 'sign-in' });
-  const outcome = await signIn({ browser, baseURL: SAMPLE, flows: [failing, { ...SIGN_IN, name: 'notes', signedIn: true }], read: wrong, folder, ready: { kind: 'nuxt' } });
+  const outcome = await signIn({ browser, baseURL: SAMPLE, flows: [failing, { ...SIGN_IN, name: 'notes', signedIn: true }], read: wrong, folder, ready: { kind: 'nuxt' }, hosts: LOOPBACK_ONLY });
   assert.equal(outcome.passed, false);
   assert.equal(outcome.storageState, null);
   assert.equal(outcome.line, 'Sign-in failed at step 5 (expect heading "Notes"): not visible after 10 s. 1 signed-in flows not attacked.');
-  const none = await signIn({ browser, baseURL: SAMPLE, flows: [], read: wrong, folder, ready: { kind: 'nuxt' } });
+  const none = await signIn({ browser, baseURL: SAMPLE, flows: [], read: wrong, folder, ready: { kind: 'nuxt' }, hosts: LOOPBACK_ONLY });
   assert.equal(none.ran, false);
 });
 
@@ -267,7 +268,7 @@ test('sample app: screenshots mask the fields filled from ${env...}', needsSampl
   let masks = 0;
   let differ = false;
   await runFlow({
-    browser, baseURL: SAMPLE, ready: { kind: 'nuxt' },
+    browser, baseURL: SAMPLE, ready: { kind: 'nuxt' }, hosts: LOOPBACK_ONLY,
     env: (n) => ({ DEMO_EMAIL: 'demo@example.com', DEMO_PASSWORD: 'nope-nope' })[n],
     flow: flow([...SIGN_IN.steps.slice(0, 3), { expect: { text: 'never there' } }]),
     timeouts: { S: 500 },

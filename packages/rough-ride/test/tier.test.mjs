@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
-import { capSection, inLanes, lanesFor, orderNotes } from '../dist/tier.mjs';
+import { computeDiff } from '../dist/diff.mjs';
+import { checkRootEntry } from '../dist/folder.mjs';
+import { lockPath } from '../dist/lock.mjs';
+import { formatDuration } from '../dist/output.mjs';
+import { runnerInfo } from '../dist/runner.mjs';
+import { hostPolicy, LOOPBACK_ONLY } from '../dist/hosts.mjs';
+import { apiOrigins, capSection, inLanes, lanesFor, orderNotes, runTier } from '../dist/tier.mjs';
 import { startSite } from './fixtures/test-site.mjs';
 import { gitRepo, runAsync as run, sh } from './helpers.mjs';
 
@@ -29,6 +35,22 @@ test('jobs run at most lanes at a time', async () => {
     await inLanes(lanes, jobs);
     assert.equal(peak, lanes);
   }
+});
+
+test("API origins are other origins on hosts the runner may contact: loopback and allow.remoteTarget, never a look-alike", () => {
+  const target = { url: 'http://localhost:3000/' };
+  const xhr = (url) => ({ url, resourceType: 'xhr' });
+  const results = [{ requests: [
+    xhr('http://localhost:3000/api/own'),
+    xhr('http://localhost.attacker.example/api'),
+    xhr('http://127.0.0.1.attacker.example/api'),
+    xhr('http://app.localhost:4000/api'),
+    xhr('http://[::1]:5000/api'),
+    xhr('http://API.Example.com/api'),
+    { url: 'http://127.0.0.1:6000/page', resourceType: 'document' },
+  ] }];
+  assert.deepEqual(apiOrigins(target, results, LOOPBACK_ONLY), ['http://[::1]:5000', 'http://app.localhost:4000']);
+  assert.deepEqual(apiOrigins(target, results, hostPolicy({ remoteTarget: 'api.example.com' })), ['http://[::1]:5000', 'http://api.example.com', 'http://app.localhost:4000']);
 });
 
 test('notes follow the fixed priority; a section over its cap ends with its overflow line', () => {
@@ -81,6 +103,28 @@ test('quick runs the baseline runs and ends as nothing attacked, with summary.js
   assert.equal(readFileSync(path.join(dir, 'summary.txt'), 'utf8'), lines.map((l) => l + '\n').join(''));
 });
 
+test('diff.patch is written before the browser starts, so a throw there leaves no browser open and frees the flow lock', async () => {
+  const root = project({ home: PASSING });
+  // An untracked app file the diff lists but diff.patch can no longer read.
+  writeFileSync(path.join(root, 'extra.js'), 'export {}\n');
+  const diff = computeDiff({ root, given: null, env: process.env, nuxtRoots: [] });
+  rmSync(path.join(root, 'extra.js'));
+  let launched = 0;
+  let closed = 0;
+  const launch = async (name) => {
+    launched++;
+    return { browser: { close: async () => void closed++ }, name, version: '1', debugPort: null };
+  };
+  const env = { ...process.env };
+  const report = { madeRun() {}, protectedFiles() {}, contract() {} };
+  await assert.rejects(
+    runTier({ subcommand: 'quick', root, folder: checkRootEntry(root), diff, info: runnerInfo(null, root, env), browserFlag: null, start: false, argv: ['quick'], env, notes: [], report, elapsed: () => 0, progress: () => {}, launch }),
+    /ENOENT/,
+  );
+  assert.deepEqual([launched, closed], [0, 0]);
+  assert.equal(existsSync(lockPath(root)), false);
+});
+
 test('the text summary is plain ASCII with no ANSI or \\r', async () => {
   const root = project({ home: PASSING });
   const { code, stdout } = await run(['quick'], { cwd: root });
@@ -123,6 +167,38 @@ test('only a new flow file changed: two baseline runs and the Flows checked line
     'Nothing attacked: the diff changes no app code. Flows checked: fresh (new, passed twice), shaky (new, failed at step 2).',
   );
   assert.ok(doc.summaryLines.some((l) => l.startsWith('Baseline failed: shaky at step 2')));
+});
+
+// 47.1 and 47.3: reset and attack setup are timed, not budgeted; attack's limit is B - P.
+test('the time line and meta.budget: quick and plan budget against B with reset apart, attack against B - P after its setup', async () => {
+  const root = project({ home: PASSING }, 'reset: node -e "setTimeout(() => {}, 300)"\n');
+  const reportOf = (doc) => readFileSync(path.join(doc.runDir, 'report.txt'), 'utf8');
+  const esc = (ms) => formatDuration(ms).replace('.', '\\.');
+  const fields = (doc) => {
+    const { budgetedMs, lanes, cpus, nominalPlanMs, windowMs, ...rest } = doc.meta.budget;
+    assert.ok(budgetedMs > 0 && budgetedMs <= doc.meta.durationMs, `budgetedMs ${budgetedMs} of ${doc.meta.durationMs}`);
+    return rest;
+  };
+
+  const quick = JSON.parse((await run(['quick', '--json'], { cwd: root })).stdout);
+  const q = fields(quick);
+  assert.ok(q.resetMs >= 300, `resetMs ${q.resetMs}`);
+  assert.deepEqual(q, { tier: 'quick', budgetMs: 120_000, overMs: 0, planMs: null, adversaryCallsMs: 0, attackSetupMs: 0, resetMs: q.resetMs, startMs: 0 });
+  assert.equal(quick.meta.budgetMs, 120_000);
+  assert.match(reportOf(quick), new RegExp(`^time: runner [\\dm.]+s = budgeted [\\dm.]+s of 2m00s \\+ reset ${esc(q.resetMs)} \\| app start 0\\.0s$`, 'm'));
+
+  const planned = JSON.parse((await run(['plan', 'quick', '--json'], { cwd: root })).stdout);
+  const p = fields(planned);
+  const P = JSON.parse(readFileSync(path.join(planned.runDir, 'diff-map.json'), 'utf8')).meta.planMs;
+  assert.ok(P > 0 && P <= planned.meta.budget.budgetedMs, `planMs ${P}`);
+  assert.deepEqual(p, { tier: 'quick', budgetMs: 120_000, overMs: 0, planMs: P, adversaryCallsMs: 0, attackSetupMs: 0, resetMs: p.resetMs, startMs: 0 });
+  assert.match(reportOf(planned), /^time: runner [\dm.]+s = budgeted [\dm.]+s of 2m00s \+ reset [\d.]+s \| app start 0\.0s$/m);
+
+  const attacked = JSON.parse((await run(['attack', '--run', planned.runId, '--json'], { cwd: root })).stdout);
+  const a = fields(attacked);
+  assert.ok(a.attackSetupMs >= a.resetMs && a.resetMs >= 300, `setup ${a.attackSetupMs}, reset ${a.resetMs}`);
+  assert.deepEqual(a, { tier: 'quick', budgetMs: 120_000, overMs: 0, planMs: P, adversaryCallsMs: 0, attackSetupMs: a.attackSetupMs, resetMs: a.resetMs, startMs: 0 });
+  assert.match(reportOf(attacked), new RegExp(`^time: runner [\\dm.]+s = attack setup ${esc(a.attackSetupMs)} \\(timed, not budgeted\\) \\+ budgeted [\\dm.]+s of ${esc(120_000 - P)} \\(the quick budget less plan ${esc(P)}\\); adversary calls 0\\.0s \\(timed, not budgeted\\) \\| app start 0\\.0s$`, 'm'));
 });
 
 // 45.5: a flow above the cut has a selected attack or a test inside the cut.

@@ -8,7 +8,7 @@ import { checkRootEntry } from '../dist/folder.mjs';
 import { compareProtected } from '../dist/protected.mjs';
 import { StopError } from '../dist/exit.mjs';
 import { keyOf } from '../dist/groups.mjs';
-import { ownHostFor } from '../dist/attacks.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 import { gitRepo, sh } from './helpers.mjs';
 
 const info = { version: '0.1.0', cliPath: '/x/dist/cli.mjs', source: { kind: 'other', detail: '/x', resolved: null }, pluginId: null, pluginData: null, node: '22.22.1', playwright: '1.64.1', claudeCode: { version: null, floorChecked: false }, editGuard: 'n/a', versionSkew: null };
@@ -99,7 +99,7 @@ test('a matching applied entry removes the check; with nothing else failed the v
 test('fails-with-no-attack lines match by the step where the check first failed', () => {
   // A third-party call sent first never becomes the action.
   const run = { requests: [{ step: 3, key: 'POST /v1/t #1', url: 'https://api.segment.io/v1/t', resourceType: 'fetch' }, { step: 3, key: 'POST /api/notes #1', url: 'http://localhost:8731/api/notes', resourceType: 'fetch' }], steps: [{ index: 3, label: 'button "Save"' }] };
-  const key = baselineKey(flow, run, 3, '/notes/new', ownHostFor([]));
+  const key = baselineKey(flow, run, 3, '/notes/new', LOOPBACK_ONLY.ownHost);
   assert.deepEqual(key, { page: '/notes/new', step: 'click', action: 'POST /api/notes' });
   const entries = [{ line: 3, ...entry({ check: 'settles' }), state: 'applied', matched: [] }];
   assert.equal(acceptsBaseline(entries, key, 'settles', 'fails with no attack: create-note step 3'), true);

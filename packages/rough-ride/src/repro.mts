@@ -8,28 +8,26 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Browser, BrowserContext } from 'playwright-core';
 import { runAttack } from './attacks.mjs';
-import { chooseBrowser, installedOnThisMachine, launchBrowser, type BrowserName, type Launched } from './browser.mjs';
+import type { BrowserName, Launched } from './browser.mjs';
 import { inlineChecks } from './appchecks.mjs';
 import { buildCatalogue, resolveTest } from './catalogue.mjs';
 import { checkRank, checkSeverity } from './checks.mjs';
 import { stopWith } from './exit.mjs';
-import { checkCommittedFiles, wroteFile } from './files.mjs';
+import { checkCommittedFiles } from './files.mjs';
 import { ensureFolder, type FolderState } from './folder.mjs';
 import type { Flow } from './flowrun.mjs';
 import { runFlow } from './flowrun.mjs';
 import { SEVERITY_TEXT } from './groups.mjs';
-import { LocalhostGuard, type GuardPolicy } from './guard.mjs';
-import { takeFlowLock } from './lock.mjs';
 import { Manifest } from './manifest.mjs';
 import { fetchOpenApi, rekey } from './openapi.mjs';
 import { escapeName, formatDuration, type Note } from './output.mjs';
 import { compareProtected } from './protected.mjs';
 import { followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
-import { createRunFolder, pruneRuns, RUN_ID, type RunFolder } from './runs.mjs';
-import { credentialStrings } from './secrets.mjs';
-import { checkSignInEnv, envReader, runReset, signIn } from './session.mjs';
-import { findTarget } from './target.mjs';
-import { apiOrigins, readyWaitFor } from './tier.mjs';
+import type { RunReport } from './runoutput.mjs';
+import { RUN_ID, type RunFolder } from './runs.mjs';
+import { checkSignInEnv } from './session.mjs';
+import { apiOrigins } from './tier.mjs';
+import { openTargetSession } from './targetsession.mjs';
 
 export interface ReproContext {
   root: string;
@@ -42,6 +40,8 @@ export interface ReproContext {
   argv: string[];
   env: NodeJS.ProcessEnv;
   notes: Note[];
+  // Where the run reports its run folder, protected comparison and contract.
+  report: RunReport;
   elapsed: () => number;
   progress: (line: string) => void;
   launch?: (name: BrowserName) => Promise<Launched>;
@@ -58,6 +58,7 @@ export interface ReproResult {
 }
 
 const HOLD_MS = 30 * 60 * 1000;
+const BASH_LIMIT = 'stopped by the Bash time limit';
 
 interface ReproRecord {
   runId: string;
@@ -102,55 +103,56 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
   manifest.verifyRun(runId!, `repros/${repro}.json`, record, `repro ${repro}`, tierCmd);
   const rec = record!;
 
-  const files = checkCommittedFiles(folder, { info, subcommand: 'repro', argv: ctx.argv, env: ctx.env });
+  const files = checkCommittedFiles(folder, { info, subcommand: 'repro', argv: ctx.argv, env: ctx.env, report: ctx.report });
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, mode: 'regress' });
+  ctx.report.protectedFiles(prot);
   ctx.notes.push(...files.notes, ...prot.notes);
   const config = prot.config;
   const flows = prot.flows.map((f) => f.flow);
   // The flow's effective version (13.7), not the copy in the record.
   const flow = flows.find((f) => f.name === rec.flow.name) ?? rec.flow.parsed;
   checkSignInEnv(flows, folder, ctx.env);
-  const target = await findTarget({ root, config, configSchema: files.config?.schema?.text ?? null, start: ctx.start, pluginData: info.pluginData?.path ?? null, againCommand: tierCmd, notes: ctx.notes });
-  wroteFile(files, info, root, target.nuxtRoot?.rel ?? null, ctx.argv);
-  const lock = takeFlowLock(root, ctx.notes);
-  const run = createRunFolder(folder, 'repro');
-  pruneRuns(folder, lock, run.id);
-  const policy: GuardPolicy = { remoteTarget: config?.allow?.remoteTarget ?? null, remoteWrites: config?.allow?.remoteWrites ?? [] };
-  const allowed = [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h);
-  const choice = chooseBrowser(ctx.browserFlag, config?.browser ?? null, installedOnThisMachine(ctx.env));
-  const launched = ctx.launch ? await ctx.launch(choice.name) : await launchBrowser(choice, ctx.notes);
-  const guard = launched.debugPort ? await LocalhostGuard.connect(launched.debugPort, policy) : undefined;
+  const session = await openTargetSession({
+    root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
+    start: ctx.start, againCommand: tierCmd, browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
+    elapsed: ctx.elapsed, run: { create: 'repro' }, reset: true,
+  });
+  const { target, hosts } = session;
+  const run = session.run!;
   const lead = [...rec.failedChecks].map((c) => c.id).sort((a, b) => checkRank(a) - checkRank(b))[0] ?? null;
   let verdict: 'reproduced' | 'did not reproduce' | string = 'did not reproduce';
   let exitCode: 0 | 1 | 2 = 0;
   const openLines: string[] = [];
   try {
-    await runReset(config, root);
-    const read = envReader(folder, ctx.env);
-    const ready = readyWaitFor(target, config);
-    const exclude = config?.exclude ?? [];
-    const signedIn = await signIn({ browser: launched.browser, baseURL: target.url, flows, read, folder, ready, exclude, waitUntil: target.apiWaitUntil });
-    const credentials = credentialStrings(signedIn.storageState);
-    const base = {
-      browser: launched.browser, baseURL: target.url, env: read, ready, exclude, allowedHosts: allowed,
-      storageState: flow.signedIn ? signedIn.storageState : undefined, credentials, guard,
-    };
-    const baseline = flow.name === 'sign-in' && signedIn.result ? signedIn.result : await runFlow({ ...base, flow, shots: 'all' });
-    if (!baseline.passed) {
+    await session.reset();
+    const signedIn = await session.signIn();
+    const base = session.defaults(flow);
+    // With a plugin data folder no flow run starts after 500 s (50.4).
+    const baseline = flow.name === 'sign-in' && signedIn.result ? signedIn.result : session.bashBlocks() ? null : await runFlow({ ...base, flow, shots: 'all' });
+    if (!baseline || baseline.voided === 'stopped at the hard stop') {
+      verdict = `could not apply: ${BASH_LIMIT}`;
+      exitCode = 2;
+    } else if (!baseline.passed) {
       verdict = `could not apply: ${flow.name} failed its baseline run`;
       exitCode = 2;
     } else {
-      const docs = await fetchOpenApi(apiOrigins(target, [baseline]), [baseline]);
+      const docs = await fetchOpenApi(apiOrigins(target, [baseline], hosts), [baseline]);
       rekey(baseline, docs);
-      const catalogue = buildCatalogue({ tier: 'standard', flows: [{ flow, runs: [baseline], passed: true }], docs, hosts: { allowed, remoteTarget: policy.remoteTarget }, today: new Date() });
+      const catalogue = buildCatalogue({ tier: 'standard', flows: [{ flow, runs: [baseline], passed: true }], docs, hosts, today: new Date() });
       const resolved = resolveTest(catalogue, flow.name, rec.attack);
       if ('stale' in resolved || 'pass' in resolved) {
         verdict = `could not apply: ${'stale' in resolved ? resolved.stale : resolved.pass}`;
         exitCode = 2;
+      } else if (session.bashBlocks()) {
+        verdict = `could not apply: ${BASH_LIMIT}`;
+        exitCode = 2;
       } else {
         const o = await runAttack(resolved.attack, flow, baseline, base, docs, inlineChecks(rec.failedChecks.flatMap((c) => (c.check ? [c.check] : []))));
         const leadResult = o.checks.find((c) => c.id === lead)?.result;
-        if (['not-applied', 'fault-never-fired', 'void', 'inconclusive'].includes(o.verdict)) {
+        if (o.voided === 'stopped at the hard stop') {
+          verdict = `could not apply: ${BASH_LIMIT}`;
+          exitCode = 2;
+        } else if (['not-applied', 'fault-never-fired', 'void', 'inconclusive'].includes(o.verdict)) {
           verdict = `could not apply: ${o.notApplied ?? o.verdict}`;
           exitCode = 2;
         } else if (leadResult === 'fail') {
@@ -160,11 +162,10 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
         if (ctx.keepOpen) await keepOpen(ctx, resolved.attack, flow, baseline, base, docs, openLines);
       }
     }
+  } catch (error) {
+    throw session.withRun(error);
   } finally {
-    guard?.close();
-    await launched.browser.close().catch(() => {});
-    target.children?.stop();
-    lock.release();
+    await session.close();
   }
   const sev = lead ? SEVERITY_TEXT[checkSeverity(lead)] : 'LOW ';
   const lines = [
