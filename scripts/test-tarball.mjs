@@ -6,7 +6,7 @@
 //   4. the MCP entry answers `initialize`
 //   5. with --step5: `quick` against the dev-split Nuxt app (scripts/release-step5.mjs)
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +18,9 @@ if (!existsSync(tgz)) {
   console.error('Usage: node scripts/test-tarball.mjs <rough-ride-x.y.z.tgz> [--step5]');
   process.exit(64);
 }
-const version = JSON.parse(spawnSync('tar', ['-xzOf', tgz, 'package/package.json'], { encoding: 'utf8' }).stdout).version;
+// tar runs in the tarball's folder with a bare name: Git Bash's GNU tar reads
+// the D: of a Windows path as a remote host.
+const version = JSON.parse(spawnSync('tar', ['-xzOf', path.basename(tgz), 'package/package.json'], { cwd: path.dirname(tgz), encoding: 'utf8' }).stdout).version;
 
 function step(name, fn) {
   process.stdout.write(`== ${name}\n`);
@@ -46,7 +48,8 @@ step('1. install the tarball into a scratch project and run the version check', 
 
 const unpacked = mkdtempSync(path.join(tmpdir(), 'rp-unpacked-'));
 step('2. unpack, install runtime packages from the shrinkwrap, validate the plugin', () => {
-  sh('tar', ['-xzf', tgz, '-C', unpacked], ROOT);
+  copyFileSync(tgz, path.join(unpacked, path.basename(tgz)));
+  sh('tar', ['-xzf', path.basename(tgz)], unpacked);
   sh('npm', ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], path.join(unpacked, 'package'));
   if (sh('claude', ['--version'], unpacked, { allowFail: true }).status === 0) {
     const validate = sh('claude', ['plugin', 'validate', '--strict', path.join(unpacked, 'package')], unpacked, { allowFail: true });
