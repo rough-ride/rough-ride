@@ -11,8 +11,8 @@ import { hasCredentialHeader } from './secrets.mjs';
 
 export const S = 10_000;
 export const C = 30_000;
-const QUIET_MS = 500;
-const POLL_MS = 100;
+export const QUIET_MS = 500;
+export const POLL_MS = 100;
 const LOAD_IDLE_MS = 500;
 const WORLD = 'rough-ride';
 
@@ -367,8 +367,6 @@ export interface RunFlowOptions {
   shots?: 'all' | number[];
   // A bad-input attack (21.9): this value replaces one fill or select step.
   badInput?: BadInputRun;
-  // An out-of-order attack (32.4).
-  outOfOrder?: OutOfOrderRun;
   // The hard stop (50.3): a flow run still going at this time (ms since the epoch) is void.
   deadline?: number;
   // A regression test's pinned time zone and locale (25.4); attacks never set them.
@@ -403,6 +401,7 @@ export interface StepAt {
   step: Step;
   kind: StepKind;
   label: string;
+  startedAt: number;
 }
 
 // What a kind's own action did: when the Observation window starts (the
@@ -426,7 +425,8 @@ export interface StepWindow {
 // How the attack goes on after a step's window (23.6): the flow goes on, the
 // attack ends there, or these steps run as its recovery (23.7).
 export type WindowEnd =
-  | { then: 'continue' }
+  // `skip`: a later step the kind already ran.
+  | { then: 'continue'; skip?: number }
   | { then: 'end' }
   | { then: 'recover'; steps: { index: number; step: Step }[]; action: string };
 
@@ -452,6 +452,8 @@ export interface KindHooks {
   afterWindow?(at: StepAt, window: StepWindow): Promise<WindowEnd>;
   // The reason of a NotApplied thrown from a hook.
   notApplied?(reason: string): void;
+  // Any request of the flow run failed.
+  requestFailed?(request: Request, failure: string): void;
   // An own-origin request that failed without the page aborting it, which
   // otherwise voids the run as target unstable: whether the kind caused it.
   excusesFailure?(record: RequestRecord | undefined): boolean;
@@ -464,6 +466,8 @@ export interface KindHooks {
 export interface FlowRunEngine {
   // The kind writes only its own slots.
   readonly result: FlowRunResult;
+  readonly flow: Flow;
+  readonly unique: string;
   readonly page: Page;
   readonly context: BrowserContext;
   // The step timeout S, the action and expect timeout, and the load timeout C.
@@ -472,6 +476,13 @@ export interface FlowRunEngine {
   // Credential strings from the sign-in session (20.6).
   readonly credentials: string[];
   ownHost(url: string): boolean;
+  // `METHOD template` of a request, as attack points key it.
+  templateFor(method: string, url: string): string;
+  // Resolves a flow locator, ${unique} and ${env} included, on this run's page.
+  locate(spec: LocatorSpec): Locator;
+  resolve(text: string): string;
+  // The page's state from the isolated world.
+  snapshot(): Promise<Snapshot>;
   // The method of the request that loaded the document now showing.
   documentMethod(): string;
   // Deletes the cookies of the Target's own hosts.
@@ -500,19 +511,6 @@ export interface PageTimingResult {
   // Credentials removed or refused, for signed-out-reload.
   removed: number;
   served401: number;
-}
-
-export interface OutOfOrderRun {
-  step: number;
-  // The separate submit step (the next click or press), or the field's own step.
-  submitStep: number;
-  // `METHOD template` of the carrying GET.
-  template: string;
-  // The older value: for a fill, null means V followed by this run's ${unique}.
-  older: string | null;
-  select: boolean;
-  // The baseline offset from the step's start to its carrying request.
-  offsetMs: number;
 }
 
 export interface OutOfOrderResult {
@@ -832,7 +830,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     aborted: [],
     pageEvents: [],
     voided: null,
-    fault: options.attack || options.outOfOrder
+    fault: options.attack
       ? { fired: false, events: [], firedAt: null, notApplied: null, pending: false, givenUp: false, absorbed: false, served: null, holdMs: holdMsFor(stepTimeout) }
       : null,
     endedAfterWindow: false,
@@ -840,7 +838,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     stoppedAt: null,
     recovery: null,
     pageTiming: null,
-    outOfOrder: options.outOfOrder ? { notApplied: null, aborted: false, releasedAt: null, linesBefore: [], olderOnly: null, newerOnly: null } : null,
+    outOfOrder: null,
     badInput: options.badInput ? { notApplied: null, held: null, linesBefore: [], reference: [], after: [], submitDisabled: false, submittedAt: null, outcome: null, carrying: null } : null,
     shots: new Map(),
     formEvents: { submits: [], invalids: [] },
@@ -941,7 +939,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
   const faultEvent = (event: string, detail?: string) => {
     const now = Date.now();
     const offset = routeEventAt === null ? 0 : Math.round(performance.now() - routeEventAt);
-    result.fault!.events.push({ at: now, offsetMs: offset, event, key: options.attack?.template ?? options.outOfOrder?.template ?? '', ...(detail ? { detail } : {}) });
+    result.fault!.events.push({ at: now, offsetMs: offset, event, key: options.attack?.template ?? '', ...(detail ? { detail } : {}) });
   };
   const extraStatus = new Map<string, number>();
   const polling = options.pollingKeys ?? new Set<string>();
@@ -1090,6 +1088,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       result.fault!.givenUp = true;
       faultEvent('given up by the page', failure);
     }
+    hooks.requestFailed?.(request, failure);
     if (/ERR_CONNECTION_REFUSED/.test(failure) && ownHost(request.url()) && result.refused === null) {
       result.refused = new URL(request.url()).origin;
     }
@@ -1269,12 +1268,18 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
   }
   const engine: FlowRunEngine = {
     result,
+    flow: options.flow,
+    unique,
     page,
     context,
     timeouts: { step: stepTimeout, action: actionTimeout, load: loadTimeout },
     readyKind: options.ready.kind,
     credentials: options.credentials ?? [],
     ownHost,
+    templateFor,
+    locate: (spec) => locate(spec),
+    resolve,
+    snapshot,
     documentMethod: () => documentMethod,
     clearOwnCookies,
     route: async (handler) => {
@@ -1510,142 +1515,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
 
   const bad = options.badInput;
   const fieldFacts = new Map<number, FieldFacts>();
-  const ooo = options.outOfOrder;
 
-  // out-of-order (32.4): hold the older value's request, enter the newer value,
-  // release the older one once the newer answer rendered. Returns the release time.
-  const runOutOfOrder = async (locator: Locator, step: Step): Promise<number> => {
-    const r = result.outOfOrder!;
-    const o = ooo!;
-    const method = o.template.slice(0, o.template.indexOf(' '));
-    let r1: { route: Route; request: Request } | null = null;
-    let r2: Request | null = null;
-    const notApplied = async (why: string): Promise<never> => {
-      r.notApplied = why;
-      if (r1 && !r.aborted && r.releasedAt === null) await r1.route.continue().catch(() => {});
-      await context.unroute('**/*').catch(() => {});
-      throw new BadInputStop();
-    };
-    await context.route('**/*', async (route, request) => {
-      const t = request.resourceType();
-      if ((t !== 'fetch' && t !== 'xhr') || request.method() !== method || templateFor(request.method(), request.url()) !== o.template) return route.fallback();
-      if (r1 === null) {
-        r1 = { route, request };
-        routeEventAt = performance.now();
-        result.fault!.fired = true;
-        result.fault!.firedAt = Date.now();
-        faultEvent('held');
-        return;
-      }
-      r2 ??= request;
-      return route.fallback();
-    });
-    context.on('requestfailed', (request) => {
-      if (r1 && request === r1.request && r.releasedAt === null && !r.aborted) {
-        r.aborted = true;
-        faultEvent('older aborted by the page', request.failure()?.errorText ?? '');
-      }
-    });
-    const own = resolve((step as { value: string }).value);
-    // The older option goes in by value; the flow's own option by its label, as the flow wrote it.
-    const enter = (value: string, own = false) => (o.select ? locator.selectOption(own ? { label: value } : { value }, { timeout: actionTimeout }) : locator.fill(value, { timeout: actionTimeout }));
-    const submit = o.submitStep !== o.step ? options.flow.steps[o.submitStep - 1]! : null;
-    const pressSubmit = async () => {
-      if (!submit) return;
-      const k = stepKind(submit);
-      const target = locate((submit as Record<string, LocatorSpec>)[k]!);
-      if (k === 'press') return target.press((submit as { key: string }).key, { timeout: actionTimeout });
-      const until = Date.now() + stepTimeout;
-      const disabled = () => target.evaluate((el) => (el as HTMLButtonElement).disabled === true || el.getAttribute('aria-disabled') === 'true', undefined, { timeout: 1000 }).catch(() => false);
-      while ((await disabled()) && Date.now() < until) await page.waitForTimeout(POLL_MS);
-      if (await disabled()) await notApplied('the submit control stayed disabled while the older request was pending');
-      return target.click({ timeout: actionTimeout });
-    };
-    const waitFor = async (check: () => boolean, ms: number) => {
-      const until = Date.now() + ms;
-      while (!check() && Date.now() < until) await page.waitForTimeout(25);
-      return check();
-    };
-    try {
-      await enter(o.older ?? own + unique);
-    } catch {
-      await notApplied('the field could not be filled while the older request was pending');
-    }
-    const held = await locator.evaluate((el) => ('value' in el ? String((el as HTMLInputElement).value) : ''), undefined, { timeout: 2000 }).catch(() => null);
-    if (held === own) await notApplied("the field kept the flow's own value");
-    await pressSubmit();
-    if (!(await waitFor(() => r1 !== null, Math.min(o.offsetMs + 1000, stepTimeout)))) await notApplied('the older value sent no request');
-    try {
-      await enter(own, true);
-    } catch {
-      await notApplied('the field could not be filled while the older request was pending');
-    }
-    await pressSubmit();
-    if (!(await waitFor(() => r2 !== null, Math.min(o.offsetMs + 1000, stepTimeout)))) await notApplied('the newer value sent no request');
-    const newer = await Promise.race([
-      (async () => {
-        const res = await r2!.response();
-        await res?.finished();
-        return res;
-      })(),
-      page.waitForTimeout(10_000).then(() => undefined),
-    ]).catch(() => undefined);
-    if (newer === undefined) await notApplied('no answer to the newer value within 10 s');
-    faultEvent('newer delivered');
-    // 500 ms with no DOM mutation, at most S after the newer request was sent.
-    const sentAt = Date.now();
-    let last = (await snapshot()).mutations;
-    let quietSince = Date.now();
-    while (Date.now() - quietSince < QUIET_MS && Date.now() - sentAt < stepTimeout) {
-      await page.waitForTimeout(POLL_MS);
-      const m = (await snapshot()).mutations;
-      if (m !== last) {
-        last = m;
-        quietSince = Date.now();
-      }
-    }
-    r.linesBefore = (await snapshot()).lines;
-    if (!r.aborted) {
-      const heldFor = Math.round(performance.now() - (routeEventAt ?? performance.now()));
-      await r1!.route.continue().catch(() => {});
-      r.releasedAt = Date.now();
-      faultEvent(`released after ${heldFor} ms`);
-    }
-    await context.unroute('**/*').catch(() => {});
-    // Both answers, from response events; bodies stay in memory.
-    const bodyOf = async (req: Request) => {
-      const res = await Promise.race([req.response(), page.waitForTimeout(10_000).then(() => null)]).catch(() => null);
-      if (!res) return null;
-      const buf = await res.body().catch(() => null);
-      return buf ? { buf, media: (res.headers()['content-type'] ?? '').split(';')[0]!.trim().toLowerCase() } : null;
-    };
-    const older = r.aborted ? null : await bodyOf(r1!.request);
-    const newerBody = await bodyOf(r2!);
-    if (older && newerBody && sha256(older.buf) === sha256(newerBody.buf)) await notApplied('both answers were the same');
-    const leaves = (b: { buf: Buffer; media: string } | null): Set<string> | null => {
-      if (!b || !isJsonMedia(b.media) || b.buf.length > MAX_BODY) return null;
-      try {
-        const out = new Set<string>();
-        const walk = (v: unknown): void => {
-          if (typeof v === 'string') {
-            if (v.length >= 4 && /\p{L}/u.test(v)) out.add(v);
-          } else if (Array.isArray(v)) v.forEach(walk);
-          else if (v && typeof v === 'object') Object.values(v).forEach(walk);
-        };
-        walk(JSON.parse(b.buf.toString('utf8')));
-        return out;
-      } catch {
-        return null;
-      }
-    };
-    const lo = leaves(older);
-    const ln = leaves(newerBody);
-    if (lo && ln) {
-      r.olderOnly = [...lo].filter((x) => !ln.has(x));
-      r.newerOnly = [...ln].filter((x) => !lo.has(x));
-    }
-    return r.releasedAt ?? Date.now();
-  };
   const queue: { index: number; step: Step; recovery: boolean }[] = options.flow.steps.map((step, i) => ({ index: i + 1, step, recovery: false }));
   let recovering = false;
   try {
@@ -1713,16 +1583,14 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
             result.badInput!.submittedAt = Date.now();
           }
           try {
-            if (!recovering && hooks.act && (acted = await hooks.act({ index, step, kind, label }, locator, before)) !== undefined) {
+            if (!recovering && hooks.act && (acted = await hooks.act({ index, step, kind, label, startedAt }, locator, before)) !== undefined) {
               if (acted.windowFrom !== undefined) windowFrom = acted.windowFrom;
             } else if (bad && index === bad.submitStep && result.badInput!.submitDisabled && !recovering) {
               // Skipped: the submit stayed disabled.
             } else if (kind === 'click') await locator.click({ timeout: actionTimeout });
             else if (kind === 'check') await locator.check({ timeout: actionTimeout });
             else if (kind === 'press') await locator.press((step as { key: string }).key, { timeout: actionTimeout });
-            else if (ooo && index === ooo.step && !isRecovery) {
-              windowFrom = await runOutOfOrder(locator, step);
-            } else if (bad && index === bad.step && !recovering && !isRecovery) {
+            else if (bad && index === bad.step && !recovering && !isRecovery) {
               // The bad value goes in with fill or selectOption; a throw is Not applied (21.9).
               result.badInput!.linesBefore = before.lines;
               try {
@@ -1747,11 +1615,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
               else await locator.selectOption({ label: value }, { timeout: actionTimeout });
             }
           } catch (error) {
-            if (error instanceof BadInputStop) throw error;
-            if (ooo && index === ooo.step) {
-              result.outOfOrder!.notApplied ??= 'the field could not be filled while the older request was pending';
-              throw new BadInputStop();
-            }
+            if (error instanceof BadInputStop || error instanceof NotApplied) throw error;
             throw new StepError(await whyActionFailed(locator, kind === 'fill' || kind === 'select' ? 'editable' : 'clickable'));
           }
           if (kind === 'fill' || kind === 'select' || kind === 'check') {
@@ -1770,7 +1634,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
         const samples: TextSample[] = [];
         const settled = kind === 'expect'
           ? { settled: true, ms: 0, unsettled: null, after: await snapshot() }
-          : await settle(before, navigated ? Date.now() : windowFrom, acted?.ceilingFrom ?? (ooo && index === ooo.step ? startedAt : windowFrom), samples);
+          : await settle(before, navigated ? Date.now() : windowFrom, acted?.ceilingFrom ?? windowFrom, samples);
         if (result.untrustedStop !== null) throw new StepError(result.untrustedStop);
         const pathAfter = pagePath(page.url());
         const wantShot = options.shots === 'all' || (Array.isArray(options.shots) && options.shots.includes(index)) || hooks.wantsShot?.(settled.after);
@@ -1799,7 +1663,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
             method: navigated ? navigationMethod : null,
           });
         }
-        const end = !recovering && hooks.afterWindow ? await hooks.afterWindow({ index, step, kind, label }, { before, samples, after: settled.after, path: pathAfter }) : null;
+        const end = !recovering && hooks.afterWindow ? await hooks.afterWindow({ index, step, kind, label, startedAt }, { before, samples, after: settled.after, path: pathAfter }) : null;
         if (end?.then === 'end') {
           result.endedAfterWindow = true;
           break;
@@ -1809,8 +1673,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           queue.unshift(...end.steps.map((x) => ({ ...x, recovery: true })));
           result.recovery = { action: end.action, passed: true, detail: null };
         }
-        // out-of-order ran its own submit step; the flow goes on after it.
-        if (ooo && index === ooo.step && ooo.submitStep !== ooo.step && queue[0]?.index === ooo.submitStep) queue.shift();
+        if (end?.then === 'continue' && end.skip !== undefined && queue[0]?.index === end.skip) queue.shift();
         // A bad input's window ends when its submit step settles (23.4): classify, then recover or go on.
         if (bad && index === bad.submitStep && !recovering && !isRecovery && result.badInput!.notApplied === null) {
           await Promise.all(pendingResponses);
@@ -1917,7 +1780,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
         if (hooks.stopsFlow?.(index)) result.stoppedAt = index;
         if (attack && index > attack.step && result.fault?.fired) result.stoppedAt = index;
         if (bad && index > bad.submitStep && result.badInput?.outcome === 'accepted') result.stoppedAt = index;
-        if (ooo && index > ooo.step && result.outOfOrder?.releasedAt !== null) result.stoppedAt = index;
         break;
       }
     }

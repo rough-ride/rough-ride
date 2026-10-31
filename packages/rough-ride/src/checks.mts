@@ -320,36 +320,3 @@ export function judgeBadInput(run: FlowRunResult, baseline: FlowRunResult, submi
     },
   });
 }
-
-// out-of-order (33.2): latest-response-wins through (a), (b) or (c), plus
-// no-uncaught-error (an AbortError after the page aborted the held request
-// doesn't count), settles and no-broken-text.
-export function judgeOutOfOrder(run: FlowRunResult, baseline: FlowRunResult, step: number, skipped: Set<string>): Judged {
-  const r = run.outOfOrder;
-  return judgeAttack(run, baseline, skipped, {
-    name: 'out-of-order',
-    gate: !r || r.notApplied !== null ? 'not-applied' : null,
-    adjust: { ignoreEvent: (e) => !!r?.aborted && /AbortError/.test(e.text) },
-    order: ['latest-response-wins', 'no-uncaught-error', 'settles', 'no-broken-text'],
-    own: ({ push }) => {
-      const x = r!;
-      let latest: string | null = null;
-      const o = run.steps.find((s) => s.index === step)?.observation;
-      if (x.olderOnly && x.newerOnly && o && x.releasedAt !== null) {
-        const after = o.samples.filter((s) => s.at >= x.releasedAt!);
-        const shownAfter = [...after.flatMap((s) => s.lines), ...o.after.lines];
-        const visibleIn = (lines: string[], leaf: string) => lines.some((l) => l.includes(leaf));
-        const appeared = x.olderOnly.find((leaf) => !visibleIn(x.linesBefore, leaf) && visibleIn(shownAfter, leaf));
-        if (appeared) latest = `latest-response-wins: "${appeared}" from the older answer appeared after the newer one`;
-        else {
-          const gone = x.newerOnly.find((leaf) => visibleIn(x.linesBefore, leaf) && !visibleIn(o.after.lines, leaf));
-          if (gone) latest = `latest-response-wins: "${gone}" from the newer answer disappeared when the older one arrived`;
-        }
-      }
-      if (!latest && run.stoppedAt !== null && run.failure) {
-        latest = `latest-response-wins: step ${run.stoppedAt} failed after the older answer arrived: ${run.failure.message.split('\n')[0]}`;
-      }
-      push('latest-response-wins', latest);
-    },
-  });
-}

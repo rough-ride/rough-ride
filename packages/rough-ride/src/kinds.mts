@@ -5,6 +5,7 @@
 import type { AttackOutcome, PlannedAttack } from './attacks.mjs';
 import type { Flow, FlowRunResult, RunFlowOptions } from './flowrun.mjs';
 import { doubleSubmitKind } from './kind-double-submit.mjs';
+import { outOfOrderKind } from './kind-out-of-order.mjs';
 import { pageTimingKind } from './kind-page-timing.mjs';
 import { viewportKind } from './kind-viewport.mjs';
 import type { OpenApiDoc } from './openapi.mjs';
@@ -42,6 +43,7 @@ export function kindId(attack: Pick<PlannedAttack, 'kind' | 'timing' | 'fault'>)
 
 const MODULES: Partial<Record<KindId, KindModule>> = {
   'double-submit': doubleSubmitKind,
+  'out-of-order': outOfOrderKind,
   'page-timing': pageTimingKind,
   viewport: viewportKind,
 };
