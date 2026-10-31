@@ -1,7 +1,7 @@
 // The generic checks ticket 18 brings (spec part 5 sections 22.1 to 22.4):
 // no-uncaught-error, settles, visible-error-message and no-broken-text.
 
-import type { ControlFacts, FlowRunResult, RequestRecord, StepRecord } from './flowrun.mjs';
+import type { ControlFacts, FlowRunResult, PageEvent, PageTimingResult, RequestRecord, StepRecord } from './flowrun.mjs';
 import { escapeName } from './output.mjs';
 import { redactSecrets } from './secrets.mjs';
 
@@ -94,27 +94,106 @@ function settlesEvidence(step: StepRecord): string {
   return why.startsWith('not ready ') ? `${step.label}: ${why}` : `${step.label}: ${why} after ${Math.round(step.settleMs / 100) / 10} s`;
 }
 
+// The runner's own reload, back and forward steps (32.2). They share the entry
+// step's index, so the baseline run's step at that index is a different step.
+const runnerNavigation = (step: StepRecord): boolean => step.label === 'reload' || step.label.startsWith('go ');
+
+// no-uncaught-error, settles and no-broken-text (22.3) are judged only here: for
+// every attack kind against its baseline run, and for a baseline run against nothing.
+type Compared = Pick<FlowRunResult, 'pageEvents' | 'steps'>;
+const NOTHING: Compared = { pageEvents: [], steps: [] };
+
+// What an attack kind changes about those three checks.
+interface Adjustments {
+  // Page events the kind expects, which never count for no-uncaught-error (22.4 check 1).
+  ignoreEvent?: (event: PageEvent) => boolean;
+  // A failure no-uncaught-error reports ahead of any page event.
+  leadingError?: string | null;
+  // Steps settles judges even where the baseline run's step at the same index did not settle.
+  ownStep?: (step: StepRecord) => boolean;
+  // A Pending hang (22.3): settles is not evaluated, and the verdict is pending unless a check failed.
+  pending?: boolean;
+}
+
+// Anything the baseline run didn't have at the same step.
+function uncaughtError(run: FlowRunResult, baseline: Compared, adjust: Adjustments): PageEvent | undefined {
+  const known = new Set(baseline.pageEvents.map((e) => `${e.step}|${e.text}`));
+  return run.pageEvents.find((e) => !known.has(`${e.step}|${e.text}`) && !adjust.ignoreEvent?.(e));
+}
+
+// An action step that did not settle where the baseline run's same step did.
+function unsettledStep(run: FlowRunResult, baseline: Compared, adjust: Adjustments): StepRecord | undefined {
+  return run.steps.find((s) => s.settled === false && (adjust.ownStep?.(s) || baseline.steps.find((b) => b.index === s.index)?.settled !== false));
+}
+
+// A broken line no baseline step showed.
+function brokenText(run: FlowRunResult, baseline: Compared): { step: StepRecord; token: string } | null {
+  const baselineLines = new Set(baseline.steps.flatMap(linesOf));
+  const fills = fillValues(run);
+  for (const step of run.steps) {
+    const broken = brokenTextIn(linesOf(step), fills, baselineLines);
+    if (broken) return { step, token: broken.token };
+  }
+  return null;
+}
+
 // Checks that already fail in a baseline run: reported once as `fails with no
 // attack` and skipped on that flow's attacks.
 export function baselineFailures(run: FlowRunResult): { id: CheckId; step: number; page: string | null }[] {
   const out: { id: CheckId; step: number; page: string | null }[] = [];
-  const firstEvent = run.pageEvents[0];
-  if (firstEvent) out.push({ id: 'no-uncaught-error', step: firstEvent.step, page: run.steps.find((s) => s.index === firstEvent.step)?.path ?? null });
-  const unsettled = run.steps.find((s) => s.settled === false);
+  const error = uncaughtError(run, NOTHING, {});
+  if (error) out.push({ id: 'no-uncaught-error', step: error.step, page: run.steps.find((s) => s.index === error.step)?.path ?? null });
+  const unsettled = unsettledStep(run, NOTHING, {});
   if (unsettled) out.push({ id: 'settles', step: unsettled.index, page: unsettled.path });
-  const fills = fillValues(run);
-  for (const step of run.steps) {
-    if (brokenTextIn(linesOf(step), fills, new Set())) {
-      out.push({ id: 'no-broken-text', step: step.index, page: step.path });
-      break;
-    }
-  }
+  const broken = brokenText(run, NOTHING);
+  if (broken) out.push({ id: 'no-broken-text', step: broken.step.index, page: broken.step.path });
   return out;
 }
 
 export interface Judged {
   verdict: 'passed' | 'failed' | 'void' | 'fault-never-fired' | 'not-applied' | 'pending' | 'inconclusive';
   checks: CheckResult[];
+}
+
+// One attack's check results. A check that fails in the baseline run reads
+// skipped-baseline instead; one that does not apply reads not-evaluated.
+function checkList(skipped: Set<string>) {
+  const checks: CheckResult[] = [];
+  const push = (id: CheckId, fail: string | null, token?: string) => {
+    if (skipped.has(id)) checks.push({ id, result: 'skipped-baseline', evidence: 'fails with no attack' });
+    else checks.push({ id, result: fail === null ? 'pass' : 'fail', evidence: evidence(fail ?? 'ok'), ...(token ? { token } : {}) });
+  };
+  const notEvaluated = (id: CheckId, why: string) => checks.push({ id, result: 'not-evaluated', evidence: evidence(why) });
+  return { checks, push, notEvaluated };
+}
+
+interface Kind {
+  // The verdict when the kind's attack did not happen as planned. A void flow run comes first.
+  gate: Judged['verdict'] | null;
+  adjust?: Adjustments;
+  // The order the kind lists its checks in, the three generic ones included.
+  order: CheckId[];
+  // The kind's own checks.
+  own?: (list: ReturnType<typeof checkList>) => void;
+}
+
+function judgeAttack(run: FlowRunResult, baseline: FlowRunResult, skipped: Set<string>, kind: Kind): Judged {
+  if (run.voided) return { verdict: 'void', checks: [] };
+  if (kind.gate !== null) return { verdict: kind.gate, checks: [] };
+  const adjust = kind.adjust ?? {};
+  const list = checkList(skipped);
+  const error = uncaughtError(run, baseline, adjust);
+  list.push('no-uncaught-error', adjust.leadingError ?? (error ? `${error.kind}: ${error.text}` : null));
+  if (adjust.pending) list.notEvaluated('settles', 'pending hang');
+  else {
+    const unsettled = unsettledStep(run, baseline, adjust);
+    list.push('settles', unsettled ? settlesEvidence(unsettled) : null);
+  }
+  const broken = brokenText(run, baseline);
+  list.push('no-broken-text', broken ? `"${broken.token}" in a new line` : null, broken?.token);
+  kind.own?.(list);
+  const checks = list.checks.sort((a, b) => kind.order.indexOf(a.id as CheckId) - kind.order.indexOf(b.id as CheckId));
+  return { verdict: checks.some((c) => c.result === 'fail') ? 'failed' : adjust.pending ? 'pending' : 'passed', checks };
 }
 
 // A told failure: the page got an error it can report. malformed-json, empty-200
@@ -129,76 +208,52 @@ export function toldFault(fault: string, state: NonNullable<FlowRunResult['fault
 
 // Judges one fault attack's flow run against the flow's baseline run.
 export function judgeFault(attackRun: FlowRunResult, baseline: FlowRunResult, attackedStep: number, skipped: Set<string>, fault = '500'): Judged {
-  if (attackRun.voided) return { verdict: 'void', checks: [] };
-  if (!attackRun.fault?.fired) return { verdict: 'fault-never-fired', checks: [] };
-  if (attackRun.fault.notApplied !== null) return { verdict: 'not-applied', checks: [] };
-  const pending = attackRun.fault.pending;
-  const told = toldFault(fault, attackRun.fault);
-  const checks: CheckResult[] = [];
-  const push = (id: CheckId, fail: string | null, token?: string) => {
-    if (skipped.has(id)) checks.push({ id, result: 'skipped-baseline', evidence: 'fails with no attack' });
-    else checks.push({ id, result: fail === null ? 'pass' : 'fail', evidence: evidence(fail ?? 'ok'), ...(token ? { token } : {}) });
-  };
-  const notEvaluated = (id: CheckId, why: string) => checks.push({ id, result: 'not-evaluated', evidence: evidence(why) });
-
-  // no-uncaught-error: anything the baseline run didn't have at the same step.
-  const known = new Set(baseline.pageEvents.map((e) => `${e.step}|${e.text}`));
-  const fresh = attackRun.pageEvents.find((e) => !known.has(`${e.step}|${e.text}`));
-  push('no-uncaught-error', fresh ? `${fresh.kind}: ${fresh.text}` : null);
-
-  // settles: every action step of the attack settles within S of its last fault event.
-  const unsettled = attackRun.steps.find((s) => s.settled === false && baseline.steps.find((b) => b.index === s.index)?.settled !== false);
-  if (pending) notEvaluated('settles', 'pending hang');
-  else push('settles', unsettled ? `${unsettled.label}: ${unsettled.observation?.unsettled ?? 'did not settle'} after ${Math.round(unsettled.settleMs / 100) / 10} s` : null);
-
-  // visible-error-message: a told failure (500 or reset, sticky so never absorbed)
-  // must show something new from the failed response until the window ends.
-  const step = attackRun.steps.find((s) => s.index === attackedStep);
-  const firedAt = attackRun.fault.firedAt ?? 0;
-  const o = step?.observation;
-  let message: string | null = 'no new visible text after the failed request';
-  if (o) {
-    const before = new Set([...o.before.lines, ...o.before.live]);
-    const typed = fillValues(attackRun);
-    const labels = new Set([...o.before.labels, ...o.after.labels]);
-    const after = o.samples.filter((x) => x.at >= firedAt);
-    const newLine = after.flatMap((x) => [...x.live, ...x.lines]).find((l) => !before.has(l) && !labels.has(l) && !typed.some((v) => l === v));
-    const dialog = attackRun.dialogs.length > 0;
-    // Navigation to another page counts, as after a 401 that moves to sign-in.
-    const previous = pathBefore(attackRun, attackedStep);
-    const moved = previous !== null && step.path !== null && step.path !== previous;
-    if (newLine || dialog || moved) message = null;
-  }
-  if (pending) notEvaluated('visible-error-message', 'pending hang');
-  else if (attackRun.fault.absorbed) notEvaluated('visible-error-message', 'a client retry absorbed the one-shot fault');
-  else if (!told) notEvaluated('visible-error-message', 'the fault delivered a 2xx');
-  else push('visible-error-message', message);
-  // values-survive (22.4 check 6): after a told failure on a click submit step.
-  if (pending) notEvaluated('values-survive', 'pending hang');
-  else if (!told || attackRun.values === null) notEvaluated('values-survive', told ? 'not a click submit step' : 'the fault was not told');
-  else {
-    const lost = attackRun.values.find((v) => !v.password && v.after !== null && v.before !== null && v.before.trim() !== v.after.trim());
-    push('values-survive', lost ? `${lost.field} held "${lost.before}", then "${lost.after}" after the failed request` : null);
-  }
-
-  // no-broken-text, against every line any baseline step showed.
-  const baselineLines = new Set(baseline.steps.flatMap(linesOf));
-  const fills = fillValues(attackRun);
-  let broken: { line: string; token: string } | null = null;
-  for (const s of attackRun.steps) {
-    broken = brokenTextIn(linesOf(s), fills, baselineLines);
-    if (broken) break;
-  }
-  push('no-broken-text', broken ? `"${broken.token}" in a new line` : null, broken?.token);
-
-  // retry-recovers (22.4 check 8): after a told, unabsorbed 500, 400, 429 or
-  // reset, or a hang or delay-3s the page gave up on.
-  const recoverable = told && !attackRun.fault.absorbed && (['500', '400', '429', 'reset'].includes(fault) || ((fault === 'hang' || fault === 'delay-3s') && attackRun.fault.givenUp));
-  if (pending) notEvaluated('retry-recovers', 'pending hang');
-  else if (!recoverable || attackRun.recovery === null) notEvaluated('retry-recovers', 'no recovery after this fault');
-  else push('retry-recovers', attackRun.recovery.passed ? null : (attackRun.recovery.detail ?? 'the flow did not reach its goal'));
-
-  return { verdict: checks.some((c) => c.result === 'fail') ? 'failed' : pending ? 'pending' : 'passed', checks };
+  const state = attackRun.fault;
+  const pending = state?.pending ?? false;
+  return judgeAttack(attackRun, baseline, skipped, {
+    gate: !state?.fired ? 'fault-never-fired' : state.notApplied !== null ? 'not-applied' : null,
+    adjust: { pending },
+    order: ['no-uncaught-error', 'settles', 'visible-error-message', 'values-survive', 'no-broken-text', 'retry-recovers'],
+    own: ({ push, notEvaluated }) => {
+      const f = state!;
+      const told = toldFault(fault, f);
+      // visible-error-message: a told failure (500 or reset, sticky so never absorbed)
+      // must show something new from the failed response until the window ends.
+      const step = attackRun.steps.find((s) => s.index === attackedStep);
+      const firedAt = f.firedAt ?? 0;
+      const o = step?.observation;
+      let message: string | null = 'no new visible text after the failed request';
+      if (o) {
+        const before = new Set([...o.before.lines, ...o.before.live]);
+        const typed = fillValues(attackRun);
+        const labels = new Set([...o.before.labels, ...o.after.labels]);
+        const after = o.samples.filter((x) => x.at >= firedAt);
+        const newLine = after.flatMap((x) => [...x.live, ...x.lines]).find((l) => !before.has(l) && !labels.has(l) && !typed.some((v) => l === v));
+        const dialog = attackRun.dialogs.length > 0;
+        // Navigation to another page counts, as after a 401 that moves to sign-in.
+        const previous = pathBefore(attackRun, attackedStep);
+        const moved = previous !== null && step.path !== null && step.path !== previous;
+        if (newLine || dialog || moved) message = null;
+      }
+      if (pending) notEvaluated('visible-error-message', 'pending hang');
+      else if (f.absorbed) notEvaluated('visible-error-message', 'a client retry absorbed the one-shot fault');
+      else if (!told) notEvaluated('visible-error-message', 'the fault delivered a 2xx');
+      else push('visible-error-message', message);
+      // values-survive (22.4 check 6): after a told failure on a click submit step.
+      if (pending) notEvaluated('values-survive', 'pending hang');
+      else if (!told || attackRun.values === null) notEvaluated('values-survive', told ? 'not a click submit step' : 'the fault was not told');
+      else {
+        const lost = attackRun.values.find((v) => !v.password && v.after !== null && v.before !== null && v.before.trim() !== v.after.trim());
+        push('values-survive', lost ? `${lost.field} held "${lost.before}", then "${lost.after}" after the failed request` : null);
+      }
+      // retry-recovers (22.4 check 8): after a told, unabsorbed 500, 400, 429 or
+      // reset, or a hang or delay-3s the page gave up on.
+      const recoverable = told && !f.absorbed && (['500', '400', '429', 'reset'].includes(fault) || ((fault === 'hang' || fault === 'delay-3s') && f.givenUp));
+      if (pending) notEvaluated('retry-recovers', 'pending hang');
+      else if (!recoverable || attackRun.recovery === null) notEvaluated('retry-recovers', 'no recovery after this fault');
+      else push('retry-recovers', attackRun.recovery.passed ? null : (attackRun.recovery.detail ?? 'the flow did not reach its goal'));
+    },
+  });
 }
 
 // The viewport attack (22.3, check 9): the flow run at 375 x 800, judged by
@@ -206,27 +261,12 @@ export function judgeFault(attackRun: FlowRunResult, baseline: FlowRunResult, at
 // step is the first step after which overflow was measured.
 export function judgeViewport(run: FlowRunResult, baseline: FlowRunResult, skipped: Set<string>): Judged & { step: number | null } {
   const overflowing = run.steps.find((s) => (s.overflowPx ?? 0) > 1) ?? null;
-  if (run.voided) return { verdict: 'void', checks: [], step: overflowing?.index ?? null };
-  const checks: CheckResult[] = [];
-  const push = (id: CheckId, fail: string | null, token?: string) => {
-    if (skipped.has(id)) checks.push({ id, result: 'skipped-baseline', evidence: 'fails with no attack' });
-    else checks.push({ id, result: fail === null ? 'pass' : 'fail', evidence: evidence(fail ?? 'ok'), ...(token ? { token } : {}) });
-  };
-  const known = new Set(baseline.pageEvents.map((e) => `${e.step}|${e.text}`));
-  const fresh = run.pageEvents.find((e) => !known.has(`${e.step}|${e.text}`));
-  push('no-uncaught-error', fresh ? `${fresh.kind}: ${fresh.text}` : null);
-  const unsettled = run.steps.find((s) => s.settled === false && baseline.steps.find((b) => b.index === s.index)?.settled !== false);
-  push('settles', unsettled ? `${unsettled.label}: ${unsettled.observation?.unsettled ?? 'did not settle'} after ${Math.round(unsettled.settleMs / 100) / 10} s` : null);
-  const baselineLines = new Set(baseline.steps.flatMap(linesOf));
-  const fills = fillValues(run);
-  let broken: { line: string; token: string } | null = null;
-  for (const s of run.steps) {
-    broken = brokenTextIn(linesOf(s), fills, baselineLines);
-    if (broken) break;
-  }
-  push('no-broken-text', broken ? `"${broken.token}" in a new line` : null, broken?.token);
-  push('no-overflow-375', overflowing ? `${overflowing.path ?? 'the page'} is ${overflowing.overflowPx} px wider than the 375 px viewport after ${overflowing.label}` : null);
-  return { verdict: checks.some((c) => c.result === 'fail') ? 'failed' : 'passed', checks, step: overflowing?.index ?? null };
+  const judged = judgeAttack(run, baseline, skipped, {
+    gate: null,
+    order: ['no-uncaught-error', 'settles', 'no-broken-text', 'no-overflow-375'],
+    own: ({ push }) => push('no-overflow-375', overflowing ? `${overflowing.path ?? 'the page'} is ${overflowing.overflowPx} px wider than the 375 px viewport after ${overflowing.label}` : null),
+  });
+  return { ...judged, step: overflowing?.index ?? null };
 }
 
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -281,28 +321,11 @@ export function oneWrite(run: FlowRunResult, baseline: FlowRunResult, step: numb
 
 // A double-submit attack (32.8): one-write, no-uncaught-error, settles and no-broken-text.
 export function judgeTiming(run: FlowRunResult, baseline: FlowRunResult, step: number, skipped: Set<string>, ownHost: (url: string) => boolean): Judged {
-  if (run.voided) return { verdict: 'void', checks: [] };
-  if (run.timing === null) return { verdict: 'fault-never-fired', checks: [] };
-  const checks: CheckResult[] = [];
-  const push = (id: CheckId, fail: string | null, token?: string) => {
-    if (skipped.has(id)) checks.push({ id, result: 'skipped-baseline', evidence: 'fails with no attack' });
-    else checks.push({ id, result: fail === null ? 'pass' : 'fail', evidence: evidence(fail ?? 'ok'), ...(token ? { token } : {}) });
-  };
-  push('one-write', oneWrite(run, baseline, step, ownHost));
-  const known = new Set(baseline.pageEvents.map((e) => `${e.step}|${e.text}`));
-  const fresh = run.pageEvents.find((e) => !known.has(`${e.step}|${e.text}`));
-  push('no-uncaught-error', fresh ? `${fresh.kind}: ${fresh.text}` : null);
-  const unsettled = run.steps.find((x) => x.settled === false && baseline.steps.find((b) => b.index === x.index)?.settled !== false);
-  push('settles', unsettled ? `${unsettled.label}: ${unsettled.observation?.unsettled ?? 'did not settle'} after ${Math.round(unsettled.settleMs / 100) / 10} s` : null);
-  const baselineLines = new Set(baseline.steps.flatMap(linesOf));
-  const fills = fillValues(run);
-  let broken: { line: string; token: string } | null = null;
-  for (const x of run.steps) {
-    broken = brokenTextIn(linesOf(x), fills, baselineLines);
-    if (broken) break;
-  }
-  push('no-broken-text', broken ? `"${broken.token}" in a new line` : null, broken?.token);
-  return { verdict: checks.some((c) => c.result === 'fail') ? 'failed' : 'passed', checks };
+  return judgeAttack(run, baseline, skipped, {
+    gate: run.timing === null ? 'fault-never-fired' : null,
+    order: ['one-write', 'no-uncaught-error', 'settles', 'no-broken-text'],
+    own: ({ push }) => push('one-write', oneWrite(run, baseline, step, ownHost)),
+  });
 }
 
 function pathBefore(run: FlowRunResult, step: number): string | null {
@@ -320,136 +343,90 @@ export function leadCheck(checks: CheckResult[]): CheckResult | null {
 // A bad-input attack (21.10, 21.11): the four checks every bad input gets, then
 // visible-error-message, values-survive and retry-recovers after a refusal.
 export function judgeBadInput(run: FlowRunResult, baseline: FlowRunResult, submitStep: number, skipped: Set<string>): Judged {
-  if (run.voided) return { verdict: 'void', checks: [] };
   const r = run.badInput;
-  if (!r || r.notApplied !== null) return { verdict: 'not-applied', checks: [] };
-  if (r.outcome === null) return { verdict: 'void', checks: [] };
-  if (r.outcome === 'inconclusive') return { verdict: 'inconclusive', checks: [] };
-  const checks: CheckResult[] = [];
-  const push = (id: CheckId, fail: string | null, token?: string) => {
-    if (skipped.has(id)) checks.push({ id, result: 'skipped-baseline', evidence: 'fails with no attack' });
-    else checks.push({ id, result: fail === null ? 'pass' : 'fail', evidence: evidence(fail ?? 'ok'), ...(token ? { token } : {}) });
-  };
-  const notEvaluated = (id: CheckId, why: string) => checks.push({ id, result: 'not-evaluated', evidence: evidence(why) });
-  const known = new Set(baseline.pageEvents.map((e) => `${e.step}|${e.text}`));
-  const fresh = run.pageEvents.find((e) => !known.has(`${e.step}|${e.text}`));
-  push('no-uncaught-error', fresh ? `${fresh.kind}: ${fresh.text}` : null);
-  const unsettled = run.steps.find((x) => x.settled === false && baseline.steps.find((b) => b.index === x.index)?.settled !== false);
-  push('settles', unsettled ? `${unsettled.label}: ${unsettled.observation?.unsettled ?? 'did not settle'} after ${Math.round(unsettled.settleMs / 100) / 10} s` : null);
-  const baselineLines = new Set(baseline.steps.flatMap(linesOf));
-  const fills = fillValues(run);
-  let broken: { line: string; token: string } | null = null;
-  for (const x of run.steps) {
-    broken = brokenTextIn(linesOf(x), fills, baselineLines);
-    if (broken) break;
-  }
-  push('no-broken-text', broken ? `"${broken.token}" in a new line` : null, broken?.token);
-  const c = r.carrying;
-  push('no-5xx-on-bad-input', r.outcome === 'crashed'
-    ? `${c ? `${c.method} ${c.path}` : 'a request'} answered ${c?.status ?? 'no response'} after the bad input`
-    : null);
-  // A refusal is outcomes 3 to 6; an accepted input followed by a failing step
-  // that shows a new message with the values intact counts as blocked by the app.
-  const valuesLost = r.reference.find((ref, i) => {
-    const now = r.after[i];
-    return !ref.password && ref.value !== null && now?.value !== null && now !== undefined && ref.value.trim() !== now.value!.trim();
+  return judgeAttack(run, baseline, skipped, {
+    gate: !r || r.notApplied !== null ? 'not-applied' : r.outcome === null ? 'void' : r.outcome === 'inconclusive' ? 'inconclusive' : null,
+    order: ['no-uncaught-error', 'settles', 'no-broken-text', 'no-5xx-on-bad-input', 'visible-error-message', 'values-survive', 'retry-recovers'],
+    own: ({ push, notEvaluated }) => {
+      const b = r!;
+      const c = b.carrying;
+      push('no-5xx-on-bad-input', b.outcome === 'crashed'
+        ? `${c ? `${c.method} ${c.path}` : 'a request'} answered ${c?.status ?? 'no response'} after the bad input`
+        : null);
+      // A refusal is outcomes 3 to 6; an accepted input followed by a failing step
+      // that shows a new message with the values intact counts as blocked by the app.
+      const valuesLost = b.reference.find((ref, i) => {
+        const now = b.after[i];
+        return !ref.password && ref.value !== null && now?.value !== null && now !== undefined && ref.value.trim() !== now.value!.trim();
+      });
+      const refused = ['rejected', 'blocked-by-browser', 'blocked-by-app', 'silent-refusal'].includes(b.outcome!);
+      if (refused) {
+        if (b.outcome === 'silent-refusal') push('visible-error-message', 'the submit ran, nothing was sent and no message appeared');
+        else if (b.outcome === 'rejected') {
+          const step = run.steps.find((x) => x.index === submitStep);
+          const o = step?.observation;
+          const before = new Set(b.linesBefore);
+          const typed = new Set(fillValues(run));
+          const shown = o ? [...o.samples.flatMap((x) => [...x.live, ...x.lines]), ...o.after.lines].some((l) => !before.has(l) && !typed.has(l) && !o.after.labels.includes(l)) : false;
+          push('visible-error-message', shown || run.dialogs.length > 0 ? null : `no new visible text after ${c ? `${c.method} ${c.path}` : 'the submit'} answered ${c?.status ?? 'nothing'}`);
+        } else push('visible-error-message', null);
+        // Lengths only: a bad value never reaches a report (21.12).
+        if (b.reference.length > 0) push('values-survive', valuesLost ? `${valuesLost.field} held ${valuesLost.value!.length} chars before the submit, then ${b.after[b.reference.indexOf(valuesLost)]?.value?.length ?? 0}` : null);
+        else notEvaluated('values-survive', 'not a click or press submit');
+        if (run.recovery) push('retry-recovers', run.recovery.passed ? null : (run.recovery.detail ?? 'the flow did not reach its goal'));
+        else notEvaluated('retry-recovers', 'no recovery ran');
+      } else {
+        for (const id of ['visible-error-message', 'values-survive', 'retry-recovers'] as const) notEvaluated(id, `outcome ${b.outcome}`);
+      }
+    },
   });
-  const refused = ['rejected', 'blocked-by-browser', 'blocked-by-app', 'silent-refusal'].includes(r.outcome);
-  if (refused) {
-    if (r.outcome === 'silent-refusal') push('visible-error-message', 'the submit ran, nothing was sent and no message appeared');
-    else if (r.outcome === 'rejected') {
-      const step = run.steps.find((x) => x.index === submitStep);
-      const o = step?.observation;
-      const before = new Set(r.linesBefore);
-      const typed = new Set(fills);
-      const shown = o ? [...o.samples.flatMap((x) => [...x.live, ...x.lines]), ...o.after.lines].some((l) => !before.has(l) && !typed.has(l) && !o.after.labels.includes(l)) : false;
-      push('visible-error-message', shown || run.dialogs.length > 0 ? null : `no new visible text after ${c ? `${c.method} ${c.path}` : 'the submit'} answered ${c?.status ?? 'nothing'}`);
-    } else push('visible-error-message', null);
-    // Lengths only: a bad value never reaches a report (21.12).
-    if (r.reference.length > 0) push('values-survive', valuesLost ? `${valuesLost.field} held ${valuesLost.value!.length} chars before the submit, then ${r.after[r.reference.indexOf(valuesLost)]?.value?.length ?? 0}` : null);
-    else notEvaluated('values-survive', 'not a click or press submit');
-    if (run.recovery) push('retry-recovers', run.recovery.passed ? null : (run.recovery.detail ?? 'the flow did not reach its goal'));
-    else notEvaluated('retry-recovers', 'no recovery ran');
-  } else {
-    for (const id of ['visible-error-message', 'values-survive', 'retry-recovers'] as const) notEvaluated(id, `outcome ${r.outcome}`);
-  }
-  return { verdict: checks.some((x) => x.result === 'fail') ? 'failed' : 'passed', checks };
 }
 
 // out-of-order (33.2): latest-response-wins through (a), (b) or (c), plus
 // no-uncaught-error (an AbortError after the page aborted the held request
 // doesn't count), settles and no-broken-text.
 export function judgeOutOfOrder(run: FlowRunResult, baseline: FlowRunResult, step: number, skipped: Set<string>): Judged {
-  if (run.voided) return { verdict: 'void', checks: [] };
   const r = run.outOfOrder;
-  if (!r || r.notApplied !== null) return { verdict: 'not-applied', checks: [] };
-  const checks: CheckResult[] = [];
-  const push = (id: CheckId, fail: string | null, token?: string) => {
-    if (skipped.has(id)) checks.push({ id, result: 'skipped-baseline', evidence: 'fails with no attack' });
-    else checks.push({ id, result: fail === null ? 'pass' : 'fail', evidence: evidence(fail ?? 'ok'), ...(token ? { token } : {}) });
-  };
-  let latest: string | null = null;
-  const o = run.steps.find((x) => x.index === step)?.observation;
-  if (r.olderOnly && r.newerOnly && o && r.releasedAt !== null) {
-    const after = o.samples.filter((x) => x.at >= r.releasedAt!);
-    const shownAfter = [...after.flatMap((x) => x.lines), ...o.after.lines];
-    const visibleIn = (lines: string[], leaf: string) => lines.some((l) => l.includes(leaf));
-    const appeared = r.olderOnly.find((leaf) => !visibleIn(r.linesBefore, leaf) && visibleIn(shownAfter, leaf));
-    if (appeared) latest = `latest-response-wins: "${appeared}" from the older answer appeared after the newer one`;
-    else {
-      const gone = r.newerOnly.find((leaf) => visibleIn(r.linesBefore, leaf) && !visibleIn(o.after.lines, leaf));
-      if (gone) latest = `latest-response-wins: "${gone}" from the newer answer disappeared when the older one arrived`;
-    }
-  }
-  if (!latest && run.stoppedAt !== null && run.failure) {
-    latest = `latest-response-wins: step ${run.stoppedAt} failed after the older answer arrived: ${run.failure.message.split('\n')[0]}`;
-  }
-  push('latest-response-wins', latest);
-  const known = new Set(baseline.pageEvents.map((e) => `${e.step}|${e.text}`));
-  const fresh = run.pageEvents.find((e) => !known.has(`${e.step}|${e.text}`) && !(r.aborted && /AbortError/.test(e.text)));
-  push('no-uncaught-error', fresh ? `${fresh.kind}: ${fresh.text}` : null);
-  const unsettled = run.steps.find((x) => x.settled === false && baseline.steps.find((b) => b.index === x.index)?.settled !== false);
-  push('settles', unsettled ? `${unsettled.label}: ${unsettled.observation?.unsettled ?? 'did not settle'} after ${Math.round(unsettled.settleMs / 100) / 10} s` : null);
-  const baselineLines = new Set(baseline.steps.flatMap(linesOf));
-  const fills = fillValues(run);
-  let broken: { line: string; token: string } | null = null;
-  for (const x of run.steps) {
-    broken = brokenTextIn(linesOf(x), fills, baselineLines);
-    if (broken) break;
-  }
-  push('no-broken-text', broken ? `"${broken.token}" in a new line` : null, broken?.token);
-  return { verdict: checks.some((x) => x.result === 'fail') ? 'failed' : 'passed', checks };
+  return judgeAttack(run, baseline, skipped, {
+    gate: !r || r.notApplied !== null ? 'not-applied' : null,
+    adjust: { ignoreEvent: (e) => !!r?.aborted && /AbortError/.test(e.text) },
+    order: ['latest-response-wins', 'no-uncaught-error', 'settles', 'no-broken-text'],
+    own: ({ push }) => {
+      const x = r!;
+      let latest: string | null = null;
+      const o = run.steps.find((s) => s.index === step)?.observation;
+      if (x.olderOnly && x.newerOnly && o && x.releasedAt !== null) {
+        const after = o.samples.filter((s) => s.at >= x.releasedAt!);
+        const shownAfter = [...after.flatMap((s) => s.lines), ...o.after.lines];
+        const visibleIn = (lines: string[], leaf: string) => lines.some((l) => l.includes(leaf));
+        const appeared = x.olderOnly.find((leaf) => !visibleIn(x.linesBefore, leaf) && visibleIn(shownAfter, leaf));
+        if (appeared) latest = `latest-response-wins: "${appeared}" from the older answer appeared after the newer one`;
+        else {
+          const gone = x.newerOnly.find((leaf) => visibleIn(x.linesBefore, leaf) && !visibleIn(o.after.lines, leaf));
+          if (gone) latest = `latest-response-wins: "${gone}" from the newer answer disappeared when the older one arrived`;
+        }
+      }
+      if (!latest && run.stoppedAt !== null && run.failure) {
+        latest = `latest-response-wins: step ${run.stoppedAt} failed after the older answer arrived: ${run.failure.message.split('\n')[0]}`;
+      }
+      push('latest-response-wins', latest);
+    },
+  });
 }
 
 // refresh, back and signed-out-reload (32.8): no-uncaught-error with the
-// document additions, settles and no-broken-text. Errors a baseline run's full
-// load of the same page template also got don't count.
+// document additions, settles with the runner's own steps, and no-broken-text.
+// Errors a baseline run's full load of the same page template also got don't count.
 export function judgePageTiming(run: FlowRunResult, baseline: FlowRunResult, skipped: Set<string>, fullLoadErrors: string[]): Judged {
-  if (run.voided) return { verdict: 'void', checks: [] };
   const r = run.pageTiming;
-  if (!r || r.notApplied !== null) return { verdict: 'not-applied', checks: [] };
-  if (r.events.length === 0) return { verdict: 'fault-never-fired', checks: [] };
-  const checks: CheckResult[] = [];
-  const push = (id: CheckId, fail: string | null, token?: string) => {
-    if (skipped.has(id)) checks.push({ id, result: 'skipped-baseline', evidence: 'fails with no attack' });
-    else checks.push({ id, result: fail === null ? 'pass' : 'fail', evidence: evidence(fail ?? 'ok'), ...(token ? { token } : {}) });
-  };
-  const known = new Set([...baseline.pageEvents.map((e) => `${e.step}|${e.text}`)]);
   const expected = new Set(fullLoadErrors);
-  const fresh = run.pageEvents.find((e) => !known.has(`${e.step}|${e.text}`) && !expected.has(e.text));
-  const doc = r.documentStatus !== null && r.documentStatus >= 500 && !expected.has(`document ${r.documentStatus}`) ? `the document answered ${r.documentStatus} after the runner's navigation`
-    : r.navigationError && !expected.has(r.navigationError) ? `the navigation failed with ${r.navigationError}`
+  const documentError = (p: PageTimingResult): string | null =>
+    p.documentStatus !== null && p.documentStatus >= 500 && !expected.has(`document ${p.documentStatus}`) ? `the document answered ${p.documentStatus} after the runner's navigation`
+    : p.navigationError && !expected.has(p.navigationError) ? `the navigation failed with ${p.navigationError}`
     : null;
-  push('no-uncaught-error', doc ?? (fresh ? `${fresh.kind}: ${fresh.text}` : null));
-  const unsettled = run.steps.find((x) => x.settled === false && (x.label === 'reload' || x.label.startsWith('go ') || baseline.steps.find((b) => b.index === x.index)?.settled !== false));
-  push('settles', unsettled ? settlesEvidence(unsettled) : null);
-  const baselineLines = new Set(baseline.steps.flatMap(linesOf));
-  const fills = fillValues(run);
-  let broken: { line: string; token: string } | null = null;
-  for (const x of run.steps) {
-    broken = brokenTextIn(linesOf(x), fills, baselineLines);
-    if (broken) break;
-  }
-  push('no-broken-text', broken ? `"${broken.token}" in a new line` : null, broken?.token);
-  return { verdict: checks.some((x) => x.result === 'fail') ? 'failed' : 'passed', checks };
+  return judgeAttack(run, baseline, skipped, {
+    gate: !r || r.notApplied !== null ? 'not-applied' : r.events.length === 0 ? 'fault-never-fired' : null,
+    adjust: { ignoreEvent: (e) => expected.has(e.text), leadingError: r ? documentError(r) : null, ownStep: runnerNavigation },
+    order: ['no-uncaught-error', 'settles', 'no-broken-text'],
+  });
 }
