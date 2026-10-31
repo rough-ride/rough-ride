@@ -6,18 +6,18 @@
 import type { AttackLink } from './accounting.mjs';
 import { fieldKind, requestKey, type BadInputPlan } from './badinputs.mjs';
 import { judgeAppChecks, matchesWhen, probeFor, type AppCheck } from './appchecks.mjs';
-import { baselineFailures, checkLabel, checkSeverity, judgeBadInput, judgeFault, judgeOutOfOrder, judgePageTiming, judgeTiming, judgeViewport, leadCheck, TOGGLE_HINT, type CheckResult } from './checks.mjs';
+import { baselineFailures, checkLabel, checkSeverity, judgeBadInput, judgeFault, judgeOutOfOrder, judgePageTiming, judgeTiming, leadCheck, TOGGLE_HINT, type CheckResult } from './checks.mjs';
 import { SEVERITY_TEXT, type Group } from './groups.mjs';
 import { LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
 import { membersText } from './summary.mjs';
 import { attackId, emptyForm, FAULT_PHRASE, isJsonMedia, kindsFor, responseSchema, type BodyKind, type FaultId } from './faults.mjs';
 import type { Form } from './forms.mjs';
 import { describeLocator, isFrameworkInternal, runFlow, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type RequestRecord, type RunFlowOptions, type Served } from './flowrun.mjs';
+import { kindFor } from './kinds.mjs';
 import { matchTemplate, type OpenApiDoc } from './openapi.mjs';
 
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-export const VIEWPORT = { width: 375, height: 800 };
 const VIEWPORT_RANK = 7;
 
 export interface PlannedAttack {
@@ -477,6 +477,10 @@ async function runJudged(
     return keyed ? `${method} ${keyed.template}` : null;
   };
   const skipped = new Set<string>(baselineFailures(baseline).map((f) => f.id));
+  const kind = kindFor(attack);
+  if (kind) {
+    return kind.run(attack, { flow, baseline, options: { ...base, flow, templateOf, pollingKeys: pollingKeys(baseline) }, docs, skipped, control: (step) => controlOf(flow, step) });
+  }
   if (attack.kind === 'bad-input' && attack.badInput) {
     const b = attack.badInput;
     const pathOf = (url: string) => {
@@ -592,31 +596,14 @@ async function runJudged(
       run,
     };
   }
-  if (attack.kind === 'viewport' || attack.fault === null) {
-    const run = await runFlow({ ...base, flow, viewport: VIEWPORT, templateOf, pollingKeys: pollingKeys(baseline), shots: [] });
-    const judged = judgeViewport(run, baseline, skipped);
-    const step = judged.step ?? attack.step;
-    return {
-      ...attack,
-      step,
-      verdict: judged.verdict,
-      checks: judged.checks,
-      page: run.steps.find((s) => s.index === step)?.path ?? null,
-      control: 'viewport 375',
-      events: [],
-      voided: run.voided,
-      served: null,
-      notApplied: null,
-      givenUp: false,
-      run,
-    };
-  }
+  // kindFor took every attack without a fault.
+  const fault = attack.fault!;
   const { schema, doc } = responseSchema(docs, attack.template.split(' ')[0]!, attack.template);
   const run = await runFlow({
     ...base,
     flow,
     attack: {
-      fault: attack.fault,
+      fault,
       sticky: attack.sticky,
       template: attack.template,
       k: attack.k,
@@ -629,7 +616,7 @@ async function runJudged(
     baselineLabels: baseline.steps.find((s) => s.index === attack.step)?.observation?.after.labels ?? [],
     shots: [attack.step],
   });
-  const judged = judgeFault(run, baseline, attack.step, skipped, attack.fault);
+  const judged = judgeFault(run, baseline, attack.step, skipped, fault);
   return {
     ...attack,
     verdict: judged.verdict,

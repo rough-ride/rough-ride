@@ -157,6 +157,8 @@ export interface Judged {
 
 // One attack's check results. A check that fails in the baseline run reads
 // skipped-baseline instead; one that does not apply reads not-evaluated.
+export type CheckList = ReturnType<typeof checkList>;
+
 function checkList(skipped: Set<string>) {
   const checks: CheckResult[] = [];
   const push = (id: CheckId, fail: string | null, token?: string) => {
@@ -167,7 +169,8 @@ function checkList(skipped: Set<string>) {
   return { checks, push, notEvaluated };
 }
 
-interface Kind {
+// How one attack kind is judged: its gate, its adjustments to the generic checks and its own checks.
+export interface KindRules {
   // The attack kind, for a programmer error that names it.
   name: string;
   // The verdict when the kind's attack did not happen as planned. A void flow run comes first.
@@ -176,7 +179,7 @@ interface Kind {
   // The order the kind lists its checks in, the three generic ones included.
   order: CheckId[];
   // The kind's own checks.
-  own?: (list: ReturnType<typeof checkList>) => void;
+  own?: (list: CheckList) => void;
 }
 
 // The checks in the kind's declared order. A check the order leaves out is a
@@ -187,7 +190,7 @@ export function inKindOrder(kind: string, order: CheckId[], checks: CheckResult[
   return checks.sort((a, b) => order.indexOf(a.id as CheckId) - order.indexOf(b.id as CheckId));
 }
 
-function judgeAttack(run: FlowRunResult, baseline: FlowRunResult, skipped: Set<string>, kind: Kind): Judged {
+export function judgeAttack(run: FlowRunResult, baseline: FlowRunResult, skipped: Set<string>, kind: KindRules): Judged {
   if (run.voided) return { verdict: 'void', checks: [] };
   if (kind.gate !== null) return { verdict: kind.gate, checks: [] };
   const adjust = kind.adjust ?? {};
@@ -265,20 +268,6 @@ export function judgeFault(attackRun: FlowRunResult, baseline: FlowRunResult, at
       else push('retry-recovers', attackRun.recovery.passed ? null : (attackRun.recovery.detail ?? 'the flow did not reach its goal'));
     },
   });
-}
-
-// The viewport attack (22.3, check 9): the flow run at 375 x 800, judged by
-// no-uncaught-error, settles, no-broken-text and no-overflow-375. The judged
-// step is the first step after which overflow was measured.
-export function judgeViewport(run: FlowRunResult, baseline: FlowRunResult, skipped: Set<string>): Judged & { step: number | null } {
-  const overflowing = run.steps.find((s) => (s.overflowPx ?? 0) > 1) ?? null;
-  const judged = judgeAttack(run, baseline, skipped, {
-    name: 'viewport',
-    gate: null,
-    order: ['no-uncaught-error', 'settles', 'no-broken-text', 'no-overflow-375'],
-    own: ({ push }) => push('no-overflow-375', overflowing ? `${overflowing.path ?? 'the page'} is ${overflowing.overflowPx} px wider than the 375 px viewport after ${overflowing.label}` : null),
-  });
-  return { ...judged, step: overflowing?.index ?? null };
 }
 
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);

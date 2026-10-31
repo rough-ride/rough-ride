@@ -359,8 +359,8 @@ export interface RunFlowOptions {
   pollingKeys?: Set<string>;
   // Credential strings from the sign-in session (section 20.6).
   credentials?: string[];
-  // The viewport attack's plain 375 x 800 viewport; 1280 x 800 otherwise.
-  viewport?: { width: number; height: number };
+  // The attack kind this flow run applies, if any; see AttackKind.
+  kind?: AttackKind;
   // A timing attack: double-submit doubles this click or press step (32.3).
   timing?: { kind: 'double-submit'; step: number };
   // Fault recovery: control labels the baseline run showed after the attacked step (23.7).
@@ -389,6 +389,30 @@ export interface RunFlowOptions {
   // before a fault clears or a recovery starts, and once after the last step of a
   // run that completed every step. `locate` resolves ${unique} as the steps do.
   onPoint?: (page: Page, locate: (spec: LocatorSpec) => Locator, point: { step: number; end: boolean; recovery: boolean; requests: number; records: number }) => Promise<void>;
+}
+
+// An attack kind as the flow run engine sees it. The engine owns the step
+// queue, the recovery queue, settling and the Observation window, request
+// recording, routes and Not applied; a kind adds its own rules at fixed points.
+export interface AttackKind {
+  // The flow run's viewport; 1280 x 800 otherwise.
+  viewport?: { width: number; height: number };
+  // Called once the page and its instrumentation exist, before the first step.
+  start(engine: FlowRunEngine): KindHooks | Promise<KindHooks>;
+}
+
+// The points of a flow run where a kind's rules apply.
+export interface KindHooks {
+  // Whether to keep a screenshot of this step when its window ends, beyond the run's `shots`.
+  wantsShot?(after: Snapshot): boolean;
+  // Facts the kind adds to the step record when the step's window ends.
+  stepFacts?(after: Snapshot): Partial<StepRecord>;
+}
+
+// What the engine hands a kind: this flow run's result, page and primitives.
+export interface FlowRunEngine {
+  // The kind writes only its own slots.
+  readonly result: FlowRunResult;
 }
 
 export interface PageTimingResult {
@@ -563,7 +587,7 @@ const SNAPSHOT = `(() => {
   };
 })()`;
 
-interface Snapshot {
+export interface Snapshot {
   busy: boolean;
   busyWhat: string | null;
   disabled: string[];
@@ -752,7 +776,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
   const context = options.context ?? await options.browser.newContext({
     baseURL: options.baseURL,
     serviceWorkers: 'block',
-    viewport: options.viewport ?? { width: 1280, height: 800 },
+    viewport: options.kind?.viewport ?? { width: 1280, height: 800 },
     ...(options.pin ? { timezoneId: options.pin.timezone, locale: options.pin.locale } : {}),
     ...(options.storageState ? { storageState: options.storageState } : {}),
   });
@@ -1167,6 +1191,8 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       }
     });
   }
+  const engine: FlowRunEngine = { result };
+  const hooks: KindHooks = options.kind ? await options.kind.start(engine) : {};
   // Untrusted runs (44.5). A predicate matcher, so an attack's unroute('**/*') keeps it.
   if (options.untrusted) {
     // A path segment, with or without its extension, that an earlier response returned.
@@ -1618,8 +1644,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           : await settle(before, navigated ? Date.now() : windowFrom, ooo && index === ooo.step ? startedAt : windowFrom, samples);
         if (result.untrustedStop !== null) throw new StepError(result.untrustedStop);
         const pathAfter = pagePath(page.url());
-        const wantShot = options.shots === 'all' || (Array.isArray(options.shots) && options.shots.includes(index)) ||
-          (options.viewport && (settled.after.overflow ?? 0) > 1 && ![...result.steps].some((x) => (x.overflowPx ?? 0) > 1));
+        const wantShot = options.shots === 'all' || (Array.isArray(options.shots) && options.shots.includes(index)) || hooks.wantsShot?.(settled.after);
         if (wantShot && kind !== 'expect' && !isRecovery && !result.shots.has(index)) {
           const png = await page.screenshot({ mask: result.envFilled.map(locate), timeout: 5000 }).catch(() => null);
           if (png) result.shots.set(index, png);
@@ -1631,7 +1656,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           index, label, observation, settled: settled.settled, settleMs: settled.ms, path: pathAfter,
           ...(control ? { control } : {}),
           ...(filled !== undefined ? { value: filled } : {}),
-          ...(options.viewport ? { overflowPx: settled.after.overflow, innerWidth: settled.after.innerWidth } : {}),
+          ...hooks.stepFacts?.(settled.after),
           ...(fieldFacts.has(index) && !isRecovery ? { field: fieldFacts.get(index) } : {}),
         });
         if (options.onPoint) await options.onPoint(page, locate, { step: index, end: false, recovery: isRecovery, requests: result.requests.length, records: result.steps.length }).catch(() => {});

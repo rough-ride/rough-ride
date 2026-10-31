@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { baselineFailures, inKindOrder, judgeBadInput, judgeFault, judgeOutOfOrder, judgePageTiming, judgeTiming, judgeViewport } from '../dist/checks.mjs';
+import { baselineFailures, inKindOrder, judgeBadInput, judgeFault, judgeOutOfOrder, judgePageTiming, judgeTiming } from '../dist/checks.mjs';
+import { judgeViewport } from '../dist/kind-viewport.mjs';
 
 // Hand-built flow runs with just what judging reads; no browser.
 const snap = (lines = [], over = {}) => ({ lines, live: [], labels: [], ...over });
