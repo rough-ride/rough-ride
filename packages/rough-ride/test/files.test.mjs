@@ -8,8 +8,11 @@ import { StopError } from '../dist/exit.mjs';
 import { checkCommittedFiles } from '../dist/files.mjs';
 import { checkRootEntry } from '../dist/folder.mjs';
 import { compareVersions, configHeader, FORMATS } from '../dist/formats.mjs';
+import { Manifest } from '../dist/manifest.mjs';
 import { unifiedDiff } from '../dist/patch.mjs';
-import { gitRepo, sh } from './helpers.mjs';
+import { gitRepo, run, sh } from './helpers.mjs';
+
+const VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 
 const FIXTURES = fileURLToPath(new URL('./fixtures/formats/', import.meta.url));
 const PLACES = { config: ['config.yaml'], accepted: ['accepted.yaml'], flow: ['flows'], tests: ['tests'] };
@@ -163,6 +166,25 @@ test('an unknown YAML file is ignored with a note, or joins the stop when newer'
   const { stop } = check(root);
   assert.equal(stop.code, 'schema-newer');
   assert.equal(stop.lines[1], '  .rough-ride/budgets.yaml  schema: 0.9.0');
+});
+
+test('repro prints the files check\'s notes, as regress does', () => {
+  const root = gitRepo();
+  writeFileSync(path.join(root, 'README.md'), 'x\n');
+  mkdirSync(path.join(root, '.rough-ride', 'flows'), { recursive: true });
+  writeFileSync(path.join(root, '.rough-ride', 'flows', 'old.yml'), 'schema: 0.1.0\n');
+  sh(root, 'add', '-A');
+  sh(root, 'commit', '-qm', 'base');
+  const id = '20261025-141207-quick-k3fz';
+  const record = { runner: { version: VERSION }, flow: { name: 'f', parsed: { name: 'f', signedIn: false, steps: [{ goto: '/' }] } } };
+  mkdirSync(path.join(root, '.rough-ride', 'runs', id, 'repros'), { recursive: true });
+  writeFileSync(path.join(root, '.rough-ride', 'runs', id, 'repros', 'r01.json'), JSON.stringify(record));
+  new Manifest(root).recordRun(id, 'repros/r01.json', record);
+  const ignored = 'Ignored: .rough-ride/flows/old.yml (rough-ride reads only .yaml files; rename it to old.yaml).';
+  for (const args of [['regress'], ['repro', `${id}/r01`]]) {
+    const doc = JSON.parse(run([...args, '--json'], { cwd: root }).stdout);
+    assert.ok(doc.notes.some((n) => n.text === ignored), `${args[0]}: ${JSON.stringify(doc.notes)}`);
+  }
 });
 
 // A fixture format break: flows 0.2.0 renames a press step's `key` to `keys`.

@@ -104,7 +104,7 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
 
   const files = checkCommittedFiles(folder, { info, subcommand: 'repro', argv: ctx.argv, env: ctx.env });
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, mode: 'regress' });
-  ctx.notes.push(...prot.notes);
+  ctx.notes.push(...files.notes, ...prot.notes);
   const config = prot.config;
   const flows = prot.flows.map((f) => f.flow);
   // The flow's effective version (13.7), not the copy in the record.
