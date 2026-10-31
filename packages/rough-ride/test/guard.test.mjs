@@ -108,6 +108,30 @@ test('a popup, a cross-origin iframe and a worker are guarded from their first r
   for (const p of ['/from-popup', '/from-iframe', '/from-worker']) assert.ok(paths.includes(p), `${p} not aborted: ${paths}`);
 });
 
+test('a popup resumed by another connection before the guard attaches is still guarded, and its abort keeps its context', async () => {
+  // Playwright's own connection resumes popups; on a slow machine that beats
+  // the guard's per-target Fetch.enable (seen on GitHub's Windows runner).
+  const attach = guard.attach;
+  guard.attach = async function (params) {
+    await sleep(400);
+    return attach.call(this, params);
+  };
+  try {
+    remote.seen.length = 0;
+    guard.aborted.delete('POST remote.test /from-popup');
+    const result = await go([{ goto: '/popup' }, { expect: { text: 'opened' } }]);
+    assert.equal(result.passed, true);
+    await sleep(800);
+    assert.deepEqual(remote.seen, []);
+    const write = guard.aborted.get('POST remote.test /from-popup');
+    assert.ok(write, 'the popup write was aborted');
+    // Tied to the popup's browser context, so abortedIn() finds it for its run.
+    assert.equal(write.contexts.size, 1);
+  } finally {
+    guard.attach = attach;
+  }
+});
+
 test('a baseline run broken by an abort names the host and the setting that allows it', async () => {
   const result = await go([{ goto: '/broken' }, { click: { role: 'button', name: 'Pay' } }, { expect: { text: 'Paid' } }], { timeouts: { S: 1500 } });
   assert.equal(
