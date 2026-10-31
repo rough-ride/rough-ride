@@ -137,7 +137,7 @@ test('calls that name a run write only its adversary/summary.txt, the block as p
   assert.deepEqual(files(root, plan.runId).map((name) => [name, name.endsWith('.json') || name.endsWith('.txt') ? runFile(root, plan.runId, name) : null]), before);
 });
 
-test('stops: a tier stop names the run it made but writes no run files; regress names none', async () => {
+test('stops: a tier stop names the run it made and writes its summary files there; regress names none', async () => {
   const reset = 'reset: node -e "process.exit(1)"\n';
   const root = findingRepo({ config: reset });
   const stop = await call(root, ['quick']);
@@ -145,14 +145,17 @@ test('stops: a tier stop names the run it made but writes no run files; regress 
   assert.equal(stop.status, 'stopped');
   assert.match(stop.runId, /-quick-/);
   assert.match(stop.summaryLines[0], new RegExp(`^rough-ride quick \\| [\\d.]+s \\| run ${stop.runId} \\| stopped$`));
-  assert.deepEqual(files(root, stop.runId), ['diff.patch']);
+  assert.deepEqual(files(root, stop.runId), ['diff.patch', 'record.json', 'summary.json', 'summary.txt']);
+  assertSummaryFiles(root, stop);
+  assert.deepEqual(recordShape(root, stop), { added: ['environment'], missing: [], replaced: [] });
   // What the run reported before the stop: the protected comparison and the contract it detected.
   assert.deepEqual(keys(stop), DOCUMENT);
   assert.deepEqual([stop.protected, stop.protectedLines, stop.contract?.status], [[], [], 'missing']);
 
-  // Without summary.json the next tier run calls it unfinished.
+  // With its summary.json the next tier run doesn't call it unfinished.
   const again = await call(root, ['quick']);
-  assert.ok(again.notes.some((n) => n.id === 'unfinished-run' && n.text.includes(stop.runId)), JSON.stringify(again.notes));
+  assert.equal(again.stop.code, 'reset-failed');
+  assert.ok(!again.notes.some((n) => n.id === 'unfinished-run'), JSON.stringify(again.notes));
 
   const tested = findingRepo({ config: reset, tests: { 'save-500-000001': TEST } });
   const regress = await call(tested, ['regress']);
@@ -236,7 +239,35 @@ test('a stop reports what the run reported before it, and names the run it carri
   assert.equal(stopped.summaryLines[0], `rough-ride quick | 1.2s | run ${run.id} | stopped`);
   assert.deepEqual([stopped.status, stopped.exitCode, stopped.stop.code, stopped.runId], ['stopped', 78, 'reset-failed', run.id]);
   assert.deepEqual([stopped.protected, stopped.protectedLines, stopped.contract], [[], [], MISSING]);
-  assert.deepEqual(files(root, run.id), []);
+  assert.deepEqual(files(root, run.id), ['record.json', 'summary.json', 'summary.txt']);
+  assertSummaryFiles(root, stopped);
+  const record = JSON.parse(runFile(root, run.id, 'record.json'));
+  assert.deepEqual(record, { ...stopped, environment: record.environment });
+  assert.equal(record.environment.mode, 'terminal');
+});
+
+test("a stop's summary files are the block as printed, markers included, with the reset tail left out", () => {
+  const data = scratchDir();
+  const { root, run, seen, output } = inProcess(['quick', '--json', '--plugin-data', data]);
+  output.stop(makeStop('reset-failed', ['reset failed.', "(last 20 lines of reset's output: printed only)"]), { run, tail: ['secret tail line'] });
+  const printed = JSON.parse(seen.stdout);
+  assert.equal(printed.summaryLines[0], BLOCK_START);
+  assert.ok(seen.stderr.includes('secret tail line\n'));
+  assertSummaryFiles(root, printed);
+  assert.ok(!runFile(root, run.id, 'summary.txt').includes('secret tail line'));
+});
+
+test('a stop on a run named by --run, or with no run, writes no summary files', () => {
+  const attack = inProcess(['attack', '--run', '20261031-120000-quick-ab12', '--json']);
+  attack.output.namedRun(attack.run, true);
+  attack.output.stop(makeStop('reset-failed', ['reset failed.']), { run: attack.run });
+  assert.equal(attack.doc().runId, attack.run.id);
+  assert.deepEqual(files(attack.root, attack.run.id), []);
+
+  const early = inProcess(['quick', '--json']);
+  early.output.stop(makeStop('files-invalid', ['bad.']));
+  assert.equal(early.doc().runId, null);
+  assert.deepEqual(files(early.root, early.run.id), []);
 });
 
 test('a run-id stop never touches the run it refused', () => {

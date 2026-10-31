@@ -55,8 +55,9 @@ export interface RunOutput extends RunReport {
   // The run a --run call works in. `ownsFiles` (attack) also writes its run files there.
   namedRun(run: RunFolder, ownsFiles: boolean): void;
   finish(outcome: Outcome): void;
-  // A stop names the run it carries, so its block lands in that run (46.5); `tail`
-  // is reset or --start output, printed in place of the tail placeholder only.
+  // A stop names the run it carries, so its block lands in that run (46.5), and
+  // writes its summary files there unless --run named that run; `tail` is reset
+  // or --start output, printed in place of the tail placeholder only.
   stop(stop: Stop, options?: { run?: RunFolder | null; tail?: string[] | null }): void;
   // Writes the run's files and the stdout document, before the exit that ends
   // the browser and the --start children (51.13).
@@ -174,10 +175,13 @@ export function createRunOutput(options: RunOutputOptions): RunOutput {
     writeAtomic(folder, ['runs', run.id, 'summary.json'], canonicalJson(doc));
   };
 
+  // With a plugin data folder, every call ends its stdout with one summary block (37).
+  const asPrinted = (finish: Finish): Finish =>
+    args.pluginData !== null && finish.lines[0] !== BLOCK_START ? { ...finish, lines: [BLOCK_START, ...finish.lines, BLOCK_END] } : finish;
+
   const emit = (finish: Finish) => {
     if (interrupted) return;
-    // With a plugin data folder, every call ends its stdout with one summary block (37).
-    if (args.pluginData !== null && finish.lines[0] !== BLOCK_START) finish = { ...finish, lines: [BLOCK_START, ...finish.lines, BLOCK_END] };
+    finish = asPrinted(finish);
     const printed = finish.tail
       ? finish.lines.flatMap((line) => (line.startsWith(TAIL_PLACEHOLDER) ? capTail(finish.tail!, finish.lines) : [line]))
       : finish.lines;
@@ -243,7 +247,17 @@ export function createRunOutput(options: RunOutputOptions): RunOutput {
       }
       const { exitCode, status } = resolveExit({ stop });
       const header = headerLine(label ?? '', elapsed(), 'stopped', current?.id);
-      emit({ status: status!, exitCode, stop, lines: [header, ...stop.lines, ...runnerBlock(info)], tail });
+      const finish = asPrinted({ status: status!, exitCode, stop, lines: [header, ...stop.lines, ...runnerBlock(info)], tail });
+      // A run folder this invocation made gets the stop's summary files, so it
+      // never reads as unfinished (38); a run named by --run keeps its own.
+      if (run && root !== null && run.id !== named?.run.id && !RUN_ID_STOPS.has(stop.code)) {
+        try {
+          writeRunFiles(run, finish, { record: { environment: environmentRecord(env, info) } });
+        } catch {
+          // The run folder is gone; stdout still carries the summary.
+        }
+      }
+      emit(finish);
     },
     async interrupt(signal) {
       if (interrupted) return;
