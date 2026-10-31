@@ -18,7 +18,7 @@ import { runFlow, type Flow, type FlowRunResult } from './flowrun.mjs';
 import { allowedSuffix } from './guard.mjs';
 import { Manifest } from './manifest.mjs';
 import { fetchOpenApi, rekey, type OpenApiDoc } from './openapi.mjs';
-import { canonicalJson, formatDuration, type Note } from './output.mjs';
+import { formatDuration, type Note } from './output.mjs';
 import { capSections } from './summary.mjs';
 import { blockLines, blockWithHints, compareProtected, protectedJson, reportLines as protectedReport, summaryLines as protectedSummary } from './protected.mjs';
 import { ciMode, environmentRecord, followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
@@ -136,6 +136,8 @@ export interface RegressResult {
   run: RunFolder | null;
   lines: string[];
   document: Record<string, unknown>;
+  // record.json's fields beyond summary.json's, once a run folder exists.
+  record?: Record<string, unknown>;
   status: 'passed' | 'findings' | 'incomplete';
   exitCode: 0 | 1 | 2;
 }
@@ -334,6 +336,5 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
     meta: { startedAt, durationMs: Math.round(ctx.elapsed()), timings: { regressMs: Math.round(ctx.elapsed()) } },
   };
   // record.json adds the environment; summary.json does not carry it (38, 52.1).
-  writeAtomic(folder, ['runs', run.id, 'record.json'], canonicalJson({ ...document, environment: environmentRecord(ctx.env, info) }));
-  return { run, lines, document, status, exitCode };
+  return { run, lines, document, record: { environment: environmentRecord(ctx.env, info) }, status, exitCode };
 }

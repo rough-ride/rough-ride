@@ -88,16 +88,12 @@ test('finished runs: each subcommand leaves its run files, with summary.json equ
   assertSummaryFiles(root, quick);
   assert.deepEqual(recordShape(root, quick), TIER_RECORD);
 
-  // regress writes record.json itself: its document and the environment only.
+  // regress's record.json holds everything in summary.json, plus the environment.
   const regress = await call(root, ['regress']);
   assert.equal(regress.status, 'findings');
   assert.deepEqual(files(root, regress.runId), ['record.json', 'report.txt', 'summary.json', 'summary.txt']);
   assertSummaryFiles(root, regress);
-  assert.deepEqual(recordShape(root, regress), {
-    added: ['environment'],
-    missing: ['command', 'contract', 'cwd', 'diff', 'exitCode', 'formats', 'notes', 'phase', 'preRelease', 'root', 'runner', 'scope', 'spec', 'status', 'stop', 'summaryLines', 'tier', 'versionSkew'],
-    replaced: [],
-  });
+  assert.deepEqual(recordShape(root, regress), { added: ['environment'], missing: [], replaced: [] });
 
   const repro = await call(root, ['repro', `${quick.runId}/${quick.findings[0].representative.repro}`]);
   assert.match(repro.runId, /-repro-/);

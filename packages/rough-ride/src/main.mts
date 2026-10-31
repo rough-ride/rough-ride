@@ -149,7 +149,7 @@ export async function main(argv: string[]): Promise<void> {
     }
     if (args.subcommand === 'regress' && root !== null) {
       const result = await runRegress({ ...common, root, folder: entry(root), only: args.only, browserFlag: args.browser, start: args.start, progress });
-      return output.finish({ status: result.status, exitCode: result.exitCode, lines: result.lines, document: result.document, run: result.run });
+      return output.finish({ status: result.status, exitCode: result.exitCode, lines: result.lines, document: result.document, run: result.run, ...(result.record ? { record: result.record } : {}) });
     }
     if (args.subcommand === 'repro' && root !== null) {
       const result = await runRepro({
