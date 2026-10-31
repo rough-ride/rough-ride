@@ -153,7 +153,7 @@ before(async () => {
   docs = await fetchOpenApi([API, SAMPLE], []);
   browser = (await launchBrowser(chooseBrowser(process.env.RP_TEST_BROWSER ?? null, null, installedOnThisMachine()), [])).browser;
   const signIn = await runFlow({
-    browser, baseURL: SAMPLE, ready: { kind: 'nuxt' }, keepStorageState: true, env: (n) => ({ E: 'demo@example.com', P: 'demo-password' })[n],
+    browser, baseURL: SAMPLE, ready: { kind: 'nuxt' }, hosts: LOOPBACK_ONLY, keepStorageState: true, env: (n) => ({ E: 'demo@example.com', P: 'demo-password' })[n],
     flow: { name: 'sign-in', signedIn: false, steps: [{ goto: '/login' }, { fill: { label: 'Email' }, value: '${env.E}' }, { fill: { label: 'Password' }, value: '${env.P}' }, { click: { role: 'button', name: 'Sign in' } }, { expect: { role: 'heading', name: 'Notes' } }] },
   });
   session = signIn.storageState;
@@ -203,7 +203,7 @@ test('sample app: function, schema and dependency rules, and the CORS allowlist 
 });
 
 test('sample app: list_notes selects the search flow and create-note, not a flow that only opens /notes; qualifier and form class', needsSample, async () => {
-  const go = (name, steps) => runFlow({ browser, baseURL: SAMPLE, flow: { name, signedIn: true, steps }, env: () => undefined, ready: { kind: 'nuxt' }, storageState: session });
+  const go = (name, steps) => runFlow({ browser, baseURL: SAMPLE, flow: { name, signedIn: true, steps }, env: () => undefined, ready: { kind: 'nuxt' }, hosts: LOOPBACK_ONLY, storageState: session });
   const flows = [
     { name: 'list-notes', steps: [{ goto: '/notes' }, { expect: { role: 'heading', name: 'Notes' } }] },
     { name: 'search-notes', steps: [{ goto: '/notes' }, { fill: { label: 'Search' }, value: 'gro' }, { expect: { role: 'heading', name: 'Notes' } }] },
