@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { claudeCodeVersion, claudeFloorStop, derivedPluginData, detectSource, EDIT_GUARD_OFF, followUpCommand, pluginDataMismatch, runnerBlock, runnerLine, versionSkew } from '../dist/runner.mjs';
+import { claudeFloorStop, derivedPluginData, detectSource, followUpCommand, pluginDataMismatch, runnerBlock, runnerLine, versionSkew } from '../dist/runner.mjs';
+import { EDIT_GUARD_OFF } from '../hooks/plugin-checks.mjs';
 import { scratchDir } from './helpers.mjs';
 
 const info = (source, extra = {}) => ({
@@ -82,13 +83,6 @@ test('the runner line names the Claude Code version, or says it is unknown in a 
   );
 });
 
-test('the Claude Code version comes from AI_AGENT, else the last segment of CLAUDE_CODE_EXECPATH', () => {
-  assert.equal(claudeCodeVersion({ AI_AGENT: 'claude-code_2-1-309_agent' }), '2.1.309');
-  assert.equal(claudeCodeVersion({ CLAUDE_CODE_EXECPATH: '/u/.local/share/claude/versions/2.1.300' }), '2.1.300');
-  assert.equal(claudeCodeVersion({ CLAUDE_CODE_EXECPATH: '/usr/local/bin/claude' }), null);
-  assert.equal(claudeCodeVersion({}), null);
-});
-
 test('follow-up commands use the form that ran the runner', () => {
   const plugin = info(
     { kind: 'plugin', detail: 'rough-ride@rough-ride', resolved: null },
@@ -127,6 +121,29 @@ test('a cache copy derives its data folder; a --plugin-data that differs is the 
   const inPlace = info(PLUGIN, { pluginData: { path: '/tmp/data', verified: false } });
   assert.equal(pluginDataMismatch(inPlace), null);
   assert.match(runnerLine(inPlace), / \| plugin data: \/tmp\/data \(from --plugin-data, not verified\)$/);
+});
+
+test('a Windows cache copy: forward slashes in the derived folder, and the same folder in any spelling', () => {
+  const cli = 'C:\\Users\\u\\.claude\\plugins\\cache\\rough-ride\\rough-ride\\0.4.0\\dist\\cli.mjs';
+  assert.equal(derivedPluginData(cli), 'C:/Users/u/.claude/plugins/data/rough-ride-rough-ride');
+  assert.equal(detectSource(cli, 'C:\\d', 'C:\\w').detail, 'rough-ride@rough-ride');
+  const given = (p) => info(PLUGIN, { cliPath: cli, pluginData: { path: p, verified: false } });
+  assert.equal(pluginDataMismatch(given('c:\\users\\u\\.claude\\plugins\\data\\rough-ride-rough-ride\\'), 'win32'), null);
+  assert.match(pluginDataMismatch(given('C:\\Users\\u\\.claude\\plugins\\data\\other'), 'win32'), /^rough-ride: --plugin-data /);
+});
+
+test('a path with no version folder under the plugin is not a cache copy', () => {
+  assert.equal(derivedPluginData('/home/u/.claude/plugins/cache/rough-ride/rough-ride'), null);
+  assert.equal(detectSource('/home/u/.claude/plugins/cache/rough-ride/rough-ride', '/d', '/w').detail, 'rough-ride');
+});
+
+test('--plugin-data in the /System/Volumes/Data spelling of the derived folder is the same folder', { skip: process.platform !== 'darwin' && 'macOS path spellings' }, () => {
+  const home = scratchDir();
+  const cli = path.join(home, 'plugins', 'cache', 'rough-ride', 'rough-ride', '0.4.0', 'dist', 'cli.mjs');
+  const data = path.join(home, 'plugins', 'data', 'rough-ride-rough-ride');
+  mkdirSync(data, { recursive: true });
+  const given = info(PLUGIN, { cliPath: cli, pluginData: { path: path.join('/System/Volumes/Data', data), verified: false } });
+  assert.equal(pluginDataMismatch(given, 'darwin'), null);
 });
 
 test('the floor check runs only with a plugin data folder and a readable version', () => {

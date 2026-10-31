@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
 import { fixture, scratchDir } from './helpers.mjs';
 import { DUPLICATE, FLOOR, INLINE, OLD_NODE, PACKAGES, pluginsHome as home } from './fixtures/hook-rows.mjs';
+import * as copy from '../hooks/plugin-checks.mjs';
 
 const PKG = fileURLToPath(new URL('..', import.meta.url));
 const PREFLIGHT_RULE = 'node "${CLAUDE_PLUGIN_ROOT}/hooks/preflight.mjs" "${CLAUDE_PLUGIN_DATA}"';
@@ -143,6 +144,21 @@ test('session-start: each condition prints its exact message as systemMessage, a
   assert.equal(message(old.stdout), OLD_NODE('20.18.1', process.execPath));
 });
 
+test('session-start: a project-scope copy counts only for its own project, in any spelling of it', () => {
+  const two = pluginsHome({ ids: [['rough-ride@rough-ride', '0.9.3'], ['rough-ride@claude-plugins-official', '1.0.0']] });
+  const file = path.join(two.plugins, 'installed_plugins.json');
+  const doc = JSON.parse(readFileSync(file, 'utf8'));
+  const cwd = scratchDir();
+  const asProject = (projectPath) => {
+    doc.plugins['rough-ride@claude-plugins-official'][0] = { ...doc.plugins['rough-ride@claude-plugins-official'][0], scope: 'project', projectPath };
+    writeFileSync(file, JSON.stringify(doc));
+    return message(hook('session-start.mjs', { ...two, stdin: JSON.stringify({ session_id: 's', cwd }) }).stdout);
+  };
+  assert.equal(asProject(scratchDir()), null);
+  assert.equal(asProject(cwd + path.sep), DUPLICATE);
+  if (process.platform === 'darwin') assert.equal(asProject(path.join('/System/Volumes/Data', cwd)), DUPLICATE);
+});
+
 test('session-start: unreadable input prints nothing and exits 0', () => {
   const p = pluginsHome({ ids: [['rough-ride@rough-ride', VERSION]] });
   writeFileSync(path.join(p.plugins, 'installed_plugins.json'), 'not json');
@@ -180,4 +196,46 @@ test('preflight: prints the edit-guard line without a marker, nothing with one, 
   writeFileSync(path.join(p.data, 'sessions', 'sess-1'), '');
   const on = hook('preflight.mjs', { ...p, args: [p.data], env: { CLAUDE_CODE_SESSION_ID: 'sess-1' } });
   assert.deepEqual([on.code, on.stdout], [0, '']);
+});
+
+// ---- The Plugin copy module, through its interface ----
+
+const CACHE_ROWS = [
+  ['the runner file of a cache copy', '/home/u/.claude/plugins/cache/rough-ride/rough-ride/0.4.0/dist/cli.mjs',
+    { id: 'rough-ride@rough-ride', pluginsRoot: '/home/u/.claude/plugins', dataFolder: '/home/u/.claude/plugins/data/rough-ride-rough-ride' }],
+  ['the copy root itself', '/home/u/.claude/plugins/cache/rough-ride/rough-ride/0.4.0',
+    { id: 'rough-ride@rough-ride', pluginsRoot: '/home/u/.claude/plugins', dataFolder: '/home/u/.claude/plugins/data/rough-ride-rough-ride' }],
+  ['a marketplace name with a dot', '/home/u/.claude/plugins/cache/my.market/rough-ride/0.4.0',
+    { id: 'rough-ride@my.market', pluginsRoot: '/home/u/.claude/plugins', dataFolder: '/home/u/.claude/plugins/data/rough-ride-my-market' }],
+  ['a Windows copy, printed with forward slashes', 'C:\\Users\\u\\.claude\\plugins\\cache\\rough-ride\\rough-ride\\0.4.0\\dist\\cli.mjs',
+    { id: 'rough-ride@rough-ride', pluginsRoot: 'C:/Users/u/.claude/plugins', dataFolder: 'C:/Users/u/.claude/plugins/data/rough-ride-rough-ride' }],
+  ['no version folder', '/home/u/.claude/plugins/cache/rough-ride/rough-ride', null],
+  ['a cache folder outside plugins', '/home/u/cache/rough-ride/rough-ride/0.4.0/dist/cli.mjs', null],
+  ['a checkout', '/src/rp/packages/rough-ride/dist/cli.mjs', null],
+];
+
+test('cacheCopy: one parser of <plugins root>/cache/<marketplace>/<plugin>/<version>/', () => {
+  for (const [name, given, expected] of CACHE_ROWS) {
+    assert.deepEqual(copy.cacheCopy(given), expected, name);
+    if (!given.endsWith('cli.mjs')) assert.equal(copy.copyId(given), expected ? expected.id : 'rough-ride', `${name}: copyId`);
+  }
+});
+
+test('the floor, the edit-guard line, the session id, semver and the Claude Code version', () => {
+  assert.equal(copy.EDIT_GUARD_OFF, EDIT_GUARD_OFF);
+  assert.equal(copy.floorStop('0.4.0', '2.1.250', 'standard'), FLOOR('0.4.0').replace('/rough-ride:quick', '/rough-ride:standard'));
+  assert.equal(copy.floorStop('0.4.0', copy.CLAUDE_FLOOR, 'quick'), null);
+  assert.equal(copy.floorStop('0.4.0', null, 'quick'), null);
+  assert.ok(copy.validSession('abc_DEF-123'));
+  assert.ok(copy.validSession('a'.repeat(200)));
+  assert.ok(!copy.validSession('a'.repeat(201)));
+  assert.ok(!copy.validSession('../x'));
+  assert.ok(!copy.validSession(''));
+  assert.ok(copy.compareSemver('2.1.300', '2.1.299') > 0);
+  assert.ok(copy.compareSemver('2.1.30', '2.1.299') < 0);
+  assert.equal(copy.compareSemver('1.0.0', '1.0.0'), 0);
+  assert.equal(copy.claudeCodeVersion({ AI_AGENT: 'claude-code_2-1-309_agent' }), '2.1.309');
+  assert.equal(copy.claudeCodeVersion({ CLAUDE_CODE_EXECPATH: '/u/.local/share/claude/versions/2.1.300' }), '2.1.300');
+  assert.equal(copy.claudeCodeVersion({ CLAUDE_CODE_EXECPATH: '/usr/local/bin/claude' }), null);
+  assert.equal(copy.claudeCodeVersion({}), null);
 });
