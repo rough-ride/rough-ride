@@ -9,7 +9,7 @@ import { readSaved } from './flowsave.mjs';
 import type { FolderState } from './folder.mjs';
 import { Manifest } from './manifest.mjs';
 import { formatDuration } from './output.mjs';
-import { parsePlan, validatePlan, type PlanInput } from './plan.mjs';
+import { parsePlan, validatePlan, type PlanInput, type PlanResult } from './plan.mjs';
 import { runnerBlock, type RunnerInfo } from './runner.mjs';
 import { callCount, CATALOGUE, checkRun, recordCall, tierCommand, type PlanState } from './runcheck.mjs';
 import type { Section } from './summary.mjs';
@@ -35,6 +35,15 @@ export function checkPlan(input: PlanInput, plan: PlanState, saved: string[], fo
   });
 }
 
+// The closing count, then how many entries only attack can decide (45.3).
+export function verdictLines(result: PlanResult): string[] {
+  const kept = result.entries.filter((e) => e.status === 'kept').length + result.checks.filter((e) => e.status === 'kept').length;
+  const unchecked = result.entries.filter((e) => e.status === 'unchecked').length;
+  const lines = [`Plan check: ${kept} ${kept === 1 ? 'entry' : 'entries'} valid, ${result.kept.length} planned ${result.kept.length === 1 ? 'attack' : 'attacks'}`];
+  if (unchecked > 0) lines.push(`Plan check: ${unchecked} ${unchecked === 1 ? 'entry' : 'entries'} unchecked; attack checks ${unchecked === 1 ? 'it' : 'them'} against fresh baseline runs`);
+  return lines;
+}
+
 export interface PlanCheckContext {
   folder: FolderState;
   root: string;
@@ -58,8 +67,7 @@ export function runPlanCheck(ctx: PlanCheckContext): { lines: string[]; document
   if (parsed.refused) return finish(['Plan check:', parsed.refused], 78);
   const saved = readSaved(ctx.folder, ctx.runId).filter((r) => r.kept).map((r) => r.name);
   const result = checkPlan(parsed.input!, plan, saved, ctx.folder);
-  const kept = result.entries.filter((e) => e.status === 'kept').length + result.checks.filter((e) => e.status === 'kept').length;
-  const body = ['Plan check:', ...parsed.warnings, ...result.lines, `Plan check: ${kept} ${kept === 1 ? 'entry' : 'entries'} valid, ${result.kept.length} planned ${result.kept.length === 1 ? 'attack' : 'attacks'}`];
+  const body = ['Plan check:', ...parsed.warnings, ...result.lines, ...verdictLines(result)];
   const rejected = result.entries.some((e) => e.status === 'rejected') || result.lines.some((l) => l.startsWith('Rejected plan entry'));
   return finish(body, rejected ? 2 : 0);
 }

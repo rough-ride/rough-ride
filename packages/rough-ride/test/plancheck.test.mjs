@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildCatalogue, planCandidates, toRecord } from '../dist/catalogue.mjs';
 import { validatePlan } from '../dist/plan.mjs';
-import { checkPlan } from '../dist/plancheck.mjs';
+import { checkPlan, verdictLines } from '../dist/plancheck.mjs';
 import { noteFlow, noteRun, signInFlow, signInRun } from './fixtures/catalogue-flows.mjs';
 
 const TODAY = new Date('2026-10-25');
@@ -83,4 +83,19 @@ test('--check leaves an entry on a flow saved after the plan unchecked, counted 
     'Unchecked plan entry: attacks[2] (over the plan cap of 8 unless attack keeps fewer for attacks[0], attacks[1])',
   ]);
   assert.deepEqual(r.kept, []);
+});
+
+test('--check closes with how many entries attack still decides, and says nothing of it when every entry was checked', () => {
+  const { plan } = planned('quick');
+  const fresh = (flow) => entry({ flow, viewport: 375 });
+  const valid = entry({ fault: '400', request: 'GET /api/notes #1' });
+  assert.deepEqual(verdictLines(checkPlan({ attacks: [valid] }, plan, [])), ['Plan check: 1 entry valid, 1 planned attack']);
+  assert.deepEqual(verdictLines(checkPlan({ attacks: [fresh('fresh-note')] }, plan, ['fresh-note'])), [
+    'Plan check: 0 entries valid, 0 planned attacks',
+    'Plan check: 1 entry unchecked; attack checks it against fresh baseline runs',
+  ]);
+  assert.deepEqual(verdictLines(checkPlan({ attacks: [fresh('fresh-note'), fresh('late-note'), valid] }, plan, ['fresh-note', 'late-note'])), [
+    'Plan check: 1 entry valid, 1 planned attack',
+    'Plan check: 2 entries unchecked; attack checks them against fresh baseline runs',
+  ]);
 });
