@@ -158,6 +158,12 @@ export interface ControlFacts {
   ariaExpanded: string | null;
 }
 
+// The labels of the runner's own reload, back and forward steps, and the start
+// of a timed-out ready wait's reason (32.2). checks.mts judges by them.
+export const RELOAD_LABEL = 'reload';
+export const GO_LABEL_PREFIX = 'go ';
+export const NOT_READY_PREFIX = 'not ready ';
+
 export interface StepRecord {
   index: number;
   label: string;
@@ -1613,7 +1619,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           try {
             await readyWait(startedAt);
           } catch {
-            throw new StepError(`not ready ${loadTimeout / 1000} s after the page loaded`);
+            throw new StepError(`${NOT_READY_PREFIX}${loadTimeout / 1000} s after the page loaded`);
           }
         }
         if (result.excluded !== null) break;
@@ -1704,9 +1710,9 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
             const samples2: TextSample[] = [];
             const done = ready
               ? await settle(before2, Date.now(), navStart, samples2)
-              : { settled: false, ms: Date.now() - navStart, unsettled: `not ready ${loadTimeout / 1000} s after the ${what === 'reload' ? 'reload' : `${what} step`}`, after: await snapshot() };
+              : { settled: false, ms: Date.now() - navStart, unsettled: `${NOT_READY_PREFIX}${loadTimeout / 1000} s after the ${what === 'reload' ? 'reload' : `${what} step`}`, after: await snapshot() };
             const obs: Observation = { before: before2, samples: samples2, after: done.after, unsettled: done.unsettled, windowEndedAt: Date.now(), startedAt: navStart };
-            result.steps.push({ index, label: what === 'reload' ? 'reload' : `go ${what}`, observation: obs, settled: done.settled, settleMs: done.ms, path });
+            result.steps.push({ index, label: what === 'reload' ? RELOAD_LABEL : `${GO_LABEL_PREFIX}${what}`, observation: obs, settled: done.settled, settleMs: done.ms, path });
             return { path, ready };
           };
           if (pt.kind === 'signed-out-reload') {
