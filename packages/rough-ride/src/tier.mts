@@ -557,12 +557,23 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
     planList = cut.items.map((x) => ({ attack: x.attack, nominalMs: x.nominalMs, aboveCut: x.aboveCut }));
     for (const item of cut.items.filter((x) => !x.aboveCut)) cutItems.push({ attack: item.attack, nominalMs: item.nominalMs, reason: 'cut' });
 
+    // Regression tests (48.4): open tests by name, then tests whose flow the diff
+    // reaches, in flow order; capped per tier. Known before plan validation, because
+    // a flow with a test inside the cut is above it (45.5).
+    const openNames = new Set(Object.entries(manifest.data.tests).filter(([, t]) => t.outcome !== 'pass').map(([n]) => n));
+    const reachedOrder = sel0.ordered.map((o) => o.name);
+    const eligible = prot.tests.filter((t) => openNames.has(t.name) || reachedOrder.includes(String(t.value.flow)));
+    const orderedTests = [
+      ...eligible.filter((t) => openNames.has(t.name)).sort((a, b) => cmp(a.name, b.name)),
+      ...eligible.filter((t) => !openNames.has(t.name)).sort((a, b) => reachedOrder.indexOf(String(a.value.flow)) - reachedOrder.indexOf(String(b.value.flow)) || cmp(a.name, b.name)),
+    ];
+
     // attack --plan -: validated against these fresh footprints; it can only add (45.2, 45.4, 45.5).
     if (ctx.mode === 'attack' && typeof ctx.planText === 'string') {
       planParsed = parsePlan(ctx.planText, tierName);
       if (planParsed.refused === null) {
         const selectedAbove = cut.items.filter((x) => x.aboveCut);
-        const aboveFlows = new Set([...selectedAbove.map((x) => x.attack.flow), ...tierTests.map((t) => String(t.value.flow)), ...addedFlows]);
+        const aboveFlows = new Set([...selectedAbove.map((x) => x.attack.flow), ...orderedTests.slice(0, spec.tests).map((t) => String(t.value.flow)), ...addedFlows]);
         const firstLoadOf = (name: string) => {
           const info = sel0.flowInfo.find((f) => f.name === name);
           const loads = [...(info?.firstLoad ?? new Map<string, number>())].filter(([file]) => changedFiles.has(file)).map(([, st]) => st);
@@ -782,15 +793,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
         };
         pump();
       });
-      // Regression tests (48.4): open tests by name, then tests whose flow the diff
-      // reaches, in flow order; capped per tier. First runs go ahead of the attacks.
-      const openNames = new Set(Object.entries(manifest.data.tests).filter(([, t]) => t.outcome !== 'pass').map(([n]) => n));
-      const reachedOrder = sel0.ordered.map((o) => o.name);
-      const eligible = prot.tests.filter((t) => openNames.has(t.name) || reachedOrder.includes(String(t.value.flow)));
-      const orderedTests = [
-        ...eligible.filter((t) => openNames.has(t.name)).sort((a, b) => cmp(a.name, b.name)),
-        ...eligible.filter((t) => !openNames.has(t.name)).sort((a, b) => reachedOrder.indexOf(String(a.value.flow)) - reachedOrder.indexOf(String(b.value.flow)) || cmp(a.name, b.name)),
-      ];
+      // First runs go ahead of the attacks.
       tierTests = orderedTests.slice(0, spec.tests);
       testsOverBudget = orderedTests.slice(spec.tests).map((t) => t.name);
       const attackBase = (flow: Flow) => ({
