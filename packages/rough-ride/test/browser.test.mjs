@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { bundledChromium, chooseBrowser, installedOnThisMachine, launchBrowser, playwrightCacheDir, playwrightCoreDir } from '../dist/browser.mjs';
 import { StopError } from '../dist/exit.mjs';
-import { run } from './helpers.mjs';
+import { run, scratchDir } from './helpers.mjs';
 
 const only = (...names) => (name) => names.includes(name);
 
@@ -27,6 +27,17 @@ test('the order is Chrome, then Edge, then the downloaded Playwright Chromium', 
 test('--browser beats browser:, which beats the order', () => {
   assert.deepEqual(chooseBrowser('msedge', 'chrome', only('chrome', 'msedge')), { name: 'msedge', pinnedBy: '--browser' });
   assert.deepEqual(chooseBrowser(null, 'msedge', only('chrome', 'msedge')), { name: 'msedge', pinnedBy: 'config' });
+});
+
+test('on Windows a copy of the environment finds Program Files and LocalAppData in any letter case', () => {
+  const root = scratchDir();
+  mkdirSync(path.join(root, 'Google', 'Chrome', 'Application'), { recursive: true });
+  writeFileSync(path.join(root, 'Google', 'Chrome', 'Application', 'chrome.exe'), '');
+  // { ...process.env } on Windows keeps the system's spelling and compares case.
+  assert.equal(installedOnThisMachine({ ProgramFiles: root }, 'win32')('chrome'), true);
+  assert.equal(installedOnThisMachine({ 'ProgramFiles(x86)': root }, 'win32')('chrome'), true);
+  assert.equal(installedOnThisMachine({ ProgramFiles: root }, 'win32')('msedge'), false);
+  assert.equal(playwrightCacheDir({ LocalAppData: root }, 'win32'), path.join(root, 'ms-playwright'));
 });
 
 test('with no usable browser the runner stops with the No browser found block and leaves the cache alone', async () => {

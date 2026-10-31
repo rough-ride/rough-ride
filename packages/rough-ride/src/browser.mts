@@ -38,10 +38,18 @@ export function bundledChromium(): { revision: string; version: string; major: n
   return { revision: entry.revision, version: entry.browserVersion, major: Number(entry.browserVersion.split('.')[0]) };
 }
 
+// Windows variable names ignore case. process.env honours that, but a copy such
+// as { ...process.env } doesn't, and Windows spells them ProgramFiles and
+// ProgramFiles(x86).
+function windowsVar(env: NodeJS.ProcessEnv, name: string): string | undefined {
+  const key = Object.keys(env).find((k) => k.toUpperCase() === name);
+  return key === undefined ? undefined : env[key];
+}
+
 export function playwrightCacheDir(env: NodeJS.ProcessEnv = process.env, platform = process.platform): string {
   if (env.PLAYWRIGHT_BROWSERS_PATH) return env.PLAYWRIGHT_BROWSERS_PATH;
   if (platform === 'darwin') return path.join(homedir(), 'Library', 'Caches', 'ms-playwright');
-  if (platform === 'win32') return path.join(env.LOCALAPPDATA ?? path.join(homedir(), 'AppData', 'Local'), 'ms-playwright');
+  if (platform === 'win32') return path.join(windowsVar(env, 'LOCALAPPDATA') ?? path.join(homedir(), 'AppData', 'Local'), 'ms-playwright');
   return path.join(env.XDG_CACHE_HOME ?? path.join(homedir(), '.cache'), 'ms-playwright');
 }
 
@@ -52,7 +60,7 @@ function channelPaths(name: 'chrome' | 'msedge', env: NodeJS.ProcessEnv, platfor
       : ['/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'];
   }
   if (platform === 'win32') {
-    const roots = [env.LOCALAPPDATA, env.PROGRAMFILES, env['PROGRAMFILES(X86)']].filter((r): r is string => !!r);
+    const roots = ['LOCALAPPDATA', 'PROGRAMFILES', 'PROGRAMFILES(X86)'].map((n) => windowsVar(env, n)).filter((r): r is string => !!r);
     const tail = name === 'chrome' ? ['Google', 'Chrome', 'Application', 'chrome.exe'] : ['Microsoft', 'Edge', 'Application', 'msedge.exe'];
     return roots.map((r) => path.join(r, ...tail));
   }
