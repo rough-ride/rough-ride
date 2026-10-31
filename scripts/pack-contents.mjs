@@ -60,7 +60,9 @@ export function packProblems(dir, pack, rootDir = ROOT) {
 
 export function npmPack(dir) {
   const out = execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: dir, encoding: 'utf8', shell: process.platform === 'win32' });
-  return JSON.parse(out)[0];
+  // npm 10 and 11 print an array; npm 12 an object keyed by package name.
+  const json = JSON.parse(out);
+  return Array.isArray(json) ? json[0] : Object.values(json)[0];
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

@@ -30,7 +30,7 @@ function assertPlainAscii(text) {
 test('--version prints the three versions and exits 0 outside any git repository', () => {
   const { code, stdout } = run(['--version']);
   assert.equal(code, 0);
-  assert.match(stdout, /^rough-ride \d+\.\d+\.\d+ \| Playwright 1\.64\.1 \| Node \d+\.\d+\.\d+\n$/);
+  assert.match(stdout, /^rough-ride \d+\.\d+\.\d+ \| Playwright 1\.64\.1 \| Node \d+\.\d+\.\d+(-[\w.]+)?\n$/);
 });
 
 test('--help exits 0 outside any git repository', () => {
@@ -47,7 +47,7 @@ test('an unknown subcommand, an unknown flag or no subcommand is a usage stop', 
     assert.equal(code, 64, args.join(' '));
     const lines = stdout.trimEnd().split('\n');
     assert.match(lines[0], /^rough-ride( \S.*)? \| \d+\.\ds \| stopped$/);
-    assert.match(lines.at(-1), /^Runner: rough-ride \d+\.\d+\.\d+ from other .*cli\.mjs \| Node [\d.]+ \| Playwright 1\.64\.1$/);
+    assert.match(lines.at(-1), /^Runner: rough-ride \d+\.\d+\.\d+ from other .*cli\.mjs \| Node \d+\.\d+\.\d+(-[\w.]+)? \| Playwright 1\.64\.1$/);
     assertPlainAscii(stdout.replace(/^Runner: .*$/m, ''));
   }
 });
