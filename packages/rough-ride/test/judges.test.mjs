@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { baselineFailures, judgeBadInput, judgeFault, judgeOutOfOrder, judgePageTiming, judgeTiming, judgeViewport } from '../dist/checks.mjs';
+import { baselineFailures, inKindOrder, judgeBadInput, judgeFault, judgeOutOfOrder, judgePageTiming, judgeTiming, judgeViewport } from '../dist/checks.mjs';
 
 // Hand-built flow runs with just what judging reads; no browser.
 const snap = (lines = [], over = {}) => ({ lines, live: [], labels: [], ...over });
@@ -284,4 +284,13 @@ test('baselineFailures: the first page event, the first unsettled step and the f
     { id: 'no-broken-text', step: 3, page: '/notes/3' },
   ]);
   same(baselineFailures(run({ pageEvents: [event(9, 'late')] })), [{ id: 'no-uncaught-error', step: 9, page: null }]);
+});
+
+test('inKindOrder: checks in the kind\'s declared order, and a check the order leaves out throws naming the kind and the id', () => {
+  const checks = [pass('no-uncaught-error'), pass('settles'), pass('no-broken-text'), fail('one-write', '2 writes')];
+  same(inKindOrder('timing', ['one-write', 'no-uncaught-error', 'settles', 'no-broken-text'], [...checks]),
+    [fail('one-write', '2 writes'), pass('no-uncaught-error'), pass('settles'), pass('no-broken-text')]);
+  // indexOf would give the left-out id -1 and silently list it first.
+  assert.throws(() => inKindOrder('timing', ['no-uncaught-error', 'settles', 'no-broken-text'], [...checks]),
+    { name: 'Error', message: "the timing kind's check order has no one-write" });
 });

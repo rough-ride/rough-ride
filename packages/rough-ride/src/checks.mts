@@ -168,6 +168,8 @@ function checkList(skipped: Set<string>) {
 }
 
 interface Kind {
+  // The attack kind, for a programmer error that names it.
+  name: string;
   // The verdict when the kind's attack did not happen as planned. A void flow run comes first.
   gate: Judged['verdict'] | null;
   adjust?: Adjustments;
@@ -175,6 +177,14 @@ interface Kind {
   order: CheckId[];
   // The kind's own checks.
   own?: (list: ReturnType<typeof checkList>) => void;
+}
+
+// The checks in the kind's declared order. A check the order leaves out is a
+// programmer error: its index of -1 would silently sort it first.
+export function inKindOrder(kind: string, order: CheckId[], checks: CheckResult[]): CheckResult[] {
+  const missing = checks.find((c) => !order.includes(c.id as CheckId));
+  if (missing) throw new Error(`the ${kind} kind's check order has no ${missing.id}`);
+  return checks.sort((a, b) => order.indexOf(a.id as CheckId) - order.indexOf(b.id as CheckId));
 }
 
 function judgeAttack(run: FlowRunResult, baseline: FlowRunResult, skipped: Set<string>, kind: Kind): Judged {
@@ -192,7 +202,7 @@ function judgeAttack(run: FlowRunResult, baseline: FlowRunResult, skipped: Set<s
   const broken = brokenText(run, baseline);
   list.push('no-broken-text', broken ? `"${broken.token}" in a new line` : null, broken?.token);
   kind.own?.(list);
-  const checks = list.checks.sort((a, b) => kind.order.indexOf(a.id as CheckId) - kind.order.indexOf(b.id as CheckId));
+  const checks = inKindOrder(kind.name, kind.order, list.checks);
   return { verdict: checks.some((c) => c.result === 'fail') ? 'failed' : adjust.pending ? 'pending' : 'passed', checks };
 }
 
@@ -211,6 +221,7 @@ export function judgeFault(attackRun: FlowRunResult, baseline: FlowRunResult, at
   const state = attackRun.fault;
   const pending = state?.pending ?? false;
   return judgeAttack(attackRun, baseline, skipped, {
+    name: 'fault',
     gate: !state?.fired ? 'fault-never-fired' : state.notApplied !== null ? 'not-applied' : null,
     adjust: { pending },
     order: ['no-uncaught-error', 'settles', 'visible-error-message', 'values-survive', 'no-broken-text', 'retry-recovers'],
@@ -262,6 +273,7 @@ export function judgeFault(attackRun: FlowRunResult, baseline: FlowRunResult, at
 export function judgeViewport(run: FlowRunResult, baseline: FlowRunResult, skipped: Set<string>): Judged & { step: number | null } {
   const overflowing = run.steps.find((s) => (s.overflowPx ?? 0) > 1) ?? null;
   const judged = judgeAttack(run, baseline, skipped, {
+    name: 'viewport',
     gate: null,
     order: ['no-uncaught-error', 'settles', 'no-broken-text', 'no-overflow-375'],
     own: ({ push }) => push('no-overflow-375', overflowing ? `${overflowing.path ?? 'the page'} is ${overflowing.overflowPx} px wider than the 375 px viewport after ${overflowing.label}` : null),
@@ -322,6 +334,7 @@ export function oneWrite(run: FlowRunResult, baseline: FlowRunResult, step: numb
 // A double-submit attack (32.8): one-write, no-uncaught-error, settles and no-broken-text.
 export function judgeTiming(run: FlowRunResult, baseline: FlowRunResult, step: number, skipped: Set<string>, ownHost: (url: string) => boolean): Judged {
   return judgeAttack(run, baseline, skipped, {
+    name: 'timing',
     gate: run.timing === null ? 'fault-never-fired' : null,
     order: ['one-write', 'no-uncaught-error', 'settles', 'no-broken-text'],
     own: ({ push }) => push('one-write', oneWrite(run, baseline, step, ownHost)),
@@ -345,6 +358,7 @@ export function leadCheck(checks: CheckResult[]): CheckResult | null {
 export function judgeBadInput(run: FlowRunResult, baseline: FlowRunResult, submitStep: number, skipped: Set<string>): Judged {
   const r = run.badInput;
   return judgeAttack(run, baseline, skipped, {
+    name: 'bad-input',
     gate: !r || r.notApplied !== null ? 'not-applied' : r.outcome === null ? 'void' : r.outcome === 'inconclusive' ? 'inconclusive' : null,
     order: ['no-uncaught-error', 'settles', 'no-broken-text', 'no-5xx-on-bad-input', 'visible-error-message', 'values-survive', 'retry-recovers'],
     own: ({ push, notEvaluated }) => {
@@ -388,6 +402,7 @@ export function judgeBadInput(run: FlowRunResult, baseline: FlowRunResult, submi
 export function judgeOutOfOrder(run: FlowRunResult, baseline: FlowRunResult, step: number, skipped: Set<string>): Judged {
   const r = run.outOfOrder;
   return judgeAttack(run, baseline, skipped, {
+    name: 'out-of-order',
     gate: !r || r.notApplied !== null ? 'not-applied' : null,
     adjust: { ignoreEvent: (e) => !!r?.aborted && /AbortError/.test(e.text) },
     order: ['latest-response-wins', 'no-uncaught-error', 'settles', 'no-broken-text'],
@@ -425,6 +440,7 @@ export function judgePageTiming(run: FlowRunResult, baseline: FlowRunResult, ski
     : p.navigationError && !expected.has(p.navigationError) ? `the navigation failed with ${p.navigationError}`
     : null;
   return judgeAttack(run, baseline, skipped, {
+    name: 'page-timing',
     gate: !r || r.notApplied !== null ? 'not-applied' : r.events.length === 0 ? 'fault-never-fired' : null,
     adjust: { ignoreEvent: (e) => expected.has(e.text), leadingError: r ? documentError(r) : null, ownStep: runnerNavigation },
     order: ['no-uncaught-error', 'settles', 'no-broken-text'],
