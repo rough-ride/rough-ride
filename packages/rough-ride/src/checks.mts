@@ -75,7 +75,7 @@ function linesOf(step: StepRecord): string[] {
   return [...o.before.lines, ...o.samples.flatMap((s) => s.lines), ...o.after.lines];
 }
 
-function fillValues(run: FlowRunResult): string[] {
+export function fillValues(run: FlowRunResult): string[] {
   return run.steps.map((s) => s.value).filter((v): v is string => v !== undefined && v.length > 0);
 }
 
@@ -276,47 +276,4 @@ function pathBefore(run: FlowRunResult, step: number): string | null {
 
 export function leadCheck(checks: CheckResult[]): CheckResult | null {
   return checks.filter((c) => c.result === 'fail').sort((a, b) => checkRank(a.id) - checkRank(b.id))[0] ?? null;
-}
-
-// A bad-input attack (21.10, 21.11): the four checks every bad input gets, then
-// visible-error-message, values-survive and retry-recovers after a refusal.
-export function judgeBadInput(run: FlowRunResult, baseline: FlowRunResult, submitStep: number, skipped: Set<string>): Judged {
-  const r = run.badInput;
-  return judgeAttack(run, baseline, skipped, {
-    name: 'bad-input',
-    gate: !r || r.notApplied !== null ? 'not-applied' : r.outcome === null ? 'void' : r.outcome === 'inconclusive' ? 'inconclusive' : null,
-    order: ['no-uncaught-error', 'settles', 'no-broken-text', 'no-5xx-on-bad-input', 'visible-error-message', 'values-survive', 'retry-recovers'],
-    own: ({ push, notEvaluated }) => {
-      const b = r!;
-      const c = b.carrying;
-      push('no-5xx-on-bad-input', b.outcome === 'crashed'
-        ? `${c ? `${c.method} ${c.path}` : 'a request'} answered ${c?.status ?? 'no response'} after the bad input`
-        : null);
-      // A refusal is outcomes 3 to 6; an accepted input followed by a failing step
-      // that shows a new message with the values intact counts as blocked by the app.
-      const valuesLost = b.reference.find((ref, i) => {
-        const now = b.after[i];
-        return !ref.password && ref.value !== null && now?.value !== null && now !== undefined && ref.value.trim() !== now.value!.trim();
-      });
-      const refused = ['rejected', 'blocked-by-browser', 'blocked-by-app', 'silent-refusal'].includes(b.outcome!);
-      if (refused) {
-        if (b.outcome === 'silent-refusal') push('visible-error-message', 'the submit ran, nothing was sent and no message appeared');
-        else if (b.outcome === 'rejected') {
-          const step = run.steps.find((x) => x.index === submitStep);
-          const o = step?.observation;
-          const before = new Set(b.linesBefore);
-          const typed = new Set(fillValues(run));
-          const shown = o ? [...o.samples.flatMap((x) => [...x.live, ...x.lines]), ...o.after.lines].some((l) => !before.has(l) && !typed.has(l) && !o.after.labels.includes(l)) : false;
-          push('visible-error-message', shown || run.dialogs.length > 0 ? null : `no new visible text after ${c ? `${c.method} ${c.path}` : 'the submit'} answered ${c?.status ?? 'nothing'}`);
-        } else push('visible-error-message', null);
-        // Lengths only: a bad value never reaches a report (21.12).
-        if (b.reference.length > 0) push('values-survive', valuesLost ? `${valuesLost.field} held ${valuesLost.value!.length} chars before the submit, then ${b.after[b.reference.indexOf(valuesLost)]?.value?.length ?? 0}` : null);
-        else notEvaluated('values-survive', 'not a click or press submit');
-        if (run.recovery) push('retry-recovers', run.recovery.passed ? null : (run.recovery.detail ?? 'the flow did not reach its goal'));
-        else notEvaluated('retry-recovers', 'no recovery ran');
-      } else {
-        for (const id of ['visible-error-message', 'values-survive', 'retry-recovers'] as const) notEvaluated(id, `outcome ${b.outcome}`);
-      }
-    },
-  });
 }

@@ -365,8 +365,6 @@ export interface RunFlowOptions {
   baselineLabels?: string[];
   // Screenshots kept in memory when a step's window ends: every step, or only these.
   shots?: 'all' | number[];
-  // A bad-input attack (21.9): this value replaces one fill or select step.
-  badInput?: BadInputRun;
   // The hard stop (50.3): a flow run still going at this time (ms since the epoch) is void.
   deadline?: number;
   // A regression test's pinned time zone and locale (25.4); attacks never set them.
@@ -468,6 +466,8 @@ export interface FlowRunEngine {
   readonly result: FlowRunResult;
   readonly flow: Flow;
   readonly unique: string;
+  // Awaits the response bodies still being read.
+  responses(): Promise<void>;
   readonly page: Page;
   readonly context: BrowserContext;
   // The step timeout S, the action and expect timeout, and the load timeout C.
@@ -483,6 +483,8 @@ export interface FlowRunEngine {
   resolve(text: string): string;
   // The page's state from the isolated world.
   snapshot(): Promise<Snapshot>;
+  // The values of these fill, select and check steps' fields now.
+  fieldValues(indices: number[]): Promise<{ field: string; value: string | null; password: boolean }[]>;
   // The method of the request that loaded the document now showing.
   documentMethod(): string;
   // Deletes the cookies of the Target's own hosts.
@@ -522,22 +524,6 @@ export interface OutOfOrderResult {
   // String leaves of at least 4 characters with a letter that only one answer carried; null when an answer isn't JSON.
   olderOnly: string[] | null;
   newerOnly: string[] | null;
-}
-
-export interface BadInputRun {
-  step: number;
-  value: string;
-  select: boolean;
-  // A multiple select's `placeholder`: no option at all.
-  noOption?: boolean;
-  submitStep: number;
-  // Every attackable step of the form, for reference values and recovery.
-  formSteps: number[];
-  // `METHOD template` of the baseline run's carrying request, or null.
-  carrying: string | null;
-  carryingWrite: boolean;
-  // `METHOD path` of 5xx answers the baseline run got at the submit step.
-  baseline5xx: string[];
 }
 
 export interface BadInputResult {
@@ -677,21 +663,6 @@ export interface Snapshot {
 const EMPTY_SNAPSHOT: Snapshot = { busy: false, busyWhat: null, disabled: [], overlay: false, lines: [], live: [], labels: [], overflow: 0, innerWidth: 0, mutations: 0 };
 
 class StepError extends Error {}
-// A bad input that could not be applied ends the attack with Not applied.
-class BadInputStop extends Error {}
-
-// A GraphQL error: the JSON request body has a `query` string and the
-// response a non-empty top-level `errors` array (21.10 outcome 3).
-function graphqlErrors(q: RequestRecord): boolean {
-  try {
-    const sent = JSON.parse(q.postData ?? '') as { query?: unknown };
-    const body = q.body as { errors?: unknown } | undefined;
-    return typeof sent.query === 'string' && Array.isArray(body?.errors) && body.errors.length > 0;
-  } catch {
-    return false;
-  }
-}
-
 // Section 23.6: a fault that delivered a 2xx lets the flow go on; a told,
 // unabsorbed fault gets a recovery; anything else ends the attack.
 export function afterWindow(fault: FaultId, state: FaultState): 'continue' | 'recover' | 'end' {
@@ -839,7 +810,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     recovery: null,
     pageTiming: null,
     outOfOrder: null,
-    badInput: options.badInput ? { notApplied: null, held: null, linesBefore: [], reference: [], after: [], submitDisabled: false, submittedAt: null, outcome: null, carrying: null } : null,
+    badInput: null,
     shots: new Map(),
     formEvents: { submits: [], invalids: [] },
     values: null,
@@ -1093,8 +1064,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       result.refused = new URL(request.url()).origin;
     }
     // An unfaulted request to the target that failed without the page aborting it.
-    const afterBadFill = options.badInput !== undefined && (record?.step ?? 0) >= options.badInput.step;
-    if (!faulted.has(request) && !afterBadFill && !hooks.excusesFailure?.(record) && ownHost(request.url()) && !/ERR_ABORTED|ERR_CONNECTION_REFUSED|ERR_BLOCKED_BY_CLIENT/.test(failure)) {
+    if (!faulted.has(request) && !hooks.excusesFailure?.(record) && ownHost(request.url()) && !/ERR_ABORTED|ERR_CONNECTION_REFUSED|ERR_BLOCKED_BY_CLIENT/.test(failure)) {
       result.voided ??= 'target unstable';
     }
   });
@@ -1270,6 +1240,9 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     result,
     flow: options.flow,
     unique,
+    responses: async () => {
+      await Promise.all(pendingResponses);
+    },
     page,
     context,
     timeouts: { step: stepTimeout, action: actionTimeout, load: loadTimeout },
@@ -1280,6 +1253,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     locate: (spec) => locate(spec),
     resolve,
     snapshot,
+    fieldValues: (indices) => fieldValuesOf(indices),
     documentMethod: () => documentMethod,
     clearOwnCookies,
     route: async (handler) => {
@@ -1513,7 +1487,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     return null;
   };
 
-  const bad = options.badInput;
   const fieldFacts = new Map<number, FieldFacts>();
 
   const queue: { index: number; step: Step; recovery: boolean }[] = options.flow.steps.map((step, i) => ({ index: i + 1, step, recovery: false }));
@@ -1567,47 +1540,13 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           const spec = (step as Record<string, LocatorSpec>)[kind]!;
           const locator = locate(spec);
           if (kind === 'click' || kind === 'press') control = await controlFacts(locator, actionTimeout);
-          if (bad && index === bad.submitStep && !recovering && !isRecovery && result.badInput!.notApplied === null) {
-            if (kind === 'click' || kind === 'press') {
-              // Reference values: blur the focused element, then read every field of the form.
-              await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur?.()).catch(() => {});
-              result.badInput!.reference = await fieldValuesOf(bad.formSteps);
-            }
-            // A submit that stays disabled through the settle window is skipped, never waited on for 30 s.
-            if (kind === 'click') {
-              const disabled = () => locator.evaluate((el) => (el as HTMLButtonElement).disabled === true || el.getAttribute('aria-disabled') === 'true', undefined, { timeout: 1000 }).catch(() => false);
-              const until = Date.now() + stepTimeout;
-              while ((await disabled()) && Date.now() < until) await page.waitForTimeout(POLL_MS);
-              if (await disabled()) result.badInput!.submitDisabled = true;
-            }
-            result.badInput!.submittedAt = Date.now();
-          }
           try {
             if (!recovering && hooks.act && (acted = await hooks.act({ index, step, kind, label, startedAt }, locator, before)) !== undefined) {
               if (acted.windowFrom !== undefined) windowFrom = acted.windowFrom;
-            } else if (bad && index === bad.submitStep && result.badInput!.submitDisabled && !recovering) {
-              // Skipped: the submit stayed disabled.
             } else if (kind === 'click') await locator.click({ timeout: actionTimeout });
             else if (kind === 'check') await locator.check({ timeout: actionTimeout });
             else if (kind === 'press') await locator.press((step as { key: string }).key, { timeout: actionTimeout });
-            else if (bad && index === bad.step && !recovering && !isRecovery) {
-              // The bad value goes in with fill or selectOption; a throw is Not applied (21.9).
-              result.badInput!.linesBefore = before.lines;
-              try {
-                if (bad.select) await locator.selectOption(bad.noOption ? [] : { value: bad.value }, { timeout: actionTimeout });
-                else await locator.fill(bad.value, { timeout: actionTimeout });
-              } catch (error) {
-                result.badInput!.notApplied = `fill failed: ${String((error as Error).message ?? error).split('\n')[0]!.slice(0, 120)}`;
-                throw new BadInputStop();
-              }
-              const held = await locator.evaluate((el) => ((el as HTMLElement).isContentEditable ? (el as HTMLElement).innerText : 'value' in el ? String((el as HTMLInputElement).value) : ''), undefined, { timeout: 2000 }).catch(() => null);
-              result.badInput!.held = held;
-              const own = resolve((step as { value: string }).value);
-              if (held !== null && held === own) {
-                result.badInput!.notApplied = "the field kept the flow's own value";
-                throw new BadInputStop();
-              }
-            } else {
+            else {
               const raw = (step as { value: string }).value;
               if (raw.includes('${env.')) result.envFilled.push(spec);
               const value = resolve(raw);
@@ -1615,7 +1554,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
               else await locator.selectOption({ label: value }, { timeout: actionTimeout });
             }
           } catch (error) {
-            if (error instanceof BadInputStop || error instanceof NotApplied) throw error;
+            if (error instanceof NotApplied) throw error;
             throw new StepError(await whyActionFailed(locator, kind === 'fill' || kind === 'select' ? 'editable' : 'clickable'));
           }
           if (kind === 'fill' || kind === 'select' || kind === 'check') {
@@ -1642,8 +1581,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           const png = await page.screenshot({ mask: result.envFilled.map(locate), timeout: 5000 }).catch(() => null);
           if (png) result.shots.set(index, png);
         }
-        const badHere = bad && index === bad.step && !recovering && !isRecovery;
-        const filled = acted?.value !== undefined ? acted.value : badHere ? bad.value : kind === 'fill' || kind === 'select' ? resolve((step as { value: string }).value) : kind === 'check' ? 'true' : undefined;
+        const filled = acted?.value !== undefined ? acted.value : kind === 'fill' || kind === 'select' ? resolve((step as { value: string }).value) : kind === 'check' ? 'true' : undefined;
         const observation: Observation = { before, samples, after: settled.after, unsettled: settled.unsettled, windowEndedAt: Date.now(), startedAt };
         result.steps.push({
           index, label, observation, settled: settled.settled, settleMs: settled.ms, path: pathAfter,
@@ -1674,56 +1612,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           result.recovery = { action: end.action, passed: true, detail: null };
         }
         if (end?.then === 'continue' && end.skip !== undefined && queue[0]?.index === end.skip) queue.shift();
-        // A bad input's window ends when its submit step settles (23.4): classify, then recover or go on.
-        if (bad && index === bad.submitStep && !recovering && !isRecovery && result.badInput!.notApplied === null) {
-          await Promise.all(pendingResponses);
-          const r = result.badInput!;
-          r.after = await fieldValuesOf(bad.formSteps);
-          const own = (url: string) => ownHost(url);
-          const pathOf = (url: string) => {
-            try {
-              return new URL(url).pathname;
-            } catch {
-              return url;
-            }
-          };
-          const since = result.requests.filter((q) => q.step >= bad.step && own(q.url) && !isFrameworkInternal(q.url));
-          const carrying = bad.carrying
-            ? since.find((q) => q.step === bad.submitStep && `${q.key.replace(/ #\d+$/, '')}` === bad.carrying) ?? null
-            : since.find((q) => q.step === bad.submitStep && q.navigation && q.method !== 'GET') ?? null;
-          r.carrying = carrying ? { method: carrying.method, path: pathOf(carrying.url), status: carrying.status, failure: carrying.failure } : null;
-          const crashed = since.some((q) =>
-            (q.status !== null && q.status >= 500 && !bad.baseline5xx.includes(`${q.method} ${pathOf(q.url)}`)) ||
-            (q.failure !== null && q.status === null && !/ERR_ABORTED/.test(q.failure)));
-          const invalids = result.formEvents.invalids.filter((e) => e.step === bad.submitStep);
-          const labels = new Set([...settled.after.labels, ...before.labels]);
-          const typed = (r.after ?? []).map((v) => v.value).filter((v): v is string => !!v);
-          const newMessage = [...samples.flatMap((x) => [...x.live, ...x.lines]), ...settled.after.lines]
-            .some((l) => !r.linesBefore.includes(l) && !labels.has(l) && !typed.includes(l));
-          const status = carrying?.status ?? null;
-          let outcome: BadOutcome;
-          if (crashed) outcome = 'crashed';
-          else if (status !== null && [401, 403, 407, 408, 429].includes(status)) outcome = 'inconclusive';
-          else if (carrying && status !== null && status >= 400 && status < 500) outcome = 'rejected';
-          else if (carrying && status !== null && status < 300 && graphqlErrors(carrying)) outcome = 'rejected';
-          else if (carrying && carrying.navigation && status !== null && status < 300 && (await locate((options.flow.steps[bad.step - 1] as Record<string, LocatorSpec>)[stepKind(options.flow.steps[bad.step - 1]!)]!).count().catch(() => 0)) > 0) outcome = 'rejected';
-          else if (!carrying && invalids.some((e) => e.browser && e.visible)) outcome = 'blocked-by-browser';
-          else if (!carrying && (r.submitDisabled || newMessage)) outcome = 'blocked-by-app';
-          else if (!carrying && (kind === 'click' || kind === 'press') && bad.carryingWrite) outcome = 'silent-refusal';
-          else outcome = 'accepted';
-          r.outcome = outcome;
-          if (outcome === 'inconclusive' || outcome === 'crashed') {
-            result.endedAfterWindow = true;
-            break;
-          }
-          if (outcome !== 'accepted') {
-            // Recovery (23.7): re-fill every field of the form with this run's own values, then submit again.
-            recovering = true;
-            const refill = bad.formSteps.filter((i) => i !== bad.submitStep).map((i) => ({ index: i, step: options.flow.steps[i - 1]!, recovery: true }));
-            queue.unshift(...refill, { index, step, recovery: true });
-            result.recovery = { action: `re-fill ${refill.length} ${refill.length === 1 ? 'field' : 'fields'}, then ${label}`, passed: true, detail: null };
-          }
-        }
         // The attacked step's window ended: the fault clears (23.5), then the
         // flow goes on, recovers, or the attack ends (23.6).
         if (attack && index === attack.step && !recovering) {
@@ -1763,10 +1651,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           result.endedAfterWindow = true;
           break;
         }
-        if (error instanceof BadInputStop) {
-          result.endedAfterWindow = true;
-          break;
-        }
         if (!(error instanceof StepError)) throw error;
         // A failure while recovering fails retry-recovers, never the flow run itself.
         if (recovering && result.recovery) {
@@ -1779,7 +1663,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
         // `Faulted; flow stopped at step <n>`, never a finding.
         if (hooks.stopsFlow?.(index)) result.stoppedAt = index;
         if (attack && index > attack.step && result.fault?.fired) result.stoppedAt = index;
-        if (bad && index > bad.submitStep && result.badInput?.outcome === 'accepted') result.stoppedAt = index;
         break;
       }
     }

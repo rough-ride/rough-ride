@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { baselineFailures, inKindOrder, judgeBadInput, judgeFault } from '../dist/checks.mjs';
+import { baselineFailures, inKindOrder, judgeFault } from '../dist/checks.mjs';
+import { judgeBadInput } from '../dist/kind-bad-input.mjs';
 import { judgeOutOfOrder } from '../dist/kind-out-of-order.mjs';
 import { judgePageTiming } from '../dist/kind-page-timing.mjs';
 import { judgeTiming } from '../dist/kind-double-submit.mjs';

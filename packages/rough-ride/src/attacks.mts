@@ -6,7 +6,7 @@
 import type { AttackLink } from './accounting.mjs';
 import { fieldKind, requestKey, type BadInputPlan } from './badinputs.mjs';
 import { judgeAppChecks, matchesWhen, probeFor, type AppCheck } from './appchecks.mjs';
-import { baselineFailures, checkLabel, checkSeverity, judgeBadInput, judgeFault, leadCheck, type CheckResult } from './checks.mjs';
+import { baselineFailures, checkLabel, checkSeverity, judgeFault, leadCheck, type CheckResult } from './checks.mjs';
 import { TOGGLE_HINT } from './kind-double-submit.mjs';
 import { SEVERITY_TEXT, type Group } from './groups.mjs';
 import { LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
@@ -481,48 +481,6 @@ async function runJudged(
   const kind = kindFor(attack);
   if (kind) {
     return kind.run(attack, { flow, baseline, options: { ...base, flow, templateOf, pollingKeys: pollingKeys(baseline) }, docs, skipped, control: (step) => controlOf(flow, step) });
-  }
-  if (attack.kind === 'bad-input' && attack.badInput) {
-    const b = attack.badInput;
-    const pathOf = (url: string) => {
-      try {
-        return new URL(url).pathname;
-      } catch {
-        return url;
-      }
-    };
-    const run = await runFlow({
-      ...base,
-      flow,
-      templateOf,
-      pollingKeys: pollingKeys(baseline),
-      shots: [b.submitStep],
-      badInput: {
-        step: b.fillStep,
-        value: b.value,
-        select: b.select,
-        noOption: b.noOption,
-        submitStep: b.submitStep,
-        formSteps: b.formSteps,
-        carrying: b.carrying,
-        carryingWrite: b.carryingWrite,
-        baseline5xx: baseline.requests.filter((q) => q.step === b.submitStep && q.status !== null && q.status >= 500).map((q) => `${q.method} ${pathOf(q.url)}`),
-      },
-    });
-    const judged = judgeBadInput(run, baseline, b.submitStep, skipped);
-    return {
-      ...attack,
-      verdict: judged.verdict,
-      checks: judged.checks,
-      page: b.page,
-      control: controlOf(flow, b.submitStep),
-      events: [],
-      voided: run.voided,
-      served: null,
-      notApplied: run.badInput?.notApplied ?? null,
-      givenUp: false,
-      run,
-    };
   }
   // kindFor took every attack without a fault.
   const fault = attack.fault!;
