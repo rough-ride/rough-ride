@@ -139,9 +139,9 @@ export async function signIn(options: {
   exclude?: string[];
   // The Bash tool's 550 s stop, with a plugin data folder.
   deadline?: number;
-  // flow save's own sign-in flow runs untrusted (44.5), with the guard and the host rules.
+  // flow save's own sign-in flow runs untrusted (44.5), with the guard.
   untrusted?: boolean;
-  hosts?: HostPolicy;
+  hosts: HostPolicy;
   guard?: LocalhostGuard;
   // App-specific checks' baseline probe (45.8 gate 6).
   onPoint?: RunFlowOptions['onPoint'];
@@ -162,7 +162,7 @@ export async function signIn(options: {
     shots: 'all',
     ...(options.deadline !== undefined && options.deadline !== Infinity ? { deadline: options.deadline } : {}),
     ...(options.untrusted ? { untrusted: true } : {}),
-    ...(options.hosts ? { hosts: options.hosts } : {}),
+    hosts: options.hosts,
     ...(options.guard ? { guard: options.guard } : {}),
     ...(options.onPoint ? { onPoint: options.onPoint } : {}),
   });

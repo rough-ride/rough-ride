@@ -12,7 +12,7 @@ import { wroteFile, type CheckedFiles } from './files.mjs';
 import type { FolderState } from './folder.mjs';
 import type { Flow, ReadyWait, RunFlowOptions } from './flowrun.mjs';
 import { LocalhostGuard } from './guard.mjs';
-import { hostPolicy, type HostPolicy } from './hosts.mjs';
+import { hostPolicy, LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
 import { takeFlowLock, type FlowLock } from './lock.mjs';
 import type { Note } from './output.mjs';
 import type { RunnerInfo } from './runner.mjs';
@@ -26,7 +26,7 @@ import { findTarget, type Target } from './target.mjs';
 type EnvReader = (name: string) => string | undefined;
 
 // What every flow run of the session starts from; a subcommand adds the flow and its extras.
-export type FlowRunDefaults = Omit<RunFlowOptions, 'flow'> & { hosts: HostPolicy };
+export type FlowRunDefaults = Omit<RunFlowOptions, 'flow'>;
 
 export interface TargetSessionOptions {
   root: string;
@@ -175,8 +175,10 @@ export async function openTargetSession(options: TargetSessionOptions): Promise<
       exclude,
       deadline: extra.deadline ?? bashStop,
       ...(extra.waitUntil !== undefined ? { waitUntil: extra.waitUntil } : {}),
-      // An untrusted sign-in flow gets the guard and the host rules of any untrusted run (44.5).
-      ...(extra.untrusted ? { untrusted: true, hosts, guard } : {}),
+      // An untrusted sign-in flow gets the guard and the host rules of any untrusted run (44.5);
+      // the committed one still runs with loopback as the only own host.
+      hosts: extra.untrusted ? hosts : LOOPBACK_ONLY,
+      ...(extra.untrusted ? { untrusted: true, guard } : {}),
       ...(extra.onPoint ? { onPoint: extra.onPoint } : {}),
     });
   };

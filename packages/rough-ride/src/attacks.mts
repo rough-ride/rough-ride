@@ -9,7 +9,7 @@ import { judgeAppChecks, matchesWhen, probeFor, type AppCheck } from './appcheck
 import { baselineFailures, checkLabel, checkSeverity, leadCheck, type CheckResult } from './checks.mjs';
 import { TOGGLE_HINT } from './kind-double-submit.mjs';
 import { SEVERITY_TEXT, type Group } from './groups.mjs';
-import { LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
+import type { HostPolicy } from './hosts.mjs';
 import { membersText } from './summary.mjs';
 import { attackId, emptyForm, isJsonMedia, kindsFor, responseSchema, type BodyKind, type FaultId } from './faults.mjs';
 import type { Form } from './forms.mjs';
@@ -462,7 +462,7 @@ export async function runAttack(
   if (matching.length === 0) return runJudged(attack, flow, baseline, base, docs);
   const probe = probeFor(matching);
   const o = await runJudged(attack, flow, baseline, { ...base, onPoint: probe.onPoint }, docs);
-  const results = judgeAppChecks(matching, attack, flow, o.run, probe.probes, o.verdict, (base.hosts ?? LOOPBACK_ONLY).ownHost);
+  const results = judgeAppChecks(matching, attack, flow, o.run, probe.probes, o.verdict, base.hosts.ownHost);
   return { ...o, checks: [...o.checks, ...results], verdict: o.verdict === 'passed' && results.some((r) => r.result === 'fail') ? 'failed' : o.verdict };
 }
 

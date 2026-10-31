@@ -4,7 +4,7 @@ import { after, before, test } from 'node:test';
 import { chooseBrowser, installedOnThisMachine, launchBrowser, makeLauncher } from '../dist/browser.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
 import { allowedSuffix, LocalhostGuard } from '../dist/guard.mjs';
-import { hostPolicy } from '../dist/hosts.mjs';
+import { hostPolicy, LOOPBACK_ONLY } from '../dist/hosts.mjs';
 
 // A stand-in remote server: Chrome maps remote.test and allowed.test to it, so
 // nothing leaves the machine. It records every request and allows CORS.
@@ -65,7 +65,7 @@ after(async () => {
 
 const baseURL = () => `http://127.0.0.1:${site.address().port}`;
 const go = (steps, extra = {}) =>
-  runFlow({ browser: launched.browser, baseURL: baseURL(), flow: { name: 'f', signedIn: false, steps }, env: () => undefined, ready: { kind: 'load' }, guard, ...extra });
+  runFlow({ browser: launched.browser, baseURL: baseURL(), flow: { name: 'f', signedIn: false, steps }, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY, guard, ...extra });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 test('header line 3 lists only the applied allow values', () => {

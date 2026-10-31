@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { after, before, beforeEach, test } from 'node:test';
 import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/browser.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
+import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 import { startUntrustedSite } from './fixtures/untrusted-site.mjs';
 
 let browser;
@@ -19,7 +20,7 @@ beforeEach(() => {
 });
 
 const run = (steps, untrusted) =>
-  runFlow({ browser, baseURL: site.url, flow: { name: 'f', signedIn: false, steps }, env: () => undefined, ready: { kind: 'load' }, untrusted });
+  runFlow({ browser, baseURL: site.url, flow: { name: 'f', signedIn: false, steps }, env: () => undefined, ready: { kind: 'load' }, hosts: LOOPBACK_ONLY, untrusted });
 
 const DELETE_42 = [{ goto: '/' }, { click: { role: 'button', name: 'Delete 42' } }, { expect: { text: 'Deleted 42' } }];
 const OWN = [{ goto: '/' }, { click: { role: 'button', name: 'Create and delete' } }, { expect: { text: 'Deleted abc123' } }];

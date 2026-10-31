@@ -6,7 +6,7 @@ import { randomInt } from 'node:crypto';
 import type { Browser, BrowserContext, CDPSession, Locator, Page, Request, Route } from 'playwright-core';
 import { MAX_BODY, sha256, type BodyKind } from './faults.mjs';
 import { abortedHint, type AbortedWrite, type LocalhostGuard } from './guard.mjs';
-import { LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
+import type { HostPolicy } from './hosts.mjs';
 import { hasCredentialHeader } from './secrets.mjs';
 
 export const S = 10_000;
@@ -327,8 +327,8 @@ export interface RunFlowOptions {
   env: (name: string) => string | undefined;
   ready: ReadyWait;
   exclude?: string[];
-  // The Target's host rules; only loopback is its own without them.
-  hosts?: HostPolicy;
+  // The Target's host rules: its own hosts for settling, cookies and fault attack points.
+  hosts: HostPolicy;
   unique?: string;
   keepStorageState?: boolean;
   // Called at the failing step, with the page still open (baseline screenshots).
@@ -773,7 +773,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
   const loadTimeout = options.timeouts?.C ?? C;
   const unique = options.unique ?? newUnique();
   const resolve = (text: string) => resolvePlaceholders(text, unique, options.env);
-  const ownHost = (options.hosts ?? LOOPBACK_ONLY).ownHost;
+  const ownHost = options.hosts.ownHost;
 
   const result: FlowRunResult = {
     passed: false,

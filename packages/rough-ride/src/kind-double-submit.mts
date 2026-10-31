@@ -5,7 +5,6 @@
 import type { AttackOutcome, PlannedAttack } from './attacks.mjs';
 import { judgeAttack, type Judged } from './checks.mjs';
 import { runFlow, type AttackKind, type ControlFacts, type FlowRunResult, type RequestRecord } from './flowrun.mjs';
-import { LOOPBACK_ONLY } from './hosts.mjs';
 import type { KindContext, KindModule } from './kinds.mjs';
 
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -104,7 +103,7 @@ export const doubleSubmitKind: KindModule = {
   record: (o) => ({ timing: { timing: o.timing, key: o.key, control: o.controlName ?? null, page: o.page }, events: o.events }),
   async run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome> {
     const run = await runFlow({ ...ctx.options, kind: flowRunKind(attack.step), shots: [attack.step] });
-    const own = (ctx.options.hosts ?? LOOPBACK_ONLY).ownHost;
+    const own = ctx.options.hosts.ownHost;
     const judged = judgeTiming(run, ctx.baseline, attack.step, ctx.skipped, own);
     const writes = run.requests.filter((q) => q.step === attack.step && WRITES.has(q.method) && (q.resourceType === 'fetch' || q.resourceType === 'xhr') && own(q.url));
     return {
