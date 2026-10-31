@@ -211,7 +211,8 @@ export interface ProtectedWrite {
 export function writeProtected(at: ProtectedWrite, rel: `flows/${string}.yaml` | `tests/${string}.yaml`, text: string, by: SavedEntry['by'], run: string): void {
   const kind = rel.startsWith('flows/') ? 'flow' : 'tests';
   const bytes = redactSecrets(text);
-  writeAtomic(at.folder, rel.split('/'), bytes);
+  // As bytes, so writeAtomic writes them as they are instead of redacting a second time.
+  writeAtomic(at.folder, rel.split('/'), Buffer.from(bytes, 'utf8'));
   at.manifest.saveCopy(rel, bytes, by, run, at.info.version);
   wroteFile(at.files, at.info, at.root, at.nuxtRel, at.argv, { shown: `.rough-ride/${rel}`, schema: FORMATS[kind].current, kind });
 }

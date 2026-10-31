@@ -107,6 +107,24 @@ test('writing a protected file is one step: the file, its saved copy and entry f
   assert.equal(files.formats.tests.highest, '0.1.0');
 });
 
+test('writing a protected file redacts once: an env value equal to another value\'s placeholder leaves the file and its saved copy the same', () => {
+  const root = repo();
+  const folder = ensureFolder(checkRootEntry(root));
+  const files = checkCommittedFiles(folder, { info: { ...info }, subcommand: 'quick', argv: ['quick'], env: {} });
+  // The placeholder is the longer value, so one pass replaces only tok-1234 and a second would replace the placeholder.
+  addSecret('tok-1234', '<env.TOKEN>');
+  addSecret('<env.TOKEN>', '<env.OTHER>');
+  try {
+    writeProtected({ folder, manifest: new Manifest(root), files, info: { ...info }, root, nuxtRel: null, argv: ['quick'] }, 'tests/t.yaml', TEST.replace('no error shown', 'no error shown tok-1234'), 'runner', 'run-1');
+  } finally {
+    clearSecrets();
+  }
+  const onDisk = readFileSync(path.join(root, '.rough-ride', 'tests', 't.yaml'), 'utf8');
+  assert.ok(onDisk.includes('no error shown <env.TOKEN>'), onDisk);
+  assert.equal(new Manifest(root).savedCopy('tests/t.yaml').text, onDisk);
+  assert.equal(new Manifest(root).label('tests/t.yaml', onDisk), 'written by rough-ride');
+});
+
 test('detached HEAD with an empty manifest prints no saved-copies note, in or out of CI mode', async () => {
   const root = repo();
   writeFileSync(path.join(root, '.rough-ride', 'tests', 't.yaml'), TEST);
