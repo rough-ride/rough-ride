@@ -6,14 +6,14 @@
 import type { AttackLink } from './accounting.mjs';
 import { fieldKind, requestKey, type BadInputPlan } from './badinputs.mjs';
 import { judgeAppChecks, matchesWhen, probeFor, type AppCheck } from './appchecks.mjs';
-import { baselineFailures, checkLabel, checkSeverity, judgeFault, leadCheck, type CheckResult } from './checks.mjs';
+import { baselineFailures, checkLabel, checkSeverity, leadCheck, type CheckResult } from './checks.mjs';
 import { TOGGLE_HINT } from './kind-double-submit.mjs';
 import { SEVERITY_TEXT, type Group } from './groups.mjs';
 import { LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
 import { membersText } from './summary.mjs';
 import { attackId, emptyForm, FAULT_PHRASE, isJsonMedia, kindsFor, responseSchema, type BodyKind, type FaultId } from './faults.mjs';
 import type { Form } from './forms.mjs';
-import { describeLocator, isFrameworkInternal, runFlow, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type RequestRecord, type RunFlowOptions, type Served } from './flowrun.mjs';
+import { describeLocator, isFrameworkInternal, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type RequestRecord, type RunFlowOptions, type Served } from './flowrun.mjs';
 import { kindFor } from './kinds.mjs';
 import { matchTemplate, type OpenApiDoc } from './openapi.mjs';
 
@@ -454,7 +454,7 @@ export async function runAttack(
   attack: PlannedAttack,
   flow: Flow,
   baseline: FlowRunResult,
-  base: Omit<RunFlowOptions, 'flow' | 'attack' | 'templateOf' | 'pollingKeys'>,
+  base: Omit<RunFlowOptions, 'flow' | 'kind' | 'templateOf' | 'pollingKeys'>,
   docs: OpenApiDoc[],
   appChecks: AppCheck[] = [],
 ): Promise<AttackOutcome> {
@@ -470,7 +470,7 @@ async function runJudged(
   attack: PlannedAttack,
   flow: Flow,
   baseline: FlowRunResult,
-  base: Omit<RunFlowOptions, 'flow' | 'attack' | 'templateOf' | 'pollingKeys'>,
+  base: Omit<RunFlowOptions, 'flow' | 'kind' | 'templateOf' | 'pollingKeys'>,
   docs: OpenApiDoc[],
 ): Promise<AttackOutcome> {
   const templateOf = (method: string, url: string) => {
@@ -478,44 +478,7 @@ async function runJudged(
     return keyed ? `${method} ${keyed.template}` : null;
   };
   const skipped = new Set<string>(baselineFailures(baseline).map((f) => f.id));
-  const kind = kindFor(attack);
-  if (kind) {
-    return kind.run(attack, { flow, baseline, options: { ...base, flow, templateOf, pollingKeys: pollingKeys(baseline) }, docs, skipped, control: (step) => controlOf(flow, step) });
-  }
-  // kindFor took every attack without a fault.
-  const fault = attack.fault!;
-  const { schema, doc } = responseSchema(docs, attack.template.split(' ')[0]!, attack.template);
-  const run = await runFlow({
-    ...base,
-    flow,
-    attack: {
-      fault,
-      sticky: attack.sticky,
-      template: attack.template,
-      k: attack.k,
-      step: attack.step,
-      ...(attack.baseline ? { baseline: attack.baseline } : {}),
-      emptyFormOf: (live: unknown) => emptyForm(live, attack.template, schema, doc),
-    },
-    templateOf,
-    pollingKeys: pollingKeys(baseline),
-    baselineLabels: baseline.steps.find((s) => s.index === attack.step)?.observation?.after.labels ?? [],
-    shots: [attack.step],
-  });
-  const judged = judgeFault(run, baseline, attack.step, skipped, fault);
-  return {
-    ...attack,
-    verdict: judged.verdict,
-    checks: judged.checks,
-    page: run.steps.find((s) => s.index === attack.step)?.path ?? null,
-    control: controlOf(flow, attack.step),
-    events: (run.fault?.events ?? []).map((e) => ({ offsetMs: e.offsetMs, event: e.event, ...(e.detail ? { detail: e.detail } : {}) })),
-    voided: run.voided,
-    served: run.fault?.served ?? null,
-    notApplied: run.fault?.notApplied ?? null,
-    givenUp: run.fault?.givenUp ?? false,
-    run,
-  };
+  return kindFor(attack).run(attack, { flow, baseline, options: { ...base, flow, templateOf, pollingKeys: pollingKeys(baseline) }, docs, skipped, control: (step) => controlOf(flow, step) });
 }
 
 // Section 37's symptom templates, by lead check.

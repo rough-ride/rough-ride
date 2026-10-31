@@ -227,18 +227,16 @@ test('hang: Pending at H with two checks judged; a page that gives up gets fast-
 });
 
 test('delay-3s: the server gets the unchanged request at least 3,000 ms after the route event; timeouts grow by 3 s', async () => {
-  const { o } = await attack(probe('/api/list'), 'delay-3s');
+  const { o, baseline, points } = await attack(probe('/api/list'), 'delay-3s');
   const received = site.log.filter((l) => l.key === 'GET /api/list').at(-1);
   assert.ok(received.at - o.run.fault.firedAt >= 3000, `${received.at - o.run.fault.firedAt}`);
   assert.match(shown(o), /^200\|application\/json\|\[\{"id":7/);
   assert.deepEqual(o.events.map((e) => e.event), ['released after 3000 ms', 'cleared']);
   assert.equal(result(o, 'visible-error-message'), 'not-evaluated');
-  const missing = await runFlow({
-    ...base({ timeouts: { S: 1500 } }),
-    flow: { name: 'f', signedIn: false, steps: [{ goto: '/probe?u=/api/list' }, { click: { role: 'button', name: 'Nope' } }] },
-    attack: { fault: 'delay-3s', sticky: false, template: 'GET /api/list', k: 1, step: 2 },
-  });
-  assert.match(missing.failure.message, /not found after 4\.5 s/);
+  // The attacked step's control is missing, so its click times out at S plus the delay.
+  const missingFlow = { name: 'f', signedIn: false, steps: [{ goto: '/probe?u=/api/list' }, { click: { role: 'button', name: 'Nope' } }] };
+  const missing = await runAttack(points.find((p) => p.fault === 'delay-3s'), missingFlow, baseline, base({ timeouts: { S: 1500 } }), []);
+  assert.match(missing.run.failure.message, /not found after 4\.5 s/);
 });
 
 test('a service worker and a cacheable GET give the same requests and #n in two baselines and the attack', async () => {

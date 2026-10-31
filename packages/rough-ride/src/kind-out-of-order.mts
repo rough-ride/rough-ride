@@ -5,6 +5,7 @@
 import type { AttackOutcome, PlannedAttack } from './attacks.mjs';
 import { judgeAttack, type Judged } from './checks.mjs';
 import { holdMsFor, isJsonMedia, MAX_BODY, sha256 } from './faults.mjs';
+import { graceEvents } from './kind-fault.mjs';
 import { NotApplied, POLL_MS, QUIET_MS, runFlow, stepKind, type AttackKind, type FaultState, type FlowRunResult, type LocatorSpec, type OutOfOrderResult } from './flowrun.mjs';
 import type { Request, Route } from 'playwright-core';
 import type { KindContext, KindModule } from './kinds.mjs';
@@ -185,6 +186,7 @@ function flowRunKind(o: OutOfOrderRun): AttackKind {
             faultEvent('older aborted by the page', request.failure()?.errorText ?? '');
           }
         },
+        settling: () => ({ pending: f.pending, holding: false, events: graceEvents(f) }),
         // It ran its own submit step; the flow goes on after it.
         afterWindow: async (at) => (at.index === o.step && o.submitStep !== o.step ? { then: 'continue', skip: o.submitStep } : { then: 'continue' }),
         notApplied: (reason) => {

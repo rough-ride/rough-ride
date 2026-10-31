@@ -205,68 +205,7 @@ export function judgeAttack(run: FlowRunResult, baseline: FlowRunResult, skipped
   return { verdict: checks.some((c) => c.result === 'fail') ? 'failed' : adjust.pending ? 'pending' : 'passed', checks };
 }
 
-// A told failure: the page got an error it can report. malformed-json, empty-200
-// and a completed delay-3s delivered a 2xx; a one-shot fault a retry absorbed was
-// never seen; a hang or delay is told once the page gave up on it.
-export function toldFault(fault: string, state: NonNullable<FlowRunResult['fault']>): boolean {
-  if (state.absorbed) return false;
-  if (fault === 'malformed-json' || fault === 'empty-200') return false;
-  if (fault === 'hang' || fault === 'delay-3s') return state.givenUp;
-  return true;
-}
-
-// Judges one fault attack's flow run against the flow's baseline run.
-export function judgeFault(attackRun: FlowRunResult, baseline: FlowRunResult, attackedStep: number, skipped: Set<string>, fault = '500'): Judged {
-  const state = attackRun.fault;
-  const pending = state?.pending ?? false;
-  return judgeAttack(attackRun, baseline, skipped, {
-    name: 'fault',
-    gate: !state?.fired ? 'fault-never-fired' : state.notApplied !== null ? 'not-applied' : null,
-    adjust: { pending },
-    order: ['no-uncaught-error', 'settles', 'visible-error-message', 'values-survive', 'no-broken-text', 'retry-recovers'],
-    own: ({ push, notEvaluated }) => {
-      const f = state!;
-      const told = toldFault(fault, f);
-      // visible-error-message: a told failure (500 or reset, sticky so never absorbed)
-      // must show something new from the failed response until the window ends.
-      const step = attackRun.steps.find((s) => s.index === attackedStep);
-      const firedAt = f.firedAt ?? 0;
-      const o = step?.observation;
-      let message: string | null = 'no new visible text after the failed request';
-      if (o) {
-        const before = new Set([...o.before.lines, ...o.before.live]);
-        const typed = fillValues(attackRun);
-        const labels = new Set([...o.before.labels, ...o.after.labels]);
-        const after = o.samples.filter((x) => x.at >= firedAt);
-        const newLine = after.flatMap((x) => [...x.live, ...x.lines]).find((l) => !before.has(l) && !labels.has(l) && !typed.some((v) => l === v));
-        const dialog = attackRun.dialogs.length > 0;
-        // Navigation to another page counts, as after a 401 that moves to sign-in.
-        const previous = pathBefore(attackRun, attackedStep);
-        const moved = previous !== null && step.path !== null && step.path !== previous;
-        if (newLine || dialog || moved) message = null;
-      }
-      if (pending) notEvaluated('visible-error-message', 'pending hang');
-      else if (f.absorbed) notEvaluated('visible-error-message', 'a client retry absorbed the one-shot fault');
-      else if (!told) notEvaluated('visible-error-message', 'the fault delivered a 2xx');
-      else push('visible-error-message', message);
-      // values-survive (22.4 check 6): after a told failure on a click submit step.
-      if (pending) notEvaluated('values-survive', 'pending hang');
-      else if (!told || attackRun.values === null) notEvaluated('values-survive', told ? 'not a click submit step' : 'the fault was not told');
-      else {
-        const lost = attackRun.values.find((v) => !v.password && v.after !== null && v.before !== null && v.before.trim() !== v.after.trim());
-        push('values-survive', lost ? `${lost.field} held "${lost.before}", then "${lost.after}" after the failed request` : null);
-      }
-      // retry-recovers (22.4 check 8): after a told, unabsorbed 500, 400, 429 or
-      // reset, or a hang or delay-3s the page gave up on.
-      const recoverable = told && !f.absorbed && (['500', '400', '429', 'reset'].includes(fault) || ((fault === 'hang' || fault === 'delay-3s') && f.givenUp));
-      if (pending) notEvaluated('retry-recovers', 'pending hang');
-      else if (!recoverable || attackRun.recovery === null) notEvaluated('retry-recovers', 'no recovery after this fault');
-      else push('retry-recovers', attackRun.recovery.passed ? null : (attackRun.recovery.detail ?? 'the flow did not reach its goal'));
-    },
-  });
-}
-
-function pathBefore(run: FlowRunResult, step: number): string | null {
+export function pathBefore(run: FlowRunResult, step: number): string | null {
   for (let i = step - 1; i >= 1; i--) {
     const p = run.steps.find((s) => s.index === i)?.path;
     if (p) return p;

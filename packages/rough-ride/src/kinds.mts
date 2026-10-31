@@ -6,6 +6,7 @@ import type { AttackOutcome, PlannedAttack } from './attacks.mjs';
 import type { Flow, FlowRunResult, RunFlowOptions } from './flowrun.mjs';
 import { badInputKind } from './kind-bad-input.mjs';
 import { doubleSubmitKind } from './kind-double-submit.mjs';
+import { faultKind } from './kind-fault.mjs';
 import { outOfOrderKind } from './kind-out-of-order.mjs';
 import { pageTimingKind } from './kind-page-timing.mjs';
 import { viewportKind } from './kind-viewport.mjs';
@@ -42,7 +43,8 @@ export function kindId(attack: Pick<PlannedAttack, 'kind' | 'timing' | 'fault'>)
   return 'fault';
 }
 
-const MODULES: Partial<Record<KindId, KindModule>> = {
+const MODULES: Record<KindId, KindModule> = {
+  fault: faultKind,
   'bad-input': badInputKind,
   'double-submit': doubleSubmitKind,
   'out-of-order': outOfOrderKind,
@@ -50,6 +52,6 @@ const MODULES: Partial<Record<KindId, KindModule>> = {
   viewport: viewportKind,
 };
 
-export function kindFor(attack: PlannedAttack): KindModule | null {
-  return MODULES[kindId(attack)] ?? null;
+export function kindFor(attack: PlannedAttack): KindModule {
+  return MODULES[kindId(attack)];
 }

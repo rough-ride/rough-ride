@@ -4,7 +4,7 @@
 
 import { randomInt } from 'node:crypto';
 import type { Browser, BrowserContext, CDPSession, Locator, Page, Request, Route } from 'playwright-core';
-import { DELAY_MS, fixedResponse, holdMsFor, isJsonMedia, malformedBody, MAX_BODY, sha256, type BodyKind, type FaultId } from './faults.mjs';
+import { MAX_BODY, sha256, type BodyKind } from './faults.mjs';
 import { abortedHint, type AbortedWrite, type LocalhostGuard } from './guard.mjs';
 import { LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
 import { hasCredentialHeader } from './secrets.mjs';
@@ -203,18 +203,6 @@ export interface FieldFacts {
   held: string | null;
 }
 
-export interface FaultAttack {
-  fault: FaultId;
-  sticky: boolean;
-  // `METHOD template` of the attack point, and its place among same-key requests in its step.
-  template: string;
-  k: number;
-  step: number;
-  // Body faults: the baseline response's status and media type, and the empty-200 rule.
-  baseline?: { status: number | null; mediaType: string | null };
-  emptyFormOf?: (live: unknown) => { kind: BodyKind; body: string } | null;
-}
-
 export interface FaultEvent {
   at: number;
   // Monotonic ms from the attack point's request reaching the route.
@@ -350,8 +338,6 @@ export interface RunFlowOptions {
   timeouts?: { S?: number; C?: number };
   // The localhost guard, attached to the whole browser; it also turns the HTTP cache off.
   guard?: LocalhostGuard;
-  // A fault attack: a route on this run's own context.
-  attack?: FaultAttack;
   // `METHOD template` for a request from the OpenAPI documents, or null to fall
   // back to the {} rules (with this run's own token and returned values).
   templateOf?: (method: string, url: string) => string | null;
@@ -361,8 +347,6 @@ export interface RunFlowOptions {
   credentials?: string[];
   // The attack kind this flow run applies, if any; see AttackKind.
   kind?: AttackKind;
-  // Fault recovery: control labels the baseline run showed after the attacked step (23.7).
-  baselineLabels?: string[];
   // Screenshots kept in memory when a step's window ends: every step, or only these.
   shots?: 'all' | number[];
   // The hard stop (50.3): a flow run still going at this time (ms since the epoch) is void.
@@ -389,6 +373,8 @@ export interface RunFlowOptions {
 export interface AttackKind {
   // The flow run's viewport; 1280 x 800 otherwise.
   viewport?: { width: number; height: number };
+  // Added to every action and expect timeout.
+  actionMs?: number;
   // Called once the page and its instrumentation exist, before the first step.
   start(engine: FlowRunEngine): KindHooks | Promise<KindHooks>;
 }
@@ -425,7 +411,8 @@ export interface StepWindow {
 export type WindowEnd =
   // `skip`: a later step the kind already ran.
   | { then: 'continue'; skip?: number }
-  | { then: 'end' }
+  // `unrecovered`: a recovery was due but has no step to run.
+  | { then: 'end'; unrecovered?: string }
   | { then: 'recover'; steps: { index: number; step: Step }[]; action: string };
 
 // The attack could not be applied: the engine ends the flow run there, and the
@@ -439,6 +426,8 @@ export class NotApplied extends Error {
 // The points of a flow run where a kind's rules apply. Step hooks run only
 // until a recovery starts; recovery steps are the flow's own.
 export interface KindHooks {
+  // Before the step's action, and before its page snapshot.
+  beforeStep?(at: StepAt): Promise<void>;
   // In place of a click, press, check, fill or select step's own action, or
   // undefined to leave the step to the engine. A NotApplied ends the attack.
   act?(at: StepAt, locator: Locator, before: Snapshot): Promise<Acted | undefined>;
@@ -450,14 +439,21 @@ export interface KindHooks {
   afterWindow?(at: StepAt, window: StepWindow): Promise<WindowEnd>;
   // The reason of a NotApplied thrown from a hook.
   notApplied?(reason: string): void;
+  // A fetch or XHR request finished, with its status read.
+  responded?(request: Request, record: RequestRecord): void;
   // Any request of the flow run failed.
   requestFailed?(request: Request, failure: string): void;
+  // Read while a step settles: a Pending request ends the window, a held one
+  // keeps it open past S, and these events start grace periods (23.2, 23.3).
+  settling?(): { pending: boolean; holding: boolean; events: { at: number; key: string }[] };
   // An own-origin request that failed without the page aborting it, which
   // otherwise voids the run as target unstable: whether the kind caused it.
   excusesFailure?(record: RequestRecord | undefined): boolean;
   // A later step failed: whether that stops the flow after the attack
   // (`Faulted; flow stopped at step <n>`) rather than failing the flow run.
   stopsFlow?(index: number): boolean;
+  // When the flow run ends, before its context closes.
+  close?(): Promise<void>;
 }
 
 // What the engine hands a kind: this flow run's result, page and primitives.
@@ -466,6 +462,12 @@ export interface FlowRunEngine {
   readonly result: FlowRunResult;
   readonly flow: Flow;
   readonly unique: string;
+  // repro --keep-open (14.8): the attack stays applied after its window.
+  readonly keepArmed: boolean;
+  // The step that owns requests now: the last action step started.
+  owner(): number;
+  // A response or abort the attack served, which no check counts as the target's own.
+  markServed(request: Request): void;
   // Awaits the response bodies still being read.
   responses(): Promise<void>;
   readonly page: Page;
@@ -663,18 +665,6 @@ export interface Snapshot {
 const EMPTY_SNAPSHOT: Snapshot = { busy: false, busyWhat: null, disabled: [], overlay: false, lines: [], live: [], labels: [], overflow: 0, innerWidth: 0, mutations: 0 };
 
 class StepError extends Error {}
-// Section 23.6: a fault that delivered a 2xx lets the flow go on; a told,
-// unabsorbed fault gets a recovery; anything else ends the attack.
-export function afterWindow(fault: FaultId, state: FaultState): 'continue' | 'recover' | 'end' {
-  if (!state.fired || state.pending || state.notApplied !== null) return 'end';
-  if (fault === 'malformed-json' || fault === 'empty-200' || (fault === 'delay-3s' && !state.givenUp)) return 'continue';
-  if (state.absorbed || fault === '401') return 'end';
-  if (fault === 'hang' || fault === 'delay-3s') return state.givenUp ? 'recover' : 'end';
-  return 'recover';
-}
-
-const FAULT_EVENT = /^(served|aborted net|given up|fast-failed|released|forwarded)/;
-
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // The dev server's own files (Nuxt's /_nuxt/ base, Vite's /@vite/ client, Nuxt
@@ -779,8 +769,7 @@ async function controlFacts(locator: Locator, timeout: number): Promise<ControlF
 
 export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
   const stepTimeout = options.timeouts?.S ?? S;
-  // Under delay-3s every step and expect timeout gets 3 s more (20.10).
-  const actionTimeout = stepTimeout + (options.attack?.fault === 'delay-3s' ? DELAY_MS : 0);
+  const actionTimeout = stepTimeout + (options.kind?.actionMs ?? 0);
   const loadTimeout = options.timeouts?.C ?? C;
   const unique = options.unique ?? newUnique();
   const resolve = (text: string) => resolvePlaceholders(text, unique, options.env);
@@ -801,9 +790,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     aborted: [],
     pageEvents: [],
     voided: null,
-    fault: options.attack
-      ? { fired: false, events: [], firedAt: null, notApplied: null, pending: false, givenUp: false, absorbed: false, served: null, holdMs: holdMsFor(stepTimeout) }
-      : null,
+    fault: null,
     endedAfterWindow: false,
     timing: null,
     stoppedAt: null,
@@ -900,18 +887,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
   const created = new Set<string>();
   const pendingResponses: Promise<void>[] = [];
   const faulted = new Set<Request>();
-  // hang: requests the fault holds; delay-3s: requests waiting out the delay.
-  const held = new Map<Request, Route>();
-  const delayed = new Set<Request>();
-  // Requests after a spent one-shot fault: a real 2xx among them absorbed it.
-  const oneShotRetries = new Set<Request>();
-  let abortingHeld = false;
-  let routeEventAt: number | null = null;
-  const faultEvent = (event: string, detail?: string) => {
-    const now = Date.now();
-    const offset = routeEventAt === null ? 0 : Math.round(performance.now() - routeEventAt);
-    result.fault!.events.push({ at: now, offsetMs: offset, event, key: options.attack?.template ?? '', ...(detail ? { detail } : {}) });
-  };
   const extraStatus = new Map<string, number>();
   const polling = options.pollingKeys ?? new Set<string>();
   const templateFor = (method: string, url: string) => options.templateOf?.(method, url) ?? requestTemplate(method, url, unique, returned);
@@ -1017,8 +992,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
         const headers = await request.allHeaders().catch(() => ({}) as Record<string, string>);
         record.credentialed = Boolean(headers.cookie) || hasCredentialHeader(headers, options.credentials ?? []);
         record.mediaType = (response?.headers()['content-type'] ?? '').split(';')[0]!.trim().toLowerCase() || null;
-        // A one-shot fault's later request that got a real 2xx: the client retry absorbed it.
-        if (oneShotRetries.has(request) && record.status !== null && record.status >= 200 && record.status < 300) result.fault!.absorbed = true;
+        hooks.responded?.(request, record);
         const size = Number(response?.headers()['content-length'] ?? 0);
         if (!response || size > MAX_BODY) {
           record.jsonRoot = 'none';
@@ -1052,13 +1026,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     const record = byRequest.get(request);
     const failure = request.failure()?.errorText ?? 'failed';
     if (record) record.failure = failure;
-    // The page gave up on a held or delayed request: from then on the fault is told.
-    if ((held.has(request) || delayed.has(request)) && !abortingHeld) {
-      held.delete(request);
-      delayed.delete(request);
-      result.fault!.givenUp = true;
-      faultEvent('given up by the page', failure);
-    }
     hooks.requestFailed?.(request, failure);
     if (/ERR_CONNECTION_REFUSED/.test(failure) && ownHost(request.url()) && result.refused === null) {
       result.refused = new URL(request.url()).origin;
@@ -1069,87 +1036,10 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     }
   });
 
-  // The fault: a route on this run's own context (sections 20.5 to 20.11).
-  let armed = false;
-  let cleared = false;
-  let countInStep = 0;
-  const attack = options.attack;
-  const holdMs = result.fault?.holdMs ?? holdMsFor(stepTimeout);
-  let holdTimer: ReturnType<typeof setTimeout> | null = null;
-  const crossOrigin = (url: string) => {
-    try {
-      return new URL(url).origin !== new URL(page.url()).origin;
-    } catch {
-      return false;
-    }
-  };
   const markServed = (request: Request) => {
     faulted.add(request);
     const record = byRequest.get(request);
     if (record) record.servedByFault = true;
-  };
-  const serveFixed = async (route: Route, request: Request, fault: '500' | '400' | '401' | '429') => {
-    const fixed = fixedResponse(fault, crossOrigin(request.url()));
-    markServed(request);
-    result.fault!.served ??= { status: fixed.status, headers: fixed.headers, body: fixed.body };
-    faultEvent(`served ${fixed.status}`);
-    await route.fulfill({ status: fixed.status, headers: fixed.headers, body: fixed.body }).catch(() => {});
-  };
-  // malformed-json and empty-200: forwarded exactly once, then the body is rewritten (20.8).
-  const serveBody = async (route: Route, request: Request) => {
-    let response;
-    try {
-      response = await route.fetch({ maxRedirects: 0, timeout: holdMs });
-    } catch (error) {
-      result.fault!.notApplied ??= `forwarding failed: ${String((error as Error).message ?? error).split('\n')[0]!.slice(0, 120)}`;
-      cleared = true;
-      markServed(request);
-      faultEvent('aborted net::ERR_FAILED');
-      await route.abort('failed').catch(() => {});
-      return;
-    }
-    const status = response.status();
-    const media = (response.headers()['content-type'] ?? '').split(';')[0]!.trim().toLowerCase() || null;
-    const body = await response.body().catch(() => Buffer.alloc(0));
-    const base = attack!.baseline;
-    const unchanged = async (reason: string) => {
-      result.fault!.notApplied ??= reason;
-      cleared = true;
-      faultEvent(`forwarded ${status} ${media ?? 'none'}`, 'unchanged');
-      await route.fulfill({ response }).catch(() => {});
-    };
-    const sameClass = base?.status != null && Math.floor(base.status / 100) === Math.floor(status / 100) && base.mediaType === media;
-    if (status < 200 || status >= 300 || !isJsonMedia(media) || body.length === 0 || (base && !sameClass)) {
-      return unchanged(`the real response was ${status} ${media ?? 'none'}`);
-    }
-    let text: string;
-    let kind: string;
-    if (attack!.fault === 'malformed-json') {
-      text = malformedBody(body.toString('utf8'));
-      kind = 'malformed';
-    } else {
-      let live: unknown;
-      try {
-        live = JSON.parse(body.toString('utf8'));
-      } catch {
-        return unchanged(`the real response was ${status} ${media ?? 'none'}`);
-      }
-      const form = attack!.emptyFormOf?.(live) ?? null;
-      if (!form) return unchanged('no empty form of the response');
-      if (form.body === JSON.stringify(live)) return unchanged('response already empty');
-      text = form.body;
-      kind = form.kind;
-    }
-    const headers: Record<string, string> = {};
-    for (const [name, value] of Object.entries(response.headers())) {
-      if (name === 'content-length' || name === 'content-encoding' || name === 'transfer-encoding') continue;
-      headers[name] = value;
-    }
-    markServed(request);
-    const shown = Object.fromEntries(Object.entries(headers).map(([n, v]) => [n, n === 'set-cookie' ? '<redacted>' : v]));
-    result.fault!.served ??= { status, headers: shown, bodyKind: kind, length: Buffer.byteLength(text), sha256: sha256(text) };
-    faultEvent(`forwarded ${status} ${media}`, kind);
-    await route.fulfill({ status, headers, body: text }).catch(() => {});
   };
   const clearOwnCookies = async () => {
     const domains = new Set((await context.cookies()).map((c) => c.domain));
@@ -1157,89 +1047,13 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       if (ownHost(`http://${domain.replace(/^\./, '')}/`)) await context.clearCookies({ domain }).catch(() => {});
     }
   };
-  // A Pending hang: a request still held at H ends the window (23.3).
-  const startHoldDeadline = () => {
-    if (holdTimer !== null) return;
-    holdTimer = setTimeout(() => {
-      if (held.size > 0 && !result.fault!.givenUp) {
-        result.fault!.pending = true;
-        faultEvent(`pending at ${holdMs / 1000} s`);
-      }
-    }, holdMs);
-  };
-  if (attack) {
-    await context.route('**/*', async (route, request) => {
-      const type = request.resourceType();
-      const url = request.url();
-      if (cleared || (type !== 'fetch' && type !== 'xhr') || !ownHost(url) || isFrameworkInternal(url)) return route.fallback();
-      // After a 401 attack point, every credentialed own-origin request gets the 401 (20.6).
-      if (attack.fault === '401' && result.fault!.fired) {
-        const headers = await request.allHeaders().catch(() => ({}) as Record<string, string>);
-        if (hasCredentialHeader(headers, options.credentials ?? [])) return serveFixed(route, request, '401');
-        return route.fallback();
-      }
-      if (templateFor(request.method(), url) !== attack.template) return route.fallback();
-      let hit = false;
-      if (!result.fault!.fired) {
-        if (armed && owner === attack.step) {
-          countInStep++;
-          hit = countInStep === attack.k;
-        }
-      } else if (attack.sticky) hit = true;
-      if (!hit) {
-        if (result.fault!.fired && !attack.sticky) oneShotRetries.add(request);
-        return route.fallback();
-      }
-      const first = !result.fault!.fired;
-      if (first) {
-        routeEventAt = performance.now();
-        result.fault!.fired = true;
-        result.fault!.firedAt = Date.now();
-      }
-      switch (attack.fault) {
-        case '500':
-        case '400':
-        case '429':
-          return serveFixed(route, request, attack.fault);
-        case '401':
-          await clearOwnCookies();
-          return serveFixed(route, request, '401');
-        case 'reset':
-          markServed(request);
-          result.fault!.served ??= { aborted: 'net::ERR_CONNECTION_RESET' };
-          faultEvent('aborted net::ERR_CONNECTION_RESET');
-          return route.abort('connectionreset').catch(() => {});
-        case 'hang':
-          markServed(request);
-          if (result.fault!.givenUp) {
-            faultEvent('fast-failed', 'net::ERR_TIMED_OUT');
-            return route.abort('timedout').catch(() => {});
-          }
-          result.fault!.served ??= { held: true };
-          held.set(request, route);
-          faultEvent('held');
-          startHoldDeadline();
-          return;
-        case 'delay-3s': {
-          result.fault!.served ??= { delayed: DELAY_MS };
-          delayed.add(request);
-          const releaseAt = performance.now() + DELAY_MS;
-          while (performance.now() < releaseAt) await new Promise((r) => setTimeout(r, Math.max(1, releaseAt - performance.now())));
-          if (!delayed.has(request)) return;
-          delayed.delete(request);
-          faultEvent(`released after ${DELAY_MS} ms`);
-          return route.continue().catch(() => {});
-        }
-        case 'malformed-json':
-        case 'empty-200':
-          return serveBody(route, request);
-      }
-    });
-  }
   const engine: FlowRunEngine = {
     result,
     flow: options.flow,
     unique,
+    keepArmed: options.keepArmed ?? false,
+    owner: () => owner,
+    markServed,
     responses: async () => {
       await Promise.all(pendingResponses);
     },
@@ -1265,7 +1079,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     navigate: (index, what, notes) => runnerNavigation(index, what, notes),
   };
   if (options.kind) hooks = await options.kind.start(engine);
-  // Untrusted runs (44.5). A predicate matcher, so an attack's unroute('**/*') keeps it.
+  // Untrusted runs (44.5).
   if (options.untrusted) {
     // A path segment, with or without its extension, that an earlier response returned.
     const holdsCreated = (url: string) => {
@@ -1299,15 +1113,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       return route.fallback();
     });
   }
-  // After the window: held requests are aborted once the page has been judged.
-  const releaseHeld = async () => {
-    if (holdTimer !== null) clearTimeout(holdTimer);
-    if (held.size === 0) return;
-    abortingHeld = true;
-    faultEvent('aborted after checks');
-    for (const route of held.values()) await route.abort('aborted').catch(() => {});
-    held.clear();
-  };
   page.on('framenavigated', (frame) => {
     if (frame !== page.mainFrame() || result.excluded !== null) return;
     let p: string;
@@ -1362,16 +1167,16 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
         result.voided = 'stopped at the hard stop';
         return { settled: true, ms: at - from, unsettled: null, after: now };
       }
+      const held = hooks.settling?.();
       // A request still held at H ends the window: Pending, settles not evaluated.
-      if (result.fault?.pending) return { settled: false, ms: at - from, unsettled: 'a held request is still pending', after: now };
+      if (held?.pending) return { settled: false, ms: at - from, unsettled: 'a held request is still pending', after: now };
       if (now.overlay && !last.overlay) result.pageEvents.push({ step: owner, at, kind: 'overlay', text: 'dev error overlay' });
       if (now.mutations !== last.mutations) quietSince = at;
       last = now;
       const stuck = now.disabled.filter((d) => !before.disabled.includes(d));
       const inflightNow = [...inflight].filter((r) => !polling.has(templateFor(r.method(), r.url())));
       const busy = now.busy || stuck.length > 0 || inflightNow.length > 0;
-      // Fault events only: served responses and aborts, give-ups, releases and forwards.
-      const events = (result.fault?.events ?? []).filter((e) => FAULT_EVENT.test(e.event));
+      const events = held?.events ?? [];
       const lastEvent = events.at(-1);
       const sameKey = lastEvent ? events.filter((e) => e.key === lastEvent.key).length : 0;
       const grace = !lastEvent ? 0 : sameKey >= 2 ? 5000 : 2000;
@@ -1383,7 +1188,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
         : inflightNow.length > 0 ? 'a request is still in flight'
         : 'the page keeps changing';
       // A held request keeps the window open until H, not S (23.2).
-      if (at - sFrom > stepTimeout && graceDone && held.size === 0) return { settled: false, ms: at - from, unsettled: why, after: now };
+      if (at - sFrom > stepTimeout && graceDone && !held?.holding) return { settled: false, ms: at - from, unsettled: why, after: now };
       if (at - stepStart > loadTimeout) return { settled: false, ms: at - from, unsettled: why, after: now };
     }
   };
@@ -1447,8 +1252,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     return `not ${verb} after ${actionTimeout / 1000} s`;
   };
 
-  // Field values of the fill, select and check steps before `index`, for values-survive.
-  const fieldValues = (index: number) => fieldValuesOf(options.flow.steps.map((_, i) => i + 1).filter((i) => i < index));
   const fieldValuesOf = async (indices: number[]) => {
     const out: { field: string; value: string | null; password: boolean }[] = [];
     for (const [i, s] of options.flow.steps.entries()) {
@@ -1465,26 +1268,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       out.push({ field: describeLocator(spec), ...read });
     }
     return out;
-  };
-
-  // Section 23.7: repeat the step when its control is still visible or it is a
-  // fill; otherwise click a control only the failure state shows. Never a reload.
-  const recoveryStepFor = async (step: Step, kind: StepKind, labelsNow: string[]): Promise<Step | null> => {
-    if (kind === 'fill' || kind === 'select' || kind === 'check') return step;
-    if (kind === 'click' || kind === 'press') {
-      const spec = (step as Record<string, LocatorSpec>)[kind]!;
-      if (await locate(spec).isVisible().catch(() => false)) return step;
-    }
-    const baseline = new Set(options.baselineLabels ?? []);
-    for (const name of [...new Set(labelsNow)].filter((l) => !baseline.has(l) && l.length <= 80)) {
-      for (const role of ['button', 'link'] as const) {
-        const candidate = page.getByRole(role, { name, exact: true });
-        if ((await candidate.count().catch(() => 0)) === 1 && (await candidate.isVisible().catch(() => false))) {
-          return { click: { role, name } } as Step;
-        }
-      }
-    }
-    return null;
   };
 
   const fieldFacts = new Map<number, FieldFacts>();
@@ -1508,11 +1291,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       }
       navigated = false;
       navigationMethod = null;
-      if (attack && index === attack.step && !isRecovery && !recovering) {
-        armed = true;
-        countInStep = 0;
-      }
-      const valuesBefore = attack && index === attack.step && kind === 'click' && !recovering ? await fieldValues(index) : null;
+      if (!recovering) await hooks.beforeStep?.({ index, step, kind, label, startedAt });
       const pathBefore = pagePath(page.url());
       const before = await snapshot();
       let control: ControlFacts | undefined;
@@ -1603,6 +1382,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
         }
         const end = !recovering && hooks.afterWindow ? await hooks.afterWindow({ index, step, kind, label, startedAt }, { before, samples, after: settled.after, path: pathAfter }) : null;
         if (end?.then === 'end') {
+          if (end.unrecovered !== undefined) result.recovery = { action: null, passed: false, detail: end.unrecovered };
           result.endedAfterWindow = true;
           break;
         }
@@ -1612,39 +1392,6 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           result.recovery = { action: end.action, passed: true, detail: null };
         }
         if (end?.then === 'continue' && end.skip !== undefined && queue[0]?.index === end.skip) queue.shift();
-        // The attacked step's window ended: the fault clears (23.5), then the
-        // flow goes on, recovers, or the attack ends (23.6).
-        if (attack && index === attack.step && !recovering) {
-          if (valuesBefore) {
-            const after = await fieldValues(index);
-            result.values = valuesBefore.map((v, i) => ({ field: v.field, before: v.value, after: after[i]?.value ?? null, password: v.password }));
-          }
-          const f = result.fault!;
-          // repro --keep-open holds the attack: nothing clears and nothing recovers (14.8).
-          if (options.keepArmed) {
-            result.endedAfterWindow = true;
-            break;
-          }
-          cleared = true;
-          if (f.fired && !f.pending) faultEvent('cleared');
-          await releaseHeld();
-          const after = afterWindow(attack.fault, f);
-          if (after === 'end') {
-            result.endedAfterWindow = true;
-            break;
-          }
-          if (after === 'recover') {
-            recovering = true;
-            const recoveryStep = await recoveryStepFor(step, kind, settled.after.labels);
-            if (!recoveryStep) {
-              result.recovery = { action: null, passed: false, detail: 'no retry path without a reload' };
-              result.endedAfterWindow = true;
-              break;
-            }
-            result.recovery = { action: describeStep(recoveryStep), passed: true, detail: null };
-            queue.unshift({ index, step: recoveryStep, recovery: true });
-          }
-        }
       } catch (error) {
         if (error instanceof NotApplied) {
           hooks.notApplied?.(error.reason);
@@ -1659,10 +1406,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           break;
         }
         await fail(index, label, `${label}: ${result.untrustedStop ?? error.message}`);
-        // After a timing attack's window, or a fault that delivered a 2xx:
-        // `Faulted; flow stopped at step <n>`, never a finding.
         if (hooks.stopsFlow?.(index)) result.stoppedAt = index;
-        if (attack && index > attack.step && result.fault?.fired) result.stoppedAt = index;
         break;
       }
     }
@@ -1691,7 +1435,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
     }
     if (options.onFinish && result.failure === null) await options.onFinish(page).catch(() => {});
   } finally {
-    if (attack && !options.keepArmed) await releaseHeld();
+    await hooks.close?.();
     if (!options.context) await context.close().catch(() => {});
   }
   return result;
