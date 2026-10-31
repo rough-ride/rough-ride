@@ -1,15 +1,21 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { canon } from '../hooks/path-check.mjs';
 
 export const CLI = fileURLToPath(new URL('../dist/cli.mjs', import.meta.url));
 export const fixture = (name) => fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 
-// A fresh folder outside any git repository.
+// The spelling the runner prints for an absolute path: path-check's canonical
+// form, with forward slashes. The one way tests derive an expected path.
+export const canonical = (p) => canon(p);
+
+// A fresh folder outside any git repository, in canonical spelling (8.3 names,
+// links and macOS /tmp resolved) with this OS's separators.
 export function scratchDir() {
-  return realpathSync(mkdtempSync(path.join(tmpdir(), 'rough-ride-test-')));
+  return path.resolve(canonical(mkdtempSync(path.join(tmpdir(), 'rough-ride-test-'))));
 }
 
 export function run(args, { preload, cwd = scratchDir(), env = {} } = {}) {

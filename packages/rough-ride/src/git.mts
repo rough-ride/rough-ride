@@ -67,7 +67,7 @@ export function classifyRevParse(result: GitResult, cwd: string, platform: NodeJ
     };
   }
   const root = canon(printed, platform);
-  if (samePath(root, home)) {
+  if (samePath(root, home, platform)) {
     return {
       stop: makeStop('home-root', [
         `The git repository here is your home folder (${root}). Run rough-ride inside the app's own repository.`,
