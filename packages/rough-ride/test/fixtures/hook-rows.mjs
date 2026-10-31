@@ -234,7 +234,7 @@ export const FLOOR = (v) =>
   `rough-ride ${v} needs Claude Code 2.1.299 or later; this session runs 2.1.250. Older versions let a failed edit-blocking hook through. Update with claude update, restart Claude Code, then run /rough-ride:quick again.`;
 export const DUPLICATE =
   "rough-ride is installed twice: rough-ride@rough-ride 0.9.3 and rough-ride@claude-plugins-official 1.0.0. Only one copy's hooks run, and each copy keeps its own data folder. Remove one: /plugin uninstall rough-ride@rough-ride";
-export const INLINE = (root) => `rough-ride is loaded from ${root.replace(/[\\/]$/, '')} for this session (--plugin-dir) and replaces the installed copy.`;
+export const INLINE = (root) => `rough-ride is loaded from ${root.replace(/[\\/]$/, '').split(path.sep).join('/')} for this session (--plugin-dir) and replaces the installed copy.`;
 export const PACKAGES = (id) =>
   `rough-ride's packages are not installed: Claude Code's install of them did not finish (60-second limit). Run in your shell: claude plugin update ${id}`;
 export const OLD_NODE = (version, execPath) => `rough-ride's hooks run on Node ${version} (${execPath}); the runner needs 22.22 or later.`;

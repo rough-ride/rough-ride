@@ -43,7 +43,7 @@ test('another rev-parse failure stops with exit 69 and git\'s first line', () =>
   const { code, doc } = json(run(['quick', '--json'], { cwd: inside }));
   assert.equal(code, 69);
   assert.equal(doc.stop.code, 'git-failed');
-  assert.match(doc.stop.lines[0], new RegExp(`^git rev-parse failed in ${inside.split(path.sep).join('/')}: fatal: `));
+  assert.match(doc.stop.lines[0], new RegExp(`^git rev-parse failed in ${canon(inside)}: fatal: `));
 });
 
 test('the home folder as the root stops with exit 64', () => {
@@ -52,7 +52,7 @@ test('the home folder as the root stops with exit 64', () => {
   assert.equal(code, 64);
   assert.equal(doc.stop.code, 'home-root');
   assert.deepEqual(doc.stop.lines, [
-    `The git repository here is your home folder (${root}). Run rough-ride inside the app's own repository.`,
+    `The git repository here is your home folder (${canon(root)}). Run rough-ride inside the app's own repository.`,
   ]);
 });
 

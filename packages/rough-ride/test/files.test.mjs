@@ -30,7 +30,8 @@ const info = (source = { kind: 'devDependency', detail: 'frontend/package.json',
 // A repository holding every fixture of one schema version, committed.
 function repoWith(version, { crlf = false } = {}) {
   const root = gitRepo();
-  if (crlf) sh(root, 'config', 'core.autocrlf', 'true');
+  // Set both ways: Git for Windows sets core.autocrlf=true system-wide.
+  sh(root, 'config', 'core.autocrlf', crlf ? 'true' : 'false');
   for (const [kind, place] of Object.entries(PLACES)) {
     const dir = path.join(FIXTURES, kind, version);
     if (!existsSync(dir)) continue;
