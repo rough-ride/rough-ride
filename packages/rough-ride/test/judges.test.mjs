@@ -68,7 +68,7 @@ test('every kind judges no-uncaught-error, settles and no-broken-text against th
     same([kind, generic(judge(quiet, baseline, new Set()))], [kind, [pass('no-uncaught-error'), pass('settles'), pass('no-broken-text')]]);
     same([kind, generic(judge(noisy, baseline, new Set()))], [kind, [
       fail('no-uncaught-error', 'exception: TypeError: x is undefined'),
-      fail('settles', kind === 'page timing' ? 'click button "Step 2": busy indicator visible' : 'click button "Step 2": busy indicator visible after 10.2 s'),
+      fail('settles', 'click button "Step 2": busy indicator visible after 10.2 s'),
       fail('no-broken-text', '"undefined" in a new line', 'undefined'),
     ]]);
     same([kind, generic(judge(noisy, baseline, ALL))], [kind, [skip('no-uncaught-error'), skip('settles'), skip('no-broken-text')]]);
@@ -263,9 +263,10 @@ test('judgePageTiming: gates, the document additions and full-load errors, and t
 
   // The runner's reload shares the entry step's index; it is judged even where the baseline step did not settle.
   const reload = (over) => step(3, { label: 'reload', settled: false, settleMs: 10_400, observation: obs(over) });
-  same(page({}, { steps: [...quiet.steps, reload({ unsettled: 'busy indicator visible' })] }).checks[1], fail('settles', 'reload: busy indicator visible'));
+  same(page({}, { steps: [...quiet.steps, reload({ unsettled: 'busy indicator visible' })] }).checks[1], fail('settles', 'reload: busy indicator visible after 10.4 s'));
+  // A ready wait that timed out already states its time (32.2), so it gets no second one.
   same(page({}, { steps: [...quiet.steps, reload({ unsettled: 'not ready 30 s after the reload' })] }).checks[1], fail('settles', 'reload: not ready 30 s after the reload'));
-  same(page({}, { steps: [...quiet.steps, { ...reload({ unsettled: 'busy indicator visible' }), label: 'go back' }] }).checks[1], fail('settles', 'go back: busy indicator visible'));
+  same(page({}, { steps: [...quiet.steps, { ...reload({ unsettled: 'busy indicator visible' }), label: 'go back' }] }).checks[1], fail('settles', 'go back: busy indicator visible after 10.4 s'));
 });
 
 test('baselineFailures: the first page event, the first unsettled step and the first broken line, with their pages', () => {

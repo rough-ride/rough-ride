@@ -88,6 +88,12 @@ export function brokenTextIn(lines: string[], fills: string[], known: Set<string
   return null;
 }
 
+// A ready wait that timed out already states its time (32.2), so it gets no second one.
+function settlesEvidence(step: StepRecord): string {
+  const why = step.observation?.unsettled ?? 'did not settle';
+  return why.startsWith('not ready ') ? `${step.label}: ${why}` : `${step.label}: ${why} after ${Math.round(step.settleMs / 100) / 10} s`;
+}
+
 // Checks that already fail in a baseline run: reported once as `fails with no
 // attack` and skipped on that flow's attacks.
 export function baselineFailures(run: FlowRunResult): { id: CheckId; step: number; page: string | null }[] {
@@ -436,7 +442,7 @@ export function judgePageTiming(run: FlowRunResult, baseline: FlowRunResult, ski
     : null;
   push('no-uncaught-error', doc ?? (fresh ? `${fresh.kind}: ${fresh.text}` : null));
   const unsettled = run.steps.find((x) => x.settled === false && (x.label === 'reload' || x.label.startsWith('go ') || baseline.steps.find((b) => b.index === x.index)?.settled !== false));
-  push('settles', unsettled ? `${unsettled.label}: ${unsettled.observation?.unsettled ?? 'did not settle'}` : null);
+  push('settles', unsettled ? settlesEvidence(unsettled) : null);
   const baselineLines = new Set(baseline.steps.flatMap(linesOf));
   const fills = fillValues(run);
   let broken: { line: string; token: string } | null = null;
