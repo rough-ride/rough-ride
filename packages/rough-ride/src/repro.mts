@@ -129,7 +129,7 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
     const base = session.defaults(flow);
     // With a plugin data folder no flow run starts after 500 s (50.4).
     const baseline = flow.name === 'sign-in' && signedIn.result ? signedIn.result : session.bashBlocks() ? null : await runFlow({ ...base, flow, shots: 'all' });
-    if (!baseline) {
+    if (!baseline || baseline.voided === 'stopped at the hard stop') {
       verdict = `could not apply: ${BASH_LIMIT}`;
       exitCode = 2;
     } else if (!baseline.passed) {
@@ -149,7 +149,10 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
       } else {
         const o = await runAttack(resolved.attack, flow, baseline, base, docs, inlineChecks(rec.failedChecks.flatMap((c) => (c.check ? [c.check] : []))));
         const leadResult = o.checks.find((c) => c.id === lead)?.result;
-        if (['not-applied', 'fault-never-fired', 'void', 'inconclusive'].includes(o.verdict)) {
+        if (o.voided === 'stopped at the hard stop') {
+          verdict = `could not apply: ${BASH_LIMIT}`;
+          exitCode = 2;
+        } else if (['not-applied', 'fault-never-fired', 'void', 'inconclusive'].includes(o.verdict)) {
           verdict = `could not apply: ${o.notApplied ?? o.verdict}`;
           exitCode = 2;
         } else if (leadResult === 'fail') {

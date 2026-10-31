@@ -198,6 +198,7 @@ test('an attack without the fields its kind needs is refused by name, not read a
   const bare = { id: 'f/label "Title"/spaces', flow: 'f', kind: 'bad-input', fault: null, sticky: false, rank: 1, key: '', template: '', step: 1, k: 1, diffLinked: false, closeness: 3 };
   assert.throws(() => attackKey(bare), /^Error: f\/label "Title"\/spaces: kind bad-input without the fields that kind needs$/);
   assert.throws(() => attackKey({ ...bare, id: 'f/x/out-of-order', kind: 'timing', timing: 'out-of-order' }), /: kind out-of-order without the fields that kind needs$/);
+  assert.throws(() => attackKey({ ...bare, id: 'f/x/fault', kind: 'fault', fault: undefined }), /: kind fault without the fields that kind needs$/);
 });
 
 const PINNED = {

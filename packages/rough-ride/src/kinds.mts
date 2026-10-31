@@ -105,7 +105,7 @@ const MODULES: { [K in KindId]: KindModule<KindFields[K]> } = {
   viewport: viewportKind,
 };
 
-const hasFault = <T extends PlannedAttack>(a: T): a is T & KindFields['fault'] => a.fault !== null;
+const hasFault = <T extends PlannedAttack>(a: T): a is T & KindFields['fault'] => a.fault != null;
 const hasBadInput = <T extends PlannedAttack>(a: T): a is T & KindFields['bad-input'] => a.badInput !== undefined;
 const hasOutOfOrder = <T extends PlannedAttack>(a: T): a is T & KindFields['out-of-order'] => a.outOfOrder !== undefined;
 
