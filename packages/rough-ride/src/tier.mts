@@ -11,7 +11,7 @@ import { printed } from '../hooks/path-check.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser, SHORT_TITLES, type BrowserName, type Launched } from './browser.mjs';
 import type { Config } from './config.mjs';
 import { diffMap, diffPatch, headerLine2, type Diff } from './diff.mjs';
-import { checkCommittedFiles, wroteFile } from './files.mjs';
+import { checkCommittedFiles, wroteFile, writeProtected } from './files.mjs';
 import { StopError } from './exit.mjs';
 import { ensureFolder, folderNotes, nestedFoldersNote, readFolderFile, type FolderState } from './folder.mjs';
 import { DELAY_MS, holdMsFor, RETRY_AFTER } from './faults.mjs';
@@ -22,7 +22,8 @@ import { takeFlowLock } from './lock.mjs';
 import { canonicalJson, formatDuration, type Note } from './output.mjs';
 import { ciMode, environmentRecord, followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
 import { createRunFolder, pruneRuns, unfinishedRunNote, type RunFolder } from './runs.mjs';
-import { asciiJson, instructionNotes, needsFlowItems, patchRanges, readSpecs, writeAdversaryFolder } from './adversary.mjs';
+import { asciiJson, instructionNotes, needsFlowItems, patchRanges, readSpecs, specCandidates, writeAdversaryFolder } from './adversary.mjs';
+import { openReviewed } from './reviewed.mjs';
 import { parseDotenv } from './session.mjs';
 import { readSaved } from './flowsave.mjs';
 import { cutPlanned, parsePlan, validatePlan, type ParsedPlan, type PlanResult } from './plan.mjs';
@@ -157,16 +158,20 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   if (nested) ctx.notes.push(nested);
   // Protected files against their reviewed versions, read once before anything runs (26.9).
   const manifest = new Manifest(root);
-  // plan and single tiers also read the root instruction files' merge-base versions in that read (40.4).
-  const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, ...(ctx.mode === 'attack' ? {} : { instructionPaths: CONTRACT_FILES }) });
+  // plan and single tiers also read the root instruction files' merge-base
+  // versions in that read (40.4), and plan its spec files' (43.1).
+  const reviewed = openReviewed(root, ctx.env, !!info.pluginData);
+  if (ctx.mode !== 'attack') reviewed.want(CONTRACT_FILES);
+  if (ctx.mode === 'plan') reviewed.want(specCandidates(folder).paths);
+  const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, reviewed });
   ctx.notes.push(...prot.notes);
   // The contract status: detected here, before reset or target.start; attack carries its plan's (resolution 37).
-  const contract = ctx.mode === 'attack' ? ctx.plan?.contract ?? null : detectContract(root, prot.instructionBase, prot.base);
+  const contract = ctx.mode === 'attack' ? ctx.plan?.contract ?? null : detectContract(root, reviewed.atMergeBase(CONTRACT_FILES), prot.base);
   setLastContract(contract);
   const acceptedList = acceptedEntries(files.accepted, prot.accepted, info.version, ctx.notes);
   // Only plan reads specs and lists changed instruction files (43.1, 43.6).
   const baseShown = prot.base?.shown ?? 'the base branch';
-  const specs = ctx.mode === 'plan' ? readSpecs(root, folder, prot.base ? [prot.base.mergeBase, prot.base.refSha] : [], baseShown) : null;
+  const specs = ctx.mode === 'plan' ? readSpecs(folder, reviewed, baseShown) : null;
   // attack's block covers the whole run, so it repeats the plan's spec and instruction-file lines (46.5).
   const planNotes = specs ? [...specs.notes, ...instructionNotes(diff, baseShown)] : ctx.plan?.planNotes ?? [];
   ctx.notes.push(...planNotes);
@@ -1117,7 +1122,9 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
     else if (r.file) flowLines.push(`Not attacked: ${r.file} (new flow ${r.name} does not reach it${r.why?.startsWith('enters ') ? `: ${r.why}` : ''})`);
   }
   for (const name of notRun) {
-    const reason = files.flows.find((f) => f.shown === `.rough-ride/flows/${name}.yaml`)?.step5[0] ?? 'invalid';
+    // A valid flow is not run when its reviewed version fails the check: the block's change says so.
+    const listed = prot.entries.find((e) => e.path === `flows/${name}.yaml`);
+    const reason = files.flows.find((f) => f.shown === `.rough-ride/flows/${name}.yaml`)?.step5[0] ?? (listed ? `.rough-ride/flows/${name}.yaml: ${listed.change}` : 'invalid');
     flowLines.push(`Not run: ${reason}`);
   }
   // Checks that fail with no attack: once per flow; outside the diff only in report.txt.
@@ -1177,10 +1184,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       testOf.set(g, { name: t.name, state: 'exists', path: shownPath });
       continue;
     }
-    writeAtomic(folder, ['tests', `${t.name}.yaml`], t.text);
-    // Its bytes go into the checksum manifest as a saved copy, in the same step (26.8).
-    manifest.saveCopy(rel, t.text, 'runner', run.id, info.version);
-    wroteFile(files, info, root, target.nuxtRoot?.rel ?? null, ctx.argv, { shown: shownPath, schema: FORMATS.tests.current, kind: 'tests' });
+    writeProtected({ folder, manifest, files, info, root, nuxtRel: target.nuxtRoot?.rel ?? null, argv: ctx.argv }, `tests/${t.name}.yaml`, t.text, 'runner', run.id);
     newTests.push(shownPath);
     manifest.data.tests[t.name] = { outcome: 'fail', run: run.id, at: startedAt };
     testOf.set(g, { name: t.name, state: 'new', path: shownPath });

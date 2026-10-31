@@ -9,7 +9,7 @@ import { CHECK_RANK, type CheckResult } from './checks.mjs';
 import type { CheckedFile } from './files.mjs';
 import { isFrameworkInternal, stepKind, type Flow, type FlowRunResult } from './flowrun.mjs';
 import { keyOf } from './groups.mjs';
-import type { Note } from './output.mjs';
+import { canonicalJson, type Note } from './output.mjs';
 
 export type EntryState = 'applied' | 'held' | 'ignored';
 
@@ -25,8 +25,8 @@ export interface AcceptedEntry {
   matched: string[];
 }
 
-const identity = (e: Record<string, unknown>) =>
-  JSON.stringify([e.page, e.step, e.action, e.check]);
+// An entry's identity (26.6): editing `because` is not an addition.
+export const entryIdentity = (e: Record<string, unknown>): string => canonicalJson([e.page, e.step, e.action, e.check]);
 
 // Every entry in the working file with its line, marked applied when the
 // protected-files comparison applies it (`applied` holds those entries), held
@@ -37,7 +37,7 @@ export function acceptedEntries(file: CheckedFile | null, applied: Record<string
   const doc = parseDocument(file.text, { lineCounter: counter });
   const seq = isMap(doc.contents) ? doc.contents.get('accepted', true) : null;
   if (!isSeq(seq)) return [];
-  const appliedIds = new Set(applied.map(identity));
+  const appliedIds = new Set(applied.map(entryIdentity));
   const out: AcceptedEntry[] = [];
   for (const item of seq.items) {
     const value = (isMap(item) ? item.toJSON() : null) as Record<string, unknown> | null;
@@ -50,7 +50,7 @@ export function acceptedEntries(file: CheckedFile | null, applied: Record<string
       action: String(value.action),
       check: String(value.check),
       because: String(value.because),
-      state: appliedIds.has(identity(value)) ? 'applied' : 'held',
+      state: appliedIds.has(entryIdentity(value)) ? 'applied' : 'held',
       matched: [],
     };
     if (!Object.hasOwn(CHECK_RANK, entry.check)) {

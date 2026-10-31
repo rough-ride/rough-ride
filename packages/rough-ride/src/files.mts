@@ -4,24 +4,18 @@
 
 import { lstatSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { parseCommitted, type CommittedFile } from './committed.mjs';
+import { checkVersion, type CheckedVersion, type CommittedKind } from './committed.mjs';
 import { makeStop, StopError, stopWith } from './exit.mjs';
 import { ensureFolder, listYaml, readFolderFile, type FolderState } from './folder.mjs';
 import { compareVersions, FORMATS, formatsReport, type FormatKind, type Formats, type FormatsReport } from './formats.mjs';
+import type { Manifest, SavedEntry } from './manifest.mjs';
 import type { Note } from './output.mjs';
 import { ciMode, updateCommand, sourceText, versionSkew, type RunnerInfo } from './runner.mjs';
 import { nuxtCandidates } from './target.mjs';
 import { createRunFolder } from './runs.mjs';
-import { loadSchema } from './schema.mjs';
+import { redactSecrets } from './secrets.mjs';
 import { buildUpgrade, upgradeFile, UPGRADERS, type Upgrader } from './upgrade.mjs';
-import { writeAtomic } from './write.mjs';
-
-const SCHEMA_FILES: Record<Exclude<FormatKind, 'plan'>, string> = {
-  config: 'config.schema.json',
-  flow: 'flow.schema.json',
-  tests: 'test.schema.json',
-  accepted: 'accepted.schema.json',
-};
+import { writeAtomic, type WriteTarget } from './write.mjs';
 
 const KIND_PLURAL: Record<FormatKind, string> = {
   config: 'config',
@@ -31,8 +25,8 @@ const KIND_PLURAL: Record<FormatKind, string> = {
   plan: 'plan.json',
 };
 
-export interface CheckedFile extends CommittedFile {
-  kind: FormatKind;
+export interface CheckedFile extends CheckedVersion {
+  kind: CommittedKind;
   text: string;
 }
 
@@ -49,6 +43,12 @@ export interface CheckedFiles {
   // Every committed file read with a schema, plus the files this invocation
   // writes (wroteFile): the skew line and `formats` both count them.
   written: { shown: string; schema: string; kind: FormatKind }[];
+  // The runner version and formats the working copies were checked against,
+  // so reviewed versions and saved copies get the same check.
+  rules: { runner: string; formats: Formats };
+  // The schema-newer stop above, for a reviewed version written for a newer
+  // rough-ride (ADR 0002): it stops the invocation as a newer working copy does.
+  stopNewer(newer: { shown: string; schema: string }[]): never;
 }
 
 export interface CheckContext {
@@ -113,11 +113,11 @@ export function checkCommittedFiles(folder: FolderState, ctx: CheckContext): Che
   const runner = ctx.info.version;
   const notes: Note[] = [];
   const read: CheckedFile[] = [];
-  const check = (kind: Exclude<FormatKind, 'plan'>, parts: string[]): CheckedFile | null => {
+  const check = (kind: CommittedKind, parts: string[]): CheckedFile | null => {
     const text = readFolderFile(folder, ...parts);
     if (text === null) return null;
     const shown = ['.rough-ride', ...parts].join('/');
-    const file = { ...parseCommitted(text, shown, kind, loadSchema(SCHEMA_FILES[kind]), formats), kind, text };
+    const file = { ...checkVersion(text, shown, kind, runner, formats), kind, text };
     read.push(file);
     return file;
   };
@@ -137,8 +137,8 @@ export function checkCommittedFiles(folder: FolderState, ctx: CheckContext): Che
     problems.push(...file.problems);
     if (file.schema === null) continue;
     (seen[file.kind] ??= []).push(file.schema.text);
-    if (compareVersions(file.schema.text, runner) > 0) newer.push({ shown: file.shown, schema: file.schema.text });
-    else if (compareVersions(file.schema.text, formats[file.kind].floor) < 0) older.push(file);
+    if (file.range === 'newer') newer.push({ shown: file.shown, schema: file.schema.text });
+    else if (file.range === 'older') older.push(file);
   }
 
   for (const parts of folder.exists ? otherYaml(folder) : []) {
@@ -155,16 +155,17 @@ export function checkCommittedFiles(folder: FolderState, ctx: CheckContext): Che
   const candidates = nuxtCandidates(folder.root);
   ctx.info.versionSkew = versionSkew(ctx.info, folder.root, ['', ...(candidates.length === 1 ? [candidates[0]!.rel] : [])], skewInput, ctx.argv);
 
-  if (newer.length > 0) {
-    const highest = newer.map((n) => n.schema).sort(compareVersions).at(-1)!;
+  const stopNewer = (found: { shown: string; schema: string }[]): never => {
+    const highest = found.map((n) => n.schema).sort(compareVersions).at(-1)!;
     stopWith(
       'schema-newer',
-      `rough-ride ${runner} can't read ${files(newer.length)} written for a newer rough-ride:`,
-      ...list(newer, () => ''),
+      `rough-ride ${runner} can't read ${files(found.length)} written for a newer rough-ride:`,
+      ...list(found, () => ''),
       `They need rough-ride ${highest} or later. This invocation used ${runner} from ${sourceText(ctx.info)}.`,
       `Update it: ${updateCommand(ctx.info, highest, ctx.argv)}`,
     );
-  }
+  };
+  if (newer.length > 0) stopNewer(newer);
 
   if (older.length > 0) throw olderStop(folder, ctx, formats, older, problems);
 
@@ -181,6 +182,8 @@ export function checkCommittedFiles(folder: FolderState, ctx: CheckContext): Che
     notes,
     formats: formatsReport(seen, formats),
     written,
+    rules: { runner, formats },
+    stopNewer,
   };
 }
 
@@ -195,6 +198,28 @@ export function wroteFile(files: CheckedFiles, info: RunnerInfo, root: string, n
     files.formats = formatsReport(seen);
   }
   info.versionSkew = versionSkew(info, root, ['', ...(nuxtRel ? [nuxtRel] : [])], files.written, argv);
+}
+
+export interface ProtectedWrite {
+  folder: WriteTarget;
+  manifest: Manifest;
+  files: CheckedFiles;
+  info: RunnerInfo;
+  root: string;
+  nuxtRel: string | null;
+  argv: string[];
+}
+
+// A flow or test rough-ride wrote (26.8) in one step: the file, its saved copy
+// and manifest entry from the very bytes written (secrets already redacted),
+// and its count in `formats` and the skew line.
+export function writeProtected(at: ProtectedWrite, rel: `flows/${string}.yaml` | `tests/${string}.yaml`, text: string, by: SavedEntry['by'], run: string): void {
+  const kind = rel.startsWith('flows/') ? 'flow' : 'tests';
+  const bytes = redactSecrets(text);
+  // As bytes, so writeAtomic writes them as they are instead of redacting a second time.
+  writeAtomic(at.folder, rel.split('/'), Buffer.from(bytes, 'utf8'));
+  at.manifest.saveCopy(rel, bytes, by, run, at.info.version);
+  wroteFile(at.files, at.info, at.root, at.nuxtRel, at.argv, { shown: `.rough-ride/${rel}`, schema: FORMATS[kind].current, kind });
 }
 
 function olderStop(

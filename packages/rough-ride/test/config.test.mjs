@@ -3,12 +3,15 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { loadConfig } from '../dist/config.mjs';
 import { StopError } from '../dist/exit.mjs';
+import { checkCommittedFiles } from '../dist/files.mjs';
 import { checkRootEntry } from '../dist/folder.mjs';
 import { ALLOWED_KEYWORDS } from '../dist/schema.mjs';
 import { gitRepo } from './helpers.mjs';
 
+const info = { version: '0.1.0', cliPath: '/x/dist/cli.mjs', source: { kind: 'other', detail: '/x', resolved: null }, pluginId: null, pluginData: null, node: '22.22.1', playwright: '1.64.1', claudeCode: { version: null, floorChecked: false }, editGuard: 'n/a', versionSkew: null };
+
+// config.yaml through the check every subcommand runs on its committed files.
 function load(text) {
   const root = gitRepo();
   mkdirSync(path.join(root, '.rough-ride'));
@@ -16,7 +19,7 @@ function load(text) {
   writeFileSync(file, text);
   const before = readFileSync(file);
   try {
-    return { config: loadConfig(checkRootEntry(root)) };
+    return { config: checkCommittedFiles(checkRootEntry(root), { info: { ...info }, subcommand: 'quick', argv: ['quick'], env: {} }).config?.value ?? null };
   } catch (error) {
     if (error instanceof StopError) return { stop: error.stop };
     throw error;

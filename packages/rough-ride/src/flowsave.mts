@@ -11,7 +11,7 @@ import { printed } from '../hooks/path-check.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser, type BrowserName, type Launched } from './browser.mjs';
 import { parseCommitted } from './committed.mjs';
 import { stopWith } from './exit.mjs';
-import { checkCommittedFiles, wroteFile } from './files.mjs';
+import { checkCommittedFiles, wroteFile, writeProtected } from './files.mjs';
 import { ensureFolder, type FolderState } from './folder.mjs';
 import { envNames, isFrameworkInternal, isLoopbackHostname, runFlow, type Flow, type FlowRunResult, type Step } from './flowrun.mjs';
 import { FORMATS } from './formats.mjs';
@@ -470,9 +470,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
         }
         const text = `schema: ${FORMATS.flow.current}\n${d.text.replace(/\n*$/, '\n')}`;
         const rel = `flows/${d.name}.yaml`;
-        writeAtomic(folder, ['flows', `${d.name}.yaml`], text);
-        manifest.saveCopy(rel, text, 'flow save', run.id, info.version);
-        wroteFile(files, info, root, target.nuxtRoot?.rel ?? null, ctx.argv, { shown: `.rough-ride/${rel}`, schema: FORMATS.flow.current, kind: 'flow' });
+        writeProtected({ folder, manifest, files, info, root, nuxtRel: target.nuxtRoot?.rel ?? null, argv: ctx.argv }, `flows/${d.name}.yaml`, text, 'flow save', run.id);
         d.line = `Saved: ${rel} (${plan.kind === 'new' ? 'new, passed twice' : plan.text})`;
         if (runPlan) {
           // 44.3: the saved flow's attack points, for the adversary and for attack.

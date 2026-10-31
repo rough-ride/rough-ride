@@ -3,6 +3,9 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, st
 import path from 'node:path';
 import { test } from 'node:test';
 import { StopError } from '../dist/exit.mjs';
+import { checkCommittedFiles, writeProtected } from '../dist/files.mjs';
+import { checkRootEntry, ensureFolder } from '../dist/folder.mjs';
+import { addSecret, clearSecrets } from '../dist/secrets.mjs';
 import { fileHash, Manifest } from '../dist/manifest.mjs';
 import { compareProtected } from '../dist/protected.mjs';
 import { gitRepo, scratchDir, sh } from './helpers.mjs';
@@ -12,8 +15,9 @@ flow: create-note
 attack: {fault: "500", sticky: true, request: "POST /api/notes #1", page: /notes/new}
 checks: [visible-error-message, settles]
 context: {timezone: UTC, locale: en-US}
-found: {run: 20261025-141207-quick-k3fz}
+found: {finding: no error shown, run: 20261025-141207-quick-k3fz, runner: "0.1.0", date: "2026-10-25"}
 `;
+const info = { version: '0.1.0', cliPath: '/x/dist/cli.mjs', source: { kind: 'other', detail: '/x', resolved: null }, pluginId: null, pluginData: null, node: '22.22.1', playwright: '1.64.1', claudeCode: { version: null, floorChecked: false }, editGuard: 'n/a', versionSkew: null };
 
 function repo() {
   const root = gitRepo();
@@ -27,13 +31,8 @@ function repo() {
 }
 
 async function compare(root, manifest, { env = {}, pluginData = false } = {}) {
-  const { parse } = await import('yaml');
-  const dir = path.join(root, '.rough-ride', 'tests');
-  const tests = readdirSync(dir).map((n) => {
-    const text = readFileSync(path.join(dir, n), 'utf8');
-    return { shown: `.rough-ride/tests/${n}`, text, value: parse(text), kind: 'tests', schema: null, problems: [], step5: [] };
-  });
-  return compareProtected({ root, folderDir: path.join(root, '.rough-ride'), files: { config: null, accepted: null, flows: [], tests, invalid: [], notes: [] }, env, pluginData, manifest });
+  const files = checkCommittedFiles(checkRootEntry(root), { info: { ...info }, subcommand: 'quick', argv: ['quick'], env: {} });
+  return compareProtected({ root, folderDir: path.join(root, '.rough-ride'), files, env, pluginData, manifest });
 }
 
 test('location: .git/.rough-ride in a main checkout, the worktree\'s own folder in a linked worktree', () => {
@@ -78,6 +77,52 @@ test('a weakened working copy runs the saved copy; an unchanged one is labelled 
   assert.equal(out.entries[0].change, 'removes or changes a check after rough-ride wrote it (run run-1)');
   assert.equal(new Manifest(root).label('tests/t.yaml', TEST), 'written by rough-ride');
   assert.equal(new Manifest(root).label('tests/t.yaml', TEST + '#x\n'), 'changed outside rough-ride');
+});
+
+test('a saved copy gets the working copy\'s check: one this runner can\'t read never runs', async () => {
+  const root = repo();
+  new Manifest(root).saveCopy('tests/t.yaml', TEST.replace('schema: 0.1.0', 'schema: 0.0.9'), 'runner', 'run-1', '0.1.0');
+  const out = await compare(root, new Manifest(root));
+  assert.deepEqual(out.tests, []);
+  assert.deepEqual(out.entries, []);
+});
+
+test('writing a protected file is one step: the file, its saved copy and entry from the same bytes, and its count in formats', () => {
+  const root = repo();
+  const folder = ensureFolder(checkRootEntry(root));
+  const files = checkCommittedFiles(folder, { info: { ...info }, subcommand: 'quick', argv: ['quick'], env: {} });
+  addSecret('tok-12345678', '<env.TOKEN>');
+  try {
+    writeProtected({ folder, manifest: new Manifest(root), files, info: { ...info }, root, nuxtRel: null, argv: ['quick'] }, 'tests/t.yaml', TEST.replace('no error shown', 'no error shown tok-12345678'), 'runner', 'run-1');
+  } finally {
+    clearSecrets();
+  }
+  const onDisk = readFileSync(path.join(root, '.rough-ride', 'tests', 't.yaml'), 'utf8');
+  assert.ok(onDisk.includes('no error shown <env.TOKEN>'), onDisk);
+  const again = new Manifest(root);
+  assert.equal(again.savedCopy('tests/t.yaml').text, onDisk);
+  assert.equal(again.label('tests/t.yaml', onDisk), 'written by rough-ride');
+  assert.equal(again.entry('tests/t.yaml').run, 'run-1');
+  assert.deepEqual(files.written.map((w) => w.shown), ['.rough-ride/tests/t.yaml']);
+  assert.equal(files.formats.tests.highest, '0.1.0');
+});
+
+test('writing a protected file redacts once: an env value equal to another value\'s placeholder leaves the file and its saved copy the same', () => {
+  const root = repo();
+  const folder = ensureFolder(checkRootEntry(root));
+  const files = checkCommittedFiles(folder, { info: { ...info }, subcommand: 'quick', argv: ['quick'], env: {} });
+  // The placeholder is the longer value, so one pass replaces only tok-1234 and a second would replace the placeholder.
+  addSecret('tok-1234', '<env.TOKEN>');
+  addSecret('<env.TOKEN>', '<env.OTHER>');
+  try {
+    writeProtected({ folder, manifest: new Manifest(root), files, info: { ...info }, root, nuxtRel: null, argv: ['quick'] }, 'tests/t.yaml', TEST.replace('no error shown', 'no error shown tok-1234'), 'runner', 'run-1');
+  } finally {
+    clearSecrets();
+  }
+  const onDisk = readFileSync(path.join(root, '.rough-ride', 'tests', 't.yaml'), 'utf8');
+  assert.ok(onDisk.includes('no error shown <env.TOKEN>'), onDisk);
+  assert.equal(new Manifest(root).savedCopy('tests/t.yaml').text, onDisk);
+  assert.equal(new Manifest(root).label('tests/t.yaml', onDisk), 'written by rough-ride');
 });
 
 test('detached HEAD with an empty manifest prints no saved-copies note, in or out of CI mode', async () => {

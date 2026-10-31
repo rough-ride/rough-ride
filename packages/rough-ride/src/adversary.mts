@@ -3,7 +3,6 @@
 // runs/<id>/adversary/. The runner writes every file there; the adversary
 // writes none.
 
-import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { lstatSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -11,6 +10,7 @@ import { printed } from '../hooks/path-check.mjs';
 import type { Diff } from './diff.mjs';
 import type { FolderState } from './folder.mjs';
 import type { Note } from './output.mjs';
+import { normalisedText, type ReviewedVersions } from './reviewed.mjs';
 import type { NuxtRoute } from './tracing.mjs';
 import { writeAtomic } from './write.mjs';
 
@@ -28,42 +28,19 @@ export interface SpecPart {
 // Rounded up to a tenth, so a short file never reads 0.0 KB.
 const kb = (n: number) => `${(Math.ceil(n / 102.4) / 10).toFixed(1)} KB`;
 
-// Each path's bytes at each revision, from one `git cat-file --batch` call; null when absent.
-function blobsAt(root: string, revs: string[], paths: string[]): Map<string, (Buffer | null)[]> {
-  const out = new Map<string, (Buffer | null)[]>(paths.map((p) => [p, revs.map(() => null)]));
-  if (paths.length === 0 || revs.length === 0) return out;
-  const queries = paths.flatMap((p) => revs.map((r) => `${r}:${p}`));
-  const result = spawnSync('git', ['--no-optional-locks', 'cat-file', '--batch'], { cwd: root, input: queries.join('\n') + '\n', maxBuffer: 64 * 1024 * 1024 });
-  const buf = result.stdout ?? Buffer.alloc(0);
-  let at = 0;
-  for (const q of queries) {
-    const nl = buf.indexOf(10, at);
-    if (nl === -1) break;
-    const header = buf.subarray(at, nl).toString('utf8');
-    at = nl + 1;
-    const m = /^[0-9a-f]+ blob (\d+)$/.exec(header);
-    if (!m) continue;
-    const size = Number(m[1]);
-    const [p, r] = [q.slice(q.indexOf(':') + 1), q.slice(0, q.indexOf(':'))];
-    out.get(p)![revs.indexOf(r)] = buf.subarray(at, at + size);
-    at += size + 1;
-  }
-  return out;
-}
-
 export function decodeUtf8(bytes: Buffer): string | null {
   if ((bytes[0] === 0xff && bytes[1] === 0xfe) || (bytes[0] === 0xfe && bytes[1] === 0xff)) return null;
   try {
     const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    return text.replace(/^﻿/, '').replace(/\r\n/g, '\n').normalize('NFC');
+    return normalisedText(text).normalize('NFC');
   } catch {
     return null;
   }
 }
 
-// 43.1: every spec file whose bytes match neither reviewed version, in name
-// order, up to 32 KB in total, with its header lines.
-export function readSpecs(root: string, folder: FolderState, reviewed: string[], baseShown: string): { parts: SpecPart[]; notes: Note[] } {
+// The spec files plan may hand over, with an Ignored note for each other entry.
+// `paths` are git-root-relative, for asking for their reviewed versions.
+export function specCandidates(folder: FolderState): { names: string[]; paths: string[]; notes: Note[] } {
   const dir = path.join(folder.dir, 'specs');
   let names: string[] = [];
   try {
@@ -87,13 +64,21 @@ export function readSpecs(root: string, folder: FolderState, reviewed: string[],
     }
     candidates.push(name);
   }
-  const rel = printed(path.relative(root, dir));
-  const blobs = blobsAt(root, reviewed, candidates.map((n) => `${rel}/${n}`));
+  const rel = printed(path.relative(folder.root, dir));
+  return { names: candidates, paths: candidates.map((n) => `${rel}/${n}`), notes };
+}
+
+// 43.1: every spec file whose bytes match neither reviewed version, in name
+// order, up to 32 KB in total, with its header lines.
+export function readSpecs(folder: FolderState, reviewed: ReviewedVersions, baseShown: string): { parts: SpecPart[]; notes: Note[] } {
+  const dir = path.join(folder.dir, 'specs');
+  const { names: candidates, paths, notes } = specCandidates(folder);
+  reviewed.want(paths);
   const parts: SpecPart[] = [];
   let total = 0;
-  for (const name of candidates) {
+  for (const [i, name] of candidates.entries()) {
     const bytes = readFileSync(path.join(dir, name));
-    const before = blobs.get(`${rel}/${name}`) ?? [];
+    const before = reviewed.bytes(paths[i]!);
     if (before.some((b) => b !== null && b.equals(bytes))) continue;
     const text = decodeUtf8(bytes);
     if (text === null) {
