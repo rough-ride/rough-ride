@@ -175,7 +175,47 @@ export function judgeBadInput(run: FlowRunResult, baseline: FlowRunResult, submi
   });
 }
 
+const REFUSED = ['rejected', 'blocked-by-browser', 'blocked-by-app', 'silent-refusal'];
+
 export const badInputKind: KindModule = {
+  what: (o) => `bad input ${o.badInput!.inputId} in ${o.badInput!.field.name}`,
+  symptom: (o, lead) => {
+    const bad = o.badInput!;
+    if (lead?.id === 'no-5xx-on-bad-input') {
+      const c = o.run.badInput?.carrying;
+      return `${o.template || 'The submit'} answers ${c?.status ?? 'no response'} to bad input ${bad.inputId} in ${bad.field.name}`;
+    }
+    if (lead?.id === 'visible-error-message' && o.run.badInput?.outcome === 'silent-refusal') {
+      return `${o.control} does nothing and shows no message for bad input ${bad.inputId} in ${bad.field.name}`;
+    }
+    return null;
+  },
+  // The field's request key, or its accessible name and kind when no request carried its value.
+  key: (o) => {
+    const b = o.badInput!;
+    return { badInput: b.inputId, page: b.page, request: b.carrying, field: b.field.key ?? { name: b.field.name, kind: b.field.kind }, ...(b.inputId === 'at-limit' ? { limit: b.limit } : {}) };
+  },
+  record: (o) => {
+    const b = o.badInput!;
+    const held = o.run.badInput?.held;
+    return {
+      badInput: {
+        id: b.inputId,
+        field: b.field,
+        preview: `${b.inputId} "${b.preview.text}" (${b.preview.length} chars)`,
+        length: b.preview.length,
+        held: { length: held?.length ?? null, cutBy: held !== null && held !== undefined && held.length < b.value.length ? 'maxlength' : null },
+        outcome: o.run.badInput?.outcome ?? null,
+      },
+    };
+  },
+  appOutcome: (_attack, run) => {
+    const o = run.badInput?.outcome ?? null;
+    if (o === null) return { cls: null, shown: 'none' };
+    if (REFUSED.includes(o)) return { cls: 'refused', shown: 'refused' };
+    if (o === 'accepted') return { cls: 'accepted', shown: 'accepted' };
+    return { cls: null, shown: o };
+  },
   async run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome> {
     const b = attack.badInput!;
     const run = await runFlow({

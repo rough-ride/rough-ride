@@ -11,7 +11,7 @@ import { TOGGLE_HINT } from './kind-double-submit.mjs';
 import { SEVERITY_TEXT, type Group } from './groups.mjs';
 import { LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
 import { membersText } from './summary.mjs';
-import { attackId, emptyForm, FAULT_PHRASE, isJsonMedia, kindsFor, responseSchema, type BodyKind, type FaultId } from './faults.mjs';
+import { attackId, emptyForm, isJsonMedia, kindsFor, responseSchema, type BodyKind, type FaultId } from './faults.mjs';
 import type { Form } from './forms.mjs';
 import { describeLocator, isFrameworkInternal, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type RequestRecord, type RunFlowOptions, type Served } from './flowrun.mjs';
 import { kindFor } from './kinds.mjs';
@@ -484,31 +484,12 @@ async function runJudged(
 // Section 37's symptom templates, by lead check.
 export function symptom(o: AttackOutcome): string {
   const lead = leadCheck(o.checks);
-  const press = o.stepKind === 'press';
-  const bad = o.badInput;
-  if (bad && lead?.id === 'no-5xx-on-bad-input') {
-    const c = o.run.badInput?.carrying;
-    return `${o.template || 'The submit'} answers ${c?.status ?? 'no response'} to bad input ${bad.inputId} in ${bad.field.name}`;
-  }
-  if (bad && lead?.id === 'visible-error-message' && o.run.badInput?.outcome === 'silent-refusal') {
-    return `${o.control} does nothing and shows no message for bad input ${bad.inputId} in ${bad.field.name}`;
-  }
-  const what = bad ? `bad input ${bad.inputId} in ${bad.field.name}`
-    : o.timing === 'out-of-order' ? `an older answer arrived after a newer one on ${o.controlName ?? o.control}`
-    : o.timing === 'refresh' ? `a reload of ${o.page}`
-    : o.timing === 'back' ? `back then forward to ${o.page}`
-    : o.timing === 'signed-out-reload' ? `a signed-out reload of ${o.page}`
-    : o.kind === 'timing' ? `a double ${press ? 'press' : 'click'} on ${o.control}`
-    : o.fault === null ? 'the 375px viewport' : `${o.template} ${FAULT_PHRASE[o.fault]}`;
+  const kind = kindFor(o);
+  const own = kind.symptom?.(o, lead);
+  if (own) return own;
+  const what = kind.what(o);
   if (lead?.id.startsWith('app-')) return `App check ${lead.id} fails on ${o.page ?? 'the page'} after ${what}`;
   switch (lead?.id) {
-    case 'one-write': {
-      const n = /one-write: (\d+) successful/.exec(lead.evidence)?.[1] ?? '2';
-      const hint = lead.evidence.endsWith(TOGGLE_HINT) ? ` ${TOGGLE_HINT}` : '';
-      return `${o.control} sends ${n} successful ${o.template} on a double ${press ? 'press' : 'click'}${hint}`;
-    }
-    case 'no-overflow-375':
-      return `${o.page ?? 'the page'} scrolls sideways at 375px`;
     case 'visible-error-message':
       return `No message when ${what} (${o.control})`;
     case 'settles':

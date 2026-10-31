@@ -93,6 +93,15 @@ export function judgeTiming(run: FlowRunResult, baseline: FlowRunResult, step: n
 }
 
 export const doubleSubmitKind: KindModule = {
+  what: (o) => `a double ${o.stepKind === 'press' ? 'press' : 'click'} on ${o.control}`,
+  symptom: (o, lead) => {
+    if (lead?.id !== 'one-write') return null;
+    const n = /one-write: (\d+) successful/.exec(lead.evidence)?.[1] ?? '2';
+    const hint = lead.evidence.endsWith(TOGGLE_HINT) ? ` ${TOGGLE_HINT}` : '';
+    return `${o.control} sends ${n} successful ${o.template} on a double ${o.stepKind === 'press' ? 'press' : 'click'}${hint}`;
+  },
+  key: (o) => ({ timing: o.timing, request: o.key, page: o.page }),
+  record: (o) => ({ timing: { timing: o.timing, key: o.key, control: o.controlName ?? null, page: o.page }, events: o.events }),
   async run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome> {
     const run = await runFlow({ ...ctx.options, kind: flowRunKind(attack.step), shots: [attack.step] });
     const own = (ctx.options.hosts ?? LOOPBACK_ONLY).ownHost;

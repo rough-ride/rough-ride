@@ -232,6 +232,9 @@ export function judgeOutOfOrder(run: FlowRunResult, baseline: FlowRunResult, ste
 }
 
 export const outOfOrderKind: KindModule = {
+  what: (o) => `an older answer arrived after a newer one on ${o.controlName ?? o.control}`,
+  key: (o) => ({ timing: 'out-of-order', page: o.page, request: o.template, field: o.outOfOrder?.fieldKey ?? null }),
+  record: (o) => ({ timing: { timing: o.timing, key: o.key, control: o.controlName ?? null, page: o.page }, events: o.events }),
   async run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome> {
     const x = attack.outOfOrder!;
     const run = await runFlow({

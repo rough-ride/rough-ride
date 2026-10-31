@@ -6,7 +6,7 @@
 import type { Request, Route } from 'playwright-core';
 import type { AttackOutcome, PlannedAttack } from './attacks.mjs';
 import { fillValues, judgeAttack, pathBefore, type Judged } from './checks.mjs';
-import { DELAY_MS, emptyForm, fixedResponse, holdMsFor, isJsonMedia, malformedBody, responseSchema, sha256, type BodyKind, type FaultId } from './faults.mjs';
+import { DELAY_MS, emptyForm, FAULT_PHRASE, fixedResponse, holdMsFor, isJsonMedia, malformedBody, responseSchema, sha256, type BodyKind, type FaultId } from './faults.mjs';
 import { describeStep, isFrameworkInternal, runFlow, type AttackKind, type FaultEvent, type FaultState, type FlowRunResult, type LocatorSpec, type Step, type StepKind } from './flowrun.mjs';
 import type { KindContext, KindModule } from './kinds.mjs';
 import { hasCredentialHeader } from './secrets.mjs';
@@ -362,6 +362,18 @@ export function judgeFault(attackRun: FlowRunResult, baseline: FlowRunResult, at
 }
 
 export const faultKind: KindModule = {
+  what: (o) => `${o.template} ${FAULT_PHRASE[o.fault!]}`,
+  key: (o) => {
+    const q = o.run.requests.find((r) => r.step === o.step && r.key.replace(/ #\d+$/, '') === o.template);
+    return { fault: o.fault, sticky: o.sticky, request: o.key, page: q?.pagePath ?? o.page };
+  },
+  record: (o) => ({ fault: { id: o.fault, sticky: o.sticky, events: o.events, served: o.served } }),
+  appOutcome: (attack, run) => {
+    if (!run.fault?.fired || run.fault.pending) return { cls: null, shown: 'none' };
+    if (run.fault.absorbed) return { cls: null, shown: 'absorbed' };
+    if (toldFault(attack.fault!, run.fault)) return { cls: 'told', shown: 'told' };
+    return { cls: 'accepted', shown: 'accepted' };
+  },
   async run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome> {
     const fault = attack.fault!;
     const { schema, doc } = responseSchema(ctx.docs, attack.template.split(' ')[0]!, attack.template);

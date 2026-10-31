@@ -6,6 +6,7 @@
 import type { AttackOutcome } from './attacks.mjs';
 import { DELAY_MS, RETRY_AFTER, sha256 } from './faults.mjs';
 import { describeLocator, stepKind, type Flow, type FlowRunResult, type LocatorSpec } from './flowrun.mjs';
+import { kindFor } from './kinds.mjs';
 import type { FolderState } from './folder.mjs';
 import { canonicalJson } from './output.mjs';
 import { reproId } from './summary.mjs';
@@ -24,17 +25,7 @@ function judged(o: AttackOutcome): number {
 
 // ticket 17 item 2's attack key, the form a regression test and a repro store.
 export function attackKey(o: AttackOutcome): Record<string, unknown> {
-  if (o.kind === 'viewport') return { viewport: 375 };
-  if (o.kind === 'bad-input' && o.badInput) {
-    // The field's request key, or its accessible name and kind when no request carried its value.
-    const b = o.badInput;
-    return { badInput: b.inputId, page: b.page, request: b.carrying, field: b.field.key ?? { name: b.field.name, kind: b.field.kind }, ...(b.inputId === 'at-limit' ? { limit: b.limit } : {}) };
-  }
-  if (o.entry) return { timing: o.timing, page: o.page, entry: o.entry.k };
-  if (o.timing === 'out-of-order') return { timing: 'out-of-order', page: o.page, request: o.template, field: o.outOfOrder?.fieldKey ?? null };
-  if (o.kind === 'timing') return { timing: o.timing, request: o.key, page: o.page };
-  const q = o.run.requests.find((r) => r.step === o.step && r.key.replace(/ #\d+$/, '') === o.template);
-  return { fault: o.fault, sticky: o.sticky, request: o.key, page: q?.pagePath ?? o.page };
+  return kindFor(o).key(o);
 }
 
 export function context(): { timezone: string; locale: string } {
@@ -68,19 +59,7 @@ export function attackRecord(o: AttackOutcome, meta: { ordinal: number; duration
         nextAction: q.nextAction ?? null,
       },
     } : {}),
-    ...(o.kind === 'bad-input' && o.badInput ? {
-      badInput: {
-        id: o.badInput.inputId,
-        field: o.badInput.field,
-        preview: `${o.badInput.inputId} "${o.badInput.preview.text}" (${o.badInput.preview.length} chars)`,
-        length: o.badInput.preview.length,
-        held: { length: o.run.badInput?.held?.length ?? null, cutBy: o.run.badInput?.held !== null && o.run.badInput?.held !== undefined && o.run.badInput.held.length < o.badInput.value.length ? 'maxlength' : null },
-        outcome: o.run.badInput?.outcome ?? null,
-      },
-    }
-    : o.kind === 'viewport' ? { viewport: { width: 375, height: 800 } }
-      : o.kind === 'timing' ? { timing: { timing: o.timing, key: o.key, control: o.controlName ?? null, page: o.page }, events: o.events }
-      : { fault: { id: o.fault, sticky: o.sticky, events: o.events, served: o.served } }),
+    ...kindFor(o).record(o),
     page: o.page,
     unique: o.run.unique,
     context: context(),

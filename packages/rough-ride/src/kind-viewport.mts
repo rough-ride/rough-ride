@@ -31,6 +31,10 @@ export function judgeViewport(run: FlowRunResult, baseline: FlowRunResult, skipp
 }
 
 export const viewportKind: KindModule = {
+  what: () => 'the 375px viewport',
+  symptom: (o, lead) => (lead?.id === 'no-overflow-375' ? `${o.page ?? 'the page'} scrolls sideways at 375px` : null),
+  key: () => ({ viewport: 375 }),
+  record: () => ({ viewport: { width: 375, height: 800 } }),
   async run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome> {
     const run = await runFlow({ ...ctx.options, kind: flowRunKind, shots: [] });
     const judged = judgeViewport(run, ctx.baseline, ctx.skipped);
