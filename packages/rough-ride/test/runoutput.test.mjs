@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
 import { parseArgs } from '../dist/args.mjs';
@@ -241,8 +241,18 @@ test('a finished run writes summary.txt, record.json and summary.json last, and 
   assert.deepEqual(files(root, run.id), ['record.json', 'summary.json', 'summary.txt']);
   assertSummaryFiles(root, printed);
   assert.deepEqual(JSON.parse(runFile(root, run.id, 'record.json')), { ...printed, environment: { ci: false } });
-  const written = (name) => statSync(path.join(run.dir, name)).mtimeMs;
-  assert.ok(written('summary.json') >= Math.max(written('summary.txt'), written('record.json')));
+});
+
+test('run files are written in one order, summary.json last: a write that fails leaves every later file unwritten', async () => {
+  const order = ['summary.txt', 'report.txt', 'record.json', 'summary.json'];
+  for (const [i, blocked] of order.entries()) {
+    const { root, run, output } = inProcess(['quick', '--json']);
+    // A folder in the file's place makes its write fail.
+    mkdirSync(path.join(run.dir, blocked, 'x'), { recursive: true });
+    output.madeRun(run);
+    await output.interrupt('SIGINT');
+    assert.deepEqual(files(root, run.id).filter((name) => name !== blocked), order.slice(0, i).sort(), blocked);
+  }
 });
 
 test('an outcome with no run folder of its own writes no summary files; under --run its block still lands in adversary/summary.txt', () => {
