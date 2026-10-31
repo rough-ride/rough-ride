@@ -33,6 +33,7 @@ import { Manifest } from './manifest.mjs';
 import { buildTest } from './regression.mjs';
 import { combine, judgeRun, runTestOnce, type FirstRun, type RunJudgement, type TestOutcome, type TestValue } from './regress.mjs';
 import { parse as parseYaml } from 'yaml';
+import { createClock } from './clock.mjs';
 import { attackNominalMs, computeCut, flowNominalMs, orderedList, reserveMs, bandOf, type CutResult } from './budget.mjs';
 import { TIER_TABLE, tierTableSha256, type TierName } from './tiers.mjs';
 import { attackKey, attackRecord, writeRepro } from './record.mjs';
@@ -201,15 +202,10 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   const skippedLines: string[] = [];
   const holdMs = holdMsFor(S);
   let ordinalNext = 0;
-  // The cut, the items it or the clock left out, and the clock (47.1: it starts once reset finished).
+  // The cut and the items it or the clock left out.
   const tierName: TierName = ctx.subcommand === 'standard' ? 'standard' : 'quick';
   let cut: CutResult | null = null;
   const cutItems: { attack: PlannedAttack; nominalMs: number; reason: 'cut' | 'time' | 'bash' | 'planned' }[] = [];
-  let hardStopAt = Infinity;
-  let clockStart = Date.now();
-  let resetMs = 0;
-  let startMs = target.startMs;
-  let planEndedAt = Date.now();
   let lanes = 1;
   let laneBackOff = false;
   const signInFailedGroups = new Set<string>();
@@ -250,20 +246,16 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   let activeChecks: AppCheck[] = [];
   const checkLines: string[] = [];
   const checkStatus = new Map<string, { status: string; why?: string }>();
-  // Split tier: plan's budgeted time P, the ordered list it wrote, attack setup time.
-  let planMs = ctx.plan?.planMs ?? 0;
+  // Split tier: the ordered list plan wrote.
   let planList: PlanState['attacks'] = [];
-  let setupMs = 0;
-  const invocationStart = Date.now();
+  const clock = createClock({ mode: ctx.mode ?? 'tier', tier: tierName, planMs: ctx.plan?.planMs, appStartMs: target.startMs, bashStop: session.bashStop });
   // attack: what the adversary added between plan and attack (44.2, 44.3).
   const savedRecords = ctx.mode === 'attack' ? readSaved(folder, ctx.plan!.runId) : [];
   const savedInRun = new Set(savedRecords.filter((r) => r.kept).map((r) => r.name));
   const linkResults = ctx.mode === 'attack' ? readLinks(folder, ctx.plan!.runId, manifest, followUpCommand(info, [ctx.plan!.tier])).links : [];
-  const { bashStop } = session;
   const bashBlocks = () => session.bashBlocks();
   try {
-    resetMs = await session.reset();
-    clockStart = Date.now();
+    clock.resetFinished(await session.reset());
     const rewritten = changedDuringRun(folder.dir, prot.texts);
     if (rewritten) ctx.notes.push(rewritten);
     const screenshot = (name: string) => async (page: Page, masks: Locator[]) => {
@@ -273,9 +265,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
 
     const signInProbe = baselineProbe();
     signInOutcome = await session.signIn(signInProbe.options);
-    // Waiting for the API is app start; the budget starts with the run that got an answer.
-    startMs += signInOutcome.waitedMs;
-    clockStart += signInOutcome.waitedMs;
+    clock.backendAnswered(signInOutcome.waitedMs);
     if (signInOutcome.result) signInProbe.keep(signInOutcome.result);
     const others = flows.filter((f) => f.name !== 'sign-in');
     lanes = lanesFor(ctx.cpus ?? availableParallelism());
@@ -561,18 +551,10 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       }
     }
 
-    planEndedAt = Date.now();
-    if (ctx.mode === 'plan') {
-      planMs = planEndedAt - clockStart;
-    } else {
-      // attack: steps 1 to 4 are setup, timed and never budgeted; attack time is B - P (42.6).
-      if (ctx.mode === 'attack') {
-        setupMs = Date.now() - invocationStart;
-        clockStart = Date.now();
-      }
+    clock.selectionEnded();
+    if (ctx.mode !== 'plan') {
       // The run-time clock (50.1 to 50.4): it only stops starts, never adds an attack.
-      const B = spec.budgetMs - planMs;
-      hardStopAt = Math.min(clockStart + B + spec.serialGraceMs + 10_000, bashStop);
+      const hardStopAt = clock.hardStopAt();
       const speedOf = (name: string) => {
         const r = runsOf(name)[0];
         const nominal = flowNominalMs(flowOf(name), r);
@@ -643,11 +625,10 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
               writeAttacks();
               continue;
             }
-            const t = Date.now() - clockStart + heldMs;
-            const est = item.nominalMs * speedOf(attack.flow);
+            const need = heldMs + item.nominalMs * speedOf(attack.flow);
             // A planned attack starts only if the sign-in segment's selected work still fits (45.5).
             if (plannedIds.has(attack.id)) {
-              if (stopReason !== null || bashBlocks() || t + est + signInReserve() > B - reserveMs(failedDurations, tierName)) {
+              if (stopReason !== null || bashBlocks() || !clock.startFits(need + signInReserve(), reserveMs(failedDurations, tierName))) {
                 cutItems.push({ attack, nominalMs: item.nominalMs, reason: 'planned' });
                 continue;
               }
@@ -659,7 +640,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
               continue;
             }
             if (stopReason === null && bashBlocks()) stopReason = 'bash';
-            if (stopReason === null && t + est > B - reserveMs(failedDurations, tierName)) stopReason = 'time';
+            if (stopReason === null && !clock.startFits(need, reserveMs(failedDurations, tierName))) stopReason = 'time';
             if (stopReason !== null) {
               cutItems.push({ attack, nominalMs: item.nominalMs, reason: stopReason });
               continue;
@@ -769,7 +750,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
           signInFailedGroups.add(o.id);
           return false;
         }
-        return Date.now() - clockStart + (meta.get(o)?.durationMs ?? 0) <= B + TIER_TABLE.tiers[tierName].serialGraceMs;
+        return clock.closingFits(meta.get(o)?.durationMs ?? 0);
       };
       await confirmGroups(groups, tierName, async (o) => {
         const flow = flows.find((f) => f.name === o.flow)!;
@@ -819,18 +800,12 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       tier: ctx.subcommand,
     });
   }
-  // The budget note (50.6): the first that applies.
-  const clockCut = cutItems.filter((c) => c.reason === 'time' || c.reason === 'bash').length;
-  const unconfirmed = groups.filter((g) => g.state === 'unchecked').length;
-  const budgetedMs = Date.now() - clockStart;
-  const B = TIER_TABLE.tiers[tierName].budgetMs;
-  if (clockCut > 0 || unconfirmed > 0) {
-    ctx.notes.push({ id: 'budget', text: `Ran slower than planned: ${clockCut} ${clockCut === 1 ? 'attack' : 'attacks'} and ${unconfirmed} confirmation ${unconfirmed === 1 ? 'run' : 'runs'} did not start before the ${ctx.subcommand} budget ran out.` });
-  } else if (budgetedMs > B) {
-    ctx.notes.push({ id: 'budget', text: `Over the ${ctx.subcommand} budget by ${formatDuration(budgetedMs - B)}: flow runs still going at ${formatDuration(B)} were allowed to finish.` });
-  } else if (planEndedAt - clockStart > B / 2) {
-    ctx.notes.push({ id: 'budget', text: `Baseline runs of ${outcomes.length} saved flows used ${formatDuration(planEndedAt - clockStart)} of the ${formatDuration(B)} ${ctx.subcommand} budget.` });
-  }
+  const budgetNote = clock.budgetNote({
+    clockCut: cutItems.filter((c) => c.reason === 'time' || c.reason === 'bash').length,
+    unconfirmed: groups.filter((g) => g.state === 'unchecked').length,
+    flows: outcomes.length,
+  });
+  if (budgetNote) ctx.notes.push({ id: 'budget', text: budgetNote });
   const voidCounts = new Map<string, number>();
   for (const o of attackOutcomes) if (o.voided) voidCounts.set(o.voided, (voidCounts.get(o.voided) ?? 0) + 1);
   for (const [why, n] of voidCounts) {
@@ -888,7 +863,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   map.budget = { nominalPlanMs: cut?.nominalPlanMs ?? null, windowMs: cut?.windowMs ?? null };
   map.selectionDigest = cut?.selectionDigest ?? null;
   map.order = sel.ordered.map((o) => o.name);
-  map.meta = { planMs: ctx.mode ? planMs : null };
+  map.meta = { planMs: clock.planMs() };
   // attack: plan.json, so a run can be replayed outside Claude Code (45.10).
   if (ctx.mode === 'attack' && ctx.plan) {
     const flowHash = (name: string) => {
@@ -953,7 +928,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       tier: tierName,
       digest: diff.digest,
       base: { given: diff.base.given ? diff.base.ref : null },
-      planMs,
+      planMs: clock.planMs() ?? 0,
       attacks: planList,
       flows: sel.ordered.map((o) => {
         const e = flowEntries.find((f) => f.name === o.name);
@@ -1267,11 +1242,9 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
     ...section(null, [
       ...header,
       `started ${startedAt}`,
-      ctx.mode === 'attack'
-        ? `time: runner ${formatDuration(ctx.elapsed())} = attack setup ${formatDuration(setupMs)} (timed, not budgeted) + budgeted ${formatDuration(Date.now() - clockStart)} of ${formatDuration(TIER_TABLE.tiers[tierName].budgetMs - planMs)} (the ${ctx.subcommand} budget less plan ${formatDuration(planMs)}); adversary calls ${formatDuration(adversaryCallsMs)} (timed, not budgeted) | app start ${formatDuration(startMs)}`
-        : `time: runner ${formatDuration(ctx.elapsed())} = budgeted ${formatDuration(Date.now() - clockStart)} of ${formatDuration(TIER_TABLE.tiers[tierName].budgetMs)} + reset ${formatDuration(resetMs)} | app start ${formatDuration(startMs)}`,
+      clock.timeLine({ runnerMs: ctx.elapsed(), adversaryCallsMs }),
       ...(ctx.mode === 'plan' ? ['Not attacked lines are provisional: attack --run decides them.'] : []),
-      ...(resetMs > 10_000 ? [`reset took ${Math.round(resetMs / 1000)}s; it is not counted in the ${ctx.subcommand} budget.`] : []),
+      ...[clock.resetLine()].filter((l): l is string => l !== null),
       ...(info.version.startsWith('0.') ? ['Pre-release (0.x): detection and false-alarm rates are not measured yet. Do not rely on its verdicts.'] : []),
     ]),
     ...section('Notes', orderNotes(ctx.notes).map((n) => n.text)),
@@ -1369,16 +1342,10 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       budgetMs: TIER_TABLE.tiers[tierName].budgetMs,
       budget: {
         tier: tierName,
-        budgetMs: TIER_TABLE.tiers[tierName].budgetMs,
-        budgetedMs: Date.now() - clockStart,
-        overMs: Math.max(0, Date.now() - clockStart - TIER_TABLE.tiers[tierName].budgetMs),
-        planMs: ctx.mode ? planMs : null,
+        ...clock.fields(),
         nominalPlanMs: cut?.nominalPlanMs ?? null,
         windowMs: cut?.windowMs ?? null,
         adversaryCallsMs,
-        attackSetupMs: setupMs,
-        resetMs,
-        startMs,
         lanes,
         cpus: availableParallelism(),
       },
