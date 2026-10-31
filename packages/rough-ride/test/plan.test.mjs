@@ -84,6 +84,7 @@ test('unchecked entries: a callback that cannot tell leaves the entry unchecked,
     entry({ flow: 'fresh-note', viewport: 375 }),
     entry({ viewport: 375 }),
     entry({ badInputs: 2, form: 'POST /api/notes' }),
+    entry({ viewport: 375 }),
   ] }, c);
   assert.deepEqual(r.lines, [
     'Unchecked plan entry: attacks[0] (flow fresh-note was saved after the plan; attack checks its points)',
@@ -91,6 +92,7 @@ test('unchecked entries: a callback that cannot tell leaves the entry unchecked,
     'Unchecked plan entry: attacks[4] (flow fresh-note was saved after the plan; attack checks its points)',
     'Unchecked plan entry: attacks[5] (over the plan cap of 8 unless attack keeps fewer for attacks[0], attacks[3], attacks[4])',
     'Unchecked plan entry: attacks[6] (which inputs come next depends on attacks[3])',
+    'Unchecked plan entry: attacks[7] (already selected if attack keeps attacks[5])',
   ]);
   // 3 + 1 kept for sure fit beside the 4 attacks[0] could add; attacks[3] could add 4 more.
   assert.deepEqual(r.entries.map((e) => [e.path, e.status, e.attackIds.length]), [
@@ -101,6 +103,7 @@ test('unchecked entries: a callback that cannot tell leaves the entry unchecked,
     ['attacks[4]', 'unchecked', 0],
     ['attacks[5]', 'unchecked', 1],
     ['attacks[6]', 'unchecked', 0],
+    ['attacks[7]', 'unchecked', 1],
   ]);
   assert.deepEqual(r.kept.map((a) => a.id), ['create-note/f/in-0', 'create-note/f/in-1', 'create-note/f/in-2', 'create-note/POST /api/notes #1/400']);
 });

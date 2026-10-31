@@ -1,8 +1,9 @@
 // The Attack catalogue: every attack point of every flow in one invocation,
 // built once from the flows' baseline runs. The tier's selected attacks come
 // from it (spec part 4 section 17.7, part 5 sections 21.1 and 21.8, part 8
-// section 32.9), and plan entries are resolved against it (part 11 section 45),
-// so the attack invocation and `attack --check` name the same attacks.
+// section 32.9), plan entries are resolved against it (part 11 section 45), and
+// so are regression tests and repros (part 6 section 25.3). plan records it, so
+// the attack invocation and `attack --check` name the same attacks.
 
 import { attackPoints, badInputAttack, doubleSubmitPoints, outOfOrderPoints, ownHostFor, pageTimingPoints, viewportAttack, type PlannedAttack } from './attacks.mjs';
 import { planBadInputs, tierInputs } from './badinputs.mjs';
@@ -87,6 +88,7 @@ interface Inside {
   } | null;
 }
 
+// Callers hold only the Catalogue value; what resolution reads stays here.
 const inside = new WeakMap<Catalogue, Inside>();
 
 export function buildCatalogue(input: CatalogueInput): Catalogue {
