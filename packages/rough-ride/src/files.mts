@@ -8,12 +8,14 @@ import { checkVersion, type CheckedVersion, type CommittedKind } from './committ
 import { makeStop, StopError, stopWith } from './exit.mjs';
 import { ensureFolder, listYaml, readFolderFile, type FolderState } from './folder.mjs';
 import { compareVersions, FORMATS, formatsReport, type FormatKind, type Formats, type FormatsReport } from './formats.mjs';
+import type { Manifest, SavedEntry } from './manifest.mjs';
 import type { Note } from './output.mjs';
 import { ciMode, updateCommand, sourceText, versionSkew, type RunnerInfo } from './runner.mjs';
 import { nuxtCandidates } from './target.mjs';
 import { createRunFolder } from './runs.mjs';
+import { redactSecrets } from './secrets.mjs';
 import { buildUpgrade, upgradeFile, UPGRADERS, type Upgrader } from './upgrade.mjs';
-import { writeAtomic } from './write.mjs';
+import { writeAtomic, type WriteTarget } from './write.mjs';
 
 const KIND_PLURAL: Record<FormatKind, string> = {
   config: 'config',
@@ -191,6 +193,27 @@ export function wroteFile(files: CheckedFiles, info: RunnerInfo, root: string, n
     files.formats = formatsReport(seen);
   }
   info.versionSkew = versionSkew(info, root, ['', ...(nuxtRel ? [nuxtRel] : [])], files.written, argv);
+}
+
+export interface ProtectedWrite {
+  folder: WriteTarget;
+  manifest: Manifest;
+  files: CheckedFiles;
+  info: RunnerInfo;
+  root: string;
+  nuxtRel: string | null;
+  argv: string[];
+}
+
+// A flow or test rough-ride wrote (26.8) in one step: the file, its saved copy
+// and manifest entry from the very bytes written (secrets already redacted),
+// and its count in `formats` and the skew line.
+export function writeProtected(at: ProtectedWrite, rel: `flows/${string}.yaml` | `tests/${string}.yaml`, text: string, by: SavedEntry['by'], run: string): void {
+  const kind = rel.startsWith('flows/') ? 'flow' : 'tests';
+  const bytes = redactSecrets(text);
+  writeAtomic(at.folder, rel.split('/'), bytes);
+  at.manifest.saveCopy(rel, bytes, by, run, at.info.version);
+  wroteFile(at.files, at.info, at.root, at.nuxtRel, at.argv, { shown: `.rough-ride/${rel}`, schema: FORMATS[kind].current, kind });
 }
 
 function olderStop(

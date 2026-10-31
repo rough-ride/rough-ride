@@ -10,7 +10,7 @@ import type { Page, Locator } from 'playwright-core';
 import { chooseBrowser, installedOnThisMachine, launchBrowser, SHORT_TITLES, type BrowserName, type Launched } from './browser.mjs';
 import type { Config } from './config.mjs';
 import { diffMap, diffPatch, headerLine2, type Diff } from './diff.mjs';
-import { checkCommittedFiles, wroteFile } from './files.mjs';
+import { checkCommittedFiles, wroteFile, writeProtected } from './files.mjs';
 import { StopError } from './exit.mjs';
 import { ensureFolder, folderNotes, nestedFoldersNote, readFolderFile, type FolderState } from './folder.mjs';
 import { DELAY_MS, holdMsFor, RETRY_AFTER } from './faults.mjs';
@@ -1243,10 +1243,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       testOf.set(g, { name: t.name, state: 'exists', path: shownPath });
       continue;
     }
-    writeAtomic(folder, ['tests', `${t.name}.yaml`], t.text);
-    // Its bytes go into the checksum manifest as a saved copy, in the same step (26.8).
-    manifest.saveCopy(rel, t.text, 'runner', run.id, info.version);
-    wroteFile(files, info, root, target.nuxtRoot?.rel ?? null, ctx.argv, { shown: shownPath, schema: FORMATS.tests.current, kind: 'tests' });
+    writeProtected({ folder, manifest, files, info, root, nuxtRel: target.nuxtRoot?.rel ?? null, argv: ctx.argv }, `tests/${t.name}.yaml`, t.text, 'runner', run.id);
     newTests.push(shownPath);
     manifest.data.tests[t.name] = { outcome: 'fail', run: run.id, at: startedAt };
     testOf.set(g, { name: t.name, state: 'new', path: shownPath });

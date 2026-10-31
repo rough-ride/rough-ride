@@ -3,8 +3,9 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSy
 import path from 'node:path';
 import { test } from 'node:test';
 import { StopError } from '../dist/exit.mjs';
-import { checkCommittedFiles } from '../dist/files.mjs';
-import { checkRootEntry } from '../dist/folder.mjs';
+import { checkCommittedFiles, writeProtected } from '../dist/files.mjs';
+import { checkRootEntry, ensureFolder } from '../dist/folder.mjs';
+import { addSecret, clearSecrets } from '../dist/secrets.mjs';
 import { fileHash, Manifest } from '../dist/manifest.mjs';
 import { compareProtected } from '../dist/protected.mjs';
 import { gitRepo, scratchDir, sh } from './helpers.mjs';
@@ -84,6 +85,26 @@ test('a saved copy gets the working copy\'s check: one this runner can\'t read n
   const out = await compare(root, new Manifest(root));
   assert.deepEqual(out.tests, []);
   assert.deepEqual(out.entries, []);
+});
+
+test('writing a protected file is one step: the file, its saved copy and entry from the same bytes, and its count in formats', () => {
+  const root = repo();
+  const folder = ensureFolder(checkRootEntry(root));
+  const files = checkCommittedFiles(folder, { info: { ...info }, subcommand: 'quick', argv: ['quick'], env: {} });
+  addSecret('tok-12345678', '<env.TOKEN>');
+  try {
+    writeProtected({ folder, manifest: new Manifest(root), files, info: { ...info }, root, nuxtRel: null, argv: ['quick'] }, 'tests/t.yaml', TEST.replace('no error shown', 'no error shown tok-12345678'), 'runner', 'run-1');
+  } finally {
+    clearSecrets();
+  }
+  const onDisk = readFileSync(path.join(root, '.rough-ride', 'tests', 't.yaml'), 'utf8');
+  assert.ok(onDisk.includes('no error shown <env.TOKEN>'), onDisk);
+  const again = new Manifest(root);
+  assert.equal(again.savedCopy('tests/t.yaml').text, onDisk);
+  assert.equal(again.label('tests/t.yaml', onDisk), 'written by rough-ride');
+  assert.equal(again.entry('tests/t.yaml').run, 'run-1');
+  assert.deepEqual(files.written.map((w) => w.shown), ['.rough-ride/tests/t.yaml']);
+  assert.equal(files.formats.tests.highest, '0.1.0');
 });
 
 test('detached HEAD with an empty manifest prints no saved-copies note, in or out of CI mode', async () => {
