@@ -361,8 +361,6 @@ export interface RunFlowOptions {
   credentials?: string[];
   // The attack kind this flow run applies, if any; see AttackKind.
   kind?: AttackKind;
-  // A timing attack: double-submit doubles this click or press step (32.3).
-  timing?: { kind: 'double-submit'; step: number };
   // Fault recovery: control labels the baseline run showed after the attacked step (23.7).
   baselineLabels?: string[];
   // Screenshots kept in memory when a step's window ends: every step, or only these.
@@ -401,18 +399,45 @@ export interface AttackKind {
   start(engine: FlowRunEngine): KindHooks | Promise<KindHooks>;
 }
 
-// The points of a flow run where a kind's rules apply.
+// A step as the engine hands it to a kind.
+export interface StepAt {
+  index: number;
+  step: Step;
+  kind: StepKind;
+  label: string;
+}
+
+// What a kind's own action did: when the Observation window starts (the
+// step's start otherwise), when its ceiling counts from (the window's start
+// otherwise), and the value the step record keeps.
+export interface Acted {
+  windowFrom?: number;
+  ceilingFrom?: number;
+  value?: string;
+}
+
+// The points of a flow run where a kind's rules apply. Step hooks run only
+// until a recovery starts; recovery steps are the flow's own.
 export interface KindHooks {
+  // In place of a click, press, check, fill or select step's own action, or
+  // undefined to leave the step to the engine. A NotApplied ends the attack.
+  act?(at: StepAt, locator: Locator, before: Snapshot): Promise<Acted | undefined>;
   // Whether to keep a screenshot of this step when its window ends, beyond the run's `shots`.
   wantsShot?(after: Snapshot): boolean;
   // Facts the kind adds to the step record when the step's window ends.
   stepFacts?(after: Snapshot): Partial<StepRecord>;
+  // A later step failed: whether that stops the flow after the attack
+  // (`Faulted; flow stopped at step <n>`) rather than failing the flow run.
+  stopsFlow?(index: number): boolean;
 }
 
 // What the engine hands a kind: this flow run's result, page and primitives.
 export interface FlowRunEngine {
   // The kind writes only its own slots.
   readonly result: FlowRunResult;
+  readonly page: Page;
+  // The step timeout S, the action and expect timeout, and the load timeout C.
+  readonly timeouts: { step: number; action: number; load: number };
 }
 
 export interface PageTimingResult {
@@ -1191,7 +1216,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       }
     });
   }
-  const engine: FlowRunEngine = { result };
+  const engine: FlowRunEngine = { result, page, timeouts: { step: stepTimeout, action: actionTimeout, load: loadTimeout } };
   const hooks: KindHooks = options.kind ? await options.kind.start(engine) : {};
   // Untrusted runs (44.5). A predicate matcher, so an attack's unroute('**/*') keeps it.
   if (options.untrusted) {
@@ -1536,9 +1561,9 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
       const pathBefore = pagePath(page.url());
       const before = await snapshot();
       let control: ControlFacts | undefined;
-      // The window starts at the step's start, or at the doubled action of a timing attack.
+      // The window starts at the step's start, or where the kind's own action says.
       let windowFrom = startedAt;
-      const doubled = options.timing?.step === index && (kind === 'click' || kind === 'press');
+      let acted: Acted | undefined;
       try {
         if (kind === 'goto') {
           const target = resolve((step as { goto: string }).goto);
@@ -1576,18 +1601,10 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
             result.badInput!.submittedAt = Date.now();
           }
           try {
-            if (bad && index === bad.submitStep && result.badInput!.submitDisabled && !recovering) {
+            if (!recovering && hooks.act && (acted = await hooks.act({ index, step, kind, label }, locator, before)) !== undefined) {
+              if (acted.windowFrom !== undefined) windowFrom = acted.windowFrom;
+            } else if (bad && index === bad.submitStep && result.badInput!.submitDisabled && !recovering) {
               // Skipped: the submit stayed disabled.
-            } else if (doubled && kind === 'click') {
-              windowFrom = Date.now();
-              result.timing = { actionAt: windowFrom, action: 'double-clicked' };
-              await locator.dblclick({ timeout: actionTimeout });
-            } else if (doubled && kind === 'press') {
-              const key = (step as { key: string }).key;
-              windowFrom = Date.now();
-              result.timing = { actionAt: windowFrom, action: 'pressed twice' };
-              await locator.press(key, { timeout: actionTimeout });
-              await page.keyboard.press(key);
             } else if (kind === 'click') await locator.click({ timeout: actionTimeout });
             else if (kind === 'check') await locator.check({ timeout: actionTimeout });
             else if (kind === 'press') await locator.press((step as { key: string }).key, { timeout: actionTimeout });
@@ -1641,7 +1658,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
         const samples: TextSample[] = [];
         const settled = kind === 'expect'
           ? { settled: true, ms: 0, unsettled: null, after: await snapshot() }
-          : await settle(before, navigated ? Date.now() : windowFrom, ooo && index === ooo.step ? startedAt : windowFrom, samples);
+          : await settle(before, navigated ? Date.now() : windowFrom, acted?.ceilingFrom ?? (ooo && index === ooo.step ? startedAt : windowFrom), samples);
         if (result.untrustedStop !== null) throw new StepError(result.untrustedStop);
         const pathAfter = pagePath(page.url());
         const wantShot = options.shots === 'all' || (Array.isArray(options.shots) && options.shots.includes(index)) || hooks.wantsShot?.(settled.after);
@@ -1650,7 +1667,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
           if (png) result.shots.set(index, png);
         }
         const badHere = bad && index === bad.step && !recovering && !isRecovery;
-        const filled = badHere ? bad.value : kind === 'fill' || kind === 'select' ? resolve((step as { value: string }).value) : kind === 'check' ? 'true' : undefined;
+        const filled = acted?.value !== undefined ? acted.value : badHere ? bad.value : kind === 'fill' || kind === 'select' ? resolve((step as { value: string }).value) : kind === 'check' ? 'true' : undefined;
         const observation: Observation = { before, samples, after: settled.after, unsettled: settled.unsettled, windowEndedAt: Date.now(), startedAt };
         result.steps.push({
           index, label, observation, settled: settled.settled, settleMs: settled.ms, path: pathAfter,
@@ -1862,7 +1879,7 @@ export async function runFlow(options: RunFlowOptions): Promise<FlowRunResult> {
         await fail(index, label, `${label}: ${result.untrustedStop ?? error.message}`);
         // After a timing attack's window, or a fault that delivered a 2xx:
         // `Faulted; flow stopped at step <n>`, never a finding.
-        if (options.timing && index > options.timing.step) result.stoppedAt = index;
+        if (hooks.stopsFlow?.(index)) result.stoppedAt = index;
         if (attack && index > attack.step && result.fault?.fired) result.stoppedAt = index;
         if (bad && index > bad.submitStep && result.badInput?.outcome === 'accepted') result.stoppedAt = index;
         if (ooo && index > ooo.step && result.outOfOrder?.releasedAt !== null) result.stoppedAt = index;

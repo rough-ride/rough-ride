@@ -6,7 +6,8 @@
 import type { AttackLink } from './accounting.mjs';
 import { fieldKind, requestKey, type BadInputPlan } from './badinputs.mjs';
 import { judgeAppChecks, matchesWhen, probeFor, type AppCheck } from './appchecks.mjs';
-import { baselineFailures, checkLabel, checkSeverity, judgeBadInput, judgeFault, judgeOutOfOrder, judgePageTiming, judgeTiming, leadCheck, TOGGLE_HINT, type CheckResult } from './checks.mjs';
+import { baselineFailures, checkLabel, checkSeverity, judgeBadInput, judgeFault, judgeOutOfOrder, judgePageTiming, leadCheck, type CheckResult } from './checks.mjs';
+import { TOGGLE_HINT } from './kind-double-submit.mjs';
 import { SEVERITY_TEXT, type Group } from './groups.mjs';
 import { LOOPBACK_ONLY, type HostPolicy } from './hosts.mjs';
 import { membersText } from './summary.mjs';
@@ -571,27 +572,6 @@ async function runJudged(
       voided: run.voided,
       served: null,
       notApplied: run.outOfOrder?.notApplied ?? null,
-      givenUp: false,
-      run,
-    };
-  }
-  if (attack.kind === 'timing') {
-    const run = await runFlow({ ...base, flow, timing: { kind: 'double-submit', step: attack.step }, templateOf, pollingKeys: pollingKeys(baseline), shots: [attack.step] });
-    const own = (base.hosts ?? LOOPBACK_ONLY).ownHost;
-    const judged = judgeTiming(run, baseline, attack.step, skipped, own);
-    const writes = run.requests.filter((q) => q.step === attack.step && WRITES.has(q.method) && (q.resourceType === 'fetch' || q.resourceType === 'xhr') && own(q.url));
-    return {
-      ...attack,
-      verdict: judged.verdict,
-      checks: judged.checks,
-      page: attack.page ?? null,
-      control: controlOf(flow, attack.step),
-      events: run.timing
-        ? [{ offsetMs: 0, event: run.timing.action, detail: writes.map((q) => `${q.key.replace(/ #\d+$/, '')} ${q.status ?? q.failure ?? 'none'} ${q.bodySha256 ?? '-'}`).join('; ') }]
-        : [],
-      voided: run.voided,
-      served: null,
-      notApplied: null,
       givenUp: false,
       run,
     };

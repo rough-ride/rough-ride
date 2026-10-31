@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { doubleSubmitPoints, findingLines, nonFinding, runAttack, severityOf, symptom, timingDedupeKey } from '../dist/attacks.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser } from '../dist/browser.mjs';
-import { sameShapeExceptBooleans } from '../dist/checks.mjs';
+import { sameShapeExceptBooleans } from '../dist/kind-double-submit.mjs';
 import { runFlow } from '../dist/flowrun.mjs';
 import { startTimingSite } from './fixtures/timing-site.mjs';
 import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
