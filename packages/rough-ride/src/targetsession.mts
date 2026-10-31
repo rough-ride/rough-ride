@@ -51,6 +51,9 @@ export interface TargetSessionOptions {
   progress?: (line: string) => void;
   // A new run folder for this subcommand word, a run that already exists, or none (snapshot).
   run: { create: string } | { existing: RunFolder; prune: boolean } | null;
+  // Runs once the run folder exists, before the browser starts; a throw
+  // closes what the session opened (a tier's diff.patch).
+  runReady?: (run: RunFolder) => void;
   // Whether reset runs before the sign-in flow; snapshot never resets (44.1).
   reset: boolean;
   // Notes an earlier run that stopped before its report, before this run's folder exists (tiers).
@@ -137,6 +140,7 @@ export async function openTargetSession(options: TargetSessionOptions): Promise<
       run = options.run.existing;
       if (options.run.prune) pruneRuns(folder, lock, run.id);
     }
+    if (run) options.runReady?.(run);
     const choice = chooseBrowser(options.browserFlag, config?.browser ?? null, installedOnThisMachine(options.env));
     options.progress?.('Starting the browser');
     launched = options.launch ? await options.launch(choice.name) : await launchBrowser(choice, notes);

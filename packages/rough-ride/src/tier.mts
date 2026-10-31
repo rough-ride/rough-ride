@@ -183,6 +183,8 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   const notRun = prot.notRun;
   checkSignInEnv(flows, folder, ctx.env);
 
+  let startedAt = '';
+  let patchBytes: Buffer = Buffer.alloc(0);
   const session = await openTargetSession({
     root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
     start: ctx.start, againCommand: `/rough-ride:${ctx.subcommand}`, browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
@@ -190,12 +192,15 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
     run: ctx.mode === 'attack'
       ? { existing: { id: ctx.plan!.runId, dir: path.join(folder.dir, 'runs', ctx.plan!.runId) } as RunFolder, prune: true }
       : { create: ctx.mode === 'plan' ? 'plan' : ctx.subcommand },
+    // The run starts with its folder, and diff.patch is written before the browser starts.
+    runReady: (made) => {
+      startedAt = new Date().toISOString();
+      patchBytes = diffPatch(root, diff);
+      writeAtomic(folder, ['runs', made.id, 'diff.patch'], patchBytes);
+    },
   });
   const { target, hosts, launched, guard } = session;
   const run = session.run!;
-  const startedAt = new Date().toISOString();
-  const patchBytes = diffPatch(root, diff);
-  writeAtomic(folder, ['runs', run.id, 'diff.patch'], patchBytes);
   let signInOutcome: SignInOutcome;
   let outcomes: BaselineOutcome[] = [];
   let selection: Selection | undefined;

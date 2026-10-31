@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
+import { computeDiff } from '../dist/diff.mjs';
+import { checkRootEntry } from '../dist/folder.mjs';
+import { lockPath } from '../dist/lock.mjs';
 import { formatDuration } from '../dist/output.mjs';
+import { runnerInfo } from '../dist/runner.mjs';
 import { hostPolicy, LOOPBACK_ONLY } from '../dist/hosts.mjs';
-import { apiOrigins, capSection, inLanes, lanesFor, orderNotes } from '../dist/tier.mjs';
+import { apiOrigins, capSection, inLanes, lanesFor, orderNotes, runTier } from '../dist/tier.mjs';
 import { startSite } from './fixtures/test-site.mjs';
 import { gitRepo, runAsync as run, sh } from './helpers.mjs';
 
@@ -97,6 +101,28 @@ test('quick runs the baseline runs and ends as nothing attacked, with summary.js
   assert.deepEqual(readdirSync(path.join(dir, 'baseline')), ['broken.png']);
   assert.deepEqual(JSON.parse(readFileSync(path.join(dir, 'summary.json'), 'utf8')), doc);
   assert.equal(readFileSync(path.join(dir, 'summary.txt'), 'utf8'), lines.map((l) => l + '\n').join(''));
+});
+
+test('diff.patch is written before the browser starts, so a throw there leaves no browser open and frees the flow lock', async () => {
+  const root = project({ home: PASSING });
+  // An untracked app file the diff lists but diff.patch can no longer read.
+  writeFileSync(path.join(root, 'extra.js'), 'export {}\n');
+  const diff = computeDiff({ root, given: null, env: process.env, nuxtRoots: [] });
+  rmSync(path.join(root, 'extra.js'));
+  let launched = 0;
+  let closed = 0;
+  const launch = async (name) => {
+    launched++;
+    return { browser: { close: async () => void closed++ }, name, version: '1', debugPort: null };
+  };
+  const env = { ...process.env };
+  const report = { madeRun() {}, protectedFiles() {}, contract() {} };
+  await assert.rejects(
+    runTier({ subcommand: 'quick', root, folder: checkRootEntry(root), diff, info: runnerInfo(null, root, env), browserFlag: null, start: false, argv: ['quick'], env, notes: [], report, elapsed: () => 0, progress: () => {}, launch }),
+    /ENOENT/,
+  );
+  assert.deepEqual([launched, closed], [0, 0]);
+  assert.equal(existsSync(lockPath(root)), false);
 });
 
 test('the text summary is plain ASCII with no ANSI or \\r', async () => {
