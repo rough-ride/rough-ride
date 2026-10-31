@@ -7,6 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseAllDocuments } from 'yaml';
+import { printed } from '../hooks/path-check.mjs';
 import { chooseBrowser, installedOnThisMachine, launchBrowser, type BrowserName, type Launched } from './browser.mjs';
 import { parseCommitted } from './committed.mjs';
 import { stopWith } from './exit.mjs';
@@ -347,7 +348,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
           onFailure: async (page) => {
             const text = await page.locator('body').ariaSnapshot().catch(() => '');
             writeAtomic(folder, ['runs', run.id, 'snapshots', `${flow.name}.txt`], text + '\n');
-            snapshot = path.join(run.dir, 'snapshots', `${flow.name}.txt`).split(path.sep).join('/');
+            snapshot = printed(path.join(run.dir, 'snapshots', `${flow.name}.txt`));
           },
         });
         return { result, snapshot };

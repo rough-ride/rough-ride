@@ -6,7 +6,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { lstatSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { canon } from '../hooks/path-check.mjs';
+import { canon, printed } from '../hooks/path-check.mjs';
 import { stopWith } from './exit.mjs';
 import { git } from './git.mjs';
 import { canonicalJson, type Note } from './output.mjs';
@@ -83,7 +83,7 @@ export class Manifest {
       this.notes.push({ id: 'manifest', text: `Checksum manifest unreadable (${why}): changes to files not yet merged are only listed, and earlier run output can't be re-run.` });
       this.data = empty();
     };
-    if (!plain(dir, true)) return unreadable(`${dir} is not a real folder`);
+    if (!plain(dir, true)) return unreadable(`${printed(dir)} is not a real folder`);
     try {
       lstatSync(this.file!);
     } catch {
@@ -134,7 +134,7 @@ export class Manifest {
       return true;
     } catch (error) {
       this.writable = false;
-      this.notes.push({ id: 'manifest', text: `Checksum manifest: can't write ${this.file} (${(error as NodeJS.ErrnoException).code ?? 'error'}). Saved copies and run-output checks are off for this run.` });
+      this.notes.push({ id: 'manifest', text: `Checksum manifest: can't write ${printed(this.file!)} (${(error as NodeJS.ErrnoException).code ?? 'error'}). Saved copies and run-output checks are off for this run.` });
       return false;
     }
   }

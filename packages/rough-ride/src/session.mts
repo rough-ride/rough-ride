@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Browser } from 'playwright-core';
+import { printed } from '../hooks/path-check.mjs';
 import type { Config } from './config.mjs';
 import { makeStop, StopError, stopWith } from './exit.mjs';
 import { readFolderFile, type FolderState } from './folder.mjs';
@@ -57,7 +58,7 @@ export function checkEnv(flow: Flow, read: (name: string) => string | undefined,
   if (missing.length === 0) return;
   const what = flow.name === 'sign-in' ? 'The sign-in flow' : `Flow ${flow.name}`;
   const lines = [
-    `${what} uses ${listNames(missing)}, which ${missing.length === 1 ? "isn't" : "aren't"} set. Set ${missing.length === 1 ? 'it' : 'them'} in the environment, or set ${missing.length === 1 ? 'it' : 'them'} in .rough-ride/.env (${path.join(folder.dir, '.env').split(path.sep).join('/')}).`,
+    `${what} uses ${listNames(missing)}, which ${missing.length === 1 ? "isn't" : "aren't"} set. Set ${missing.length === 1 ? 'it' : 'them'} in the environment, or set ${missing.length === 1 ? 'it' : 'them'} in .rough-ride/.env (${printed(path.join(folder.dir, '.env'))}).`,
   ];
   const pr = pullRequestLine(listNames(missing), missing.length, env);
   if (pr) lines.push(pr);
