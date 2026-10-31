@@ -100,3 +100,24 @@ test('the hard stop is B + G + 10 s from the budget start, or the Bash stop when
   bash.clock.selectionEnded();
   assert.equal(bash.clock.hardStopAt(), 1_050_000);
 });
+
+// The time line budgets attack against A = B - P, so the note and overMs do too (47.3, 50.1).
+test('attack: the over-budget note and overMs count from A = B - P, as the time line does', () => {
+  const { clock, pass } = fake({ mode: 'attack', planMs: 30_000 });
+  clock.resetFinished(0);
+  pass(9_000);
+  clock.selectionEnded();
+  pass(100_000);
+  assert.equal(clock.budgetNote({ clockCut: 0, unconfirmed: 0, flows: 3 }), 'Over the quick budget by 10s: flow runs still going at 1m30s were allowed to finish.');
+  assert.equal(clock.fields().overMs, 10_000);
+  assert.match(clock.timeLine({ runnerMs: 109_000, adversaryCallsMs: 0 }), / budgeted 1m40s of 1m30s /);
+});
+
+test('attack: when plan used more than half of B, the note names P, not the attack setup', () => {
+  const { clock, pass } = fake({ mode: 'attack', planMs: 64_000 });
+  clock.resetFinished(0);
+  pass(9_000);
+  clock.selectionEnded();
+  pass(20_000);
+  assert.equal(clock.budgetNote({ clockCut: 0, unconfirmed: 0, flows: 3 }), 'Baseline runs of 3 saved flows used 1m04s of the 2m00s quick budget.');
+});

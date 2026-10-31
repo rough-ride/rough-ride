@@ -68,12 +68,13 @@ export function createClock(options: ClockOptions): InvocationClock {
   let budgetStart = created;
   let resetMs = 0;
   let appStartMs = options.appStartMs;
-  let selectionEndedAt = created;
-  let planMs = mode === 'attack' ? options.planMs ?? 0 : 0;
+  // Budgeted time up to the end of selection: P in the planning split (attack
+  // reads plan's back), and in one invocation the baseline runs' share of B.
+  let planningMs = mode === 'attack' ? options.planMs ?? 0 : 0;
   let setupMs = 0;
 
   const budgeted = () => now() - budgetStart;
-  const limit = () => budgetMs - planMs;
+  const limit = () => (mode === 'attack' ? budgetMs - planningMs : budgetMs);
 
   return {
     resetFinished(ms) {
@@ -86,12 +87,12 @@ export function createClock(options: ClockOptions): InvocationClock {
       budgetStart += waitedMs;
     },
     selectionEnded() {
-      selectionEndedAt = now();
-      if (mode === 'plan') planMs = selectionEndedAt - budgetStart;
       if (mode === 'attack') {
         // Steps 1 to 4 are setup, timed and never budgeted; attack time starts now (42.6).
         setupMs = now() - created;
         budgetStart = now();
+      } else {
+        planningMs = now() - budgetStart;
       }
     },
     budgetedMs: budgeted,
@@ -99,23 +100,21 @@ export function createClock(options: ClockOptions): InvocationClock {
     startFits: (needMs, reserveMs) => budgeted() + needMs <= limit() - reserveMs,
     closingFits: (estMs) => budgeted() + estMs <= limit() + serialGraceMs,
     hardStopAt: () => Math.min(budgetStart + limit() + serialGraceMs + 10_000, options.bashStop),
-    planMs: () => (mode === 'tier' ? null : planMs),
-    // 50.6: the first that applies.
+    planMs: () => (mode === 'tier' ? null : planningMs),
+    // 50.6: the first that applies. Over the budget means over this invocation's limit.
     budgetNote({ clockCut, unconfirmed, flows }) {
       const spent = budgeted();
       if (clockCut > 0 || unconfirmed > 0) {
         return `Ran slower than planned: ${clockCut} ${clockCut === 1 ? 'attack' : 'attacks'} and ${unconfirmed} confirmation ${unconfirmed === 1 ? 'run' : 'runs'} did not start before the ${tier} budget ran out.`;
       }
-      if (spent > budgetMs) return `Over the ${tier} budget by ${formatDuration(spent - budgetMs)}: flow runs still going at ${formatDuration(budgetMs)} were allowed to finish.`;
-      // attack's baseline runs are setup: its budget started after them.
-      const planning = mode === 'attack' ? 0 : selectionEndedAt - budgetStart;
-      if (planning > budgetMs / 2) return `Baseline runs of ${flows} saved flows used ${formatDuration(planning)} of the ${formatDuration(budgetMs)} ${tier} budget.`;
+      if (spent > limit()) return `Over the ${tier} budget by ${formatDuration(spent - limit())}: flow runs still going at ${formatDuration(limit())} were allowed to finish.`;
+      if (planningMs > budgetMs / 2) return `Baseline runs of ${flows} saved flows used ${formatDuration(planningMs)} of the ${formatDuration(budgetMs)} ${tier} budget.`;
       return null;
     },
     timeLine({ runnerMs, adversaryCallsMs }) {
       const start = `app start ${formatDuration(appStartMs)}`;
       return mode === 'attack'
-        ? `time: runner ${formatDuration(runnerMs)} = attack setup ${formatDuration(setupMs)} (timed, not budgeted) + budgeted ${formatDuration(budgeted())} of ${formatDuration(limit())} (the ${tier} budget less plan ${formatDuration(planMs)}); adversary calls ${formatDuration(adversaryCallsMs)} (timed, not budgeted) | ${start}`
+        ? `time: runner ${formatDuration(runnerMs)} = attack setup ${formatDuration(setupMs)} (timed, not budgeted) + budgeted ${formatDuration(budgeted())} of ${formatDuration(limit())} (the ${tier} budget less plan ${formatDuration(planningMs)}); adversary calls ${formatDuration(adversaryCallsMs)} (timed, not budgeted) | ${start}`
         : `time: runner ${formatDuration(runnerMs)} = budgeted ${formatDuration(budgeted())} of ${formatDuration(budgetMs)} + reset ${formatDuration(resetMs)} | ${start}`;
     },
     resetLine: () => (resetMs > 10_000 ? `reset took ${Math.round(resetMs / 1000)}s; it is not counted in the ${tier} budget.` : null),
@@ -124,8 +123,8 @@ export function createClock(options: ClockOptions): InvocationClock {
       return {
         budgetMs,
         budgetedMs: spent,
-        overMs: Math.max(0, spent - budgetMs),
-        planMs: mode === 'tier' ? null : planMs,
+        overMs: Math.max(0, spent - limit()),
+        planMs: mode === 'tier' ? null : planningMs,
         attackSetupMs: setupMs,
         resetMs,
         startMs: appStartMs,
