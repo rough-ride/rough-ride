@@ -159,6 +159,8 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
         if (ctx.keepOpen) await keepOpen(ctx, resolved.attack, flow, baseline, base, docs, openLines);
       }
     }
+  } catch (error) {
+    throw session.withRun(error);
   } finally {
     await session.close();
   }

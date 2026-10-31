@@ -262,6 +262,8 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
       const note = heldNow !== null && heldThen !== null && heldNow !== heldThen ? `held ${heldNow.toLocaleString('en-US')} chars now; ${heldThen.toLocaleString('en-US')} when found${heldNow < heldThen ? ' (cut by maxlength)' : ''}` : null;
       results.push({ name: t.name, flow: String(value.flow), outcome, reason, checks: listed, failed, alsoFailed: f.judgement!.alsoFailed, note, accepted: testAcceptedNotes(acceptedList, f.outcome, flows.find((x) => x.name === value.flow), failed) });
     }
+  } catch (error) {
+    throw session.withRun(error);
   } finally {
     await session.close();
   }

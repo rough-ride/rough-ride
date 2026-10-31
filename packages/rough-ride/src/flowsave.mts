@@ -478,6 +478,8 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
           if (plan.kind === 'repair') repairCount++;
         }
       }
+    } catch (error) {
+      throw session.withRun(error);
     } finally {
       await session.close();
     }

@@ -133,7 +133,7 @@ test('calls that name a run write only its adversary/summary.txt, the block as p
   assert.deepEqual(files(root, plan.runId).map((name) => [name, name.endsWith('.json') || name.endsWith('.txt') ? runFile(root, plan.runId, name) : null]), before);
 });
 
-test('stops: a tier stop names the run it made and writes its summary files there; regress names none', async () => {
+test('stops: a tier or regress stop names the run it made and writes its summary files there', async () => {
   const reset = 'reset: node -e "process.exit(1)"\n';
   const root = findingRepo({ config: reset });
   const stop = await call(root, ['quick']);
@@ -156,11 +156,40 @@ test('stops: a tier stop names the run it made and writes its summary files ther
   const tested = findingRepo({ config: reset, tests: { 'save-500-000001': TEST } });
   const regress = await call(tested, ['regress']);
   assert.equal(regress.stop.code, 'reset-failed');
-  assert.equal(regress.runId, null);
-  assert.match(regress.summaryLines[0], /^rough-ride regress \| [\d.]+s \| stopped$/);
-  const made = readdirSync(path.join(tested, '.rough-ride', 'runs'));
-  assert.equal(made.length, 1);
-  assert.deepEqual(files(tested, made[0]), []);
+  assert.match(regress.runId, /-regress-/);
+  assert.match(regress.summaryLines[0], new RegExp(`^rough-ride regress \\| [\\d.]+s \\| run ${regress.runId} \\| stopped$`));
+  assert.deepEqual(readdirSync(path.join(tested, '.rough-ride', 'runs')), [regress.runId]);
+  assert.deepEqual(files(tested, regress.runId), ['record.json', 'summary.json', 'summary.txt']);
+  assertSummaryFiles(tested, regress);
+});
+
+test('repro and flow save: a stop after the run folder exists names that run; under --run its block lands in that run, which keeps its own summary files', async () => {
+  // reset fails once .git/stop-reset exists, a file outside the diff.
+  const root = findingRepo({ config: `reset: node -e "process.exit(+require('fs').existsSync('.git/stop-reset'))"\n` });
+  const data = scratchDir();
+  const quick = await call(root, ['quick']);
+  assert.equal(quick.status, 'findings');
+  const plan = await call(root, ['plan', 'quick', '--plugin-data', data]);
+  assert.equal(plan.status, 'planned');
+  const planSummary = runFile(root, plan.runId, 'summary.json');
+  writeFileSync(path.join(root, '.git', 'stop-reset'), '');
+
+  const repro = await call(root, ['repro', `${quick.runId}/${quick.findings[0].representative.repro}`]);
+  const saved = await call(root, ['flow', 'save', 'home'], { input: 'signedIn: false\nsteps:\n  - goto: /\n' });
+  for (const [doc, word] of [[repro, 'repro'], [saved, 'flow']]) {
+    assert.equal(doc.stop.code, 'reset-failed');
+    assert.match(doc.runId, new RegExp(`-${word}-`));
+    assert.deepEqual(files(root, doc.runId), ['record.json', 'summary.json', 'summary.txt']);
+    assertSummaryFiles(root, doc);
+  }
+
+  // A new sign-in flow needs no needsFlow item under --run.
+  const input = 'signedIn: false\nsteps:\n  - goto: /\n';
+  const { code, stdout, stderr } = await runAsync(['flow', 'save', 'sign-in', '--run', plan.runId, '--plugin-data', data, '--json'], { cwd: root, env: LOCAL, input });
+  const underRun = JSON.parse(stdout);
+  assert.deepEqual([code, underRun.stop.code, underRun.runId], [78, 'reset-failed', plan.runId]);
+  assert.equal(runFile(root, plan.runId, path.join('adversary', 'summary.txt')), stderr);
+  assert.equal(runFile(root, plan.runId, 'summary.json'), planSummary);
 });
 
 test('outcomes without a run folder: a usage stop and nothing to attack write nothing under runs/', async () => {
