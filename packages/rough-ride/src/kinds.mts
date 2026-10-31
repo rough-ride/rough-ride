@@ -5,7 +5,9 @@
 import type { AttackLink } from './accounting.mjs';
 import type { MatchedAttack } from './appchecks.mjs';
 import type { AttackOutcome, NonFinding, PlannedAttack } from './attacks.mjs';
+import type { BadInputPlan } from './badinputs.mjs';
 import type { CheckResult } from './checks.mjs';
+import type { FaultId } from './faults.mjs';
 import type { Flow, FlowRunResult, RequestRecord, RunFlowOptions } from './flowrun.mjs';
 import { badInputKind } from './kind-bad-input.mjs';
 import { doubleSubmitKind } from './kind-double-submit.mjs';
@@ -28,16 +30,29 @@ export interface KindContext {
   control(step: number): string;
 }
 
-export interface KindModule {
-  run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome>;
+// The fields each kind's attacks always carry beyond PlannedAttack's shared ones.
+export interface KindFields {
+  fault: { fault: FaultId };
+  'bad-input': { badInput: BadInputPlan };
+  'double-submit': object;
+  'out-of-order': { outOfOrder: NonNullable<PlannedAttack['outOfOrder']> };
+  'page-timing': object;
+  viewport: object;
+}
+
+export type KindId = keyof KindFields;
+
+// A kind module, handed its attacks with the fields of its kind (F).
+export interface KindModule<F extends object = object> {
+  run(attack: PlannedAttack & F, ctx: KindContext): Promise<AttackOutcome>;
   // The symptom's words for what the attack did (37).
-  what(o: AttackOutcome): string;
+  what(o: AttackOutcome & F): string;
   // The symptom when the lead check is one the kind words itself, or null.
-  symptom?(o: AttackOutcome, lead: CheckResult | null): string | null;
+  symptom?(o: AttackOutcome & F, lead: CheckResult | null): string | null;
   // The attack as a regression test and a repro key it.
-  key(o: AttackOutcome): Record<string, unknown>;
+  key(o: AttackOutcome & F): Record<string, unknown>;
   // The run record's fields for this kind (38).
-  record(o: AttackOutcome): Record<string, unknown>;
+  record(o: AttackOutcome & F): Record<string, unknown>;
   // An app check's outcome class (45.7); none when the kind has no such classes.
   appOutcome?(attack: MatchedAttack, run: FlowRunResult): { cls: 'told' | 'refused' | 'accepted' | null; shown: string };
   // The id an app check's when.ids names the attack by (45.7), or null.
@@ -45,9 +60,9 @@ export interface KindModule {
   // The attack link's kind word and the endpoints the attack went to (selection, 17).
   link(attack: LinkedAttack): { kind: AttackLink['kind']; endpoints: string[] };
   // Which line that is never a finding (20.15) the attack gets, in the kind's order, or null.
-  nonFinding(o: AttackOutcome, lines: NonFindingLines): NonFinding | null;
+  nonFinding(o: AttackOutcome & F, lines: NonFindingLines): NonFinding | null;
   // The group key's page and action (34).
-  groupKey(o: AttackOutcome, at: GroupKeyFacts): { page: string; action: string };
+  groupKey(o: AttackOutcome & F, at: GroupKeyFacts): { page: string; action: string };
 }
 
 // What an attack link is made from: a planned attack or its outcome.
@@ -69,8 +84,6 @@ export interface GroupKeyFacts {
   suffixes(entry: boolean): string;
 }
 
-export type KindId = 'fault' | 'double-submit' | 'out-of-order' | 'page-timing' | 'bad-input' | 'viewport';
-
 // A timing attack's kind comes from its timing id; an attack without a fault is the viewport.
 export function kindId(attack: { kind: PlannedAttack['kind']; timing?: string; fault: string | null }): KindId {
   if (attack.kind === 'bad-input') return 'bad-input';
@@ -83,7 +96,7 @@ export function kindId(attack: { kind: PlannedAttack['kind']; timing?: string; f
   return 'fault';
 }
 
-const MODULES: Record<KindId, KindModule> = {
+const MODULES: { [K in KindId]: KindModule<KindFields[K]> } = {
   fault: faultKind,
   'bad-input': badInputKind,
   'double-submit': doubleSubmitKind,
@@ -92,6 +105,23 @@ const MODULES: Record<KindId, KindModule> = {
   viewport: viewportKind,
 };
 
-export function kindFor(attack: Parameters<typeof kindId>[0]): KindModule {
+const hasFault = <T extends PlannedAttack>(a: T): a is T & KindFields['fault'] => a.fault !== null;
+const hasBadInput = <T extends PlannedAttack>(a: T): a is T & KindFields['bad-input'] => a.badInput !== undefined;
+const hasOutOfOrder = <T extends PlannedAttack>(a: T): a is T & KindFields['out-of-order'] => a.outOfOrder !== undefined;
+
+// Calls `use` with the attack's kind module and the attack typed with its
+// kind's fields; an attack without them is a builder's mistake.
+export function withKind<T extends PlannedAttack, R>(attack: T, use: <F extends object>(kind: KindModule<F>, attack: T & F) => R): R {
+  const id = kindId(attack);
+  if (id === 'fault' && hasFault(attack)) return use(MODULES.fault, attack);
+  if (id === 'bad-input' && hasBadInput(attack)) return use(MODULES['bad-input'], attack);
+  if (id === 'out-of-order' && hasOutOfOrder(attack)) return use(MODULES['out-of-order'], attack);
+  if (id === 'double-submit' || id === 'page-timing' || id === 'viewport') return use(MODULES[id], attack);
+  throw new Error(`${attack.id}: kind ${id} without the fields that kind needs`);
+}
+
+// What a kind says about an attack that is not a PlannedAttack: an app
+// check's matched attack, or an attack link's source.
+export function kindFor(attack: Parameters<typeof kindId>[0]): Pick<KindModule, 'appOutcome' | 'appId' | 'link'> {
   return MODULES[kindId(attack)];
 }

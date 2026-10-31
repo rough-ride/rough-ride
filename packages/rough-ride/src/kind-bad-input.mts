@@ -3,10 +3,10 @@
 // submit step's window classifies the outcome, and a refusal recovers by
 // re-filling the form with this run's own values.
 
-import type { AttackOutcome, PlannedAttack } from './attacks.mjs';
+import type { AttackOutcome } from './attacks.mjs';
 import { fillValues, judgeAttack, type Judged } from './checks.mjs';
 import { isFrameworkInternal, NotApplied, POLL_MS, runFlow, stepKind, type AttackKind, type BadInputResult, type BadOutcome, type FlowRunResult, type LocatorSpec, type RequestRecord } from './flowrun.mjs';
-import type { KindContext, KindModule } from './kinds.mjs';
+import type { KindContext, KindFields, KindModule } from './kinds.mjs';
 
 export interface BadInputRun {
   step: number;
@@ -177,10 +177,10 @@ export function judgeBadInput(run: FlowRunResult, baseline: FlowRunResult, submi
 
 const REFUSED = ['rejected', 'blocked-by-browser', 'blocked-by-app', 'silent-refusal'];
 
-export const badInputKind: KindModule = {
-  what: (o) => `bad input ${o.badInput!.inputId} in ${o.badInput!.field.name}`,
+export const badInputKind: KindModule<KindFields['bad-input']> = {
+  what: (o) => `bad input ${o.badInput.inputId} in ${o.badInput.field.name}`,
   symptom: (o, lead) => {
-    const bad = o.badInput!;
+    const bad = o.badInput;
     if (lead?.id === 'no-5xx-on-bad-input') {
       const c = o.run.badInput?.carrying;
       return `${o.template || 'The submit'} answers ${c?.status ?? 'no response'} to bad input ${bad.inputId} in ${bad.field.name}`;
@@ -192,11 +192,11 @@ export const badInputKind: KindModule = {
   },
   // The field's request key, or its accessible name and kind when no request carried its value.
   key: (o) => {
-    const b = o.badInput!;
+    const b = o.badInput;
     return { badInput: b.inputId, page: b.page, request: b.carrying, field: b.field.key ?? { name: b.field.name, kind: b.field.kind }, ...(b.inputId === 'at-limit' ? { limit: b.limit } : {}) };
   },
   record: (o) => {
-    const b = o.badInput!;
+    const b = o.badInput;
     const held = o.run.badInput?.held;
     return {
       badInput: {
@@ -227,8 +227,8 @@ export const badInputKind: KindModule = {
     if (o === 'accepted') return { cls: 'accepted', shown: 'accepted' };
     return { cls: null, shown: o };
   },
-  async run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome> {
-    const b = attack.badInput!;
+  async run(attack, ctx: KindContext): Promise<AttackOutcome> {
+    const b = attack.badInput;
     const run = await runFlow({
       ...ctx.options,
       shots: [b.submitStep],

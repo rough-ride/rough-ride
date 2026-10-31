@@ -2,13 +2,13 @@
 // value's request is held while the newer value is entered, and released once
 // the newer answer rendered; latest-response-wins judges what the page shows.
 
-import type { AttackOutcome, PlannedAttack } from './attacks.mjs';
+import type { AttackOutcome } from './attacks.mjs';
 import { judgeAttack, type Judged } from './checks.mjs';
 import { holdMsFor, isJsonMedia, MAX_BODY, sha256 } from './faults.mjs';
 import { graceEvents } from './kind-fault.mjs';
 import { NotApplied, POLL_MS, QUIET_MS, runFlow, stepKind, type AttackKind, type FaultState, type FlowRunResult, type LocatorSpec, type OutOfOrderResult } from './flowrun.mjs';
 import type { Request, Route } from 'playwright-core';
-import type { KindContext, KindModule } from './kinds.mjs';
+import type { KindContext, KindFields, KindModule } from './kinds.mjs';
 
 export interface OutOfOrderRun {
   step: number;
@@ -231,17 +231,17 @@ export function judgeOutOfOrder(run: FlowRunResult, baseline: FlowRunResult, ste
   });
 }
 
-export const outOfOrderKind: KindModule = {
+export const outOfOrderKind: KindModule<KindFields['out-of-order']> = {
   what: (o) => `an older answer arrived after a newer one on ${o.controlName ?? o.control}`,
-  key: (o) => ({ timing: 'out-of-order', page: o.page, request: o.template, field: o.outOfOrder?.fieldKey ?? null }),
+  key: (o) => ({ timing: 'out-of-order', page: o.page, request: o.template, field: o.outOfOrder.fieldKey }),
   record: (o) => ({ timing: { timing: o.timing, key: o.key, control: o.controlName ?? null, page: o.page }, events: o.events }),
   appId: (attack) => attack.timing ?? null,
   link: (attack) => ({ kind: 'timing', endpoints: attack.writeKeys ?? [attack.template] }),
   // A later failing step fails latest-response-wins through (c), so a stopped flow gets no line.
   nonFinding: (o, lines) => (o.verdict === 'not-applied' ? lines.notApplied() : lines.byVerdict()),
-  groupKey: (o) => ({ page: o.page ?? '/', action: `field ${o.page ?? '/'} ${o.template} ${o.outOfOrder?.fieldKey ?? ''}` }),
-  async run(attack: PlannedAttack, ctx: KindContext): Promise<AttackOutcome> {
-    const x = attack.outOfOrder!;
+  groupKey: (o) => ({ page: o.page ?? '/', action: `field ${o.page ?? '/'} ${o.template} ${o.outOfOrder.fieldKey}` }),
+  async run(attack, ctx: KindContext): Promise<AttackOutcome> {
+    const x = attack.outOfOrder;
     const run = await runFlow({
       ...ctx.options,
       shots: [attack.step],

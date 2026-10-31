@@ -6,7 +6,7 @@
 import type { AttackOutcome } from './attacks.mjs';
 import { DELAY_MS, RETRY_AFTER, sha256 } from './faults.mjs';
 import { describeLocator, stepKind, type Flow, type FlowRunResult, type LocatorSpec } from './flowrun.mjs';
-import { kindFor } from './kinds.mjs';
+import { withKind } from './kinds.mjs';
 import type { FolderState } from './folder.mjs';
 import { canonicalJson } from './output.mjs';
 import { reproId } from './summary.mjs';
@@ -25,7 +25,7 @@ function judged(o: AttackOutcome): number {
 
 // ticket 17 item 2's attack key, the form a regression test and a repro store.
 export function attackKey(o: AttackOutcome): Record<string, unknown> {
-  return kindFor(o).key(o);
+  return withKind(o, (kind, a) => kind.key(a));
 }
 
 export function context(): { timezone: string; locale: string } {
@@ -59,7 +59,7 @@ export function attackRecord(o: AttackOutcome, meta: { ordinal: number; duration
         nextAction: q.nextAction ?? null,
       },
     } : {}),
-    ...kindFor(o).record(o),
+    ...withKind(o, (kind, a) => kind.record(a)),
     page: o.page,
     unique: o.run.unique,
     context: context(),

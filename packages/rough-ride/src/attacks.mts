@@ -14,7 +14,7 @@ import { membersText } from './summary.mjs';
 import { attackId, emptyForm, isJsonMedia, kindsFor, responseSchema, type BodyKind, type FaultId } from './faults.mjs';
 import type { Form } from './forms.mjs';
 import { describeLocator, isFrameworkInternal, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type RequestRecord, type RunFlowOptions, type Served } from './flowrun.mjs';
-import { kindFor, type LinkedAttack } from './kinds.mjs';
+import { kindFor, withKind, type LinkedAttack, type NonFindingLines } from './kinds.mjs';
 import { matchTemplate, type OpenApiDoc } from './openapi.mjs';
 
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -478,16 +478,15 @@ async function runJudged(
     return keyed ? `${method} ${keyed.template}` : null;
   };
   const skipped = new Set<string>(baselineFailures(baseline).map((f) => f.id));
-  return kindFor(attack).run(attack, { flow, baseline, options: { ...base, flow, templateOf, pollingKeys: pollingKeys(baseline) }, docs, skipped, control: (step) => controlOf(flow, step) });
+  const ctx = { flow, baseline, options: { ...base, flow, templateOf, pollingKeys: pollingKeys(baseline) }, docs, skipped, control: (step: number) => controlOf(flow, step) };
+  return withKind(attack, (kind, a) => kind.run(a, ctx));
 }
 
 // Section 37's symptom templates, by lead check.
 export function symptom(o: AttackOutcome): string {
   const lead = leadCheck(o.checks);
-  const kind = kindFor(o);
-  const own = kind.symptom?.(o, lead);
+  const { own, what } = withKind(o, (kind, a) => ({ own: kind.symptom?.(a, lead) ?? null, what: kind.what(a) }));
   if (own) return own;
-  const what = kind.what(o);
   if (lead?.id.startsWith('app-')) return `App check ${lead.id} fails on ${o.page ?? 'the page'} after ${what}`;
   switch (lead?.id) {
     case 'visible-error-message':
@@ -556,7 +555,7 @@ export interface NonFinding {
 export function nonFinding(o: AttackOutcome, holdMs: number): NonFinding | null {
   const pending = (): NonFinding => ({ kind: 'pending', text: `Pending: ${o.id} (no response for ${holdMs / 1000} s and the page did not give up)`, refs: [o.id] });
   const notApplied = (): NonFinding => ({ kind: 'not-applied', text: `Not applied: ${o.id} (${o.notApplied ?? 'unknown'})`, refs: [o.id] });
-  return kindFor(o).nonFinding(o, {
+  const lines: NonFindingLines = {
     notApplied,
     flowStopped: () => (o.run.stoppedAt !== null ? { kind: 'faulted-flow-stopped', text: `Faulted; flow stopped at step ${o.run.stoppedAt}: ${o.id}`, refs: [o.id] } : null),
     byVerdict: () => {
@@ -574,5 +573,6 @@ export function nonFinding(o: AttackOutcome, holdMs: number): NonFinding | null 
           return null;
       }
     },
-  });
+  };
+  return withKind(o, (kind, a) => kind.nonFinding(a, lines));
 }

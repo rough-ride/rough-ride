@@ -5,7 +5,7 @@
 import type { AttackOutcome } from './attacks.mjs';
 import { checkRank, checkSeverity, type CheckResult } from './checks.mjs';
 import { stepKind, type Flow, type RequestRecord } from './flowrun.mjs';
-import { kindFor } from './kinds.mjs';
+import { withKind } from './kinds.mjs';
 import type { FlowClass } from './forms.mjs';
 
 export type Severity = 'high' | 'medium' | 'low';
@@ -82,7 +82,7 @@ export function keyOf(o: AttackOutcome, flow: Flow): GroupKey {
   const s = flow.steps[o.step - 1];
   const step = s ? stepKind(s) : 'goto';
   const request = attackRequest(o);
-  const { page, action } = kindFor(o).groupKey(o, { request, suffixes: (entry) => actionSuffixes(o, request, entry) });
+  const { page, action } = withKind(o, (kind, a) => kind.groupKey(a, { request, suffixes: (entry) => actionSuffixes(o, request, entry) }));
   return { page, step, action };
 }
 
