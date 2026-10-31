@@ -1183,7 +1183,9 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
     else if (r.file) flowLines.push(`Not attacked: ${r.file} (new flow ${r.name} does not reach it${r.why?.startsWith('enters ') ? `: ${r.why}` : ''})`);
   }
   for (const name of notRun) {
-    const reason = files.flows.find((f) => f.shown === `.rough-ride/flows/${name}.yaml`)?.step5[0] ?? 'invalid';
+    // A valid flow is not run when its reviewed version fails the check: the block's change says so.
+    const listed = prot.entries.find((e) => e.path === `flows/${name}.yaml`);
+    const reason = files.flows.find((f) => f.shown === `.rough-ride/flows/${name}.yaml`)?.step5[0] ?? (listed ? `.rough-ride/flows/${name}.yaml: ${listed.change}` : 'invalid');
     flowLines.push(`Not run: ${reason}`);
   }
   // Checks that fail with no attack: once per flow; outside the diff only in report.txt.

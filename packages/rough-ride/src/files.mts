@@ -46,6 +46,9 @@ export interface CheckedFiles {
   // The runner version and formats the working copies were checked against,
   // so reviewed versions and saved copies get the same check.
   rules: { runner: string; formats: Formats };
+  // The schema-newer stop above, for a reviewed version written for a newer
+  // rough-ride (ADR 0002): it stops the invocation as a newer working copy does.
+  stopNewer(newer: { shown: string; schema: string }[]): never;
 }
 
 export interface CheckContext {
@@ -152,16 +155,17 @@ export function checkCommittedFiles(folder: FolderState, ctx: CheckContext): Che
   const candidates = nuxtCandidates(folder.root);
   ctx.info.versionSkew = versionSkew(ctx.info, folder.root, ['', ...(candidates.length === 1 ? [candidates[0]!.rel] : [])], skewInput, ctx.argv);
 
-  if (newer.length > 0) {
-    const highest = newer.map((n) => n.schema).sort(compareVersions).at(-1)!;
+  const stopNewer = (found: { shown: string; schema: string }[]): never => {
+    const highest = found.map((n) => n.schema).sort(compareVersions).at(-1)!;
     stopWith(
       'schema-newer',
-      `rough-ride ${runner} can't read ${files(newer.length)} written for a newer rough-ride:`,
-      ...list(newer, () => ''),
+      `rough-ride ${runner} can't read ${files(found.length)} written for a newer rough-ride:`,
+      ...list(found, () => ''),
       `They need rough-ride ${highest} or later. This invocation used ${runner} from ${sourceText(ctx.info)}.`,
       `Update it: ${updateCommand(ctx.info, highest, ctx.argv)}`,
     );
-  }
+  };
+  if (newer.length > 0) stopNewer(newer);
 
   if (older.length > 0) throw olderStop(folder, ctx, formats, older, problems);
 
@@ -179,6 +183,7 @@ export function checkCommittedFiles(folder: FolderState, ctx: CheckContext): Che
     formats: formatsReport(seen, formats),
     written,
     rules: { runner, formats },
+    stopNewer,
   };
 }
 

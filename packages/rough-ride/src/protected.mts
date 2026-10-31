@@ -12,7 +12,7 @@ import type { Config } from './config.mjs';
 import type { ReviewedBase } from './diff.mjs';
 import type { CheckedFiles } from './files.mjs';
 import { describeLocator, type Flow, type LocatorSpec, type Step } from './flowrun.mjs';
-import type { FormatKind } from './formats.mjs';
+import { compareVersions, type FormatKind } from './formats.mjs';
 import { git } from './git.mjs';
 import { fileHash, type Manifest } from './manifest.mjs';
 import { canonicalJson, type Note } from './output.mjs';
@@ -71,10 +71,11 @@ interface Version {
   value: Record<string, unknown>;
 }
 
-// A version that exists but can't be compared or run, and why.
+// A version that exists but can't be compared, and why: below this runner's
+// floor, written for a newer runner, or failing steps 1 to 3 or 5.
 interface Unreadable {
   schema: string | null;
-  newerOrOlder: boolean;
+  why: 'older' | 'newer' | 'invalid';
 }
 
 type Judged = { ok: true; version: Version } | { ok: false; unreadable: Unreadable };
@@ -83,16 +84,26 @@ type Judged = { ok: true; version: Version } | { ok: false; unreadable: Unreadab
 function judge(text: string, p: string, rules: CheckedFiles['rules']): Judged | null {
   const f = checkVersion(text, `.rough-ride/${p}`, kindOf(p), rules.runner, rules.formats);
   if (f.value === null && f.schema === null && f.problems.length === 0) return null;
-  if (f.range === 'older' || f.range === 'newer') return { ok: false, unreadable: { schema: f.schema!.text, newerOrOlder: true } };
-  if (f.value === null || f.problems.length > 0 || f.step5.length > 0) return { ok: false, unreadable: { schema: f.schema?.text ?? null, newerOrOlder: false } };
+  if (f.range === 'older' || f.range === 'newer') return { ok: false, unreadable: { schema: f.schema!.text, why: f.range } };
+  if (f.value === null || f.problems.length > 0 || f.step5.length > 0) return { ok: false, unreadable: { schema: f.schema?.text ?? null, why: 'invalid' } };
   return { ok: true, version: { text, value: f.value } };
 }
 
 const kindOf = (p: string): CommittedKind => (p === 'config.yaml' ? 'config' : p === 'accepted.yaml' ? 'accepted' : p.startsWith('flows/') ? 'flow' : 'tests');
 
-// 26.3: an R this runner can't read is not compared, so W is used.
+// An R this runner can't compare (26.3, 26.13, ADR 0002, ADR 0003). Only one
+// below the floor lets W be used uncompared. One written for a newer runner
+// stops the invocation, as a newer W does. An invalid one is kept: it is not
+// compared, and W is not used in its place, so neither version runs.
 function unreadableText(u: Unreadable, refShown: string): string {
-  return u.newerOrOlder ? `the ${refShown} version is in a format this runner can't read (schema ${u.schema})` : `the ${refShown} version doesn't pass this runner's checks`;
+  return u.why === 'invalid' ? `the ${refShown} version doesn't pass this runner's checks` : `the ${refShown} version is in a format this runner can't read (schema ${u.schema})`;
+}
+
+// With no readable R, the unreadable one that decides: an invalid R is never
+// passed over for one below the floor.
+function unreadableOf(rs: Judged[]): Unreadable | undefined {
+  const all = rs.flatMap((r) => (r.ok ? [] : [r.unreadable]));
+  return all.find((u) => u.why === 'invalid') ?? all[0];
 }
 
 const canon = (v: unknown): string => canonicalJson(v ?? null);
@@ -294,11 +305,12 @@ function resolve(
     }
     return { used: 'reviewed', version: r, reviewed: true, stepsChanged: !!best.stepsChanged, entry: { change: best.text!, weakening: true, used: 'reviewed', notApplied: [], outcome: rules.reviewedOutcome(refShown) }, notRun: false };
   }
-  const unreadable = rs.find((r): r is { ok: false; unreadable: Unreadable } => !r.ok);
+  const unreadable = unreadableOf(rs);
   if (unreadable) {
-    const why = unreadableText(unreadable.unreadable, refShown);
-    if (w.version) return { used: 'working-tree', version: w.version, reviewed: true, stepsChanged: false, entry: { change: `${why}, so this version is used`, weakening: false, used: 'working-tree', notApplied: [], outcome: 'ran this version' }, notRun: false };
-    return { used: 'none', version: null, reviewed: true, stepsChanged: false, entry: { change: `${missing}; ${why}`, weakening: false, used: 'none', notApplied: [], outcome: 'not run' }, notRun: w.present };
+    const why = unreadableText(unreadable, refShown);
+    if (w.version && unreadable.why === 'older') return { used: 'working-tree', version: w.version, reviewed: true, stepsChanged: false, entry: { change: `${why}, so this version is used`, weakening: false, used: 'working-tree', notApplied: [], outcome: 'ran this version' }, notRun: false };
+    const change = w.version ? `${why}, so neither version runs` : `${missing}; ${why}`;
+    return { used: 'none', version: null, reviewed: true, stepsChanged: false, entry: { change, weakening: false, used: 'none', notApplied: [], outcome: 'not run' }, notRun: w.present };
   }
   // No R: the copy rough-ride saved on this branch runs when W is gone or weakens it (26.8).
   const s = saved?.judged?.ok ? saved.judged.version : null;
@@ -369,7 +381,14 @@ export function compareProtected(options: CompareOptions): ProtectedResult {
   const reviewed = new Map(reviewedPaths.map((p) => [p, versions.texts(`${rel}/${p}`)]));
   const refShown = base?.shown ?? 'the base branch';
   const entries: ProtectedEntry[] = [];
-  const reviewedOf = (p: string): Judged[] => (reviewed.get(p) ?? []).flatMap((text) => judge(text, p, files.rules) ?? []);
+  const judged = new Map(reviewedPaths.map((p) => [p, (reviewed.get(p) ?? []).flatMap((text) => judge(text, p, files.rules) ?? [])]));
+  // A reviewed version written for a newer runner stops here, before anything is compared or run (ADR 0002).
+  const newer = [...judged].flatMap(([p, js]) => {
+    const schema = js.flatMap((j) => (!j.ok && j.unreadable.why === 'newer' ? [j.unreadable.schema!] : [])).sort(compareVersions).at(-1);
+    return schema ? [{ shown: `.rough-ride/${p} (${refShown} version)`, schema }] : [];
+  });
+  if (newer.length > 0) files.stopNewer(newer);
+  const reviewedOf = (p: string): Judged[] => judged.get(p) ?? [];
   const savedOf = (p: string) => {
     const saved = options.manifest?.savedCopy(p);
     return saved ? { judged: judge(saved.text, p, files.rules), run: saved.entry.run } : null;
@@ -403,24 +422,27 @@ export function compareProtected(options: CompareOptions): ProtectedResult {
     if (out.version) tests.push({ name: p.slice('tests/'.length).replace(/\.yaml$/, ''), value: out.version.value, used: out.used, pending: out.used === 'reviewed' });
   }
 
-  // accepted.yaml: entries added since R wait; removed ones stop at once; no R
-  // applies none. An entry in either reviewed version counts as reviewed.
+  // accepted.yaml: entries added since R wait; removed ones stop at once; no R,
+  // or an invalid one, applies none. An entry in either reviewed version counts as reviewed.
   const wAccepted = working.get('accepted.yaml')?.version ?? null;
   const wEntries = wAccepted && Array.isArray(wAccepted.value.accepted) ? (wAccepted.value.accepted as unknown[]).filter(isObject) : [];
   const rAccepted = reviewedOf('accepted.yaml');
   const readableAccepted = rAccepted.flatMap((r) => (r.ok ? [r.version] : []));
-  const cantReadAccepted = readableAccepted.length === 0 ? rAccepted.find((r): r is { ok: false; unreadable: Unreadable } => !r.ok) : undefined;
+  const cantReadAccepted = readableAccepted.length === 0 ? unreadableOf(rAccepted) : undefined;
+  const waitingLine = (e: Record<string, unknown>) => `Accepted outside review, not applied until merged: ${String(e.page)} ${String(e.step)} ${String(e.action)} ${String(e.check)}.`;
   let accepted: Record<string, unknown>[];
-  if (cantReadAccepted) {
+  if (cantReadAccepted?.why === 'older') {
     accepted = wEntries;
-    if (wAccepted) entries.push({ path: 'accepted.yaml', kind: 'accepted', by: null, change: `${unreadableText(cantReadAccepted.unreadable, refShown)}, so this version is used`, weakening: false, used: 'working-tree', notApplied: [], outcome: 'applied' });
+    if (wAccepted) entries.push({ path: 'accepted.yaml', kind: 'accepted', by: null, change: `${unreadableText(cantReadAccepted, refShown)}, so this version is used`, weakening: false, used: 'working-tree', notApplied: [], outcome: 'applied' });
+  } else if (cantReadAccepted) {
+    accepted = [];
+    if (wAccepted) entries.push({ path: 'accepted.yaml', kind: 'accepted', by: null, change: `${unreadableText(cantReadAccepted, refShown)}, so no entry in this version applies`, weakening: wEntries.length > 0, used: 'none', notApplied: wEntries.map(waitingLine), outcome: 'not applied until merged' });
   } else {
     const rIds = new Set(readableAccepted.flatMap((r) => (Array.isArray(r.value.accepted) ? (r.value.accepted as unknown[]).filter(isObject).map(entryIdentity) : [])));
     accepted = wEntries.filter((e) => rIds.has(entryIdentity(e)));
     const waiting = wEntries.filter((e) => !rIds.has(entryIdentity(e)));
     if (waiting.length > 0) {
-      const shownEntry = (e: Record<string, unknown>) => `${String(e.page)} ${String(e.step)} ${String(e.action)} ${String(e.check)}`;
-      entries.push({ path: 'accepted.yaml', kind: 'accepted', by: null, change: `adds ${waiting.length} ${waiting.length === 1 ? 'entry' : 'entries'}`, weakening: true, used: 'reviewed', notApplied: waiting.map((e) => `Accepted outside review, not applied until merged: ${shownEntry(e)}.`), outcome: 'not applied until merged' });
+      entries.push({ path: 'accepted.yaml', kind: 'accepted', by: null, change: `adds ${waiting.length} ${waiting.length === 1 ? 'entry' : 'entries'}`, weakening: true, used: 'reviewed', notApplied: waiting.map(waitingLine), outcome: 'not applied until merged' });
     }
   }
 
@@ -428,11 +450,17 @@ export function compareProtected(options: CompareOptions): ProtectedResult {
   const wConfig = working.get('config.yaml')?.version ?? null;
   const rConfig = reviewedOf('config.yaml');
   const readableConfig = rConfig.flatMap((r) => (r.ok ? [r.version] : []));
-  const cantReadConfig = readableConfig.length === 0 ? rConfig.find((r): r is { ok: false; unreadable: Unreadable } => !r.ok) : undefined;
+  const cantReadConfig = readableConfig.length === 0 ? unreadableOf(rConfig) : undefined;
   let cfg: ReturnType<typeof effectiveConfig>;
   let configR: Version | null = null;
-  if (cantReadConfig && wConfig) {
-    cfg = { config: asConfig(wConfig), entries: [{ change: `${unreadableText(cantReadConfig.unreadable, refShown)}, so this version is used`, weakening: false, used: 'working-tree', notApplied: [], outcome: 'applied' }], lines: [] };
+  if (cantReadConfig?.why === 'older' && wConfig) {
+    cfg = { config: asConfig(wConfig), entries: [{ change: `${unreadableText(cantReadConfig, refShown)}, so this version is used`, weakening: false, used: 'working-tree', notApplied: [], outcome: 'applied' }], lines: [] };
+  } else if (cantReadConfig && wConfig) {
+    // An invalid R: W's safety values wait as they do with no R. Its other
+    // values (target, reset) still apply, as they would against any R (26.7).
+    const alone = effectiveConfig(asConfig(wConfig), null, refShown);
+    const notApplied = alone.entries.flatMap((e) => e.notApplied);
+    cfg = { config: alone.config, entries: [{ change: `${unreadableText(cantReadConfig, refShown)}, so this version's allow values are not applied`, weakening: notApplied.length > 0, used: 'none', notApplied, outcome: 'not applied until merged' }], lines: [] };
   } else {
     const held = (c: ReturnType<typeof effectiveConfig>) => c.entries.reduce((n, e) => n + e.notApplied.length, 0);
     const w = wConfig && asConfig(wConfig);

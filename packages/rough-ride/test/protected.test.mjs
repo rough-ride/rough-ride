@@ -160,19 +160,15 @@ test('which test runs: each rung of 26.6 against one reviewed version', () => {
   assert.deepEqual(testCase(TEST, {}), { tests: ['t working-tree false 2'], lines: [] });
 });
 
-test('every reviewed version gets the working copy\'s check: one below the floor, written for a newer runner or invalid is not compared, and the working copy is used', () => {
+test('a reviewed version below the floor is not compared, and the working copy is used, for every kind (26.3, 26.13)', () => {
   const OLD = (t) => t.replace('schema: 0.1.0', 'schema: 0.0.9');
-  const NEWER = (t) => t.replace('schema: 0.1.0', 'schema: 9.0.0');
-  const used = (schema) => `the origin/main version is in a format this runner can't read (schema ${schema}), so this version is used`;
-  const flowWith = (r) => compareIn({ working: { 'flows/f.yaml': NO_EXPECT }, merge: { 'flows/f.yaml': r } });
-  for (const [r, change] of [[OLD(FLOW), used('0.0.9')], [NEWER(FLOW), used('9.0.0')], [FLOW + 'extra: 1\n', "the origin/main version doesn't pass this runner's checks, so this version is used"]]) {
-    const out = flowWith(r);
-    assert.deepEqual(out.flows.map((f) => `${f.used} ${f.flow.steps.length}`), ['working-tree 3']);
-    assert.deepEqual(lines(out), [`flows/f.yaml: ${change} -> ran this version [working-tree]`]);
-  }
+  const used = `the origin/main version is in a format this runner can't read (schema 0.0.9), so this version is used`;
+  const flow = compareIn({ working: { 'flows/f.yaml': NO_EXPECT }, merge: { 'flows/f.yaml': OLD(FLOW) } });
+  assert.deepEqual(flow.flows.map((f) => `${f.used} ${f.flow.steps.length}`), ['working-tree 3']);
+  assert.deepEqual(lines(flow), [`flows/f.yaml: ${used} -> ran this version [working-tree]`]);
   const test = compareIn({ working: { 'tests/t.yaml': TEST }, merge: { 'tests/t.yaml': OLD(TEST) } });
   assert.deepEqual(test.tests.map((t) => `${t.used} ${t.pending}`), ['working-tree false']);
-  assert.deepEqual(lines(test), [`tests/t.yaml: ${used('0.0.9')} -> ran this version [working-tree]`]);
+  assert.deepEqual(lines(test), [`tests/t.yaml: ${used} -> ran this version [working-tree]`]);
   const entry = (check) => `  - {page: /notes/new, step: click, action: POST /api/notes, check: ${check}, because: on purpose}\n`;
   const both = compareIn({
     working: { 'accepted.yaml': 'schema: 0.1.0\naccepted:\n' + entry('settles'), 'config.yaml': CONFIG.replace('[api.example.com]', '[api.example.com, new.example.com]') },
@@ -180,7 +176,61 @@ test('every reviewed version gets the working copy\'s check: one below the floor
   });
   assert.deepEqual(both.accepted.map((e) => e.check), ['settles']);
   assert.deepEqual(both.config.allow.remoteWrites, ['api.example.com', 'new.example.com']);
-  assert.deepEqual(lines(both), [`accepted.yaml: ${used('0.0.9')} -> applied [working-tree]`, `config.yaml: ${used('0.0.9')} -> applied [working-tree]`]);
+  assert.deepEqual(lines(both), [`accepted.yaml: ${used} -> applied [working-tree]`, `config.yaml: ${used} -> applied [working-tree]`]);
+});
+
+test('a reviewed version written for a newer rough-ride stops the invocation, as a newer working copy does (ADR 0002): a weakened working copy never runs, for every kind', () => {
+  const NEWER = (t) => t.replace('schema: 0.1.0', 'schema: 9.0.0');
+  const entry = (check) => `  - {page: /notes/new, step: click, action: POST /api/notes, check: ${check}, because: on purpose}\n`;
+  const cases = [
+    ['flows/f.yaml', NO_EXPECT, NEWER(FLOW)],
+    ['tests/t.yaml', TEST.replace('[visible-error-message, settles]', '[settles]'), NEWER(TEST)],
+    ['accepted.yaml', 'schema: 0.1.0\naccepted:\n' + entry('settles'), 'schema: 9.0.0\naccepted: []\n'],
+    ['config.yaml', CONFIG.replace('[api.example.com]', '[api.example.com, new.example.com]'), NEWER(CONFIG)],
+  ];
+  for (const [p, working, merge] of cases) {
+    assert.throws(() => compareIn({ working: { [p]: working }, merge: { [p]: merge } }), (error) => {
+      assert.equal(error.stop.code, 'schema-newer');
+      assert.deepEqual(error.stop.lines, [
+        "rough-ride 0.1.0 can't read 1 file written for a newer rough-ride:",
+        `  .rough-ride/${p} (origin/main version)  schema: 9.0.0`,
+        'They need rough-ride 9.0.0 or later. This invocation used 0.1.0 from other /x.',
+        'Update it: Install rough-ride 9.0.0 or later.',
+      ]);
+      return true;
+    }, p);
+  }
+});
+
+test('a reviewed version that fails this runner\'s checks is kept, not compared, and neither version runs: no flow or test runs, no accepted entry or allow host applies', () => {
+  const why = "the origin/main version doesn't pass this runner's checks";
+  for (const merge of [FLOW + 'extra: 1\n', 'schema: 0.1.0\nsteps: [\n']) {
+    const out = compareIn({ working: { 'flows/f.yaml': NO_EXPECT }, merge: { 'flows/f.yaml': merge } });
+    assert.deepEqual(out.flows, []);
+    assert.deepEqual(out.notRun, ['f']);
+    assert.deepEqual(lines(out), [`flows/f.yaml: ${why}, so neither version runs -> not run [none]`]);
+  }
+  const deleted = compareIn({ merge: { 'flows/f.yaml': FLOW + 'extra: 1\n' } });
+  assert.deepEqual([deleted.flows, deleted.notRun, lines(deleted)], [[], [], [`flows/f.yaml: deleted; ${why} -> not run [none]`]]);
+  const test = compareIn({ working: { 'tests/t.yaml': TEST.replace('[visible-error-message, settles]', '[settles]') }, merge: { 'tests/t.yaml': TEST + 'extra: 1\n' } });
+  assert.deepEqual(test.tests, []);
+  assert.deepEqual(lines(test), [`tests/t.yaml: ${why}, so neither version runs -> not run [none]`]);
+  const entry = (check) => `  - {page: /notes/new, step: click, action: POST /api/notes, check: ${check}, because: on purpose}\n`;
+  const both = compareIn({
+    working: { 'accepted.yaml': 'schema: 0.1.0\naccepted:\n' + entry('settles'), 'config.yaml': CONFIG.replace('[api.example.com]', '[api.example.com, new.example.com]') },
+    merge: { 'accepted.yaml': 'schema: 0.1.0\naccepted:\n' + entry('settles') + 'extra: 1\n', 'config.yaml': CONFIG + 'extra: 1\n' },
+  });
+  assert.deepEqual(both.accepted, []);
+  assert.deepEqual(both.config.allow.remoteWrites, []);
+  assert.equal(both.config.reset, 'npm run db:reset', 'the working copy still gives the values outside review');
+  assert.deepEqual(lines(both), [
+    `accepted.yaml: ${why}, so no entry in this version applies -> not applied until merged [none]`,
+    `config.yaml: ${why}, so this version's allow values are not applied -> not applied until merged [none]`,
+  ]);
+  assert.deepEqual(both.entries.map((e) => e.notApplied), [
+    ['Accepted outside review, not applied until merged: /notes/new click POST /api/notes settles.'],
+    ['allow.remoteWrites adds api.example.com', 'allow.remoteWrites adds new.example.com'],
+  ]);
 });
 
 test('a reviewed version this runner can\'t read never runs: with an invalid working copy too, the flow is listed and not run', () => {
