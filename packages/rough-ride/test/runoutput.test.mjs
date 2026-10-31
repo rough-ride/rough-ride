@@ -259,6 +259,7 @@ test('a stop reports what the run reported before it, and names the run it carri
   const { root, run, output, doc } = inProcess(['quick', '--json']);
   output.protectedFiles(PROTECTED);
   output.contract(MISSING);
+  output.madeRun(run);
   output.stop(makeStop('reset-failed', ['reset failed.']), { run });
   const stopped = doc();
   assert.equal(stopped.summaryLines[0], `rough-ride quick | 1.2s | run ${run.id} | stopped`);
@@ -274,6 +275,7 @@ test('a stop reports what the run reported before it, and names the run it carri
 test("a stop's summary files are the block as printed, markers included, with the reset tail left out", () => {
   const data = scratchDir();
   const { root, run, seen, output } = inProcess(['quick', '--json', '--plugin-data', data]);
+  output.madeRun(run);
   output.stop(makeStop('reset-failed', ['reset failed.', "(last 20 lines of reset's output: printed only)"]), { run, tail: ['secret tail line'] });
   const printed = JSON.parse(seen.stdout);
   assert.equal(printed.summaryLines[0], BLOCK_START);
@@ -282,12 +284,18 @@ test("a stop's summary files are the block as printed, markers included, with th
   assert.ok(!runFile(root, run.id, 'summary.txt').includes('secret tail line'));
 });
 
-test('a stop on a run named by --run, or with no run, writes no summary files', () => {
+test('a stop on a run named by --run, on a run this invocation did not make, or with no run, writes no summary files', () => {
   const attack = inProcess(['attack', '--run', '20261031-120000-quick-ab12', '--json']);
   attack.output.namedRun(attack.run, true);
   attack.output.stop(makeStop('reset-failed', ['reset failed.']), { run: attack.run });
   assert.equal(attack.doc().runId, attack.run.id);
   assert.deepEqual(files(attack.root, attack.run.id), []);
+
+  // A run the stop names but this invocation neither made nor was given keeps its files.
+  const other = inProcess(['quick', '--json']);
+  other.output.stop(makeStop('reset-failed', ['reset failed.']), { run: other.run });
+  assert.equal(other.doc().runId, other.run.id);
+  assert.deepEqual(files(other.root, other.run.id), []);
 
   const early = inProcess(['quick', '--json']);
   early.output.stop(makeStop('files-invalid', ['bad.']));

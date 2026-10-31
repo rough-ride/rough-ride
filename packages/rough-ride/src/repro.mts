@@ -103,7 +103,7 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
   manifest.verifyRun(runId!, `repros/${repro}.json`, record, `repro ${repro}`, tierCmd);
   const rec = record!;
 
-  const files = checkCommittedFiles(folder, { info, subcommand: 'repro', argv: ctx.argv, env: ctx.env });
+  const files = checkCommittedFiles(folder, { info, subcommand: 'repro', argv: ctx.argv, env: ctx.env, report: ctx.report });
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, mode: 'regress' });
   ctx.report.protectedFiles(prot);
   ctx.notes.push(...files.notes, ...prot.notes);

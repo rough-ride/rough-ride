@@ -151,7 +151,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   // Step 4: a writing invocation creates the folder and its .gitignore.
   const folder = ensureFolder(ctx.folder);
   // Step 5: every committed file, read once and checked before any is used.
-  const files = checkCommittedFiles(folder, { info, subcommand: ctx.subcommand, argv: ctx.argv, env: ctx.env });
+  const files = checkCommittedFiles(folder, { info, subcommand: ctx.subcommand, argv: ctx.argv, env: ctx.env, report: ctx.report });
   ctx.notes.push(...files.notes, ...folderNotes(folder, files.flows.map((f) => f.shown.split('/').at(-1)!)));
   const nested = nestedFoldersNote(root);
   if (nested) ctx.notes.push(nested);

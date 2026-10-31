@@ -134,7 +134,7 @@ export function runLink(ctx: LinkContext): { lines: string[]; document: Record<s
     return { lines: sections.flatMap((x) => x.lines), document: { sections }, status: exitCode === 0 ? 'passed' as const : 'incomplete' as const, exitCode };
   };
   if (callCount(folder, ctx.runId, 'link') >= 2) return finish([`Not run: link (run ${ctx.runId} already made 2 link calls)`], 2);
-  const files = checkCommittedFiles(folder, { info, subcommand: 'link', argv: ctx.argv, env: ctx.env });
+  const files = checkCommittedFiles(folder, { info, subcommand: 'link', argv: ctx.argv, env: ctx.env, report: ctx.report });
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest });
   ctx.report.protectedFiles(prot);
   protLines = protectedSummary(prot);

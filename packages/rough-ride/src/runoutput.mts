@@ -56,8 +56,8 @@ export interface RunOutput extends RunReport {
   namedRun(run: RunFolder, ownsFiles: boolean): void;
   finish(outcome: Outcome): void;
   // A stop names the run it carries, so its block lands in that run (46.5), and
-  // writes its summary files there unless --run named that run; `tail` is reset
-  // or --start output, printed in place of the tail placeholder only.
+  // writes its summary files there when this invocation made that run; `tail` is
+  // reset or --start output, printed in place of the tail placeholder only.
   stop(stop: Stop, options?: { run?: RunFolder | null; tail?: string[] | null }): void;
   // Writes the run's files and the stdout document, before the exit that ends
   // the browser and the --start children (51.13).
@@ -249,8 +249,9 @@ export function createRunOutput(options: RunOutputOptions): RunOutput {
       const header = headerLine(label ?? '', elapsed(), 'stopped', current?.id);
       const finish = asPrinted({ status: status!, exitCode, stop, lines: [header, ...stop.lines, ...runnerBlock(info)], tail });
       // A run folder this invocation made gets the stop's summary files, so it
-      // never reads as unfinished (38); a run named by --run keeps its own.
-      if (run && root !== null && run.id !== named?.run.id && !RUN_ID_STOPS.has(stop.code)) {
+      // never reads as unfinished (38); any other run, one named by --run
+      // included, keeps its own.
+      if (run && root !== null && run.id === made?.id && !RUN_ID_STOPS.has(stop.code)) {
         try {
           writeRunFiles(run, finish, { record: { environment: environmentRecord(env, info) } });
         } catch {

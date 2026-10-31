@@ -53,11 +53,13 @@ function repoWith(version, { crlf = false } = {}) {
   return root;
 }
 
+// `made`: the run folders the check reported making.
 function check(root, ctx = {}) {
+  const made = [];
   try {
-    return { result: checkCommittedFiles(checkRootEntry(root), { info: info(), subcommand: 'quick', argv: ['quick'], env: {}, ...ctx }) };
+    return { result: checkCommittedFiles(checkRootEntry(root), { info: info(), subcommand: 'quick', argv: ['quick'], env: {}, report: { madeRun: (run) => made.push(run) }, ...ctx }), made };
   } catch (error) {
-    if (error instanceof StopError) return { stop: error.stop, run: error.run };
+    if (error instanceof StopError) return { stop: error.stop, run: error.run, made };
     throw error;
   }
 }
@@ -215,8 +217,10 @@ for (const crlf of [false, true]) {
     writeFileSync(path.join(root, 'package.json'), JSON.stringify({ devDependencies: { 'rough-ride': '0.1.0' } }));
     const before = snapshot(root);
     const ctx = { ...BREAK, info: info(undefined, { version: '0.2.0' }), env: {} };
-    const { stop, run } = check(root, ctx);
+    const { stop, run, made } = check(root, ctx);
     assert.equal(stop.code, 'schema-older');
+    // The upgrade run is one this invocation made, so the stop's summary files go there.
+    assert.deepEqual(made, [run]);
     assert.deepEqual(snapshot(root), before, 'no committed file changes');
     const rel = `.rough-ride/runs/${run.id}`;
     assert.deepEqual(stop.lines, [

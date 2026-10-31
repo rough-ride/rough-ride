@@ -101,7 +101,7 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
     return { lines: sections.flatMap((x) => x.lines), document: { sections }, status: exitCode === 0 ? 'passed' as const : 'incomplete' as const, exitCode };
   };
   if (callCount(folder, ctx.runId, 'snapshot') >= 3) return finish([`Not run: snapshot (run ${ctx.runId} already made 3 snapshot calls)`], 2);
-  const files = checkCommittedFiles(folder, { info, subcommand: 'snapshot', argv: ctx.argv, env: ctx.env });
+  const files = checkCommittedFiles(folder, { info, subcommand: 'snapshot', argv: ctx.argv, env: ctx.env, report: ctx.report });
   ctx.notes.push(...files.notes);
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest });
   ctx.report.protectedFiles(prot);

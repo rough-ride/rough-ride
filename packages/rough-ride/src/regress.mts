@@ -157,7 +157,7 @@ interface TestResult {
 export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
   const { root, info } = ctx;
   const folder = ensureFolder(ctx.folder);
-  const files = checkCommittedFiles(folder, { info, subcommand: 'regress', argv: ctx.argv, env: ctx.env });
+  const files = checkCommittedFiles(folder, { info, subcommand: 'regress', argv: ctx.argv, env: ctx.env, report: ctx.report });
   ctx.notes.push(...files.notes);
   const manifest = new Manifest(root);
   const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, mode: 'regress' });
