@@ -167,6 +167,8 @@ export interface PlanScope {
   selected: Iterable<string>;
   // Flows with a selected attack or a test inside the cut, and flows saved in this run (45.5).
   aboveFlows: Iterable<string>;
+  // Flows saved after the planning invocation: what plan recorded for them no longer counts.
+  changedSince?: Iterable<string>;
 }
 
 // validatePlan's callbacks (45.4): what each plan entry names in this catalogue,
@@ -174,13 +176,16 @@ export interface PlanScope {
 export function planCandidates(catalogue: Catalogue, scope: PlanScope): Omit<Candidates, 'checks'> {
   const c = inside.get(catalogue)!;
   const selected = new Set(scope.selected);
+  const changedSince = new Set(scope.changedSince ?? []);
   const fresh = (name: string) => c.fresh?.flows.get(name);
+  const savedLater = (name: string) => ({ unchecked: `flow ${name} was saved after the plan; attack checks its points` });
   return {
     tier: c.tier,
     aboveFlows: new Set(scope.aboveFlows),
-    allFlows: new Set(c.flows.keys()),
+    allFlows: new Set([...c.flows.keys(), ...changedSince]),
     selected,
     fault: (name, request, fault, oneShot) => {
+      if (changedSince.has(name)) return savedLater(name);
       const entry = c.flows.get(name);
       const same = (entry?.faults ?? []).filter((a) => a.key === request);
       if (same.length === 0) return `${request} is not an attack point of ${name}`;
@@ -195,6 +200,7 @@ export function planCandidates(catalogue: Catalogue, scope: PlanScope): Omit<Can
       return { ...pick(sticky), sticky: false, id: attackId(name, sticky.key, sticky.fault, false) };
     },
     badInputs: (name, form) => {
+      if (changedSince.has(name)) return savedLater(name);
       const entry = c.flows.get(name);
       if (!entry?.baseline) return `${name} has no baseline run`;
       const submit = !!form && typeof form === 'object' && 'submit' in (form as object) ? describeLocator((form as { submit: LocatorSpec }).submit) : null;
@@ -206,7 +212,9 @@ export function planCandidates(catalogue: Catalogue, scope: PlanScope): Omit<Can
         .map((p) => fresh(name)?.inputs[entry.inputs.indexOf(p)] ?? named(name, p.id));
     },
     viewport: (name) => {
-      if (!c.flows.has(name) || name === 'sign-in') return 'no viewport attack on the sign-in flow';
+      if (name === 'sign-in') return 'no viewport attack on the sign-in flow';
+      if (changedSince.has(name)) return savedLater(name);
+      if (!c.flows.has(name)) return 'no viewport attack on the sign-in flow';
       return fresh(name)?.viewport ?? named(name, `${name}/viewport-375`);
     },
   };

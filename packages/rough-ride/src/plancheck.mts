@@ -3,28 +3,25 @@
 // Final validation still happens against the fresh baseline runs in attack.
 
 import { specFacts } from './appchecks.mjs';
-import type { PlannedAttack } from './attacks.mjs';
+import { fromRecord, planCandidates } from './catalogue.mjs';
+import { stopWith } from './exit.mjs';
 import { readSaved } from './flowsave.mjs';
 import type { FolderState } from './folder.mjs';
 import { Manifest } from './manifest.mjs';
 import { formatDuration } from './output.mjs';
 import { parsePlan, validatePlan, type PlanInput } from './plan.mjs';
 import { runnerBlock, type RunnerInfo } from './runner.mjs';
-import { callCount, checkRun, recordCall, type PlanState } from './runcheck.mjs';
+import { callCount, CATALOGUE, checkRun, recordCall, tierCommand, type PlanState } from './runcheck.mjs';
 import type { Section } from './summary.mjs';
 
-const STICKY_BY_DEFAULT = new Set(['500', '400', '429', 'reset', 'malformed-json', 'empty-200', '401', 'hang']);
-
-// A stand-in for an attack the fresh run would build: only its id and flow matter here.
-const stub = (flow: string, id: string): PlannedAttack => ({ id, flow } as PlannedAttack);
-
+// The recorded Attack catalogue resolves entries as attack's fresh one will;
+// entries on flows saved after the plan stay unchecked until attack.
 export function checkPlan(input: PlanInput, plan: PlanState, saved: string[], folder?: FolderState) {
-  const outline = plan.flows as { name: string; aboveCut: boolean; requests?: { key: string }[]; forms?: { form: string }[] }[];
-  const allFlows = new Set([...(plan.flowPages ?? []).map((f) => f.name), ...outline.map((f) => f.name), ...saved]);
+  const recorded = fromRecord(plan.catalogue);
+  if (!recorded) throw new Error(`run ${plan.runId} has no recorded Attack catalogue`);
+  const allFlows = new Set([...(plan.flowPages ?? []).map((f) => f.name), ...plan.flows.map((f) => f.name), ...saved]);
   return validatePlan(input, {
-    tier: plan.tier,
-    aboveFlows: new Set([...outline.filter((f) => f.aboveCut).map((f) => f.name), ...saved]),
-    allFlows,
+    ...planCandidates(recorded.catalogue, { selected: recorded.scope.selected, aboveFlows: [...recorded.scope.aboveFlows, ...saved], changedSince: saved }),
     // The static gates only: anchors on baseline text and the baseline gate wait for attack's fresh runs.
     checks: {
       specs: folder ? specFacts(folder, plan.specParts ?? []) : new Map(),
@@ -35,20 +32,6 @@ export function checkPlan(input: PlanInput, plan: PlanState, saved: string[], fo
       },
       apiKeys: plan.apiKeys ?? [],
     },
-    selected: new Set(plan.selected ?? []),
-    fault: (flow, request, fault, oneShot) => {
-      const known = outline.find((f) => f.name === flow);
-      // A flow saved in this run has no recorded footprint yet; attack checks its points.
-      if (known && !(known.requests ?? []).some((q) => q.key === request)) return `${request} is not an attack point of ${flow}`;
-      const sticky = !oneShot && STICKY_BY_DEFAULT.has(fault);
-      return stub(flow, `${flow}/${request}/${fault}${sticky ? '!' : ''}`);
-    },
-    badInputs: (flow, form) => {
-      const known = outline.find((f) => f.name === flow);
-      if (known && (known.forms ?? []).length === 0) return `${typeof form === 'string' ? form : 'that form'} is not a form of ${flow}`;
-      return Array.from({ length: 12 }, (_, i) => stub(flow, `${flow}/${typeof form === 'string' ? form : 'form'}/input-${i + 1}`));
-    },
-    viewport: (flow) => (flow === 'sign-in' ? 'no viewport attack on the sign-in flow' : stub(flow, `${flow}/viewport-375`)),
   });
 }
 
@@ -63,6 +46,7 @@ export interface PlanCheckContext {
 
 export function runPlanCheck(ctx: PlanCheckContext): { lines: string[]; document: Record<string, unknown>; status: 'passed' | 'incomplete' | 'stopped'; exitCode: 0 | 2 | 78 } {
   const plan = checkRun(ctx.folder, ctx.runId, ctx.info, new Manifest(ctx.root));
+  if (!fromRecord(plan.catalogue)) stopWith('refused-run-output', `Refused: run ${ctx.runId}'s ${CATALOGUE} is not one this runner reads. Run ${tierCommand(ctx.info, plan.tier)} again.`);
   const finish = (body: string[], exitCode: 0 | 2 | 78) => {
     const header = ['rough-ride attack --check', formatDuration(ctx.elapsed()), `run ${ctx.runId}`].join(' | ');
     const sections: Section[] = [{ id: 'header', lines: [header] }, { id: 'flows', lines: body }, { id: 'runner', lines: runnerBlock(ctx.info) }].filter((x) => x.lines.length > 0) as Section[];
