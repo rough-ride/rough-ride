@@ -98,6 +98,7 @@ export async function select(options: {
     for (const file of tracing.appWide) reach.set(file, reach.get(file) ?? 'app-wide');
     const sent = new Set(f.runs.flatMap((r) => r.requests.filter((q) => (q.resourceType === 'fetch' || q.resourceType === 'xhr') && !isFrameworkInternal(q.url)).map((q) => q.key.replace(/ #\d+$/, ''))));
     const r = tracing.reach.find((x) => x.flow === f.flow.name);
+    const byRule = [...reach.values()].some((rule) => rule === 'module' || rule === 'page');
     flowInfo.push({
       name: f.flow.name,
       signedIn: f.flow.signedIn,
@@ -105,11 +106,11 @@ export async function select(options: {
       excluded: f.excluded,
       reach,
       firstLoad: r?.firstLoad ?? new Map(),
+      reachesByRule: byRule,
       sent,
       pages: f.runs.flatMap((x) => x.pages),
       attackPointSteps: [...new Set(f.runs.flatMap((x) => x.requests.filter((q) => (q.resourceType === 'fetch' || q.resourceType === 'xhr') && ownHost(q.url) && !isFrameworkInternal(q.url)).map((q) => q.step)))],
     });
-    const byRule = [...reach.values()].some((rule) => rule === 'module' || rule === 'page');
     const cls = flowClass({ forms, requestKeys: [...sent], changedEndpoints, reachesByRule: byRule }) ?? (tracing.appWide.length > 0 ? 'app-wide' : null);
     if (cls === null) continue;
     const reachCount = [...reach.values()].length + [...sent].filter((k) => changedEndpoints.has(k)).length;

@@ -14,7 +14,7 @@ import { checkCommittedFiles, wroteFile } from './files.mjs';
 import { StopError } from './exit.mjs';
 import { ensureFolder, folderNotes, nestedFoldersNote, readFolderFile, type FolderState } from './folder.mjs';
 import { DELAY_MS, holdMsFor, RETRY_AFTER } from './faults.mjs';
-import { describeLocator, envNames, isLoopbackHostname, runFlow, S, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type ReadyWait } from './flowrun.mjs';
+import { describeLocator, envNames, runFlow, S, stepKind, type Flow, type FlowRunResult, type LocatorSpec, type ReadyWait } from './flowrun.mjs';
 import { FORMATS, type FormatsReport } from './formats.mjs';
 import { allowedSuffix, LocalhostGuard, type GuardPolicy } from './guard.mjs';
 import { takeFlowLock } from './lock.mjs';
@@ -25,10 +25,10 @@ import { asciiJson, instructionNotes, needsFlowItems, patchRanges, readSpecs, wr
 import { parseDotenv } from './session.mjs';
 import { readSaved } from './flowsave.mjs';
 import { cutPlanned, parsePlan, validatePlan, type ParsedPlan, type PlanResult } from './plan.mjs';
+import { buildCatalogue, planCandidates } from './catalogue.mjs';
 import { readLinks } from './link.mjs';
 import { adversaryCallTime, bashBlocksStart, bashDeadline, LIMITS, SELECTION, type PlanState } from './runcheck.mjs';
 import { blockLines, blockWithHints, changedDuringRun, compareProtected, type ProtectedResult, extraNodeCodeNote, protectedJson, reportLines as protectedReport, summaryLines as protectedSummary } from './protected.mjs';
-import { planBadInputs, tierInputs } from './badinputs.mjs';
 import { Manifest } from './manifest.mjs';
 import { buildTest } from './regression.mjs';
 import { combine, judgeRun, runTestOnce, type FirstRun, type RunJudgement, type TestOutcome, type TestValue } from './regress.mjs';
@@ -43,7 +43,7 @@ import { findTarget, type Target } from './target.mjs';
 import { reachedVia } from './tracing.mjs';
 import { reachCounts, select, type Selection } from './selection.mjs';
 import { account, notAttackedLines, nothingAttackedLine, reportNotAttacked, SCOPE_LINE } from './accounting.mjs';
-import { attackLink, attackPoints, badInputAttack, doubleSubmitPoints, outOfOrderPoints, pageTimingPoints, groupLines, nonFinding, orderAttacks, timingDedupeKey, viewportAttack, ownHostFor, runAttack, symptom as symptomOf, type AttackOutcome, type PlannedAttack } from './attacks.mjs';
+import { attackLink, groupLines, nonFinding, orderAttacks, timingDedupeKey, ownHostFor, runAttack, symptom as symptomOf, type AttackOutcome, type PlannedAttack } from './attacks.mjs';
 import { baselineFailures, checkLabel } from './checks.mjs';
 import { baselineGate, inlineChecks, probeFor, shapeOf, specFacts, type AppCheck, type PointProbe } from './appchecks.mjs';
 import { cmp, confirmGroups, groupFindings, memberOf, SEVERITY_TEXT, type Group } from './groups.mjs';
@@ -77,8 +77,6 @@ export async function inLanes<T>(lanes: number, jobs: (() => Promise<T>)[]): Pro
 }
 
 export { capSection, orderNotes } from './summary.mjs';
-
-const NO_CREDENTIAL = 'Skipped: signed-out-reload (the session holds no credential the runner can remove or refuse)';
 
 export interface BaselineOutcome {
   flow: Flow;
@@ -234,7 +232,6 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   const underTestOf = new Map<Group, string>();
   const testResults: { name: string; outcome: TestOutcome; reason: string | null; failed: string[]; accepted?: string[] }[] = [];
   const timingByFlow = new Map<string, { attack: string; key: string; step: number; control: string | null; diffLinked: boolean; skipped: boolean }[]>();
-  const fieldOwner = new Map<string, string>();
   const rateLimited = new Set<string>();
   const rateLimitedLines: string[] = [];
   const meta = new Map<AttackOutcome, { ordinal: number; durationMs: number }>();
@@ -407,15 +404,6 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
     const ownHost = ownHostFor([policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h));
     const changedFiles = new Set(diff.files.map((f) => f.path));
     const runsOf = (name: string) => (name === 'sign-in' ? (signInOutcome.result ? [signInOutcome.result] : []) : outcomes.find((o) => o.flow.name === name)?.runs ?? []);
-    const planned: PlannedAttack[] = [];
-    const forwardable = (url: string) => {
-      try {
-        const host = new URL(url).hostname;
-        return isLoopbackHostname(host) || host === policy.remoteTarget;
-      } catch {
-        return false;
-      }
-    };
     // attack: flows kept in this run go after every saved flow, so planned attacks keep
     // the dedupe and field ownership; a kept flow that only visits its linked page
     // joins here even though no rule reached a changed file through it (42.6 step 4).
@@ -425,49 +413,34 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       ...[...addedFlows].filter((n) => n !== 'sign-in'),
       ...sel0.ordered.filter((o) => o.name === 'sign-in').map((o) => o.name),
     ];
-    for (const name of orderedNames) {
-      const flow = flows.find((f) => f.name === name)!;
-      const runs = runsOf(name);
-      const baseline = runs[0];
-      const passedRun = name === 'sign-in' ? signInOutcome.passed : outcomes.find((o) => o.flow.name === name)?.passed;
-      if (!baseline || !passedRun) continue;
+    const firstLoadOf = (name: string) => {
       const info = sel0.flowInfo.find((f) => f.name === name);
-      if (!info) continue;
-      const loads = [...info.firstLoad.entries()].filter(([file]) => changedFiles.has(file)).map(([, st]) => st);
-      const points = attackPoints(flow, baseline, ownHost, sel0.changedEndpoints, loads.length > 0 ? Math.min(...loads) : null, {
-        tier: ctx.subcommand === 'standard' ? 'standard' : 'quick',
-        signInFlow: name === 'sign-in',
-        forwardable,
-        docs: sel0.docs,
-      });
-      skippedLines.push(...(points.skipped ?? []));
-      // double-submit in both tiers (32.9), and one viewport attack per reached
-      // flow (22.3); neither on the sign-in flow.
-      const firstLoad = loads.length > 0 ? Math.min(...loads) : null;
-      const doubles = doubleSubmitPoints(flow, baseline, ownHost, sel0.changedEndpoints, firstLoad, name === 'sign-in');
-      skippedLines.push(...(doubles.skipped ?? []));
-      const byRule = [...info.reach.values()].some((rule) => rule === 'module' || rule === 'page');
-      // Bad inputs: every form of a reached flow, in the tier's share; a field once per invocation (21.1, 21.8).
-      const badPlan = planBadInputs(flow, baseline, sel0.formsByFlow.get(name) ?? [], sel0.docs, { signInFlow: name === 'sign-in', today: new Date() });
-      skippedLines.push(...badPlan.skipped);
-      fieldsNotAttacked.push(...badPlan.fieldsNotAttacked);
-      const bads: PlannedAttack[] = [];
-      for (const { band, plan } of tierInputs(badPlan.inputs, ctx.subcommand === 'standard' ? 'standard' : 'quick')) {
-        const owner = fieldOwner.get(plan.fieldKey);
-        if (owner && owner !== name) continue;
-        fieldOwner.set(plan.fieldKey, name);
-        bads.push(badInputAttack(name, plan, band, firstLoad));
-      }
-      // out-of-order: standard only, band 2 (32.9).
-      const stale = ctx.subcommand === 'standard' ? outOfOrderPoints(flow, baseline, sel0.formsByFlow.get(name) ?? [], ownHost, sel0.changedEndpoints, firstLoad, name === 'sign-in') : [];
-      // refresh, back and signed-out-reload: standard only (32.9).
-      const pageKinds = ctx.subcommand === 'standard' ? pageTimingPoints(flow, runs, sel0.changedEndpoints, firstLoad, name === 'sign-in') : [];
-      if (ctx.subcommand === 'standard') skippedLines.push(...(pageKinds.skipped ?? []));
-      const noCredential = credentials.length === 0 && (signInOutcome.storageState?.cookies ?? []).filter((c) => ownHost(`http://${c.domain.replace(/^\./, '')}/`)).length === 0;
-      if (noCredential && pageKinds.some((a) => a.timing === 'signed-out-reload') && !skippedLines.includes(NO_CREDENTIAL)) skippedLines.push(NO_CREDENTIAL);
-      const pageAttacks = pageKinds.filter((a) => !(noCredential && a.timing === 'signed-out-reload'));
-      planned.push(...points, ...doubles, ...stale, ...pageAttacks, ...bads, ...(name === 'sign-in' ? [] : [viewportAttack(flow, byRule)]));
-    }
+      const loads = [...(info?.firstLoad ?? new Map<string, number>())].filter(([file]) => changedFiles.has(file)).map(([, st]) => st);
+      return loads.length > 0 ? Math.min(...loads) : null;
+    };
+    const catalogue = buildCatalogue({
+      tier: tierName,
+      flows: [...orderedNames, ...flows.map((f) => f.name).filter((n) => !orderedNames.includes(n))].map((name) => {
+        const info = sel0.flowInfo.find((f) => f.name === name);
+        return {
+          flow: flows.find((f) => f.name === name)!,
+          runs: runsOf(name),
+          passed: !!(name === 'sign-in' ? signInOutcome.passed : outcomes.find((o) => o.flow.name === name)?.passed),
+          reached: orderedNames.includes(name) && !!info,
+          forms: sel0.formsByFlow.get(name) ?? [],
+          firstLoad: firstLoadOf(name),
+          reachesByRule: info?.reachesByRule ?? false,
+        };
+      }),
+      changedEndpoints: sel0.changedEndpoints,
+      docs: sel0.docs,
+      hosts: { allowed: [policy.remoteTarget, ...policy.remoteWrites].filter((h): h is string => !!h), remoteTarget: policy.remoteTarget },
+      noCredential: credentials.length === 0 && (signInOutcome.storageState?.cookies ?? []).filter((c) => ownHost(`http://${c.domain.replace(/^\./, '')}/`)).length === 0,
+      today: new Date(),
+    });
+    skippedLines.push(...catalogue.skipped);
+    fieldsNotAttacked.push(...catalogue.fieldsNotAttacked);
+    const planned = [...catalogue.share];
 
     // The ordered list (48.3), the dedupe (48.5), then the cut by nominal time (48.7).
     const spec = TIER_TABLE.tiers[tierName];
@@ -574,55 +547,8 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       if (planParsed.refused === null) {
         const selectedAbove = cut.items.filter((x) => x.aboveCut);
         const aboveFlows = new Set([...selectedAbove.map((x) => x.attack.flow), ...orderedTests.slice(0, spec.tests).map((t) => String(t.value.flow)), ...addedFlows]);
-        const firstLoadOf = (name: string) => {
-          const info = sel0.flowInfo.find((f) => f.name === name);
-          const loads = [...(info?.firstLoad ?? new Map<string, number>())].filter(([file]) => changedFiles.has(file)).map(([, st]) => st);
-          return loads.length > 0 ? Math.min(...loads) : null;
-        };
-        const faultPoints = new Map<string, PlannedAttack[]>();
-        const pointsOf = (name: string) => {
-          if (!faultPoints.has(name)) {
-            const baseline = runsOf(name)[0];
-            const flow = flows.find((f) => f.name === name);
-            faultPoints.set(name, baseline && flow ? attackPoints(flow, baseline, ownHost, sel0.changedEndpoints, firstLoadOf(name), { tier: 'standard', signInFlow: name === 'sign-in', forwardable, docs: sel0.docs }) : []);
-          }
-          return faultPoints.get(name)!;
-        };
         planResult = validatePlan(planParsed.input!, {
-          tier: tierName,
-          aboveFlows,
-          allFlows: new Set(flows.map((f) => f.name)),
-          selected: new Set(selectedAbove.map((x) => x.attack.id)),
-          fault: (name, request, fault, oneShot) => {
-            const same = pointsOf(name).filter((a) => a.key === request);
-            if (same.length === 0) return `${request} is not an attack point of ${name}`;
-            const kind = same.filter((a) => a.fault === fault);
-            if (kind.length === 0) return `${fault} does not apply to ${request}`;
-            if (!oneShot) return kind.find((a) => a.sticky) ?? kind[0]!;
-            const once = kind.find((a) => !a.sticky);
-            if (once) return once;
-            const sticky = kind[0]!;
-            return { ...sticky, sticky: false, id: sticky.id.replace(/!$/, '') };
-          },
-          badInputs: (name, form) => {
-            const flow = flows.find((f) => f.name === name);
-            const baseline = runsOf(name)[0];
-            if (!flow || !baseline) return `${name} has no baseline run`;
-            const all = planBadInputs(flow, baseline, sel0.formsByFlow.get(name) ?? [], sel0.docs, { signInFlow: false, today: new Date() }).inputs;
-            const matches = all.filter((p) => (typeof form === 'string' ? p.carrying === form : !!form && typeof form === 'object' && 'submit' in (form as object) && describeLocator((form as { submit: LocatorSpec }).submit) === p.formName));
-            if (matches.length === 0) return `${typeof form === 'string' ? form : 'that form'} is not a form of ${name}`;
-            const selectedIds = new Set(selectedAbove.map((x) => x.attack.id));
-            return matches
-              .filter((p) => !fieldOwner.has(p.fieldKey) || fieldOwner.get(p.fieldKey) === name)
-              .map((p) => badInputAttack(name, p, 2, firstLoadOf(name)))
-              .filter((a) => !selectedIds.has(a.id));
-          },
-          viewport: (name) => {
-            const flow = flows.find((f) => f.name === name);
-            if (!flow || name === 'sign-in') return 'no viewport attack on the sign-in flow';
-            const info = sel0.flowInfo.find((f) => f.name === name);
-            return viewportAttack(flow, [...(info?.reach.values() ?? [])].some((rule) => rule === 'module' || rule === 'page'));
-          },
+          ...planCandidates(catalogue, { selected: selectedAbove.map((x) => x.attack.id), aboveFlows }),
           // App-specific checks against the spec read again and these fresh baseline runs (45.8).
           checks: {
             specs: specFacts(folder, ctx.plan?.specParts ?? []),

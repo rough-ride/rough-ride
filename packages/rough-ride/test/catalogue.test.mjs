@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildCatalogue } from '../dist/catalogue.mjs';
+import { buildCatalogue, planCandidates } from '../dist/catalogue.mjs';
+import { validatePlan } from '../dist/plan.mjs';
 import { noteFlow, noteRun, signInFlow, signInRun } from './fixtures/catalogue-flows.mjs';
 
 const TODAY = new Date('2026-10-25');
@@ -93,4 +94,56 @@ test('a field shared by two flows is attacked through the first only; unreached,
     today: TODAY,
   });
   assert.deepEqual([others.share, others.skipped, others.fieldsNotAttacked], [[], [], []]);
+});
+
+// The attack invocation's plan validation (45.4): the selected attacks above the cut and the flows they are on.
+const scopeOf = (c) => ({ selected: c.share.map((a) => a.id), aboveFlows: new Set(c.share.map((a) => a.flow)) });
+const entry = (over) => ({ flow: 'create-note', because: 'b', ...over });
+
+test('plan entries resolve against the catalogue: unknown points, faults that do not apply, default and one-shot forms, viewport', () => {
+  const c = build('quick');
+  const r = validatePlan({ attacks: [
+    entry({ fault: '500', request: 'POST /api/note #1' }),
+    entry({ flow: 'sign-in', fault: '401', request: 'POST /api/login #1' }),
+    entry({ fault: '500', request: 'POST /api/notes #1' }),
+    entry({ fault: 'reset', request: 'POST /api/notes #1', oneShot: true }),
+    entry({ fault: '500', request: 'GET /api/notes #1', oneShot: true }),
+    entry({ fault: 'delay-3s', request: 'GET /api/notes #1' }),
+    entry({ fault: '400', request: 'GET /api/notes #1' }),
+    entry({ flow: 'sign-in', viewport: 375 }),
+  ] }, planCandidates(c, scopeOf(c)));
+  assert.deepEqual(r.lines, [
+    'Rejected plan entry: attacks[0] (POST /api/note #1 is not an attack point of create-note)',
+    'Rejected plan entry: attacks[1] (401 does not apply to POST /api/login #1)',
+    'Rejected plan entry: attacks[2] (already selected)',
+    'Rejected plan entry: attacks[7] (no viewport attack on the sign-in flow)',
+  ]);
+  assert.deepEqual(r.kept.map((a) => [a.id, a.sticky, a.rank]), [
+    ['create-note/POST /api/notes #1/reset', false, 6],
+    ['create-note/GET /api/notes #1/500', false, 17],
+    ['create-note/GET /api/notes #1/delay-3s', false, 18],
+    ['create-note/GET /api/notes #1/400!', true, 9],
+  ]);
+});
+
+test('bad-input entries: the next inputs not already selected, named by carrying request or submit step; a field owned by an earlier flow is skipped', () => {
+  const c = build('quick');
+  const r = validatePlan({ attacks: [
+    entry({ badInputs: 2, form: 'POST /api/notes' }),
+    entry({ badInputs: 1, form: { submit: { role: 'button', name: 'Save' } } }),
+    entry({ flow: 'quick-note', badInputs: 3, form: 'POST /api/notes' }),
+    entry({ badInputs: 1, form: 'POST /api/other' }),
+  ] }, planCandidates(c, scopeOf(c)));
+  assert.deepEqual(r.entries.map((e) => [e.path, e.status, e.attackIds]), [
+    ['attacks[0]', 'kept', ['create-note/label "Title"/spaces', 'create-note/label "Title"/specials']],
+    ['attacks[1]', 'kept', ['create-note/label "Title"/unicode']],
+    ['attacks[2]', 'already-selected', []],
+    ['attacks[3]', 'rejected', []],
+  ]);
+  assert.equal(r.lines.at(-1), 'Rejected plan entry: attacks[3] (POST /api/other is not a form of create-note)');
+  assert.ok(r.kept.every((a) => a.rank === 8 && a.badInput));
+  const runless = buildCatalogue({ tier: 'quick', flows: [{ flow: noteFlow('never-ran'), runs: [], passed: false }], docs: [], hosts: { allowed: [], remoteTarget: null }, today: TODAY });
+  const none = validatePlan({ attacks: [entry({ flow: 'never-ran', badInputs: 1, form: 'POST /api/notes' }), entry({ flow: 'never-ran', fault: '500', request: 'POST /api/notes #1' }), entry({ flow: 'never-ran', viewport: 375 })] }, planCandidates(runless, { selected: [], aboveFlows: ['never-ran'] }));
+  assert.deepEqual(none.lines, ['Rejected plan entry: attacks[0] (never-ran has no baseline run)', 'Rejected plan entry: attacks[1] (POST /api/notes #1 is not an attack point of never-ran)']);
+  assert.deepEqual(none.kept.map((a) => a.id), ['never-ran/viewport-375']);
 });

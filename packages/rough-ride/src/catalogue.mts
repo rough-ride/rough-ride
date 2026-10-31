@@ -6,10 +6,11 @@
 
 import { attackPoints, badInputAttack, doubleSubmitPoints, outOfOrderPoints, ownHostFor, pageTimingPoints, viewportAttack, type PlannedAttack } from './attacks.mjs';
 import { planBadInputs, tierInputs } from './badinputs.mjs';
-import type { FaultId } from './faults.mjs';
+import { attackId, type FaultId } from './faults.mjs';
 import { findForms, type Form } from './forms.mjs';
-import { isLoopbackHostname, type Flow, type FlowRunResult } from './flowrun.mjs';
+import { describeLocator, isLoopbackHostname, type Flow, type FlowRunResult, type LocatorSpec } from './flowrun.mjs';
 import type { OpenApiDoc } from './openapi.mjs';
+import type { Candidates } from './plan.mjs';
 import type { TierName } from './tiers.mjs';
 
 const NO_CREDENTIAL = 'Skipped: signed-out-reload (the session holds no credential the runner can remove or refuse)';
@@ -160,3 +161,57 @@ export function buildCatalogue(input: CatalogueInput): Catalogue {
   });
   return catalogue;
 }
+
+export interface PlanScope {
+  // Ids of the selected attacks above the cut.
+  selected: Iterable<string>;
+  // Flows with a selected attack or a test inside the cut, and flows saved in this run (45.5).
+  aboveFlows: Iterable<string>;
+}
+
+// validatePlan's callbacks (45.4): what each plan entry names in this catalogue,
+// or why it names nothing, in the words the attack invocation uses.
+export function planCandidates(catalogue: Catalogue, scope: PlanScope): Omit<Candidates, 'checks'> {
+  const c = inside.get(catalogue)!;
+  const selected = new Set(scope.selected);
+  const fresh = (name: string) => c.fresh?.flows.get(name);
+  return {
+    tier: c.tier,
+    aboveFlows: new Set(scope.aboveFlows),
+    allFlows: new Set(c.flows.keys()),
+    selected,
+    fault: (name, request, fault, oneShot) => {
+      const entry = c.flows.get(name);
+      const same = (entry?.faults ?? []).filter((a) => a.key === request);
+      if (same.length === 0) return `${request} is not an attack point of ${name}`;
+      const kind = same.filter((a) => a.fault === fault);
+      if (kind.length === 0) return `${fault} does not apply to ${request}`;
+      const pick = (ref: FaultRef) => fresh(name)?.faults[entry!.faults.indexOf(ref)] ?? named(name, ref.id);
+      if (!oneShot) return pick(kind.find((a) => a.sticky) ?? kind[0]!);
+      const once = kind.find((a) => !a.sticky);
+      if (once) return pick(once);
+      // The one-shot form of a kind that is only sticky (27.16).
+      const sticky = kind[0]!;
+      return { ...pick(sticky), sticky: false, id: attackId(name, sticky.key, sticky.fault, false) };
+    },
+    badInputs: (name, form) => {
+      const entry = c.flows.get(name);
+      if (!entry?.baseline) return `${name} has no baseline run`;
+      const submit = !!form && typeof form === 'object' && 'submit' in (form as object) ? describeLocator((form as { submit: LocatorSpec }).submit) : null;
+      const matches = entry.inputs.filter((p) => (typeof form === 'string' ? p.carrying === form : submit !== null && submit === p.formName));
+      if (matches.length === 0) return `${typeof form === 'string' ? form : 'that form'} is not a form of ${name}`;
+      return matches
+        .filter((p) => !c.fieldOwner.has(p.fieldKey) || c.fieldOwner.get(p.fieldKey) === name)
+        .filter((p) => !selected.has(p.id))
+        .map((p) => fresh(name)?.inputs[entry.inputs.indexOf(p)] ?? named(name, p.id));
+    },
+    viewport: (name) => {
+      if (!c.flows.has(name) || name === 'sign-in') return 'no viewport attack on the sign-in flow';
+      return fresh(name)?.viewport ?? named(name, `${name}/viewport-375`);
+    },
+  };
+}
+
+// A recorded catalogue names attacks without building them: attack --check
+// reads only their ids and flows, and attack builds them from fresh runs.
+const named = (flow: string, id: string): PlannedAttack => ({ id, flow } as PlannedAttack);
