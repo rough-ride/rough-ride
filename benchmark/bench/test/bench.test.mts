@@ -8,7 +8,10 @@ import { APPS, BENCHMARK, filesUnder, loadApp, type App } from '../apps.mts';
 import { hintProblems, hintWords, portabilityProblems } from '../lint.mts';
 import { FIXED_DATE, materialize } from '../materialize.mts';
 
-const work = () => realpathSync.native(mkdtempSync(path.join(tmpdir(), 'bench-')));
+// Windows refuses work roots over 40 characters, and the user temp folder is
+// longer than that on GitHub's runners, so tests use RUNNER_TEMP there.
+const workBase = process.platform === 'win32' ? (process.env.RUNNER_TEMP ?? path.parse(tmpdir()).root) : tmpdir();
+const work = () => realpathSync.native(mkdtempSync(path.join(workBase, 'bench-')));
 const git = (cwd: string, ...args: string[]) => spawnSync('git', args, { cwd, encoding: 'utf8' }).stdout;
 
 // A copy of the fixture app to break on purpose.

@@ -1,0 +1,3 @@
+# Check out text files with LF on every OS: the tests compare bytes, and the
+# Windows runner would otherwise convert them to CRLF.
+* text=auto eol=lf

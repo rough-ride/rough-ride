@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
+import { canon } from '../hooks/path-check.mjs';
 import { classifyRevParse } from '../dist/git.mjs';
 import { caseSensitive, gitRepo, run, scratchDir, sh } from './helpers.mjs';
 
@@ -11,11 +12,11 @@ test('from the root, frontend/ and backend/ the runner uses the same git root', 
   const root = gitRepo();
   for (const sub of ['', 'frontend', 'backend']) {
     const { doc } = json(run(['quick', '--json'], { cwd: path.join(root, sub) }));
-    assert.equal(doc.root, root);
-    assert.equal(doc.cwd, path.join(root, sub).split(path.sep).join('/'));
+    assert.equal(doc.root, canon(root));
+    assert.equal(doc.cwd, canon(path.join(root, sub)));
     const rootNote = doc.notes.find((n) => n.id === 'root');
     if (sub === '') assert.equal(rootNote, undefined);
-    else assert.deepEqual(rootNote, { id: 'root', text: `root: ${root}` });
+    else assert.deepEqual(rootNote, { id: 'root', text: `root: ${canon(root)}` });
   }
 });
 

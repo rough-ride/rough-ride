@@ -38,10 +38,10 @@ async function compare(root, manifest, { env = {}, pluginData = false } = {}) {
 
 test('location: .git/.rough-ride in a main checkout, the worktree\'s own folder in a linked worktree', () => {
   const root = repo();
-  assert.equal(new Manifest(root).file, path.join(realpathSync(root), '.git', '.rough-ride', 'manifest.json'));
+  assert.equal(new Manifest(root).file, path.join(realpathSync.native(root), '.git', '.rough-ride', 'manifest.json'));
   const wt = path.join(scratchDir(), 'wt');
   sh(root, 'worktree', 'add', '-q', '-b', 'other', wt);
-  assert.equal(new Manifest(wt).file, path.join(realpathSync(root), '.git', 'worktrees', 'wt', '.rough-ride', 'manifest.json'));
+  assert.equal(new Manifest(wt).file, path.join(realpathSync.native(root), '.git', 'worktrees', 'wt', '.rough-ride', 'manifest.json'));
 });
 
 test('hashes ignore a BOM and CRLF; a copy whose content doesn\'t match its name is missing', () => {

@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
+import { canon } from '../hooks/path-check.mjs';
 import { contractLine } from '../dist/contract.mjs';
 import { checkRootEntry } from '../dist/folder.mjs';
 import { ciMode, environmentRecord, isCi, runnerInfo } from '../dist/runner.mjs';
@@ -84,8 +85,9 @@ test('CI=true, run from frontend/: the candidate stays in run output, the lines 
   // No contract here: the summary leaves the missing line out, report.txt keeps it.
   assert.ok(!lines.some((l) => l.startsWith('Resilience contract: not in')));
   assert.ok(runFile(root, id, 'report.txt').split('\n').some((l) => l.startsWith('Resilience contract: not in')));
-  // The root note still prints in CI mode (resolution 121).
-  assert.ok(lines.includes(`root: ${root}`), lines.join('\n'));
+  // The root note still prints in CI mode (resolution 121), in the runner's
+  // canonical spelling: forward slashes and long names on Windows.
+  assert.ok(lines.includes(`root: ${canon(root)}`), lines.join('\n'));
   assert.equal(runFile(root, id, 'summary.txt'), lines.map((l) => l + '\n').join(''));
 });
 
