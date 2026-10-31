@@ -3,7 +3,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from 'node:path';
 import { after, before, test } from 'node:test';
 import { formatDuration } from '../dist/output.mjs';
-import { capSection, inLanes, lanesFor, orderNotes } from '../dist/tier.mjs';
+import { hostPolicy, LOOPBACK_ONLY } from '../dist/hosts.mjs';
+import { apiOrigins, capSection, inLanes, lanesFor, orderNotes } from '../dist/tier.mjs';
 import { startSite } from './fixtures/test-site.mjs';
 import { gitRepo, runAsync as run, sh } from './helpers.mjs';
 
@@ -30,6 +31,22 @@ test('jobs run at most lanes at a time', async () => {
     await inLanes(lanes, jobs);
     assert.equal(peak, lanes);
   }
+});
+
+test("API origins are other origins on hosts the runner may contact: loopback and allow.remoteTarget, never a look-alike", () => {
+  const target = { url: 'http://localhost:3000/' };
+  const xhr = (url) => ({ url, resourceType: 'xhr' });
+  const results = [{ requests: [
+    xhr('http://localhost:3000/api/own'),
+    xhr('http://localhost.attacker.example/api'),
+    xhr('http://127.0.0.1.attacker.example/api'),
+    xhr('http://app.localhost:4000/api'),
+    xhr('http://[::1]:5000/api'),
+    xhr('http://API.Example.com/api'),
+    { url: 'http://127.0.0.1:6000/page', resourceType: 'document' },
+  ] }];
+  assert.deepEqual(apiOrigins(target, results, LOOPBACK_ONLY), ['http://[::1]:5000', 'http://app.localhost:4000']);
+  assert.deepEqual(apiOrigins(target, results, hostPolicy({ remoteTarget: 'api.example.com' })), ['http://[::1]:5000', 'http://api.example.com', 'http://app.localhost:4000']);
 });
 
 test('notes follow the fixed priority; a section over its cap ends with its overflow line', () => {

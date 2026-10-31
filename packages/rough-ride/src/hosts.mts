@@ -21,9 +21,10 @@ export function normalHost(host: string): string {
   return host.replace(/^\[|\]$/g, '').toLowerCase();
 }
 
+// 127.0.0.0/8 only as an IPv4 address: URL.hostname writes one as four numbers.
 export function isLoopbackHostname(hostname: string): boolean {
   const h = normalHost(hostname);
-  return h === 'localhost' || h.endsWith('.localhost') || h === '::1' || /^127\./.test(h);
+  return h === 'localhost' || h.endsWith('.localhost') || h === '::1' || /^127(\.\d{1,3}){3}$/.test(h);
 }
 
 function hostOf(url: string): string | null {

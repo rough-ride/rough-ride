@@ -26,6 +26,8 @@ test('loopback hosts are the Target\'s under every policy; other hosts only unde
     ...loopback,
     ['https://staging.example.com/api', false, false, false],
     ['http://192.168.1.5/x', false, false, false],
+    ['http://127.0.0.1.attacker.example/x', false, false, false],
+    ['http://localhost.attacker.example/x', false, false, false],
   ]);
   check(hostPolicy({ remoteTarget: 'staging.example.com', remoteWrites: ['abcd.supabase.co'] }), [
     ...loopback,

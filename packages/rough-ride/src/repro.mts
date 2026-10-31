@@ -132,7 +132,7 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
       verdict = `could not apply: ${flow.name} failed its baseline run`;
       exitCode = 2;
     } else {
-      const docs = await fetchOpenApi(apiOrigins(target, [baseline]), [baseline]);
+      const docs = await fetchOpenApi(apiOrigins(target, [baseline], hosts), [baseline]);
       rekey(baseline, docs);
       const catalogue = buildCatalogue({ tier: 'standard', flows: [{ flow, runs: [baseline], passed: true }], docs, hosts, today: new Date() });
       const resolved = resolveTest(catalogue, flow.name, rec.attack);

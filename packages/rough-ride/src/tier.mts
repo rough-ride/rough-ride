@@ -16,6 +16,7 @@ import { DELAY_MS, holdMsFor, RETRY_AFTER } from './faults.mjs';
 import { describeLocator, envNames, runFlow, S, stepKind, type Flow, type FlowRunResult, type LocatorSpec } from './flowrun.mjs';
 import { FORMATS, type FormatsReport } from './formats.mjs';
 import { allowedSuffix } from './guard.mjs';
+import type { HostPolicy } from './hosts.mjs';
 import { canonicalJson, formatDuration, type Note } from './output.mjs';
 import { ciMode, environmentRecord, followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
 import type { RunReport } from './runoutput.mjs';
@@ -126,7 +127,9 @@ export interface TierResult {
   exitCode: 0 | 1 | 2;
 }
 
-export function apiOrigins(target: Target, results: FlowRunResult[]): string[] {
+// Origins other than the Target's own that fetch or XHR requests went to, on
+// hosts the runner itself may contact: loopback and allow.remoteTarget (resolution 4).
+export function apiOrigins(target: Target, results: FlowRunResult[], hosts: HostPolicy): string[] {
   const own = new URL(target.url).origin;
   const origins = new Set<string>();
   for (const r of results) {
@@ -134,8 +137,7 @@ export function apiOrigins(target: Target, results: FlowRunResult[]): string[] {
       if (req.resourceType !== 'fetch' && req.resourceType !== 'xhr') continue;
       try {
         const origin = new URL(req.url).origin;
-        const host = new URL(req.url).hostname;
-        if (origin !== own && /^(localhost|127\.|\[::1\]|::1)/.test(host)) origins.add(origin);
+        if (origin !== own && hosts.forwardable(req.url)) origins.add(origin);
       } catch {
         // Not a URL with an origin.
       }
@@ -975,7 +977,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   const aborted = guard?.note();
   if (aborted) ctx.notes.push(aborted);
   const allResults = [...(signInOutcome!.result ? [signInOutcome!.result] : []), ...outcomes.flatMap((o) => o.runs)];
-  const origins = apiOrigins(target, allResults);
+  const origins = apiOrigins(target, allResults, hosts);
   const ci = ciMode(ctx.env, info);
 
   // Header (section 37).

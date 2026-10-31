@@ -216,7 +216,7 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
       }
       baselines.set(name, last);
     }));
-    const docs = await fetchOpenApi(apiOrigins(target, [...baselines.values()].filter((x): x is FlowRunResult => !!x)), [...baselines.values()].filter((x): x is FlowRunResult => !!x));
+    const docs = await fetchOpenApi(apiOrigins(target, [...baselines.values()].filter((x): x is FlowRunResult => !!x), hosts), [...baselines.values()].filter((x): x is FlowRunResult => !!x));
     for (const r of baselines.values()) if (r) rekey(r, docs);
 
     // First runs in lanes, the sign-in flow's tests last; then a refresh and second runs alone (25.2).
