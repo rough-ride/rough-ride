@@ -3,6 +3,8 @@ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSy
 import path from 'node:path';
 import { test } from 'node:test';
 import { StopError } from '../dist/exit.mjs';
+import { checkCommittedFiles } from '../dist/files.mjs';
+import { checkRootEntry } from '../dist/folder.mjs';
 import { fileHash, Manifest } from '../dist/manifest.mjs';
 import { compareProtected } from '../dist/protected.mjs';
 import { gitRepo, scratchDir, sh } from './helpers.mjs';
@@ -12,8 +14,9 @@ flow: create-note
 attack: {fault: "500", sticky: true, request: "POST /api/notes #1", page: /notes/new}
 checks: [visible-error-message, settles]
 context: {timezone: UTC, locale: en-US}
-found: {run: 20261025-141207-quick-k3fz}
+found: {finding: no error shown, run: 20261025-141207-quick-k3fz, runner: "0.1.0", date: "2026-10-25"}
 `;
+const info = { version: '0.1.0', cliPath: '/x/dist/cli.mjs', source: { kind: 'other', detail: '/x', resolved: null }, pluginId: null, pluginData: null, node: '22.22.1', playwright: '1.64.1', claudeCode: { version: null, floorChecked: false }, editGuard: 'n/a', versionSkew: null };
 
 function repo() {
   const root = gitRepo();
@@ -27,13 +30,8 @@ function repo() {
 }
 
 async function compare(root, manifest, { env = {}, pluginData = false } = {}) {
-  const { parse } = await import('yaml');
-  const dir = path.join(root, '.rough-ride', 'tests');
-  const tests = readdirSync(dir).map((n) => {
-    const text = readFileSync(path.join(dir, n), 'utf8');
-    return { shown: `.rough-ride/tests/${n}`, text, value: parse(text), kind: 'tests', schema: null, problems: [], step5: [] };
-  });
-  return compareProtected({ root, folderDir: path.join(root, '.rough-ride'), files: { config: null, accepted: null, flows: [], tests, invalid: [], notes: [] }, env, pluginData, manifest });
+  const files = checkCommittedFiles(checkRootEntry(root), { info: { ...info }, subcommand: 'quick', argv: ['quick'], env: {} });
+  return compareProtected({ root, folderDir: path.join(root, '.rough-ride'), files, env, pluginData, manifest });
 }
 
 test('location: .git/.rough-ride in a main checkout, the worktree\'s own folder in a linked worktree', () => {

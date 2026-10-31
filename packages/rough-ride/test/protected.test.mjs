@@ -5,6 +5,9 @@ import { test } from 'node:test';
 import {
   blockLines, changedDuringRun, compareFlow, compareProtected, compareTest, effectiveConfig, extraNodeCodeNote, summaryLines,
 } from '../dist/protected.mjs';
+import { checkCommittedFiles } from '../dist/files.mjs';
+import { checkRootEntry } from '../dist/folder.mjs';
+import { memoryBlobs, ReviewedVersions } from '../dist/reviewed.mjs';
 import { gitRepo, scratchDir, sh } from './helpers.mjs';
 
 const FLOW = `schema: 0.1.0
@@ -27,7 +30,7 @@ flow: create-note
 attack: {fault: "500", sticky: true, request: "POST /api/notes #1", page: /notes/new}
 checks: [visible-error-message, settles]
 context: {timezone: UTC, locale: en-US}
-found: {run: 20261025-141207-quick-k3fz}
+found: {finding: no error shown, run: 20261025-141207-quick-k3fz, runner: "0.1.0", date: "2026-10-25"}
 `;
 
 // A repo whose main holds the reviewed versions, on a feature branch with a remote-tracking origin/main.
@@ -54,29 +57,35 @@ function repoWith(files, { remote = true } = {}) {
   return { root, write };
 }
 
-// The CheckedFiles shape compareProtected reads, from the working tree.
-async function checked(root) {
-  const { parse } = await import('yaml');
-  const { readdirSync, readFileSync, existsSync } = await import('node:fs');
-  const dir = path.join(root, '.rough-ride');
-  const file = (rel, kind) => {
-    const p = path.join(dir, rel);
-    if (!existsSync(p)) return null;
-    const text = readFileSync(p, 'utf8');
-    let value = null;
-    try {
-      value = parse(text.replace(/^﻿/, ''));
-    } catch {
-      value = null;
-    }
-    return { shown: `.rough-ride/${rel}`, text, value, kind, schema: null, problems: [], step5: value ? [] : ['invalid'] };
-  };
-  const list = (sub, kind) => (existsSync(path.join(dir, sub)) ? readdirSync(path.join(dir, sub)).sort().map((n) => file(`${sub}/${n}`, kind)) : []);
-  return { config: file('config.yaml', 'config'), accepted: file('accepted.yaml', 'accepted'), flows: list('flows', 'flow'), tests: list('tests', 'tests'), invalid: [], notes: [] };
-}
+const info = { version: '0.1.0', cliPath: '/x/dist/cli.mjs', source: { kind: 'other', detail: '/x', resolved: null }, pluginId: null, pluginData: null, node: '22.22.1', playwright: '1.64.1', claudeCode: { version: null, floorChecked: false }, editGuard: 'n/a', versionSkew: null };
+
+// The working tree's files, checked as every subcommand checks them.
+const checked = (root) => checkCommittedFiles(checkRootEntry(root), { info: { ...info }, subcommand: 'quick', argv: ['quick'], env: {} });
 
 const compare = async (root, env = {}, pluginData = false) =>
-  compareProtected({ root, folderDir: path.join(root, '.rough-ride'), files: await checked(root), env, pluginData });
+  compareProtected({ root, folderDir: path.join(root, '.rough-ride'), files: checked(root), env, pluginData });
+
+const MERGE = 'm'.repeat(40);
+const REF = 'f'.repeat(40);
+
+// Working files on disk; reviewed versions in memory, at the merge base and,
+// when `ref` is given, at the base ref's own commit. Paths are relative to .rough-ride/.
+function compareIn({ working = {}, merge = {}, ref = null }) {
+  const root = scratchDir();
+  mkdirSync(path.join(root, '.rough-ride'));
+  for (const [rel, text] of Object.entries(working)) {
+    mkdirSync(path.dirname(path.join(root, '.rough-ride', rel)), { recursive: true });
+    writeFileSync(path.join(root, '.rough-ride', rel), text);
+  }
+  const inFolder = (files) => Object.fromEntries(Object.entries(files).map(([rel, text]) => [`.rough-ride/${rel}`, text]));
+  const blobs = memoryBlobs({ [MERGE]: inFolder(merge), ...(ref ? { [REF]: inFolder(ref) } : {}) });
+  const reviewed = new ReviewedVersions(blobs, { shown: 'origin/main', ref: 'refs/remotes/origin/main', mergeBase: MERGE, refSha: ref ? REF : MERGE, local: false });
+  return compareProtected({ root, folderDir: path.join(root, '.rough-ride'), files: checked(root), env: {}, pluginData: false, reviewed });
+}
+
+const lines = (out) => out.entries.map((e) => `${e.path}: ${e.change} -> ${e.outcome} [${e.used}]`);
+const NO_EXPECT = FLOW.replace('  - expect: {text: Saved}\n', '');
+const STEP_CHANGED = FLOW.replace('{role: button, name: Save}', '{role: button, name: Submit}');
 
 test('flows: a removed expect runs the reviewed version; added expects run at once; changed steps wait for the reviewed baseline', () => {
   const r = { schema: '0.1.0', signedIn: true, steps: [{ goto: '/a' }, { click: { text: 'Go' } }, { expect: { text: 'Saved' } }] };
@@ -114,6 +123,55 @@ test('config: an added remote-writes host waits, a removed exclude stays, an add
   ]);
   // No reviewed config: none of the safety values apply.
   assert.deepEqual(effectiveConfig(w, null, 'origin/main').config.allow, { remoteWrites: [] });
+});
+
+test('which flow runs: each rung of 26.5 against one reviewed version', () => {
+  const flowCase = (working) => {
+    const out = compareIn({ working: working === null ? {} : { 'flows/f.yaml': working }, merge: { 'flows/f.yaml': FLOW } });
+    return { flows: out.flows.map((f) => `${f.flow.name} ${f.used} ${f.reviewed} ${f.stepsChanged ? 'steps-changed' : '-'} ${f.flow.steps.length}`), lines: lines(out), notRun: out.notRun };
+  };
+  assert.deepEqual(flowCase(FLOW), { flows: ['f working-tree true - 4'], lines: [], notRun: [] });
+  assert.deepEqual(flowCase(FLOW.replace('signedIn: true', 'signedIn: true # a comment')), { flows: ['f working-tree true - 4'], lines: ['flows/f.yaml: reformatted (same content) -> ran this version [working-tree]'], notRun: [] });
+  assert.deepEqual(flowCase(FLOW + '  - expect: {text: More}\n'), { flows: ['f working-tree true - 5'], lines: ['flows/f.yaml: adds 1 expect -> ran this version [working-tree]'], notRun: [] });
+  assert.deepEqual(flowCase(STEP_CHANGED), { flows: ['f reviewed true steps-changed 4'], lines: ['flows/f.yaml: step 3 changed -> ran the origin/main version [reviewed]'], notRun: [] });
+  assert.deepEqual(flowCase(NO_EXPECT), { flows: ['f reviewed true - 4'], lines: ['flows/f.yaml: removes the expect at step 4 (text "Saved") -> ran the origin/main version [reviewed]'], notRun: [] });
+  assert.deepEqual(flowCase(null), { flows: ['f reviewed true - 4'], lines: ['flows/f.yaml: deleted -> ran the origin/main version [reviewed]'], notRun: [] });
+  assert.deepEqual(flowCase(FLOW + 'extra: 1\n'), { flows: ['f reviewed true - 4'], lines: ['flows/f.yaml: invalid -> ran the origin/main version [reviewed]'], notRun: [] });
+});
+
+test('which flow runs with no reviewed version: a valid one runs and is listed as new', () => {
+  const out = compareIn({ working: { 'flows/f.yaml': FLOW } });
+  assert.deepEqual(out.flows.map((f) => `${f.flow.name} ${f.used} ${f.reviewed}`), ['f working-tree false']);
+  assert.deepEqual(lines(out), ['flows/f.yaml: new, no reviewed version -> ran this version [working-tree]']);
+});
+
+test('which test runs: each rung of 26.6 against one reviewed version', () => {
+  const testCase = (working, merge = { 'tests/t.yaml': TEST }) => {
+    const out = compareIn({ working: working === null ? {} : { 'tests/t.yaml': working }, merge });
+    return { tests: out.tests.map((t) => `${t.name} ${t.used} ${t.pending} ${t.value.checks.length}`), lines: lines(out) };
+  };
+  assert.deepEqual(testCase(TEST), { tests: ['t working-tree false 2'], lines: [] });
+  assert.deepEqual(testCase(TEST.replace('quick-k3fz', 'quick-aaaa')), { tests: ['t working-tree false 2'], lines: ["tests/t.yaml: changes found or a check's spec or because -> ran this version [working-tree]"] });
+  assert.deepEqual(testCase(TEST.replace('settles]', 'settles, no-uncaught-error]')), { tests: ['t working-tree false 3'], lines: ['tests/t.yaml: adds checks -> ran this version [working-tree]'] });
+  assert.deepEqual(testCase(TEST.replace('[visible-error-message, settles]', '[settles]')), { tests: ['t reviewed true 2'], lines: ['tests/t.yaml: removes or changes a check -> ran the origin/main version (pending until merged) [reviewed]'] });
+  assert.deepEqual(testCase(null), { tests: ['t reviewed true 2'], lines: ['tests/t.yaml: deleted -> ran the origin/main version (pending until merged) [reviewed]'] });
+  assert.deepEqual(testCase(TEST + 'extra: 1\n'), { tests: ['t reviewed true 2'], lines: ['tests/t.yaml: invalid -> ran the origin/main version (pending until merged) [reviewed]'] });
+  assert.deepEqual(testCase(TEST + 'extra: 1\n', {}), { tests: [], lines: ['tests/t.yaml: invalid, no reviewed version (stale) -> not run [none]'] });
+  assert.deepEqual(testCase(TEST, {}), { tests: ['t working-tree false 2'], lines: [] });
+});
+
+test('accepted.yaml and config.yaml: entries and safety values only from the reviewed version', () => {
+  const entry = (check) => `  - {page: /notes/new, step: click, action: POST /api/notes, check: ${check}, because: on purpose}\n`;
+  const out = compareIn({
+    working: { 'accepted.yaml': 'schema: 0.1.0\naccepted:\n' + entry('settles') + entry('values-survive'), 'config.yaml': CONFIG.replace('[api.example.com]', '[api.example.com, new.example.com]') },
+    merge: { 'accepted.yaml': 'schema: 0.1.0\naccepted:\n' + entry('settles'), 'config.yaml': CONFIG },
+  });
+  assert.deepEqual(out.accepted.map((e) => e.check), ['settles']);
+  assert.deepEqual(out.config.allow.remoteWrites, ['api.example.com']);
+  assert.deepEqual(lines(out), [
+    'accepted.yaml: adds 1 entry -> not applied until merged [reviewed]',
+    'config.yaml: allow.remoteWrites adds new.example.com -> not applied until merged [reviewed]',
+  ]);
 });
 
 test('in a repo: reformatted copies count as unchanged; a removed expect runs origin/main\'s version; the block and JSON say so', async () => {
