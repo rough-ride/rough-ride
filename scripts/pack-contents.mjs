@@ -43,6 +43,11 @@ export function packProblems(dir, pack, rootDir = ROOT) {
       if (version !== undefined && version !== entry.version) problems.push(`${key} is ${entry.version} in the shrinkwrap but ${version} in package.json`);
     }
   }
+  // npm 12 reads only package-lock.json in the checkout; npm pack never publishes it.
+  const lockFile = path.join(dir, 'package-lock.json');
+  if (existsSync(shrinkwrapFile) && (!existsSync(lockFile) || !readFileSync(lockFile).equals(readFileSync(shrinkwrapFile)))) {
+    problems.push('package-lock.json differs from npm-shrinkwrap.json; copy the shrinkwrap over it');
+  }
   for (const name of ['LICENSE', 'README.md']) {
     const mine = path.join(dir, name);
     const root = path.join(rootDir, name);

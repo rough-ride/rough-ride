@@ -13,7 +13,7 @@ const good = { files: [{ path: 'package.json' }, { path: 'README.md' }, { path: 
 // A copy of the package's own metadata to break on purpose.
 function pkg() {
   const dir = scratchDir();
-  for (const f of ['package.json', 'npm-shrinkwrap.json', 'LICENSE', 'README.md']) cpSync(path.join(PKG, f), path.join(dir, f));
+  for (const f of ['package.json', 'npm-shrinkwrap.json', 'package-lock.json', 'LICENSE', 'README.md']) cpSync(path.join(PKG, f), path.join(dir, f));
   mkdirSync(path.join(dir, 'src'));
   writeFileSync(path.join(dir, 'src', 'cli.mts'), '');
   return dir;
@@ -40,6 +40,10 @@ test('pack-contents fails each listed case', () => {
   const drift = pkg();
   writeFileSync(path.join(drift, 'package.json'), JSON.stringify({ ...meta, dependencies: { ...meta.dependencies, yaml: '2.9.0' } }));
   expect(good, /npm-shrinkwrap\.json lists .* but package\.json lists/, drift);
+
+  const lock = pkg();
+  writeFileSync(path.join(lock, 'package-lock.json'), '{}');
+  expect(good, /package-lock\.json differs from npm-shrinkwrap\.json/, lock);
 
   const licence = pkg();
   writeFileSync(path.join(licence, 'LICENSE'), 'changed');

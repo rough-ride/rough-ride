@@ -3,7 +3,7 @@
 // entry, whose pin moves only in its own PR after npm serves the version.
 // `version-sync` checks them: equal on a PR, equal to X.Y.Z on a vX.Y.Z or
 // vX.Y.Z-rc.N tag.
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -68,6 +68,7 @@ export function setVersion(version, root = ROOT) {
     j.version = version;
     j.packages[''].version = version;
   });
+  copyFileSync(path.join(pkgDir, 'npm-shrinkwrap.json'), path.join(pkgDir, 'package-lock.json'));
   for (const f of docFiles(root)) {
     const full = path.join(root, f);
     const text = readFileSync(full, 'utf8');

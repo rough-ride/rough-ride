@@ -31,6 +31,8 @@ test('version:set rewrites package.json, plugin.json, the shrinkwrap root and pi
   assert.deepEqual([...new Set(versionsIn(root).map((f) => f.value))], ['0.2.0']);
   assert.match(readFileSync(path.join(root, 'README.md'), 'utf8'), /rough-ride@0\.2\.0 quick/);
   assert.equal(readFileSync(path.join(root, '.claude-plugin', 'marketplace.json'), 'utf8'), marketplace);
+  const pkgDir = path.join(root, 'packages', 'rough-ride');
+  assert.equal(readFileSync(path.join(pkgDir, 'package-lock.json'), 'utf8'), readFileSync(path.join(pkgDir, 'npm-shrinkwrap.json'), 'utf8'));
   assert.throws(() => setVersion('v0.3', root), /not x\.y\.z/);
 });
 
