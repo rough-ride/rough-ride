@@ -15,14 +15,20 @@ export interface HostPolicy {
   writeAllowed(url: string): boolean;
 }
 
+// One spelling for comparing hosts: URL.hostname brackets an IPv6 address and
+// lower-cases names, while config.yaml may write either form (10.1, 10.4).
+export function normalHost(host: string): string {
+  return host.replace(/^\[|\]$/g, '').toLowerCase();
+}
+
 export function isLoopbackHostname(hostname: string): boolean {
-  const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  const h = normalHost(hostname);
   return h === 'localhost' || h.endsWith('.localhost') || h === '::1' || /^127\./.test(h);
 }
 
 function hostOf(url: string): string | null {
   try {
-    return new URL(url).hostname;
+    return normalHost(new URL(url).hostname);
   } catch {
     return null;
   }
@@ -31,22 +37,23 @@ function hostOf(url: string): string | null {
 export function hostPolicy(allow: { remoteTarget?: string | null; remoteWrites?: string[] } | undefined): HostPolicy {
   const remoteTarget = allow?.remoteTarget ?? null;
   const remoteWrites = allow?.remoteWrites ?? [];
-  const allowed = [remoteTarget, ...remoteWrites].filter((h): h is string => !!h);
+  const target = remoteTarget ? normalHost(remoteTarget) : null;
+  const writes = remoteWrites.map(normalHost);
   return {
     remoteTarget,
     remoteWrites,
     ownHost: (url) => {
       const host = hostOf(url);
-      return host !== null && (isLoopbackHostname(host) || allowed.includes(host));
+      return host !== null && (isLoopbackHostname(host) || host === target || writes.includes(host));
     },
     forwardable: (url) => {
       const host = hostOf(url);
-      return host !== null && (isLoopbackHostname(host) || host === remoteTarget);
+      return host !== null && (isLoopbackHostname(host) || host === target);
     },
     // A URL with no host can't reach one, so the guard lets it continue.
     writeAllowed: (url) => {
-      const host = hostOf(url)?.replace(/^\[|\]$/g, '');
-      return host === undefined || isLoopbackHostname(host) || host === remoteTarget || remoteWrites.includes(host);
+      const host = hostOf(url);
+      return host === null || isLoopbackHostname(host) || host === target || writes.includes(host);
     },
   };
 }

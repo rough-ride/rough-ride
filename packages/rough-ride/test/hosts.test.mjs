@@ -42,12 +42,13 @@ test('loopback hosts are the Target\'s under every policy; other hosts only unde
   assert.ok(!isLoopbackHostname('localhost.example.com'));
 });
 
-test('an IPv6 or upper-case allow host is compared as config.yaml spells it', () => {
+test('an allow host matches without IPv6 brackets or letter case, however config.yaml spells it', () => {
   const policy = hostPolicy({ remoteTarget: '2001:db8::5', remoteWrites: ['[2001:db8::6]', 'Writes.Example.com'] });
   check(policy, [
-    ['http://[2001:db8::5]:3000/api', false, false, true],
-    ['http://[2001:db8::6]/rest', true, false, false],
-    ['https://writes.example.com/rest', false, false, false],
+    ['http://[2001:db8::5]:3000/api', true, true, true],
+    ['http://[2001:db8::6]/rest', true, false, true],
+    ['https://writes.example.com/rest', true, false, true],
+    ['http://[2001:db8::7]/rest', false, false, false],
   ]);
   // The report and summary.json keep the spelling config.yaml has.
   assert.equal(policy.remoteTarget, '2001:db8::5');

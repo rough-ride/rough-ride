@@ -218,6 +218,11 @@ test('a non-loopback target.url is refused unless allow.remoteTarget names its h
     config: { schema: '0.1.0', target: { url: 'http://remote.invalid:3000' }, allow: { remoteTarget: 'remote.invalid' } },
   })));
   assert.equal(allowed.stop.code, 'nothing-running');
+  // The host rules' one spelling: letter case and IPv6 brackets don't matter.
+  for (const [url, remoteTarget] of [['http://remote.invalid:3000', 'Remote.Invalid'], ['http://[2001:db8::5]:3000', '[2001:db8::5]']]) {
+    const spelled = await stopOf(findTarget(options(root, { config: { schema: '0.1.0', target: { url }, allow: { remoteTarget } } })));
+    assert.equal(spelled.stop.code, 'nothing-running', `${url} ${remoteTarget}`);
+  }
 });
 
 test('--start with anything answering at the config URL refuses to start', async (t) => {
