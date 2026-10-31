@@ -6,10 +6,10 @@ import { linkSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { canon, checkPath, fold, samePath } from '../hooks/path-check.mjs';
+import { canon, checkPath, couldBeInside, fold, inside, printed, samePath } from '../hooks/path-check.mjs';
 import { StopError } from '../dist/exit.mjs';
 import { checkRootEntry, readFolderFile } from '../dist/folder.mjs';
-import { gitRepo, scratchDir } from './helpers.mjs';
+import { caseSensitive, gitRepo, scratchDir } from './helpers.mjs';
 
 const win = process.platform === 'win32';
 const mac = process.platform === 'darwin';
@@ -147,4 +147,107 @@ test('canon cleans the string and keeps the missing tail as written', () => {
   const dir = scratchDir();
   assert.equal(canon(path.join(dir, 'Missing', 'Tail') + path.sep), canon(dir) + '/Missing/Tail');
   assert.ok(!canon(dir).includes('\\'));
+});
+
+// Rows for paths that do not exist, so they run on every OS with any platform.
+const MISSING = '/no-such-rough-ride-dir';
+const SAME_ROWS = [
+  ['a trailing slash', `${MISSING}/a/`, `${MISSING}/a`, 'linux', true],
+  ['letter case on Linux', `${MISSING}/A`, `${MISSING}/a`, 'linux', false],
+  ['letter case of a missing folder on macOS', `${MISSING}/Data`, `${MISSING}/data`, 'darwin', true],
+  ['another folder on macOS', `${MISSING}/data`, `${MISSING}/date`, 'darwin', false],
+  ['backslashes, forward slashes and drive-letter case', 'c:\\No\\Such\\Data\\', 'C:/No/Such/Data', 'win32', true],
+  ['a \\\\?\\ prefix', '\\\\?\\C:\\No\\Such', 'C:\\No\\Such', 'win32', true],
+  ['letter case of a missing folder on Windows', 'C:\\No\\Such\\DATA', 'C:\\no\\such\\data', 'win32', true],
+  ['another drive', 'C:\\No\\Such', 'D:\\No\\Such', 'win32', false],
+];
+
+for (const [name, a, b, platform, expected] of SAME_ROWS) {
+  test(`samePath row (${platform}): ${name}`, () => {
+    assert.equal(samePath(a, b, platform), expected);
+    assert.equal(samePath(b, a, platform), expected);
+  });
+}
+
+test('samePath: the file system decides for folders that exist', () => {
+  const dir = scratchDir();
+  mkdirSync(path.join(dir, 'Data'));
+  symlinkSync(path.join(dir, 'Data'), path.join(dir, 'alias'), 'junction');
+  assert.ok(samePath(path.join(dir, 'alias'), path.join(dir, 'Data')));
+  if (caseSensitive(dir)) {
+    // Two real folders that differ only in letter case stay two folders, even
+    // under macOS's or Windows's platform rule; so does a missing case variant.
+    mkdirSync(path.join(dir, 'data'));
+    assert.equal(samePath(path.join(dir, 'Data'), path.join(dir, 'data'), 'darwin'), false);
+    assert.equal(samePath(path.join(dir, 'Data'), path.join(dir, 'DATA'), 'darwin'), false);
+  } else {
+    assert.ok(samePath(path.join(dir, 'DATA'), path.join(dir, 'Data')));
+  }
+});
+
+const INSIDE_ROWS = [
+  ['below', `${MISSING}/a/b`, `${MISSING}/a`, 'linux', true],
+  ['the folder itself', `${MISSING}/a`, `${MISSING}/a/`, 'linux', true],
+  ['a sibling sharing the prefix', `${MISSING}/ab`, `${MISSING}/a`, 'linux', false],
+  ['out with ..', `${MISSING}/a/../b`, `${MISSING}/a`, 'linux', false],
+  ['letter case on Linux', `${MISSING}/A/b`, `${MISSING}/a`, 'linux', false],
+  ['letter case of a missing folder on macOS', `${MISSING}/A/b`, `${MISSING}/a`, 'darwin', true],
+  ['the root', `${MISSING}/a`, '/', 'linux', true],
+  ['mixed slashes and drive-letter case', 'c:\\No\\Such\\A\\b', 'C:/No/Such/A', 'win32', true],
+  ['letter case of a missing folder on Windows', 'C:\\No\\Such\\a\\b', 'C:\\No\\Such\\A', 'win32', true],
+  ['a drive root', 'C:\\No', 'C:\\', 'win32', true],
+  ['another drive', 'D:\\No\\Such\\A', 'C:\\No\\Such', 'win32', false],
+];
+
+for (const [name, child, parent, platform, expected] of INSIDE_ROWS) {
+  test(`inside row (${platform}): ${name}`, () => {
+    assert.equal(inside(child, parent, platform), expected);
+    // What is inside could be inside.
+    if (expected) assert.equal(couldBeInside(child, parent, platform), true);
+  });
+}
+
+test('inside follows links; couldBeInside also takes the path as written', () => {
+  const dir = scratchDir();
+  mkdirSync(path.join(dir, 'root'));
+  mkdirSync(path.join(dir, 'outside'));
+  symlinkSync(path.join(dir, 'outside'), path.join(dir, 'root', 'link'), 'junction');
+  symlinkSync(path.join(dir, 'root'), path.join(dir, 'into'), 'junction');
+  const viaLink = path.join(dir, 'root', 'link', 'x.md');
+  assert.equal(inside(viaLink, path.join(dir, 'root')), false);
+  assert.equal(couldBeInside(viaLink, path.join(dir, 'root')), true);
+  assert.equal(inside(path.join(dir, 'into', 'x.md'), path.join(dir, 'root')), true);
+  assert.equal(couldBeInside(path.join(dir, 'outside', 'x.md'), path.join(dir, 'root')), false);
+});
+
+test('couldBeInside ignores letter case on macOS and Windows, even for folders that exist', () => {
+  const dir = scratchDir();
+  mkdirSync(path.join(dir, 'projects'));
+  const sensitive = caseSensitive(dir);
+  if (sensitive) mkdirSync(path.join(dir, 'Projects'));
+  const child = path.join(dir, 'Projects', 'x.jsonl');
+  assert.equal(couldBeInside(child, path.join(dir, 'projects'), 'darwin'), true);
+  if (sensitive) {
+    assert.equal(couldBeInside(child, path.join(dir, 'projects'), 'linux'), false);
+    assert.equal(inside(child, path.join(dir, 'projects'), 'darwin'), false);
+  }
+});
+
+const PRINTED_ROWS = [
+  ['an absolute Windows path', 'C:\\Users\\u\\app', 'win32', 'C:/Users/u/app'],
+  ['a relative Windows path', 'frontend\\package.json', 'win32', 'frontend/package.json'],
+  ['forward slashes on Windows', 'C:/Users/u', 'win32', 'C:/Users/u'],
+  ['a POSIX path', '/home/u/app', 'linux', '/home/u/app'],
+  ['a backslash, a file-name character on POSIX', '/home/u/a\\b', 'linux', '/home/u/a\\b'],
+  ['a macOS path', 'frontend/package.json', 'darwin', 'frontend/package.json'],
+];
+
+for (const [name, given, platform, expected] of PRINTED_ROWS) {
+  test(`printed row (${platform}): ${name}`, () => {
+    assert.equal(printed(given, platform), expected);
+  });
+}
+
+test('printed defaults to this OS: a joined path prints with forward slashes', () => {
+  assert.equal(printed(path.join('frontend', 'package.json')), 'frontend/package.json');
 });
