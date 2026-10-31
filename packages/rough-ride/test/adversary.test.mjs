@@ -4,27 +4,29 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { asciiJson, instructionNotes, linedJson, needsFlowItems, patchRanges, readSpecs } from '../dist/adversary.mjs';
 import { checkRootEntry, ensureFolder } from '../dist/folder.mjs';
-import { gitRepo, sh } from './helpers.mjs';
+import { gitBlobs, memoryBlobs, ReviewedVersions } from '../dist/reviewed.mjs';
+import { gitRepo, scratchDir, sh } from './helpers.mjs';
 
-function repoWithSpecs() {
-  const root = gitRepo();
+const baseAt = (sha) => ({ shown: 'main', ref: 'refs/heads/main', mergeBase: sha, refSha: sha, local: true });
+const BASE = 'b'.repeat(40);
+
+// Reviewed versions in memory: merged.txt and edited.txt at the base.
+function folderWithSpecs() {
+  const root = scratchDir();
   const specs = path.join(root, '.rough-ride', 'specs');
   mkdirSync(specs, { recursive: true });
   writeFileSync(path.join(specs, 'merged.txt'), 'Already merged.\n');
-  writeFileSync(path.join(specs, 'edited.txt'), 'Before.\n');
-  sh(root, 'add', '-A');
-  sh(root, 'commit', '-qm', 'base');
-  const base = sh(root, 'rev-parse', 'HEAD').trim();
   writeFileSync(path.join(specs, 'edited.txt'), 'After the edit.\r\n');
   writeFileSync(path.join(specs, 'fresh.txt'), '﻿Brand new.\n');
   writeFileSync(path.join(specs, 'notes.md'), '# md\n');
   writeFileSync(path.join(specs, 'wide.txt'), Buffer.from('﻿hi', 'utf16le'));
-  return { root, folder: ensureFolder(checkRootEntry(root)), base, specs };
+  const reviewed = new ReviewedVersions(memoryBlobs({ [BASE]: { '.rough-ride/specs/merged.txt': 'Already merged.\n', '.rough-ride/specs/edited.txt': 'Before.\n' } }), baseAt(BASE));
+  return { folder: ensureFolder(checkRootEntry(root)), reviewed, specs };
 }
 
 test('specs: merged ones are left out; edited and new ones are handed over in name order with their lines; .md and UTF-16 are ignored', () => {
-  const { root, folder, base } = repoWithSpecs();
-  const { parts, notes } = readSpecs(root, folder, [base, base], 'main');
+  const { folder, reviewed } = folderWithSpecs();
+  const { parts, notes } = readSpecs(folder, reviewed, 'main');
   assert.deepEqual(parts.map((p) => [p.name, p.text]), [['edited.txt', 'After the edit.\n'], ['fresh.txt', 'Brand new.\n']]);
   assert.deepEqual(notes.map((n) => [n.id, n.text]), [
     ['ignored', 'Ignored: .rough-ride/specs/notes.md (rough-ride reads only <name>.txt files)'],
@@ -36,16 +38,32 @@ test('specs: merged ones are left out; edited and new ones are handed over in na
 });
 
 test('specs: past 32 KB in total the rest are cut; with none, the none line and the hint', () => {
-  const { root, folder, base, specs } = repoWithSpecs();
+  const { folder, reviewed, specs } = folderWithSpecs();
   writeFileSync(path.join(specs, 'big.txt'), 'x'.repeat(32 * 1024 - 10));
-  const { notes } = readSpecs(root, folder, [base], 'main');
+  const { notes } = readSpecs(folder, reviewed, 'main');
   assert.ok(notes.some((n) => n.text === 'Spec cut: .rough-ride/specs/edited.txt (over 32 KB in total)'));
-  const empty = gitRepo();
-  const none = readSpecs(empty, ensureFolder(checkRootEntry(empty)), [], 'origin/main');
+  const empty = scratchDir();
+  const none = readSpecs(ensureFolder(checkRootEntry(empty)), new ReviewedVersions(memoryBlobs({}), null), 'origin/main');
   assert.deepEqual(none.notes.map((n) => n.text), [
     'Spec: none (.rough-ride/specs/ has no file that is new or changed since origin/main): only generic checks judge this run.',
     "For app-specific checks, write what you asked for in .rough-ride/specs/<name>.txt yourself (agents can't write there) and run again.",
   ]);
+});
+
+// The git adapter's own read: a tree in the batch must not shift the answers after it.
+test('specs from git: a name that was a folder at the base reads as new and leaves the later specs in step', () => {
+  const root = gitRepo();
+  const specs = path.join(root, '.rough-ride', 'specs');
+  mkdirSync(path.join(specs, 'aaa.txt'), { recursive: true });
+  writeFileSync(path.join(specs, 'aaa.txt', 'inner'), 'x\n');
+  writeFileSync(path.join(specs, 'merged.txt'), 'Already merged.\n');
+  sh(root, 'add', '-A');
+  sh(root, 'commit', '-qm', 'base');
+  const base = sh(root, 'rev-parse', 'HEAD').trim();
+  sh(root, 'rm', '-rq', '.rough-ride/specs/aaa.txt');
+  writeFileSync(path.join(specs, 'aaa.txt'), 'Now a file.\n');
+  const { parts } = readSpecs(ensureFolder(checkRootEntry(root)), new ReviewedVersions(gitBlobs(root), baseAt(base)), 'main');
+  assert.deepEqual(parts.map((p) => p.name), ['aaa.txt']);
 });
 
 test('instruction files below the root that changed get the line; the root file and deletions do not', () => {

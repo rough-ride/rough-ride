@@ -10,6 +10,7 @@ import { canon } from '../hooks/path-check.mjs';
 import { stopWith } from './exit.mjs';
 import { git } from './git.mjs';
 import { canonicalJson, type Note } from './output.mjs';
+import { normalisedText } from './reviewed.mjs';
 
 export interface SavedEntry {
   branch: string;
@@ -33,7 +34,7 @@ const empty = (): ManifestData => ({ version: 1, saved: [], runs: {}, tests: {} 
 
 // sha256 over the stored bytes, after a leading BOM is removed and CRLF becomes LF (27.3).
 export function fileHash(text: string): string {
-  return createHash('sha256').update(text.replace(/^﻿/, '').replace(/\r\n/g, '\n')).digest('hex');
+  return createHash('sha256').update(normalisedText(text)).digest('hex');
 }
 
 // Read-back run output: the sha256 of the canonical JSON of its parsed value.
@@ -160,7 +161,7 @@ export class Manifest {
   saveCopy(rel: string, text: string, by: SavedEntry['by'], run: string, runner: string): void {
     if (!this.branch) return;
     const sha = fileHash(text);
-    if (!this.writeFile(path.join('copies', `${sha}.yaml`), text.replace(/^﻿/, '').replace(/\r\n/g, '\n'))) return;
+    if (!this.writeFile(path.join('copies', `${sha}.yaml`), normalisedText(text))) return;
     this.data.saved = this.data.saved.filter((e) => !(e.branch === this.branch && e.path === rel));
     this.data.saved.push({ branch: this.branch, path: rel, sha256: sha, by, run, runner, at: new Date().toISOString() });
     this.save();

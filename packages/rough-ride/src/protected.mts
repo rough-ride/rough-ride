@@ -3,18 +3,18 @@
 // once it is merged into the default branch: until then the reviewed version
 // runs. Saved copies and attribution labels come in ticket 32.
 
-import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse } from 'yaml';
 import type { Config } from './config.mjs';
-import { reflogMessage, reviewedBase, type ReviewedBase } from './diff.mjs';
+import type { ReviewedBase } from './diff.mjs';
 import type { CheckedFiles } from './files.mjs';
 import { describeLocator, type Flow, type LocatorSpec, type Step } from './flowrun.mjs';
 import { compareVersions, FORMATS, type FormatKind } from './formats.mjs';
 import { git } from './git.mjs';
 import { fileHash, type Manifest } from './manifest.mjs';
 import { canonicalJson, type Note } from './output.mjs';
+import { openReviewed, type ReviewedVersions } from './reviewed.mjs';
 import { isCi } from './runner.mjs';
 
 export type Used = 'working-tree' | 'reviewed' | 'saved-copy' | 'none';
@@ -59,39 +59,6 @@ export interface ProtectedResult {
   compareLine: string;
   // Hashes of each file's reviewed versions, for pruning the manifest.
   reviewedHashes: Map<string, string[]>;
-  // The four root instruction files at the merge base, when asked for (40.4);
-  // null when not asked for or there is no merge base.
-  instructionBase: Map<string, Buffer | null> | null;
-}
-
-// ---- Reading: one `git cat-file --batch` for every reviewed version (26.3).
-
-export function catFileBatch(root: string, specs: string[]): Map<string, string | null> {
-  return new Map([...catFileBatchRaw(root, specs)].map(([spec, bytes]) => [spec, bytes === null ? null : bytes.toString('utf8')]));
-}
-
-// The same read, keeping each blob's bytes.
-export function catFileBatchRaw(root: string, specs: string[]): Map<string, Buffer | null> {
-  const out = new Map<string, Buffer | null>();
-  if (specs.length === 0) return out;
-  const result = spawnSync('git', ['--no-optional-locks', 'cat-file', '--batch'], { cwd: root, input: specs.join('\n') + '\n', maxBuffer: 256 * 1024 * 1024 });
-  const buf = result.stdout ?? Buffer.alloc(0);
-  let at = 0;
-  for (const spec of specs) {
-    const nl = buf.indexOf(0x0a, at);
-    if (nl < 0) break;
-    const header = buf.subarray(at, nl).toString('utf8');
-    at = nl + 1;
-    const m = /^\S+ (\S+) (\d+)$/.exec(header);
-    if (!m) {
-      out.set(spec, null);
-      continue;
-    }
-    const size = Number(m[2]);
-    out.set(spec, m[1] === 'blob' ? buf.subarray(at, at + size) : null);
-    at += size + 1;
-  }
-  return out;
 }
 
 function parsed(text: string | null): unknown {
@@ -232,8 +199,9 @@ export interface CompareOptions {
   pluginData: boolean;
   mode?: 'tier' | 'regress';
   manifest?: Manifest;
-  // Contract detection: these git-root-relative paths join the same read at the merge base.
-  instructionPaths?: readonly string[];
+  // The invocation's reviewed versions, when other readers ask for paths in
+  // the same read (40.4, 43.1); opened from git with `mode` otherwise.
+  reviewed?: ReviewedVersions;
 }
 
 const REMOVE_HINT = 'To remove it for good, delete the file, then in your own terminal remove its entry from .git/.rough-ride/manifest.json, or delete .git/.rough-ride/ to forget every saved copy in this worktree.';
@@ -250,43 +218,23 @@ export function lastProtected(): ProtectedResult | null {
 export function compareProtected(options: CompareOptions): ProtectedResult {
   const { root, files } = options;
   const rel = path.relative(root, options.folderDir).split(path.sep).join('/');
-  const base = reviewedBase(root, options.env, options.pluginData, options.mode);
+  const versions = options.reviewed ?? openReviewed(root, options.env, options.pluginData, options.mode);
+  const { base } = versions;
   const notes: Note[] = [];
   const working = new Map<string, { text: string; value: unknown; kind: FormatKind; step5: string[] }>();
   for (const f of [files.config, files.accepted, ...files.flows, ...files.tests].filter((x): x is NonNullable<typeof x> => !!x)) {
     working.set(f.shown.replace(/^\.rough-ride\//, ''), { text: f.text, value: f.value, kind: f.kind, step5: f.step5 });
   }
-  // Reviewed versions: at the merge base, and at the base ref's own commit when it differs.
-  const reviewed = new Map<string, { merge: string | null; ref: string | null }>();
-  let instructionBase: Map<string, Buffer | null> | null = null;
-  if (base) {
-    const listed = new Set<string>();
-    for (const sha of new Set([base.mergeBase, base.refSha])) {
-      const ls = git(['ls-tree', '-r', '--name-only', '-z', sha, '--', `${rel}/`], root);
-      for (const p of ls.stdout.split('\0').filter(Boolean)) {
-        const inner = p.slice(rel.length + 1);
-        if (PROTECTED.test(inner)) listed.add(inner);
-      }
-    }
-    for (const p of working.keys()) listed.add(p);
-    const paths = [...listed].sort();
-    const specs = paths.flatMap((p) => [`${base.mergeBase}:${rel}/${p}`, ...(base.refSha !== base.mergeBase ? [`${base.refSha}:${rel}/${p}`] : [])]);
-    const instructionSpecs = (options.instructionPaths ?? []).map((p) => `${base.mergeBase}:${p}`);
-    const raw = catFileBatchRaw(root, [...specs, ...instructionSpecs]);
-    const blobs = (spec: string) => {
-      const bytes = raw.get(spec);
-      return bytes === undefined || bytes === null ? null : bytes.toString('utf8');
-    };
-    for (const p of paths) reviewed.set(p, { merge: blobs(`${base.mergeBase}:${rel}/${p}`), ref: base.refSha !== base.mergeBase ? blobs(`${base.refSha}:${rel}/${p}`) : null });
-    if (options.instructionPaths) instructionBase = new Map(options.instructionPaths.map((p) => [p, raw.get(`${base.mergeBase}:${p}`) ?? null]));
-  }
+  // Reviewed versions of every protected path at either commit, and the CI
+  // inputs' merge-base versions, asked for together so one read serves them.
+  const reviewedPaths = base ? [...new Set([...versions.list(rel).map((p) => p.slice(rel.length + 1)).filter((p) => PROTECTED.test(p)), ...working.keys()])].sort() : [];
+  const ci = ciChanges(root, base);
+  versions.want([...reviewedPaths.map((p) => `${rel}/${p}`), ...ci.packages]);
+  const reviewed = new Map(reviewedPaths.map((p) => [p, versions.texts(`${rel}/${p}`)]));
   const refShown = base?.shown ?? 'the base branch';
   const entries: ProtectedEntry[] = [];
   const kindOf = (p: string): FormatKind => (p === 'config.yaml' ? 'config' : p === 'accepted.yaml' ? 'accepted' : p.startsWith('flows/') ? 'flow' : 'tests');
-  const reviewedValues = (p: string) => {
-    const r = reviewed.get(p);
-    return [r?.merge ?? null, r?.ref ?? null].filter((t): t is string => t !== null).map((text) => ({ text, value: parsed(text) }));
-  };
+  const reviewedValues = (p: string) => (reviewed.get(p) ?? []).map((text) => ({ text, value: parsed(text) }));
   // A reviewed version below this runner's floor can't be compared: W runs.
   const belowFloor = (p: string, value: unknown) => {
     const schema = isObject(value) && typeof value.schema === 'string' ? value.schema : null;
@@ -423,7 +371,7 @@ export function compareProtected(options: CompareOptions): ProtectedResult {
     // Only when some branch has a saved copy to leave unused (52.4, in every mode).
     if (options.manifest.dir && options.manifest.branch === null && options.manifest.data.saved.length > 0) notes.push({ id: 'protected-trust', text: 'Saved copies: not used (detached HEAD).' });
   }
-  entries.push(...ciInputs(root, base));
+  entries.push(...ciInputs(root, ci, versions));
 
   // The protected-trust note (26.3).
   let compareLine = '';
@@ -433,30 +381,37 @@ export function compareProtected(options: CompareOptions): ProtectedResult {
     notes.push({ id: 'protected-trust', text: `Protected files compared with local ${base.shown} (no remote). Commits on ${base.shown} count as reviewed, so rough-ride can't tell your commits there from an agent's.` });
   } else {
     compareLine = `Protected files compared with ${base.shown} (${base.mergeBase.slice(0, 7)}).`;
-    const message = reflogMessage(root, base.ref);
+    const message = versions.lastMove();
     // git writes `fetch: ...`, `pull: ...`, `clone: ...` and `update by push`.
     if (message !== null && !/^(fetch|pull|push|clone|update by push)\b/.test(message)) {
       notes.push({ id: 'protected-trust', text: `${base.shown} was last moved by something other than fetch, pull or push: protected files may be compared with an unreviewed commit.` });
     }
   }
   const texts = new Map<string, string | null>([...working].map(([p, w]) => [p, w.text]));
-  const reviewedHashes = new Map([...reviewed].map(([p, r]) => [p, [r.merge, r.ref].filter((t): t is string => t !== null).map(fileHash)]));
-  last = { base, entries, config: cfg.config, flows, notRun, tests, accepted, notes, texts, compareLine, reviewedHashes, instructionBase };
+  const reviewedHashes = new Map([...reviewed].map(([p, texts]) => [p, texts.map(fileHash)]));
+  last = { base, entries, config: cfg.config, flows, notRun, tests, accepted, notes, texts, compareLine, reviewedHashes };
   return last;
 }
 
-// CI inputs (26.12): listed, never judged.
-function ciInputs(root: string, base: ReviewedBase | null): ProtectedEntry[] {
-  if (!base) return [];
-  const out: ProtectedEntry[] = [];
+// CI inputs changed since the merge base (26.12): workflows, and the package
+// files whose rough-ride lines are compared.
+function ciChanges(root: string, base: ReviewedBase | null): { workflows: string[]; packages: string[] } {
+  if (!base) return { workflows: [], packages: [] };
   const changed = git(['diff', '--name-only', '-z', base.mergeBase, '--', '.github/workflows', 'package.json', 'package-lock.json'], root).stdout.split('\0').filter(Boolean);
   const untracked = git(['ls-files', '--others', '--exclude-standard', '-z', '--', '.github/workflows'], root).stdout.split('\0').filter(Boolean);
-  for (const p of [...new Set([...changed, ...untracked])].sort()) {
+  const all = [...new Set([...changed, ...untracked])].sort();
+  return { workflows: all.filter((p) => p.startsWith('.github/workflows/')), packages: all.filter((p) => !p.startsWith('.github/workflows/')) };
+}
+
+// CI inputs (26.12): listed, never judged.
+function ciInputs(root: string, ci: { workflows: string[]; packages: string[] }, versions: ReviewedVersions): ProtectedEntry[] {
+  const out: ProtectedEntry[] = [];
+  for (const p of [...ci.workflows, ...ci.packages].sort()) {
     if (p.startsWith('.github/workflows/')) {
       out.push({ path: p, kind: 'ci', by: null, change: 'CI workflow changed', weakening: false, used: 'working-tree', notApplied: [], outcome: 'listed, not judged' });
       continue;
     }
-    const before = catFileBatch(root, [`${base.mergeBase}:${p}`]).get(`${base.mergeBase}:${p}`) ?? '';
+    const before = versions.bytes(p)[0]?.toString('utf8') ?? '';
     let now = '';
     try {
       now = readFileSync(path.join(root, p), 'utf8');

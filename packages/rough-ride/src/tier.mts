@@ -21,7 +21,8 @@ import { takeFlowLock } from './lock.mjs';
 import { canonicalJson, formatDuration, type Note } from './output.mjs';
 import { ciMode, environmentRecord, followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
 import { createRunFolder, pruneRuns, unfinishedRunNote, type RunFolder } from './runs.mjs';
-import { asciiJson, instructionNotes, needsFlowItems, patchRanges, readSpecs, writeAdversaryFolder } from './adversary.mjs';
+import { asciiJson, instructionNotes, needsFlowItems, patchRanges, readSpecs, specCandidates, writeAdversaryFolder } from './adversary.mjs';
+import { openReviewed } from './reviewed.mjs';
 import { parseDotenv } from './session.mjs';
 import { readSaved } from './flowsave.mjs';
 import { cutPlanned, parsePlan, validatePlan, type ParsedPlan, type PlanResult } from './plan.mjs';
@@ -158,16 +159,20 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   if (nested) ctx.notes.push(nested);
   // Protected files against their reviewed versions, read once before anything runs (26.9).
   const manifest = new Manifest(root);
-  // plan and single tiers also read the root instruction files' merge-base versions in that read (40.4).
-  const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, ...(ctx.mode === 'attack' ? {} : { instructionPaths: CONTRACT_FILES }) });
+  // plan and single tiers also read the root instruction files' merge-base
+  // versions in that read (40.4), and plan its spec files' (43.1).
+  const reviewed = openReviewed(root, ctx.env, !!info.pluginData);
+  if (ctx.mode !== 'attack') reviewed.want(CONTRACT_FILES);
+  if (ctx.mode === 'plan') reviewed.want(specCandidates(folder).paths);
+  const prot = compareProtected({ root, folderDir: folder.dir, files, env: ctx.env, pluginData: !!info.pluginData, manifest, reviewed });
   ctx.notes.push(...prot.notes);
   // The contract status: detected here, before reset or target.start; attack carries its plan's (resolution 37).
-  const contract = ctx.mode === 'attack' ? ctx.plan?.contract ?? null : detectContract(root, prot.instructionBase, prot.base);
+  const contract = ctx.mode === 'attack' ? ctx.plan?.contract ?? null : detectContract(root, reviewed.atMergeBase(CONTRACT_FILES), prot.base);
   setLastContract(contract);
   const acceptedList = acceptedEntries(files.accepted, prot.accepted, info.version, ctx.notes);
   // Only plan reads specs and lists changed instruction files (43.1, 43.6).
   const baseShown = prot.base?.shown ?? 'the base branch';
-  const specs = ctx.mode === 'plan' ? readSpecs(root, folder, prot.base ? [prot.base.mergeBase, prot.base.refSha] : [], baseShown) : null;
+  const specs = ctx.mode === 'plan' ? readSpecs(folder, reviewed, baseShown) : null;
   // attack's block covers the whole run, so it repeats the plan's spec and instruction-file lines (46.5).
   const planNotes = specs ? [...specs.notes, ...instructionNotes(diff, baseShown)] : ctx.plan?.planNotes ?? [];
   ctx.notes.push(...planNotes);
