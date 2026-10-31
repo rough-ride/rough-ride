@@ -95,22 +95,25 @@ function identity(p) {
   }
 }
 
+function spelling(p, platform) {
+  try {
+    return canon(p, platform);
+  } catch (_) {
+    return cleanString((platform === 'win32' ? path.win32 : path.posix).resolve(p));
+  }
+}
+
 // Two paths are the same place when their canonical strings match, or both
 // exist and their (dev, ino) match, which covers macOS's /System/Volumes/Data
 // spelling. For a folder that exists, the file system decides letter case:
 // canon already returns its stored case. Only when neither exists, such as a
 // data folder not created yet, is case ignored on macOS and Windows, whose
-// volumes ignore it by default (spec part 1 section 4, part 11 section 46.2).
-// A path canon cannot read (EACCES, ELOOP) is not the same place as anything.
+// volumes ignore it by default (spec part 2 section 6.10).
+// A path canon cannot read (EACCES, ELOOP) is compared as written: resolved
+// and cleaned, never run through realpath. The function does not throw.
 export function samePath(a, b, platform = process.platform) {
-  let ca;
-  let cb;
-  try {
-    ca = canon(a, platform);
-    cb = canon(b, platform);
-  } catch (_) {
-    return false;
-  }
+  const ca = spelling(a, platform);
+  const cb = spelling(b, platform);
   if (ca === cb) return true;
   const sa = identity(a);
   const sb = identity(b);

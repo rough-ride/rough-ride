@@ -175,6 +175,25 @@ test('session-start: an install record whose projectPath cannot be read is skipp
   }
 });
 
+test('session-start: a projectPath that cannot be read is compared with the cwd as written', { skip: process.platform === 'win32' && 'POSIX permissions' }, () => {
+  const two = pluginsHome({ ids: [['rough-ride@rough-ride', '0.9.3'], ['rough-ride@claude-plugins-official', '1.0.0']] });
+  const file = path.join(two.plugins, 'installed_plugins.json');
+  const doc = JSON.parse(readFileSync(file, 'utf8'));
+  const locked = path.join(scratchDir(), 'locked');
+  const project = path.join(locked, 'project');
+  mkdirSync(project, { recursive: true });
+  doc.plugins['rough-ride@claude-plugins-official'][0] = { ...doc.plugins['rough-ride@claude-plugins-official'][0], scope: 'project', projectPath: project };
+  writeFileSync(file, JSON.stringify(doc));
+  chmodSync(locked, 0o000);
+  try {
+    const start = (cwd) => message(hook('session-start.mjs', { ...two, stdin: JSON.stringify({ session_id: 's', cwd }) }).stdout);
+    assert.equal(start(project), DUPLICATE);
+    assert.equal(start(path.join(locked, 'other')), null);
+  } finally {
+    chmodSync(locked, 0o700);
+  }
+});
+
 test('session-start: unreadable input prints nothing and exits 0', () => {
   const p = pluginsHome({ ids: [['rough-ride@rough-ride', VERSION]] });
   writeFileSync(path.join(p.plugins, 'installed_plugins.json'), 'not json');

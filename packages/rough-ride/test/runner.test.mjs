@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { claudeFloorStop, derivedPluginData, detectSource, followUpCommand, pluginDataMismatch, runnerBlock, runnerLine, versionSkew } from '../dist/runner.mjs';
@@ -144,6 +144,22 @@ test('--plugin-data in the /System/Volumes/Data spelling of the derived folder i
   mkdirSync(data, { recursive: true });
   const given = info(PLUGIN, { cliPath: cli, pluginData: { path: path.join('/System/Volumes/Data', data), verified: false } });
   assert.equal(pluginDataMismatch(given, 'darwin'), null);
+});
+
+test('a --plugin-data that cannot be read is compared as written, not stopped for', { skip: process.platform === 'win32' && 'POSIX permissions' }, () => {
+  const home = scratchDir();
+  const locked = path.join(home, 'locked');
+  const cli = path.join(locked, 'plugins', 'cache', 'rough-ride', 'rough-ride', '0.4.0', 'dist', 'cli.mjs');
+  const data = path.join(locked, 'plugins', 'data', 'rough-ride-rough-ride');
+  mkdirSync(data, { recursive: true });
+  const given = (p) => info(PLUGIN, { cliPath: cli, pluginData: { path: p, verified: false } });
+  chmodSync(locked, 0o000);
+  try {
+    assert.equal(pluginDataMismatch(given(data)), null);
+    assert.match(pluginDataMismatch(given(path.join(locked, 'plugins', 'data', 'other'))), /^rough-ride: --plugin-data /);
+  } finally {
+    chmodSync(locked, 0o700);
+  }
 });
 
 test('the floor check runs only with a plugin data folder and a readable version', () => {

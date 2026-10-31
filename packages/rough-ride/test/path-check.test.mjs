@@ -185,7 +185,7 @@ test('samePath: the file system decides for folders that exist', () => {
   }
 });
 
-test('samePath: a path that cannot be read is not the same place, and does not throw', { skip: win && 'POSIX permissions' }, () => {
+test('samePath: a path canon cannot read is compared as written, and does not throw', { skip: win && 'POSIX permissions' }, () => {
   const dir = scratchDir();
   const locked = path.join(dir, 'locked');
   mkdirSync(path.join(locked, 'inner'), { recursive: true });
@@ -193,6 +193,10 @@ test('samePath: a path that cannot be read is not the same place, and does not t
   try {
     assert.equal(samePath(path.join(locked, 'inner'), dir), false);
     assert.equal(samePath(dir, path.join(locked, 'inner')), false);
+    assert.equal(samePath(path.join(locked, 'inner'), path.join(locked, 'inner') + '/'), true);
+    assert.equal(samePath(path.join(locked, 'inner'), path.join(locked, 'other')), false);
+    assert.equal(samePath(path.join(locked, 'inner'), path.join(locked, 'INNER'), 'darwin'), true);
+    assert.equal(samePath(path.join(locked, 'inner'), path.join(locked, 'INNER'), 'linux'), false);
   } finally {
     chmodSync(locked, 0o700);
   }
