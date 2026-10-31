@@ -71,6 +71,12 @@ function checkTop(value: Record<string, unknown>): string | null {
   return null;
 }
 
+// What a callback answers when it can't resolve the entry from what it holds:
+// attack resolves it against fresh baseline runs (45.3).
+export interface Unchecked {
+  unchecked: string;
+}
+
 export interface Candidates {
   tier: TierName;
   // Flows above the cut, including flows saved in this run.
@@ -79,17 +85,17 @@ export interface Candidates {
   // Ids of the selected attacks the invocation runs.
   selected: Set<string>;
   // The planned attack, or why the entry is rejected.
-  fault(flow: string, request: string, fault: string, oneShot: boolean): PlannedAttack | string;
+  fault(flow: string, request: string, fault: string, oneShot: boolean): PlannedAttack | string | Unchecked;
   // The form's runnable inputs not already run by a selected attack, in round-robin order, or why none.
-  badInputs(flow: string, form: unknown): PlannedAttack[] | string;
-  viewport(flow: string): PlannedAttack | string;
+  badInputs(flow: string, form: unknown): PlannedAttack[] | string | Unchecked;
+  viewport(flow: string): PlannedAttack | string | Unchecked;
   // What app-specific checks are validated against; left out, every check reads no spec.
   checks?: CheckFacts;
 }
 
 export interface PlanEntry {
   path: string;
-  status: 'kept' | 'rejected' | 'already-selected';
+  status: 'kept' | 'rejected' | 'already-selected' | 'unchecked';
   attackIds: string[];
   why?: string;
 }
@@ -109,6 +115,8 @@ export function planCap(tier: TierName): number {
 }
 
 // 45.2 rules 2 to 5, 45.4 and 45.5: each entry on its own, then the cap.
+// An unchecked entry counts toward the cap as if attack kept all it can name;
+// a later entry is rejected only when it overflows the entries known kept (45.3).
 export function validatePlan(input: PlanInput, c: Candidates): PlanResult {
   const cap = planCap(c.tier);
   const kept: PlannedAttack[] = [];
@@ -117,6 +125,21 @@ export function validatePlan(input: PlanInput, c: Candidates): PlanResult {
   const reject = (path: string, why: string) => {
     entries.push({ path, status: 'rejected', attackIds: [], why });
     lines.push(`Rejected plan entry: ${path} (${why})`);
+  };
+  // Unchecked entries so far, and the most attacks they could add.
+  const unsure: { path: string; ids: string[] }[] = [];
+  let unsureMost = 0;
+  const leaveUnchecked = (path: string, why: string, ids: string[], most: number) => {
+    entries.push({ path, status: 'unchecked', attackIds: ids, why });
+    lines.push(`Unchecked plan entry: ${path} (${why})`);
+    unsure.push({ path, ids });
+    unsureMost += most;
+  };
+  const capWhy = (kind: string, keep: number, asked: unknown) => (kind === 'badInputs' ? `over the plan cap of ${cap}; ${keep} of ${asked} bad inputs kept` : `over the plan cap of ${cap}`);
+  const unchecked = (path: string, kind: string, asked: unknown, why: string, most: number) => {
+    // Whatever it names, attack keeps none of it once the known entries fill the cap.
+    if (kept.length >= cap) reject(path, capWhy(kind, 0, asked));
+    else leaveUnchecked(path, why, [], most);
   };
   for (const [i, raw] of (input.attacks ?? []).entries()) {
     const path = `attacks[${i}]`;
@@ -180,6 +203,10 @@ export function validatePlan(input: PlanInput, c: Candidates): PlanResult {
         reject(path, a);
         continue;
       }
+      if ('unchecked' in a) {
+        unchecked(path, 'fault', 1, a.unchecked, 1);
+        continue;
+      }
       attacks = [a];
     } else if (kinds[0] === 'badInputs') {
       if (!Number.isInteger(e.badInputs) || (e.badInputs as number) < 1 || (e.badInputs as number) > 12) {
@@ -193,6 +220,16 @@ export function validatePlan(input: PlanInput, c: Candidates): PlanResult {
       const found = c.badInputs(e.flow, e.form);
       if (typeof found === 'string') {
         reject(path, found);
+        continue;
+      }
+      if (!Array.isArray(found)) {
+        unchecked(path, 'badInputs', e.badInputs, found.unchecked, e.badInputs as number);
+        continue;
+      }
+      // Which inputs come next depends on whether attack keeps an earlier unchecked entry naming some of them.
+      const shared = unsure.find((u) => found.some((a) => u.ids.includes(a.id) && !kept.some((k) => k.id === a.id)));
+      if (shared) {
+        unchecked(path, 'badInputs', e.badInputs, `which inputs come next depends on ${shared.path}`, e.badInputs as number);
         continue;
       }
       attacks = found.filter((a) => !kept.some((k) => k.id === a.id)).slice(0, e.badInputs as number);
@@ -211,6 +248,10 @@ export function validatePlan(input: PlanInput, c: Candidates): PlanResult {
         reject(path, a);
         continue;
       }
+      if ('unchecked' in a) {
+        unchecked(path, 'viewport', 1, a.unchecked, 1);
+        continue;
+      }
       attacks = [a];
     }
     if (attacks.length === 1 && (c.selected.has(attacks[0]!.id) || kept.some((k) => k.id === attacks[0]!.id))) {
@@ -218,13 +259,25 @@ export function validatePlan(input: PlanInput, c: Candidates): PlanResult {
       lines.push(`Rejected plan entry: ${path} (already selected)`);
       continue;
     }
+    const duplicate = attacks.length === 1 ? unsure.find((u) => u.ids.includes(attacks[0]!.id)) : undefined;
+    if (duplicate) {
+      leaveUnchecked(path, `already selected if attack keeps ${duplicate.path}`, [attacks[0]!.id], 1);
+      continue;
+    }
     const room = cap - kept.length;
+    if (unsureMost > 0 && room > 0 && attacks.length > room - unsureMost) {
+      // It fits or overflows depending on what attack keeps for the unchecked entries before it.
+      const others = unsure.map((u) => u.path).join(', ');
+      const why = attacks.length > room
+        ? `over the plan cap of ${cap}; at most ${room} of ${e.badInputs} bad inputs kept, fewer if attack keeps more for ${others}`
+        : `over the plan cap of ${cap} unless attack keeps fewer for ${others}`;
+      leaveUnchecked(path, why, attacks.slice(0, room).map((a) => a.id), Math.min(attacks.length, room));
+      continue;
+    }
     if (room <= 0 || attacks.length > room) {
       const keep = attacks.slice(0, Math.max(0, room));
       kept.push(...keep);
-      const why = kinds[0] === 'badInputs'
-        ? `over the plan cap of ${cap}; ${keep.length} of ${e.badInputs} bad inputs kept`
-        : `over the plan cap of ${cap}`;
+      const why = capWhy(kinds[0]!, keep.length, e.badInputs);
       entries.push({ path, status: keep.length > 0 ? 'kept' : 'rejected', attackIds: keep.map((a) => a.id), why });
       lines.push(`Rejected plan entry: ${path} (${why})`);
       continue;
