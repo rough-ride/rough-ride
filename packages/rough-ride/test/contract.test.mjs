@@ -133,6 +133,12 @@ test('missing: CLAUDE.local.md is never touched; a link outside the root, a file
     symlinkSync(outside, path.join(root, 'CLAUDE.md'));
     assert.equal(detect(root).status, 'missing', 'a link outside the root');
     rmSync(path.join(root, 'CLAUDE.md'));
+    const sibling = `${root}-sibling`;
+    mkdirSync(sibling);
+    writeFileSync(path.join(sibling, 'contract.md'), TEMPLATE);
+    symlinkSync(path.join(sibling, 'contract.md'), path.join(root, 'CLAUDE.md'));
+    assert.equal(detect(root).status, 'missing', 'a link into a sibling whose name starts with the root\'s');
+    rmSync(path.join(root, 'CLAUDE.md'));
     write(root, 'inside.md', TEMPLATE);
     symlinkSync(path.join(root, 'inside.md'), path.join(root, 'CLAUDE.md'));
     assert.equal(detect(root).status, 'current', 'a link inside the root');

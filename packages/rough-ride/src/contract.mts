@@ -3,9 +3,10 @@
 // in this copy's own template. Advice only: the status never changes
 // selection, attacks, verdicts or the exit code, and nothing here writes a file.
 
-import { lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { lstatSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { canon, inside, printed } from '../hooks/path-check.mjs';
 import { decodeUtf8 } from './adversary.mjs';
 
 // At the git root, in this order. CLAUDE.local.md is never read, not even to see whether it exists.
@@ -84,9 +85,8 @@ export function readInstruction(root: string, rel: string): InstructionRead {
     return { exists: false, bytes: null };
   }
   try {
-    const realRoot = realpathSync(root);
-    const real = realpathSync(full);
-    if (!real.startsWith(realRoot + path.sep)) return { exists: true, bytes: null };
+    const real = canon(full);
+    if (!inside(real, root)) return { exists: true, bytes: null };
     const stat = statSync(real);
     if (!stat.isFile() || stat.size > MAX_BYTES) return { exists: true, bytes: null };
     return { exists: true, bytes: readFileSync(real) };
@@ -176,7 +176,7 @@ export interface LineOptions {
 export function contractLine(c: ContractStatus | null, o: LineOptions): string | null {
   if (c === null) return null;
   const url = `https://github.com/rough-ride/rough-ride/blob/v${o.version}/README.md#resilience-contract` +
-    (o.ci ? '' : ` (also at ${(o.templateFile ?? TEMPLATE_FILE).split(path.sep).join('/')})`);
+    (o.ci ? '' : ` (also at ${printed(o.templateFile ?? TEMPLATE_FILE)})`);
   const alone = 'agents leave instruction files alone.';
   switch (c.status) {
     case 'missing':
