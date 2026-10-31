@@ -8,7 +8,8 @@ import { spawnSync } from 'node:child_process';
 import { reflogMessage, reviewedBase, type ReviewedBase } from './diff.mjs';
 import { git } from './git.mjs';
 
-// The seam: git in production, an in-memory set of commits in tests.
+// The seam: git in production, an in-memory set of commits in tests
+// (test/helpers.mjs memoryBlobs).
 export interface BlobSource {
   // Paths under `dir` (git-root-relative, ending in `/`) at `commit`.
   list(commit: string, dir: string): string[];
@@ -50,19 +51,6 @@ function catFileBatch(root: string, specs: string[]): Map<string, Buffer | null>
     at += size + 1;
   }
   return out;
-}
-
-// Commits by sha, each a map of git-root-relative paths to their content.
-export function memoryBlobs(commits: Record<string, Record<string, string | Buffer>>, lastMove: string | null = 'fetch: fast-forward'): BlobSource {
-  return {
-    list: (commit, dir) => Object.keys(commits[commit] ?? {}).filter((p) => p.startsWith(dir)).sort(),
-    read: (specs) => new Map(specs.map((spec) => {
-      const at = spec.indexOf(':');
-      const content = commits[spec.slice(0, at)]?.[spec.slice(at + 1)];
-      return [spec, content === undefined ? null : Buffer.from(content)];
-    })),
-    lastMove: () => lastMove,
-  };
 }
 
 // The one normalisation for comparing stored text (26.4, 27.3): a leading BOM

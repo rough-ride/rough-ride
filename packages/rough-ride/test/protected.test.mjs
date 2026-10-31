@@ -7,8 +7,8 @@ import {
 } from '../dist/protected.mjs';
 import { checkCommittedFiles } from '../dist/files.mjs';
 import { checkRootEntry } from '../dist/folder.mjs';
-import { memoryBlobs, ReviewedVersions } from '../dist/reviewed.mjs';
-import { gitRepo, scratchDir, sh } from './helpers.mjs';
+import { ReviewedVersions } from '../dist/reviewed.mjs';
+import { gitRepo, memoryBlobs, scratchDir, sh } from './helpers.mjs';
 
 const FLOW = `schema: 0.1.0
 signedIn: true

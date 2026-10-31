@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { gitBlobs, memoryBlobs, normalisedText, ReviewedVersions } from '../dist/reviewed.mjs';
-import { gitRepo, sh } from './helpers.mjs';
+import { gitBlobs, normalisedText, ReviewedVersions } from '../dist/reviewed.mjs';
+import { gitRepo, memoryBlobs, sh } from './helpers.mjs';
 
 const baseOf = (mergeBase, refSha) => ({ shown: 'origin/main', ref: 'refs/remotes/origin/main', mergeBase, refSha, local: false });
 

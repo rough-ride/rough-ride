@@ -4,8 +4,8 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { asciiJson, instructionNotes, linedJson, needsFlowItems, patchRanges, readSpecs } from '../dist/adversary.mjs';
 import { checkRootEntry, ensureFolder } from '../dist/folder.mjs';
-import { gitBlobs, memoryBlobs, ReviewedVersions } from '../dist/reviewed.mjs';
-import { gitRepo, scratchDir, sh } from './helpers.mjs';
+import { gitBlobs, ReviewedVersions } from '../dist/reviewed.mjs';
+import { gitRepo, memoryBlobs, scratchDir, sh } from './helpers.mjs';
 
 const baseAt = (sha) => ({ shown: 'main', ref: 'refs/heads/main', mergeBase: sha, refSha: sha, local: true });
 const BASE = 'b'.repeat(40);

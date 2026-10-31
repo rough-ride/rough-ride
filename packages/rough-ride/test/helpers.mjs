@@ -65,3 +65,18 @@ export function runAsync(args, { cwd = scratchDir(), env = {}, input } = {}) {
     child.on('close', (code) => resolve({ code, stdout, stderr }));
   });
 }
+
+// A BlobSource (src/reviewed.mts) over commits held in memory: commits by sha,
+// each a map of git-root-relative paths to their content. `lastMove` is the
+// base ref's reflog message the source reports.
+export function memoryBlobs(commits, lastMove = 'fetch: fast-forward') {
+  return {
+    list: (commit, dir) => Object.keys(commits[commit] ?? {}).filter((p) => p.startsWith(dir)).sort(),
+    read: (specs) => new Map(specs.map((spec) => {
+      const at = spec.indexOf(':');
+      const content = commits[spec.slice(0, at)]?.[spec.slice(at + 1)];
+      return [spec, content === undefined ? null : Buffer.from(content)];
+    })),
+    lastMove: () => lastMove,
+  };
+}
