@@ -89,7 +89,7 @@ test('quick runs the baseline runs and ends as nothing attacked, with summary.js
   assert.deepEqual(doc.flows.signIn, 'none');
   assert.deepEqual(doc.flows.baselineFailed.map((f) => `${f.flow} ${f.step}`), ['broken 2']);
   const lines = doc.summaryLines;
-  assert.match(lines[0], new RegExp(`^rough-ride quick \\| [\\dm.]+s \\| run ${doc.runId} \\| 0\\.x pre-release: detection and false-alarm rates not measured yet$`));
+  assert.match(lines[0], new RegExp(`^rough-ride quick \\| [\\dm.]+s \\| run ${doc.runId} \\| early preview: accuracy not measured yet, treat findings as leads to check$`));
   assert.match(lines[1], /^diff: main [0-9a-f]{7}\.\.working tree \| 1 file$/);
   assert.match(lines[2], new RegExp(`^target: ${site.url.replace(/[.]/g, '\\.')} \\(target\\.url in config\\.yaml\\) \\| (Chrome|Edge|Chromium) [\\d.]+$`));
   assert.ok(lines.includes('Baseline failed: broken at step 2 (expect text "Never shown"): not visible after 10 s. Not attacked until it passes.'));
@@ -99,6 +99,7 @@ test('quick runs the baseline runs and ends as nothing attacked, with summary.js
   const dir = path.join(root, '.rough-ride', 'runs', doc.runId);
   assert.deepEqual(readdirSync(dir).sort(), ['baseline', 'diff-map.json', 'diff.patch', 'record.json', 'report.txt', 'summary.json', 'summary.txt']);
   assert.deepEqual(readdirSync(path.join(dir, 'baseline')), ['broken.png']);
+  assert.ok(readFileSync(path.join(dir, 'report.txt'), 'utf8').includes('\nEarly preview: how often rough-ride catches real bugs, and how often it raises false alarms, has not been measured yet. Treat findings as leads to check.\n'));
   assert.deepEqual(JSON.parse(readFileSync(path.join(dir, 'summary.json'), 'utf8')), doc);
   assert.equal(readFileSync(path.join(dir, 'summary.txt'), 'utf8'), lines.map((l) => l + '\n').join(''));
 });

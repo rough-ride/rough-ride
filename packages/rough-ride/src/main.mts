@@ -8,7 +8,7 @@ import { checkRootEntry, locationNotes } from './folder.mjs';
 import { findGitRoot } from './git.mjs';
 import { automationNote, computeDiff, isEmpty, largeDiffNote, nothingToAttackLine, type Diff } from './diff.mjs';
 import { nuxtCandidates } from './target.mjs';
-import { runTier } from './tier.mjs';
+import { PRE_RELEASE, runTier } from './tier.mjs';
 import { runRegress } from './regress.mjs';
 import { runRepro } from './repro.mjs';
 import { runFlowSave } from './flowsave.mjs';
@@ -44,7 +44,6 @@ const NEEDS_ROOT: ReadonlySet<Subcommand> = new Set([
 ]);
 
 const TIERS: ReadonlySet<Subcommand> = new Set(['quick', 'standard', 'plan']);
-const PRE_RELEASE = '0.x pre-release: detection and false-alarm rates not measured yet';
 
 export async function main(argv: string[]): Promise<void> {
   const elapsed = startClock();

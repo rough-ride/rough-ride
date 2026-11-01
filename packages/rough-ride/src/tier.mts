@@ -55,7 +55,9 @@ import { moduleFiles, repoFiles } from './tracing.mjs';
 import { writeAtomic } from './write.mjs';
 import { CONTRACT_FILES, contractJson, contractLine, detectContract, summaryContractLine } from './contract.mjs';
 
-export const PRE_RELEASE = '0.x pre-release: detection and false-alarm rates not measured yet';
+// Every 0.x run says it, on the header line and in report.txt, until the benchmark measures accuracy.
+export const PRE_RELEASE = 'early preview: accuracy not measured yet, treat findings as leads to check';
+export const PRE_RELEASE_REPORT = 'Early preview: how often rough-ride catches real bugs, and how often it raises false alarms, has not been measured yet. Treat findings as leads to check.';
 
 // 1 CPU -> 1 lane, 2 or 3 -> 2, 4 -> 3, 5 or more -> 4 (49.3).
 export function lanesFor(cpus: number): number {
@@ -1252,7 +1254,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       clock.timeLine({ runnerMs: ctx.elapsed(), adversaryCallsMs }),
       ...(ctx.mode === 'plan' ? ['Not attacked lines are provisional: attack --run decides them.'] : []),
       ...[clock.resetLine()].filter((l): l is string => l !== null),
-      ...(info.version.startsWith('0.') ? ['Pre-release (0.x): detection and false-alarm rates are not measured yet. Do not rely on its verdicts.'] : []),
+      ...(info.version.startsWith('0.') ? [PRE_RELEASE_REPORT] : []),
     ]),
     ...section('Notes', orderNotes(ctx.notes).map((n) => n.text)),
     ...section(null, protectedReport(prot)),

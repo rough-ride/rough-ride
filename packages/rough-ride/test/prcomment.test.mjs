@@ -82,7 +82,7 @@ test('the sample quick and regress documents render the passed body exactly', ()
       'rough-ride quick | no findings | non-blocking',
       '',
       '```text',
-      'rough-ride quick | 15m29s | run 20261027-184640-quick-hkhw | 0.x pre-release: detection and false-alarm rates not measured yet',
+      'rough-ride quick | 15m29s | run 20261027-184640-quick-hkhw | early preview: accuracy not measured yet, treat findings as leads to check',
       'diff: main 03342ce..working tree | 1 file -> 1 flow, 1 form',
       'target: http://localhost:3731 (proven Nuxt dev server) | API http://localhost:8731 | Chrome 156.0.8078.48',
       "Protected files compared with local main (no remote). Commits on main count as reviewed, so rough-ride can't tell your commits there from an agent's.",

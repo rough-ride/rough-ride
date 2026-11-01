@@ -71,7 +71,7 @@ test('with a plugin data folder the summary sits between the two marker lines, w
 
 test('a golden summary: the sample app\'s cleared-form shape renders byte for byte', () => {
   const lines = renderSummary({
-    header: ['rough-ride quick | 1m38s | run 20261025-141207-quick-k3fz | 0.x pre-release: detection and false-alarm rates not measured yet', 'diff: origin/main 3f2a91c..working tree | 1 file -> 1 flow, 1 form', 'target: http://localhost:3731 (proven Nuxt dev server) | API http://localhost:8731 | Chrome 155.0.8059.81'],
+    header: ['rough-ride quick | 1m38s | run 20261025-141207-quick-k3fz | early preview: accuracy not measured yet, treat findings as leads to check', 'diff: origin/main 3f2a91c..working tree | 1 file -> 1 flow, 1 form', 'target: http://localhost:3731 (proven Nuxt dev server) | API http://localhost:8731 | Chrome 155.0.8059.81'],
     nothingAttacked: null,
     notes: [],
     protectedBlock: [],
@@ -86,7 +86,7 @@ test('a golden summary: the sample app\'s cleared-form shape renders byte for by
     fullReport: 'Full report: /Users/me/app/.rough-ride/runs/20261025-141207-quick-k3fz/report.txt',
     runner: ['Runner: rough-ride 0.1.0 from npx | Node 22.22.1 | Playwright 1.64.1'],
   });
-  assert.equal(lines.join('\n') + '\n', `rough-ride quick | 1m38s | run 20261025-141207-quick-k3fz | 0.x pre-release: detection and false-alarm rates not measured yet
+  assert.equal(lines.join('\n') + '\n', `rough-ride quick | 1m38s | run 20261025-141207-quick-k3fz | early preview: accuracy not measured yet, treat findings as leads to check
 diff: origin/main 3f2a91c..working tree | 1 file -> 1 flow, 1 form
 target: http://localhost:3731 (proven Nuxt dev server) | API http://localhost:8731 | Chrome 155.0.8059.81
 MED   Typed values lost after POST /api/notes fails with 500 (button "Save") | 2 attacks | repro r01
