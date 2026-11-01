@@ -10,7 +10,7 @@
 
 You need Node.js 22.22+, git, and Google Chrome or Microsoft Edge.
 
-**In Claude Code (2.1.299+):**
+**In Claude Code:**
 
 ```
 /plugin marketplace add rough-ride/rough-ride
