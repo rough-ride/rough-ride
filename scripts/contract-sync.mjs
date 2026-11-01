@@ -1,5 +1,5 @@
 // The `contract-sync` CI job (spec part 10 section 40.7): the resilience
-// contract's template, the README copy, the editions file, the coverage map
+// contract's template, the docs page's copy, the editions file, the coverage map
 // and the tier table stay in step. Run after `npm run build`.
 // Usage: node scripts/contract-sync.mjs [--base <ref>]
 // --base reads the editions file at that ref, so a frozen entry can't change.
@@ -25,10 +25,13 @@ export function normalise(bytes) {
 
 export const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
-// The fenced `markdown` block under the README's "Resilience contract" heading, or null.
-export function readmeBlock(readme) {
-  const lines = readme.split('\n');
-  const heading = lines.findIndex((l) => l === '## Resilience contract');
+// The page that holds the text users copy.
+export const PAGE = 'docs/resilience-contract.md';
+
+// The fenced `markdown` block under the page's "The text" heading, or null.
+export function pageBlock(page) {
+  const lines = page.split('\n');
+  const heading = lines.findIndex((l) => l === '## The text');
   if (heading === -1) return null;
   const open = lines.findIndex((l, i) => i > heading && l === '```markdown');
   if (open === -1 || lines.slice(heading + 1, open).some((l) => l.startsWith('## '))) return null;
@@ -41,8 +44,8 @@ const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const wholeWord = (word) => new RegExp(`(?<![A-Za-z0-9-])${escape(word)}(?![A-Za-z0-9-])`, 'i');
 
 // Every problem in one tree's inputs:
-// {template: Buffer, readme: string, editions: [], previous: [] | null, coverage: {}, ids: {checks, faults, inputs, attacks}, tier: {S, viewport}}.
-export function contractProblems({ template, readme, editions, previous = null, coverage, ids, tier }) {
+// {template: Buffer, page: string, editions: [], previous: [] | null, coverage: {}, ids: {checks, faults, inputs, attacks}, tier: {S, viewport}}.
+export function contractProblems({ template, page, editions, previous = null, coverage, ids, tier }) {
   const problems = [];
   const text = template.toString('latin1');
   const lines = text.split('\n');
@@ -53,10 +56,10 @@ export function contractProblems({ template, readme, editions, previous = null, 
   const inner = opening === -1 || closing === -1 ? [] : lines.slice(opening + 1, closing);
   const items = inner.map((l) => /^(\d+)\. /.exec(l)?.[1]).filter(Boolean).map(Number);
 
-  // (a) the README block equals the template's bytes.
-  const block = readmeBlock(readme);
-  if (block === null) problems.push('(a) the README has no fenced markdown block under "## Resilience contract"');
-  else if (!Buffer.from(block, 'utf8').equals(template)) problems.push('(a) the README block differs from templates/resilience-contract.md');
+  // (a) the page's block equals the template's bytes.
+  const block = pageBlock(page);
+  if (block === null) problems.push(`(a) ${PAGE} has no fenced markdown block under "## The text"`);
+  else if (!Buffer.from(block, 'utf8').equals(template)) problems.push(`(a) the ${PAGE} block differs from templates/resilience-contract.md`);
 
   // (b) the editions file and the template.
   if (!Array.isArray(editions) || editions.length === 0) problems.push('(b) contract-editions.json has no entries');
@@ -129,7 +132,7 @@ export async function readTree(root = ROOT) {
   const attacks = [...new Set(kinds.flatMap((k) => ('timing' in k ? [k.timing] : 'viewport' in k ? [`viewport-${k.viewport}`] : [])))];
   return {
     template: readFileSync(path.join(pkg, 'templates', 'resilience-contract.md')),
-    readme: readFileSync(path.join(root, 'README.md'), 'utf8'),
+    page: readFileSync(path.join(root, PAGE), 'utf8'),
     editions: JSON.parse(readFileSync(path.join(root, EDITIONS), 'utf8')),
     coverage: JSON.parse(readFileSync(path.join(pkg, 'test', 'fixtures', 'contract-coverage.json'), 'utf8')),
     ids: { checks: Object.keys(CHECK_RANK), faults: FAULT_IDS, inputs: BAD_INPUT_IDS, attacks },

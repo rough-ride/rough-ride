@@ -62,7 +62,7 @@ test('CI mode: GITHUB_ACTIONS=true, or CI set to anything but false or 0, with n
 test('in CI mode an older contract line ends with the tag URL and has no (also at', () => {
   const older = { status: 'older', file: 'CLAUDE.md', edition: 1, current: 2 };
   const line = contractLine(older, { version: '0.1.0', ci: true, summary: null });
-  assert.ok(line.endsWith('the text at https://github.com/rough-ride/rough-ride/blob/v0.1.0/README.md#resilience-contract; agents leave instruction files alone.'), line);
+  assert.ok(line.endsWith('the text at https://github.com/rough-ride/rough-ride/blob/v0.1.0/docs/resilience-contract.md#the-text; agents leave instruction files alone.'), line);
   assert.ok(!line.includes('(also at'));
   assert.ok(contractLine(older, { version: '0.1.0', ci: false, summary: null }).includes('(also at'));
 });
@@ -276,7 +276,7 @@ test('in a pull_request event the stop adds the fork, Dependabot or same-reposit
     pullRequestLine('DEMO_PASSWORD', 1, { ...pr, GITHUB_EVENT_PATH: event('owner/app'), GITHUB_ACTOR: 'dependabot[bot]' }),
     'Dependabot pull requests get only Dependabot secrets: add DEMO_PASSWORD under Settings > Secrets and variables > Dependabot.',
   );
-  const same = "This run got no value for DEMO_PASSWORD: add it as a repository secret and map it in the workflow step's env, or use CI-only values (README: GitHub Actions).";
+  const same = "This run got no value for DEMO_PASSWORD: add it as a repository secret and map it in the workflow step's env, or use CI-only values (docs/github-actions.md).";
   assert.equal(pullRequestLine('DEMO_PASSWORD', 1, { ...pr, GITHUB_EVENT_PATH: event('owner/app'), GITHUB_ACTOR: 'someone' }), same);
   assert.equal(pullRequestLine('DEMO_PASSWORD', 1, { ...pr, GITHUB_EVENT_NAME: 'push', GITHUB_EVENT_PATH: event('someone/app') }), null);
 

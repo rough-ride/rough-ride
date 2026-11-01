@@ -1,6 +1,15 @@
-# GitHub Actions: details
+# Run rough-ride on pull requests
 
-The workflow itself is in the [README](../README.md#run-rough-ride-on-pull-requests-github-actions) and ships as `templates/github-actions/rough-ride.yml`.
+Every pull request from a branch of the same repository gets one rough-ride comment, which each push edits. A finding, a stop or a step timeout never turns the job red: only a failed checkout, setup or install does.
+
+The workflow is [`templates/github-actions/rough-ride.yml`](../packages/rough-ride/templates/github-actions/rough-ride.yml), shipped in the package under MIT-0. After installing rough-ride (step 1 below), copy it:
+
+```
+mkdir -p .github/workflows
+cp node_modules/rough-ride/templates/github-actions/rough-ride.yml .github/workflows/rough-ride.yml
+```
+
+Without a `package.json`, download the file from the link above instead.
 
 It is written for a Nuxt 4 + FastAPI app with `frontend/`, `backend/`, uv and SQLite. Other stacks change only the install steps and `.rough-ride/config.yaml` (see the variants below).
 

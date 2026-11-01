@@ -13,7 +13,7 @@ import { gitRepo, runAsync, run, scratchDir, sh } from './helpers.mjs';
 
 const PKG = fileURLToPath(new URL('..', import.meta.url));
 const TEMPLATE = readFileSync(path.join(PKG, 'templates', 'resilience-contract.md'), 'utf8');
-const URL1 = 'https://github.com/rough-ride/rough-ride/blob/v0.1.0/README.md#resilience-contract';
+const URL1 = 'https://github.com/rough-ride/rough-ride/blob/v0.1.0/docs/resilience-contract.md#the-text';
 const ALSO = ` (also at ${TEMPLATE_FILE.split(path.sep).join('/')})`;
 
 function write(root, rel, text) {
@@ -87,7 +87,7 @@ test('declined and newer print nothing; older names the runner edition and its s
   const editions = path.join(scratchDir(), 'contract-editions.json');
   writeFileSync(editions, JSON.stringify([{ edition: 1, summary: 'one' }, { edition: 2, summary: 'adds item 12 on offline pages' }]));
   assert.equal(contractLine(older, { version: '0.6.0', ci: true, summary: editionSummary(2, editions) }),
-    'Resilience contract: CLAUDE.md has edition 1; rough-ride 0.6.0 ships edition 2 (adds item 12 on offline pages). The user replaces the section between its two marker lines with the text at https://github.com/rough-ride/rough-ride/blob/v0.6.0/README.md#resilience-contract; agents leave instruction files alone.');
+    'Resilience contract: CLAUDE.md has edition 1; rough-ride 0.6.0 ships edition 2 (adds item 12 on offline pages). The user replaces the section between its two marker lines with the text at https://github.com/rough-ride/rough-ride/blob/v0.6.0/docs/resilience-contract.md#the-text; agents leave instruction files alone.');
 });
 
 test('not-loaded: the marker only in AGENTS.md under a CLAUDE.md without @AGENTS.md; the import outside fenced code makes it current', () => {

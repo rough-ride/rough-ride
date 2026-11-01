@@ -175,7 +175,7 @@ export interface LineOptions {
 // The fixed line for missing, older, not-loaded and removed; null for the rest (40.5).
 export function contractLine(c: ContractStatus | null, o: LineOptions): string | null {
   if (c === null) return null;
-  const url = `https://github.com/rough-ride/rough-ride/blob/v${o.version}/README.md#resilience-contract` +
+  const url = `https://github.com/rough-ride/rough-ride/blob/v${o.version}/docs/resilience-contract.md#the-text` +
     (o.ci ? '' : ` (also at ${printed(o.templateFile ?? TEMPLATE_FILE)})`);
   const alone = 'agents leave instruction files alone.';
   switch (c.status) {

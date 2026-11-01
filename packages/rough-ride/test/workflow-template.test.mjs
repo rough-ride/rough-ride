@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 import { docsFiles, pinProblems } from '../../../scripts/docs-pins.mjs';
 import { npmPack } from '../../../scripts/pack-contents.mjs';
-import { commentScript, readmeProblems, readmeTemplateBlock, runCommentScript, SECTION, TEMPLATE, templateProblems, templateShasProblems } from '../../../scripts/workflow-template.mjs';
+import { commentScript, runCommentScript, TEMPLATE, templateProblems, templateShasProblems } from '../../../scripts/workflow-template.mjs';
 
 const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 const read = (f) => readFileSync(path.join(ROOT, f), 'utf8');
@@ -23,11 +23,9 @@ function edit(from, to) {
   return template.replace(from, to);
 }
 
-test('the shipped template passes the static checks and template-shas, and both READMEs carry it byte for byte', () => {
+test('the shipped template passes the static checks and template-shas', () => {
   assert.deepEqual(templateProblems(template), []);
   assert.deepEqual(templateShasProblems(template, own), []);
-  for (const f of ['README.md', 'packages/rough-ride/README.md']) assert.deepEqual(readmeProblems(f, read(f), Buffer.from(template)), [], f);
-  assert.equal(readmeTemplateBlock(readme), template);
   assert.doesNotMatch(template, /<sha>|\u2014/);
 });
 
@@ -77,16 +75,10 @@ test('static checks: permissions, ${{ in run:, the CI-only variables, the trigge
   has(templateProblems('jobs: [unclosed'), /not YAML/);
 });
 
-test('a one-byte change to a README copy, or a missing section, fails template-checks', () => {
-  const tpl = Buffer.from(template);
-  has(readmeProblems('README.md', readme.replace('timeout-minutes: 35 ', 'timeout-minutes: 36 '), tpl), /^README\.md's fenced copy differs from packages\/rough-ride\/templates\/github-actions\/rough-ride\.yml$/);
-  has(readmeProblems('README.md', readme.replace(SECTION, '## GitHub Actions'), tpl), /has no fenced yaml block under/);
-});
-
-test('the README section links docs/github-actions.md, which carries the two steps, the timeout formulas, the Dependabot and Renovate snippets and every variant', () => {
-  const start = readme.indexOf(SECTION);
-  assert.ok(readme.slice(start, readme.indexOf('\n## ', start + 1)).includes('(docs/github-actions.md)'));
+test('the README links docs/github-actions.md, which links the template and carries the two steps, the timeout formulas, the Dependabot and Renovate snippets and every variant', () => {
+  assert.ok(readme.includes('/docs/github-actions.md)'));
   const section = read('docs/github-actions.md');
+  assert.ok(section.includes('(../packages/rough-ride/templates/github-actions/rough-ride.yml)'));
   assert.match(section, /1\. \*\*Maintainer, before the first pull request:\*\* run `npm i -D -E rough-ride@\d+\.\d+\.\d+`/);
   assert.match(section, /2\. \*\*Admin, once:\*\* never add `rough-ride \(non-blocking\)` or `rough-ride comment` to required status checks or rulesets/);
   assert.match(section, /ceil\(\(`target\.startTimeout` \+ longest `reset` \+ hard stop \+ 150 s\) \/ 60\)/);

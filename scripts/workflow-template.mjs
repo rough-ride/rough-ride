@@ -1,7 +1,7 @@
 // The checks on the documented GitHub Actions workflow (spec part 13 section 51,
 // Acceptance, and 53.5): `template-shas` compares the template's action pins with
-// rough-ride's own workflows, and `template-checks` runs the static checks and
-// compares both READMEs' fenced copy with the template byte for byte.
+// rough-ride's own workflows, and `template-checks` runs the static checks. The
+// template is the only copy: docs/github-actions.md links to it.
 // Usage: node scripts/workflow-template.mjs template-shas | template-checks
 import { spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -12,7 +12,6 @@ import YAML from 'yaml';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 export const TEMPLATE = 'packages/rough-ride/templates/github-actions/rough-ride.yml';
-export const SECTION = '## Run rough-ride on pull requests (GitHub Actions)';
 const USES = /^\s*(?:-\s+)?uses:\s*(.*)$/;
 const PIN = /^\s*(?:-\s+)?uses:\s*([^@\s]+)@([0-9a-f]{40}) +# (v\S+)/;
 const CI_ONLY = ['DEMO_EMAIL', 'DEMO_PASSWORD', 'SAMPLE_DB'];
@@ -101,24 +100,6 @@ export function templateProblems(text) {
   return problems;
 }
 
-// The first fenced `yaml` block in the README's GitHub Actions section, or null.
-export function readmeTemplateBlock(readme) {
-  const lines = readme.split('\n');
-  const heading = lines.indexOf(SECTION);
-  if (heading === -1) return null;
-  const open = lines.findIndex((l, i) => i > heading && l === '```yaml');
-  if (open === -1 || lines.slice(heading + 1, open).some((l) => l.startsWith('## '))) return null;
-  const close = lines.findIndex((l, i) => i > open && l === '```');
-  if (close === -1) return null;
-  return lines.slice(open + 1, close).join('\n') + '\n';
-}
-
-export function readmeProblems(name, readme, template) {
-  const block = readmeTemplateBlock(readme);
-  if (block === null) return [`${name} has no fenced yaml block under "${SECTION}"`];
-  return Buffer.from(block, 'utf8').equals(template) ? [] : [`${name}'s fenced copy differs from ${TEMPLATE}`];
-}
-
 // The comment job's posting script (53.5), as the template holds it.
 export function commentScript(text) {
   const step = steps(YAML.parse(text).jobs?.comment).find((s) => typeof s.run === 'string' && s.run.includes('gh api'));
@@ -197,10 +178,8 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const template = readFileSync(path.join(ROOT, TEMPLATE));
   const problems = [];
   if (command === 'template-shas') problems.push(...templateShasProblems(template.toString('utf8'), ownWorkflows(ROOT)));
-  else if (command === 'template-checks') {
-    problems.push(...templateProblems(template.toString('utf8')));
-    for (const f of ['README.md', 'packages/rough-ride/README.md']) problems.push(...readmeProblems(f, readFileSync(path.join(ROOT, f), 'utf8'), template));
-  } else {
+  else if (command === 'template-checks') problems.push(...templateProblems(template.toString('utf8')));
+  else {
     console.log('Usage: node scripts/workflow-template.mjs template-shas | template-checks');
     process.exit(64);
   }

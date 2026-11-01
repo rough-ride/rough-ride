@@ -79,8 +79,8 @@ export function pullRequestLine(names: string, count: number, env: NodeJS.Proces
   if (head === null || head !== env.GITHUB_REPOSITORY) return "Pull requests from forks get no secrets, so the sign-in flow can't run here.";
   if (env.GITHUB_ACTOR === 'dependabot[bot]') return `Dependabot pull requests get only Dependabot secrets: add ${names} under Settings > Secrets and variables > Dependabot.`;
   return count === 1
-    ? `This run got no value for ${names}: add it as a repository secret and map it in the workflow step's env, or use CI-only values (README: GitHub Actions).`
-    : `This run got no value for ${names}: add them as repository secrets and map them in the workflow step's env, or use CI-only values (README: GitHub Actions).`;
+    ? `This run got no value for ${names}: add it as a repository secret and map it in the workflow step's env, or use CI-only values (docs/github-actions.md).`
+    : `This run got no value for ${names}: add them as repository secrets and map them in the workflow step's env, or use CI-only values (docs/github-actions.md).`;
 }
 
 // The sign-in flow's variables, checked as soon as flows are read: before

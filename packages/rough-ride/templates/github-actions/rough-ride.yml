@@ -56,7 +56,7 @@ jobs:
 
       - name: rough-ride ${{ env.RP_TIER }}
         continue-on-error: true      # findings, stops and step timeouts never fail the job
-        timeout-minutes: 10          # README formula: start wait + reset + hard stop + 150 s
+        timeout-minutes: 10          # docs/github-actions.md: start wait + reset + hard stop + 150 s
         env:
           DEMO_EMAIL: demo@example.com           # a CI-only user in this job's throwaway database:
           DEMO_PASSWORD: demo-password           # not a secret, and never a real password

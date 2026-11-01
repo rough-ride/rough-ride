@@ -3,41 +3,40 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { contractProblems, normalise, readmeBlock, readTree, sha256 } from '../../../scripts/contract-sync.mjs';
+import { contractProblems, normalise, pageBlock, readTree, sha256 } from '../../../scripts/contract-sync.mjs';
 import { npmPack } from '../../../scripts/pack-contents.mjs';
 
 const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 const tree = await readTree(ROOT);
 const text = tree.template.toString('utf8');
 
-// The tree with its template text replaced, the README and editions kept in step.
+// The tree with its template text replaced, the docs page and editions kept in step.
 function withText(next, over = {}) {
   const template = Buffer.from(next);
-  const readme = tree.readme.replace(text, next);
+  const page = tree.page.replace(text, next);
   const editions = tree.editions.map((e, i, all) => (i === all.length - 1 ? { ...e, sha256: sha256(normalise(template)) } : e));
-  return { ...tree, template, readme, editions, ...over };
+  return { ...tree, template, page, editions, ...over };
 }
 const has = (problems, re) => assert.ok(problems.some((p) => re.test(p)), problems.join('\n') || 'no problems');
 
 test('the release tree passes, and the coverage map covers every id with no double-click entry', () => {
   assert.deepEqual(contractProblems(tree), []);
-  assert.equal(readmeBlock(tree.readme), text);
+  assert.equal(pageBlock(tree.page), text);
   assert.equal(tree.ids.checks.length, 10);
   assert.equal(tree.ids.faults.length, 9);
   assert.deepEqual(tree.ids.attacks.sort(), ['back', 'double-submit', 'out-of-order', 'refresh', 'signed-out-reload', 'viewport-375']);
   assert.equal(Object.keys(tree.coverage).length, 10 + 9 + tree.ids.inputs.length + 6);
   assert.ok(!('double-click' in tree.coverage));
-  assert.equal(readFileSync(new URL('../README.md', import.meta.url), 'utf8'), tree.readme);
 });
 
-test('(a) one byte of the README block differs from the template', () => {
-  has(contractProblems({ ...tree, readme: tree.readme.replace('375 px wide screen', '375 px wide screen ') }), /^\(a\) the README block differs/);
-  has(contractProblems({ ...tree, readme: tree.readme.replace('## Resilience contract\n\nThe', '## Resilience\n\nThe') }), /^\(a\) the README has no fenced markdown block/);
+test('(a) one byte of the docs page block differs from the template', () => {
+  has(contractProblems({ ...tree, page: tree.page.replace('375 px wide screen', '375 px wide screen ') }), /^\(a\) the docs\/resilience-contract\.md block differs/);
+  has(contractProblems({ ...tree, page: tree.page.replace('## The text\n', '## Text\n') }), /^\(a\) docs\/resilience-contract\.md has no fenced markdown block/);
 });
 
 test('(b) the template changes without a new editions entry; editions skip; a frozen entry changes', () => {
   const changed = Buffer.from(text.replace('stays disabled', 'stays greyed out'));
-  has(contractProblems({ ...tree, template: changed, readme: tree.readme.replace(text, changed.toString()) }), /^\(b\) the template's sha256 .* needs a new editions entry/);
+  has(contractProblems({ ...tree, template: changed, page: tree.page.replace(text, changed.toString()) }), /^\(b\) the template's sha256 .* needs a new editions entry/);
   has(contractProblems({ ...tree, editions: [{ ...tree.editions[0], edition: 2 }] }), /^\(b\) contract-editions.json entry 1 has edition 2/);
   has(contractProblems({ ...tree, editions: [tree.editions[0], { ...tree.editions[0], edition: 2 }] }), /same sha256/);
   const frozen = [{ ...tree.editions[0], since: '0.4.0' }];
