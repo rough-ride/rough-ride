@@ -7,8 +7,9 @@ import { fixture, run, scratchDir } from './helpers.mjs';
 
 const OWN = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 const load = (name) => JSON.parse(readFileSync(fixture(`prcomment/${name}`), 'utf8'));
-const TIER = load('tier.json');
-const REGRESS = load('regress.json');
+// The samples say which runner wrote them; pr-comment reads only its own version's documents.
+const TIER = { ...load('tier.json'), runner: { ...load('tier.json').runner, version: OWN } };
+const REGRESS = { ...load('regress.json'), runner: { ...load('regress.json').runner, version: OWN } };
 const RUNNER = 'Runner: rough-ride 0.1.0 from devDependency package.json | Node 22.23.3 | Playwright 1.64.1';
 const NO_GITHUB = { GITHUB_ACTIONS: '', GITHUB_EVENT_PATH: '', GITHUB_SHA: '', GITHUB_SERVER_URL: '', GITHUB_REPOSITORY: '', GITHUB_RUN_ID: '', GITHUB_RUN_ATTEMPT: '' };
 

@@ -2,7 +2,7 @@
   "name": "rough-ride-repo",
   "private": true,
   "description": "Development tooling for the rough-ride package. Not published.",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "scripts": {
     "build": "tsc -p packages/rough-ride/tsconfig.json && node scripts/copy-schemas.mjs",
     "test": "node --test \"packages/rough-ride/test/*.test.mjs\"",

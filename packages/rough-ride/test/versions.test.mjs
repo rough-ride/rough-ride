@@ -39,8 +39,9 @@ test('version:set rewrites package.json, plugin.json, the shrinkwrap root and pi
 test('version-sync fails a plugin.json that differs and a tag whose files say another version', () => {
   const root = tree();
   const plugin = path.join(root, 'packages', 'rough-ride', '.claude-plugin', 'plugin.json');
-  writeFileSync(plugin, JSON.stringify({ ...JSON.parse(readFileSync(plugin, 'utf8')), version: '0.1.1' }));
-  assert.match(syncProblems(versionsIn(root)).join('\n'), /plugin\.json says 0\.1\.1, packages\/rough-ride\/package\.json says 0\.1\.0/);
+  const own = JSON.parse(readFileSync(path.join(root, 'packages', 'rough-ride', 'package.json'), 'utf8')).version;
+  writeFileSync(plugin, JSON.stringify({ ...JSON.parse(readFileSync(plugin, 'utf8')), version: '9.9.9' }));
+  assert.match(syncProblems(versionsIn(root)).join('\n'), new RegExp(`plugin\\.json says 9\\.9\\.9, packages/rough-ride/package\\.json says ${own.replaceAll('.', '\\.')}`));
   setVersion('0.4.9', root);
   assert.deepEqual(syncProblems(versionsIn(root)), []);
   assert.match(syncProblems(versionsIn(root), 'v0.5.0').join('\n'), /says 0\.4\.9, the tag v0\.5\.0 says 0\.5\.0/);

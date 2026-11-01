@@ -1,8 +1,8 @@
 {
   "name": "rough-ride",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Attacks a web app that a coding agent just changed with faults and bad inputs, and judges whether it stays usable and honest.",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "keywords": [
     "resilience",
     "testing",

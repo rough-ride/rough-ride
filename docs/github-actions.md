@@ -6,7 +6,7 @@ It is written for a Nuxt 4 + FastAPI app with `frontend/`, `backend/`, uv and SQ
 
 ## Who does what
 
-1. **Maintainer, before the first pull request:** run `npm i -D -E rough-ride@0.1.0` in the folder that runs `npm ci`. Commit `.rough-ride/config.yaml` with `reset`, `.rough-ride/flows/sign-in.yaml`, `.rough-ride/.gitignore` and the workflow. Make `reset` (or the app) create the CI-only sign-in user from the flow's variables.
+1. **Maintainer, before the first pull request:** run `npm i -D -E rough-ride@0.1.1` in the folder that runs `npm ci`. Commit `.rough-ride/config.yaml` with `reset`, `.rough-ride/flows/sign-in.yaml`, `.rough-ride/.gitignore` and the workflow. Make `reset` (or the app) create the CI-only sign-in user from the flow's variables.
 2. **Admin, once:** never add `rough-ride (non-blocking)` or `rough-ride comment` to required status checks or rulesets. Keep GitHub's default approval for first-time contributors. With the `secrets.*` variant only, add the repository secrets and the same names under Dependabot secrets.
 
 ## Notes on the workflow
@@ -74,7 +74,7 @@ The two runner steps' `env` adds `DATABASE_URL: postgresql://app:ci-only@localho
 
 **A `frontend/` with its own lockfile.** In the install step, run `npm ci --prefix frontend` and leave `uv sync --project backend --locked` as it is. Both runner steps and the render step set `working-directory: frontend`, and setup-node sets `cache-dependency-path: frontend/package-lock.json`. The upload path stays `.rough-ride/runs/`, because `uses:` steps ignore `working-directory`.
 
-**No `package.json`** (server-rendered Python, Ruby or Go): keep setup-node, drop `npm ci`, and run `exec npx -y rough-ride@0.1.0 quick --start --json`, with the same form for `regress` and `pr-comment`. The config gives `target.url` and `target.start`.
+**No `package.json`** (server-rendered Python, Ruby or Go): keep setup-node, drop `npm ci`, and run `exec npx -y rough-ride@0.1.1 quick --start --json`, with the same form for `regress` and `pr-comment`. The config gives `target.url` and `target.start`.
 
 **pnpm.** Add a `pnpm/action-setup` step before setup-node, pinned by full commit SHA with its release in a comment like the other actions, set setup-node's `cache: pnpm`, install with `pnpm install --frozen-lockfile` and run `exec pnpm exec rough-ride ...`.
 
