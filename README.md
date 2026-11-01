@@ -1,6 +1,6 @@
 # rough-ride
 
-<p align="center"><img src="https://raw.githubusercontent.com/rough-ride/rough-ride/main/docs/banner.svg" alt="rough-ride: drives your app down a rough road, before your users do." width="100%"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/rough-ride/rough-ride/main/docs/banner.png" alt="rough-ride: drives your app down a rough road, before your users do." width="100%"></p>
 
 **Resilience testing for agent-built web apps.** After a coding agent changes your app, rough-ride attacks what changed with network faults, bad inputs and timing tricks in a real browser, and tells you where the app breaks or lies.
 
