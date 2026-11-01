@@ -83,9 +83,10 @@ test('a one-byte change to a README copy, or a missing section, fails template-c
   has(readmeProblems('README.md', readme.replace(SECTION, '## GitHub Actions'), tpl), /has no fenced yaml block under/);
 });
 
-test('the README section carries the two steps, the timeout formulas, the Dependabot and Renovate snippets and every variant', () => {
+test('the README section links docs/github-actions.md, which carries the two steps, the timeout formulas, the Dependabot and Renovate snippets and every variant', () => {
   const start = readme.indexOf(SECTION);
-  const section = readme.slice(start, readme.indexOf('\n## ', start + 1));
+  assert.ok(readme.slice(start, readme.indexOf('\n## ', start + 1)).includes('(docs/github-actions.md)'));
+  const section = read('docs/github-actions.md');
   assert.match(section, /1\. \*\*Maintainer, before the first pull request:\*\* run `npm i -D -E rough-ride@\d+\.\d+\.\d+`/);
   assert.match(section, /2\. \*\*Admin, once:\*\* never add `rough-ride \(non-blocking\)` or `rough-ride comment` to required status checks or rulesets/);
   assert.match(section, /ceil\(\(`target\.startTimeout` \+ longest `reset` \+ hard stop \+ 150 s\) \/ 60\)/);
