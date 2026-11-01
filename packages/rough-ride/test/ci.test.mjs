@@ -276,7 +276,7 @@ test('in a pull_request event the stop adds the fork, Dependabot or same-reposit
     pullRequestLine('DEMO_PASSWORD', 1, { ...pr, GITHUB_EVENT_PATH: event('owner/app'), GITHUB_ACTOR: 'dependabot[bot]' }),
     'Dependabot pull requests get only Dependabot secrets: add DEMO_PASSWORD under Settings > Secrets and variables > Dependabot.',
   );
-  const same = "This run got no value for DEMO_PASSWORD: add it as a repository secret and map it in the workflow step's env, or use CI-only values (docs/github-actions.md).";
+  const same = "This run got no value for DEMO_PASSWORD: add it as a repository secret and map it in the workflow step's env, or use CI-only values (https://github.com/rough-ride/rough-ride/blob/main/docs/github-actions.md).";
   assert.equal(pullRequestLine('DEMO_PASSWORD', 1, { ...pr, GITHUB_EVENT_PATH: event('owner/app'), GITHUB_ACTOR: 'someone' }), same);
   assert.equal(pullRequestLine('DEMO_PASSWORD', 1, { ...pr, GITHUB_EVENT_NAME: 'push', GITHUB_EVENT_PATH: event('someone/app') }), null);
 

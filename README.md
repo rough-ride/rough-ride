@@ -25,6 +25,8 @@ Then start your dev server and, after a change, run `/rough-ride:quick`.
 npx rough-ride@0.1.2 quick
 ```
 
+The terminal attacks only through flows saved in `.rough-ride/flows/`, which the plugin writes for you (or use `flow save`). On a new repository, start with the plugin.
+
 Every finding comes with a repro you can replay in a visible browser and a regression test you can commit.
 
 ## Commands
@@ -38,7 +40,9 @@ Every finding comes with a repro you can replay in a visible browser and a regre
 | `flow save` | Save a flow to `.rough-ride/flows/` |
 | `pr-comment` | Turn a CI run summary into a pull request comment |
 
-Flags: `--start` starts and stops your app (set `target.start` in `.rough-ride/config.yaml`), `--base <ref>`, `--browser chrome|msedge|chromium`, `--json`. No config is needed to start; [`templates/config.yaml`](https://github.com/rough-ride/rough-ride/blob/main/packages/rough-ride/templates/config.yaml) lists every setting.
+Flags: `--start` starts and stops your app, `--base <ref>`, `--browser chrome|msedge|chromium`, `--json`.
+
+**Config:** a single Nuxt app needs no config. For any other app, set `target.url` (and `target.start` for `--start`) in `.rough-ride/config.yaml`; [`templates/config.yaml`](https://github.com/rough-ride/rough-ride/blob/main/packages/rough-ride/templates/config.yaml) lists every setting.
 
 ## Learn more
 

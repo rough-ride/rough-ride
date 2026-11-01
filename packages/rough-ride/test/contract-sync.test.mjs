@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { contractProblems, normalise, pageBlock, readTree, sha256 } from '../../../scripts/contract-sync.mjs';
+import { contractProblems, normalise, PAGE, pageBlock, readTree, sha256 } from '../../../scripts/contract-sync.mjs';
+import { contractLine } from '../dist/contract.mjs';
 import { npmPack } from '../../../scripts/pack-contents.mjs';
 
 const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
@@ -78,4 +79,11 @@ test('the packed tarball holds the template, its MIT-0 LICENSE and the editions 
   const files = npmPack(fileURLToPath(new URL('..', import.meta.url))).files.map((f) => f.path);
   for (const f of ['templates/resilience-contract.md', 'templates/LICENSE', 'dist/contract-editions.json']) assert.ok(files.includes(f), f);
   assert.match(readFileSync(path.join(ROOT, 'CONTRIBUTING.md'), 'utf8'), /templates\/` are made under that folder's MIT-0 licence/);
+});
+
+test('the link the runner prints opens the page and heading that contract-sync checks', () => {
+  const line = contractLine({ status: 'missing' }, { version: '0.1.0', ci: true });
+  assert.ok(pageBlock(tree.page) !== null);
+  assert.ok(line.includes(`https://github.com/rough-ride/rough-ride/blob/v0.1.0/${PAGE}#the-text.`), line);
+  assert.ok(tree.page.split('\n').includes('## The text'));
 });

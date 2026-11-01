@@ -161,8 +161,8 @@ jobs:
       - run: npm ci
       - run: node scripts/workflow-template.mjs template-shas
 
-  # The workflow template's static checks, both README copies, and its comment
-  # job's script under bash with a mocked gh (the runner image ships jq).
+  # The workflow template's static checks and its comment job's script under
+  # bash with a mocked gh (the runner image ships jq).
   template-checks:
     runs-on: ubuntu-24.04
     steps:
