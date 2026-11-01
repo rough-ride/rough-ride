@@ -52,7 +52,8 @@ export function startTimingSite() {
           return json(200, url.searchParams.has('count') ? { id: 1, starred, count } : { id: 1, starred });
         }
         if (key === 'POST /api/once') {
-          if (onceTaken) return json(500, { detail: 'busy' });
+          // The duplicate's 500 answers 300 ms after the first request's 200, so it always lands last.
+          if (onceTaken) return void setTimeout(() => json(500, { detail: 'busy' }), 300);
           onceTaken = true;
           setTimeout(() => (onceTaken = false), 1000);
           return json(200, { ok: true });
