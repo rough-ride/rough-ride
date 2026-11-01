@@ -38,7 +38,7 @@
 With your dev server running, from the repository root:
 
 ```
-npx rough-ride@0.1.1 quick
+npx rough-ride@0.1.2 quick
 ```
 
 Add `--start` to let rough-ride start and stop the app itself; set `target.start` in `.rough-ride/config.yaml` first.
@@ -54,7 +54,7 @@ Add `--start` to let rough-ride start and stop the app itself; set `target.start
 | `flow save` | Save a flow to `.rough-ride/flows/` |
 | `pr-comment` | Turn a CI run summary into a pull request comment |
 
-Useful flags: `--start`, `--base <ref>`, `--browser chrome|msedge|chromium`, `--json`. Run `npx rough-ride@0.1.1 --help` for all of them.
+Useful flags: `--start`, `--base <ref>`, `--browser chrome|msedge|chromium`, `--json`. Run `npx rough-ride@0.1.2 --help` for all of them.
 
 ## Configuration (optional)
 
@@ -100,7 +100,7 @@ To update it later, replace everything between the two marker lines. To decline 
 
 Each pull request gets one rough-ride comment, updated on every push. A finding never fails the job.
 
-1. Run `npm i -D -E rough-ride@0.1.1`, then commit `.rough-ride/config.yaml`, `.rough-ride/flows/sign-in.yaml`, `.rough-ride/.gitignore` and the workflow below as `.github/workflows/rough-ride.yml`.
+1. Run `npm i -D -E rough-ride@0.1.2`, then commit `.rough-ride/config.yaml`, `.rough-ride/flows/sign-in.yaml`, `.rough-ride/.gitignore` and the workflow below as `.github/workflows/rough-ride.yml`.
 2. Make the config's `reset` (or the app) create the CI-only sign-in user from the flow's variables.
 3. Never add its jobs to required status checks.
 
