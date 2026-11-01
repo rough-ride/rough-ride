@@ -20,7 +20,7 @@ import { gitRepo } from './helpers.mjs';
 
 const SAMPLE = 'http://localhost:3731';
 const sampleUp = await fetch(`${SAMPLE}/login`).then((r) => r.ok).catch(() => false);
-const needsSample = { skip: !sampleUp && 'the sample app is not running (BUGS=none npm run dev in .scratch/chaos-v1/prototypes/sample-app)' };
+const needsSample = { skip: !sampleUp && 'the sample app is not running (BUGS=none npm run dev in fixtures/sample-app)' };
 const DEMO = { DEMO_EMAIL: 'demo@example.com', DEMO_PASSWORD: 'demo-password' };
 const env = (name) => DEMO[name];
 

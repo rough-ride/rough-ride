@@ -1,0 +1,15 @@
+{
+  "name": "chaos-v1-sample-app",
+  "private": true,
+  "workspaces": ["frontend"],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:api": "uv run --project backend uvicorn app:app --app-dir backend --host 127.0.0.1 --port 8731",
+    "dev:web": "npm --workspace frontend run dev",
+    "db:reset": "uv run --project backend python backend/reset_db.py",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}

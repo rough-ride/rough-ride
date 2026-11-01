@@ -14,7 +14,7 @@ import { createRunFolder } from '../dist/runs.mjs';
 import { writeAtomic } from '../dist/write.mjs';
 import { gitRepo, run, scratchDir, sh } from './helpers.mjs';
 
-const SAMPLE = fileURLToPath(new URL('../../../.scratch/chaos-v1/prototypes/sample-app/', import.meta.url));
+const SAMPLE = fileURLToPath(new URL('../../../fixtures/sample-app/', import.meta.url));
 
 function write(root, file, text = 'x\n') {
   mkdirSync(path.dirname(path.join(root, file)), { recursive: true });

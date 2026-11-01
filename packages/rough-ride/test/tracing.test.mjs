@@ -8,10 +8,10 @@ import { pagePath, requestTemplate, runFlow } from '../dist/flowrun.mjs';
 import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 import { moduleFiles, routeMatches, traceReach } from '../dist/tracing.mjs';
 
-const SAMPLE_DIR = fileURLToPath(new URL('../../../.scratch/chaos-v1/prototypes/sample-app/', import.meta.url));
+const SAMPLE_DIR = fileURLToPath(new URL('../../../fixtures/sample-app/', import.meta.url));
 const SAMPLE = 'http://localhost:3731';
 const sampleUp = await fetch(`${SAMPLE}/login`).then((r) => r.ok).catch(() => false);
-const needsSample = { skip: !sampleUp && 'the sample app is not running (BUGS=none npm run dev in .scratch/chaos-v1/prototypes/sample-app)' };
+const needsSample = { skip: !sampleUp && 'the sample app is not running (BUGS=none npm run dev in fixtures/sample-app)' };
 
 // The sample app's own files, as git would list them.
 function sampleFiles() {

@@ -11,7 +11,7 @@ import { canonical, gitRepo, scratchDir } from './helpers.mjs';
 
 const FAKE = fileURLToPath(new URL('./fixtures/fake-nuxt.mjs', import.meta.url));
 const TREE = fileURLToPath(new URL('./fixtures/tree.mjs', import.meta.url));
-const SAMPLE = fileURLToPath(new URL('../../../.scratch/chaos-v1/prototypes/sample-app/', import.meta.url));
+const SAMPLE = fileURLToPath(new URL('../../../fixtures/sample-app/', import.meta.url));
 const posix = { skip: process.platform === 'win32' && 'process groups are POSIX; Windows uses taskkill' };
 const children = [];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -332,7 +332,7 @@ test('an interrupted invocation ends every process --start launched (SIGINT 130,
 test('the running sample app serves its own lock file and counts as proven', async (t) => {
   const dir = path.join(SAMPLE, 'frontend');
   if (!readLock({ dir })?.port) {
-    t.skip('the sample app is not running (npm run dev:web in .scratch/chaos-v1/prototypes/sample-app)');
+    t.skip('the sample app is not running (npm run dev:web in fixtures/sample-app)');
     return;
   }
   const proof = await proveLock({ dir, rel: 'frontend/' });

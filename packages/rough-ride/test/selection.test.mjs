@@ -14,11 +14,11 @@ import { select } from '../dist/selection.mjs';
 import { LOOPBACK_ONLY } from '../dist/hosts.mjs';
 import { gitRepo, sh } from './helpers.mjs';
 
-const SAMPLE_DIR = fileURLToPath(new URL('../../../.scratch/chaos-v1/prototypes/sample-app/', import.meta.url));
+const SAMPLE_DIR = fileURLToPath(new URL('../../../fixtures/sample-app/', import.meta.url));
 const SAMPLE = 'http://localhost:3731';
 const API = 'http://127.0.0.1:8731';
 const sampleUp = await fetch(`${SAMPLE}/login`).then((r) => r.ok).catch(() => false);
-const needsSample = { skip: !sampleUp && 'the sample app is not running (BUGS=none npm run dev in .scratch/chaos-v1/prototypes/sample-app)' };
+const needsSample = { skip: !sampleUp && 'the sample app is not running (BUGS=none npm run dev in fixtures/sample-app)' };
 
 test('enclosing blocks by indentation; decorators belong to the block below', () => {
   const src = ['import x', '', '@app.post("/a")', 'def create(a):', '    if a:', '        return 1', '', 'class C(Base):', '    def m(self):', '        pass'];
