@@ -4,7 +4,7 @@
 
 **Resilience testing for agent-built web apps.** After a coding agent changes your app, rough-ride attacks what changed with network faults, bad inputs and timing tricks in a real browser, and tells you where the app breaks or lies.
 
-> Pre-release (0.x): detection and false-alarm rates are not measured yet. Do not rely on its verdicts.
+> Early preview: how often it catches real bugs, and how often it raises false alarms, hasn't been measured yet. Treat findings as leads to check.
 
 ## Quick start
 
