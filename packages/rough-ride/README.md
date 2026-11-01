@@ -1,14 +1,6 @@
 # rough-ride
 
-```text
-          _______________
-         //   ||   ||    \\___
-    ____//____||___||_____\\__\___         r o u g h - r i d e
-   |   _        your app       _  |        drives your app down a rough road,
-   '--(_)---------------------(_)-'        before your users do.
-~~~~~^~~~~~~~~^~~~~~~~~^~~~~~~~~^~~~~~~~~~~~~~^~~~~~~~~~~~~~^~~~~~~~~~~^~~~~~~
-    500    timeout    429    offline    double-click    bad input    375px
-```
+<p align="center"><img src="https://raw.githubusercontent.com/rough-ride/rough-ride/main/docs/banner.svg" alt="rough-ride: drives your app down a rough road, before your users do." width="100%"></p>
 
 **Resilience testing for agent-built web apps.** After a coding agent changes your app, rough-ride attacks what changed with network faults, bad inputs and timing tricks in a real browser, and tells you where the app breaks or lies.
 
