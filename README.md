@@ -22,7 +22,7 @@ Then start your dev server and, after a change, run `/rough-ride:quick`.
 **From the terminal**, with your dev server running, in the repository root:
 
 ```
-npx rough-ride@0.1.3 quick
+npx rough-ride@0.1.4 quick
 ```
 
 The terminal attacks only through flows saved in `.rough-ride/flows/`, which the plugin writes for you (or use `flow save`). On a new repository, start with the plugin.
