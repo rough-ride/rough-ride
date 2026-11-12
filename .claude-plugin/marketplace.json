@@ -10,7 +10,7 @@
       "source": {
         "source": "npm",
         "package": "rough-ride",
-        "version": "0.1.4"
+        "version": "0.1.5"
       },
       "description": "Attacks a web app that a coding agent just changed with faults and bad inputs, and judges whether it stays usable and honest.",
       "license": "MIT"
