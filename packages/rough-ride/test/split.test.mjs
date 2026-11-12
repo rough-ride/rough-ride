@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { CATALOGUE, checkDigest, checkRun, LIMITS, SELECTION } from '../dist/runcheck.mjs';
+import { CATALOGUE, checkDigest, checkRun, LIMITS, planAgain, SELECTION } from '../dist/runcheck.mjs';
 import { StopError } from '../dist/exit.mjs';
 import { checkRootEntry, ensureFolder } from '../dist/folder.mjs';
 import { Manifest } from '../dist/manifest.mjs';
@@ -54,6 +54,14 @@ test('run-id stops: no run, already attacked, another version, an edited selecti
   writeFileSync(path.join(p.dir, 'record.json'), '{"phase":"attacked"}');
   assert.deepEqual(stopOf(() => checkRun(p.folder, ID, info, p.manifest)).lines, [`Run ${ID} was already attacked. Run /rough-ride:standard again.`]);
   assert.deepEqual(stopOf(() => checkDigest({ digest: 'd1' }, 'd2')), { kind: 'retry', code: 'code-changed', lines: ['The code changed since the plan was made. Plan again.'] });
+});
+
+test('a plan made with --base is run again on that base: the runner call under the plugin, since the tier skills take no arguments', () => {
+  const p = planned({ base: { given: 'origin/dev' } });
+  writeFileSync(path.join(p.dir, 'record.json'), '{"phase":"attacked"}');
+  assert.deepEqual(stopOf(() => checkRun(p.folder, ID, info, p.manifest)).lines, [`Run ${ID} was already attacked. Run node "/x/dist/cli.mjs" standard --base origin/dev --plugin-data "/d" again.`]);
+  assert.deepEqual(planAgain({ tier: 'quick', base: { given: 'origin/dev' } }), { command: 'quick', base: 'origin/dev' });
+  assert.deepEqual(planAgain({ tier: 'standard', base: { given: null } }), { command: 'standard', base: null });
 });
 
 test('the recorded Attack catalogue comes back with the plan; an edited or missing copy stops as an altered read-back file', () => {

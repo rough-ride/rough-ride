@@ -10,8 +10,10 @@ import { DUPLICATE, FLOOR, INLINE, OLD_NODE, PACKAGES, pluginsHome as home } fro
 import * as copy from '../hooks/plugin-checks.mjs';
 
 const PKG = fileURLToPath(new URL('..', import.meta.url));
-const PREFLIGHT_RULE = 'node "${CLAUDE_PLUGIN_ROOT}/hooks/preflight.mjs" "${CLAUDE_PLUGIN_DATA}"';
-const PREFLIGHT_LINE = '!`' + PREFLIGHT_RULE + '`';
+// Each tier skill names itself, so the preflight's floor stop says which skill to run again.
+const PREFLIGHT_RULE = (tier) => `node "\${CLAUDE_PLUGIN_ROOT}/hooks/preflight.mjs" "\${CLAUDE_PLUGIN_DATA}" ${tier}`;
+const PREFLIGHT_LINE = (tier) => '!`' + PREFLIGHT_RULE(tier) + '`';
+const RUNNER = 'node "${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs"';
 const EDIT_GUARD_OFF =
   "Edit guard: not running in this session. rough-ride's hooks did not start (hooks turned off by settings or policy, another copy holds the name, or node is missing for hooks), so edits under .rough-ride/ are not blocked.";
 const VERSION = JSON.parse(readFileSync(path.join(PKG, 'package.json'), 'utf8')).version;
@@ -37,13 +39,36 @@ for (const tier of ['quick', 'standard']) {
     assert.equal(data.background, false);
     // Ticket 02's probes: heredoc calls don't match prefix rules, so the
     // runner rules leave allowed-tools and guard rule 7 allows them (41.3).
-    assert.deepEqual(data['allowed-tools'], [`Bash(${PREFLIGHT_RULE})`, `PowerShell(${PREFLIGHT_RULE})`]);
+    assert.deepEqual(data['allowed-tools'], [`Bash(${PREFLIGHT_RULE(tier)})`, `PowerShell(${PREFLIGHT_RULE(tier)})`]);
     assert.ok(!/\$(ARGUMENTS|\d|[A-Za-z_{])/.test(body.replace(/\$\{CLAUDE_PLUGIN_(ROOT|DATA)\}/g, '')), 'no argument placeholder');
-    assert.equal(body.split('\n')[0], PREFLIGHT_LINE);
+    assert.equal(body.split('\n')[0], PREFLIGHT_LINE(tier));
     assert.ok(
       body.trimEnd().endsWith(`reply exactly: Refused: rough-ride takes no arguments. Run /rough-ride:${tier} again with nothing after it. Requirements go in .rough-ride/specs/<name>.txt, which you write yourself.`),
     );
     assert.ok(body.includes('`ARGUMENTS:`'));
+  });
+}
+
+// regress and repro run in the session that typed them: no fork, no adversary,
+// one runner call whose only argument is what the skill checked.
+for (const [name, hint, call, refusal] of [
+  ['regress', '[test names]', `${RUNNER} regress --only <name> --plugin-data "\${CLAUDE_PLUGIN_DATA}"`, 'Refused: /rough-ride:regress takes test names made of lowercase letters, digits and dashes, or nothing.'],
+  ['repro', '<run id>/r<n>', `${RUNNER} repro <id> --plugin-data "\${CLAUDE_PLUGIN_DATA}"`, 'Refused: /rough-ride:repro takes one finding id, such as 20261025-141207-quick-k3fz/r01, from a quick or standard summary.'],
+]) {
+  test(`skills/${name}: a main-session skill with one placeholder, one runner call and its refusal`, () => {
+    const { data, keys, body } = frontmatter(`skills/${name}/SKILL.md`);
+    assert.deepEqual(keys, ['name', 'description', 'argument-hint', 'allowed-tools']);
+    assert.equal(data.name, name);
+    assert.equal(data['argument-hint'], hint);
+    assert.deepEqual(data['allowed-tools'], [`Bash(${RUNNER} ${name} *)`]);
+    // The only placeholder is $ARGUMENTS, once; no shell line runs at load time.
+    const rest = body.replace(/\$\{CLAUDE_PLUGIN_(ROOT|DATA)\}/g, '');
+    assert.equal(rest.match(/\$ARGUMENTS/g)?.length, 1);
+    assert.ok(!/\$(\d|[A-Za-z_{])/.test(rest.replace('$ARGUMENTS', '')), 'no other placeholder');
+    assert.ok(!body.includes('!`'), 'no shell line');
+    assert.ok(body.includes(`\n    ${call}\n`), 'the runner call, indented as code');
+    assert.ok(body.includes(`reply exactly: ${refusal}`));
+    assert.ok(body.includes('Use the Bash tool with timeout 600000, and run no other command.'));
   });
 }
 
@@ -204,8 +229,14 @@ test('session-start: unreadable input prints nothing and exits 0', () => {
 
 test('preflight: exits 1 on an old Claude Code, missing packages or an old Node, printing the message', () => {
   const p = pluginsHome({ ids: [['rough-ride@rough-ride', VERSION]] });
-  const floor = hook('preflight.mjs', { ...p, args: [p.data], env: { AI_AGENT: 'claude-code_2-1-250_agent' } });
+  const floor = hook('preflight.mjs', { ...p, args: [p.data, 'quick'], env: { AI_AGENT: 'claude-code_2-1-250_agent' } });
   assert.deepEqual([floor.code, floor.stdout], [1, FLOOR(VERSION) + '\n']);
+  // /rough-ride:standard's preflight names standard; a missing or unknown name says quick.
+  const standard = hook('preflight.mjs', { ...p, args: [p.data, 'standard'], env: { AI_AGENT: 'claude-code_2-1-250_agent' } });
+  assert.deepEqual([standard.code, standard.stdout], [1, FLOOR(VERSION).replace('/rough-ride:quick', '/rough-ride:standard') + '\n']);
+  for (const args of [[p.data], [p.data, 'other']]) {
+    assert.equal(hook('preflight.mjs', { ...p, args, env: { AI_AGENT: 'claude-code_2-1-250_agent' } }).stdout, FLOOR(VERSION) + '\n');
+  }
 
   const bare = pluginsHome({ ids: [['rough-ride@rough-ride', VERSION]], withPackages: false });
   const missing = hook('preflight.mjs', { ...bare, args: [bare.data] });
@@ -258,9 +289,9 @@ test('cacheCopy: one parser of <plugins root>/cache/<marketplace>/<plugin>/<vers
 
 test('the floor, the edit-guard line, the session id, semver and the Claude Code version', () => {
   assert.equal(copy.EDIT_GUARD_OFF, EDIT_GUARD_OFF);
-  assert.equal(copy.floorStop('0.4.0', '2.1.250', 'standard'), FLOOR('0.4.0').replace('/rough-ride:quick', '/rough-ride:standard'));
-  assert.equal(copy.floorStop('0.4.0', copy.CLAUDE_FLOOR, 'quick'), null);
-  assert.equal(copy.floorStop('0.4.0', null, 'quick'), null);
+  assert.equal(copy.floorStop('0.4.0', '2.1.250', '/rough-ride:standard'), FLOOR('0.4.0').replace('/rough-ride:quick', '/rough-ride:standard'));
+  assert.equal(copy.floorStop('0.4.0', copy.CLAUDE_FLOOR, '/rough-ride:quick'), null);
+  assert.equal(copy.floorStop('0.4.0', null, '/rough-ride:quick'), null);
   assert.ok(copy.validSession('abc_DEF-123'));
   assert.ok(copy.validSession('a'.repeat(200)));
   assert.ok(!copy.validSession('a'.repeat(201)));

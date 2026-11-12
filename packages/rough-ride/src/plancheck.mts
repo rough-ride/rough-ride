@@ -10,8 +10,8 @@ import type { FolderState } from './folder.mjs';
 import { Manifest } from './manifest.mjs';
 import { formatDuration } from './output.mjs';
 import { parsePlan, validatePlan, type PlanInput, type PlanResult } from './plan.mjs';
-import { runnerBlock, type RunnerInfo } from './runner.mjs';
-import { callCount, CATALOGUE, checkRun, recordCall, tierCommand, type PlanState } from './runcheck.mjs';
+import { followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
+import { callCount, CATALOGUE, checkRun, planAgain, recordCall, type PlanState } from './runcheck.mjs';
 import type { Section } from './summary.mjs';
 
 // The recorded Attack catalogue resolves entries as attack's fresh one will;
@@ -55,7 +55,7 @@ export interface PlanCheckContext {
 
 export function runPlanCheck(ctx: PlanCheckContext): { lines: string[]; document: Record<string, unknown>; status: 'passed' | 'incomplete' | 'stopped'; exitCode: 0 | 2 | 78 } {
   const plan = checkRun(ctx.folder, ctx.runId, ctx.info, new Manifest(ctx.root));
-  if (!fromRecord(plan.catalogue)) stopWith('refused-run-output', `Refused: run ${ctx.runId}'s ${CATALOGUE} is not one this runner reads. Run ${tierCommand(ctx.info, plan.tier)} again.`);
+  if (!fromRecord(plan.catalogue)) stopWith('refused-run-output', `Refused: run ${ctx.runId}'s ${CATALOGUE} is not one this runner reads. Run ${followUpCommand(ctx.info, planAgain(plan))} again.`);
   const finish = (body: string[], exitCode: 0 | 2 | 78) => {
     const header = ['rough-ride attack --check', formatDuration(ctx.elapsed()), `run ${ctx.runId}`].join(' | ');
     const sections: Section[] = [{ id: 'header', lines: [header] }, { id: 'flows', lines: body }, { id: 'runner', lines: runnerBlock(ctx.info) }].filter((x) => x.lines.length > 0) as Section[];

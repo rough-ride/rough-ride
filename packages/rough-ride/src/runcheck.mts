@@ -8,7 +8,7 @@ import { stopWith } from './exit.mjs';
 import type { FolderState } from './folder.mjs';
 import { writeAtomic } from './write.mjs';
 import type { Manifest } from './manifest.mjs';
-import { followUpCommand, type RunnerInfo } from './runner.mjs';
+import { followUpCommand, type Invocation, type RunnerInfo } from './runner.mjs';
 import type { TierName } from './tiers.mjs';
 import type { ContractStatus } from './contract.mjs';
 
@@ -83,8 +83,9 @@ export function bashDeadline(pluginData: boolean, processStart: number): number 
   return pluginData ? processStart + BASH_STOP_MS : Infinity;
 }
 
-export function tierCommand(info: RunnerInfo, tier: TierName): string {
-  return followUpCommand(info, [tier]);
+// What to run again for a plan: its tier, on the base it was planned against.
+export function planAgain(plan: Pick<PlanState, 'tier' | 'base'>): Invocation {
+  return { command: plan.tier, base: plan.base.given };
 }
 
 function readJson(file: string): unknown {
@@ -98,11 +99,12 @@ function readJson(file: string): unknown {
 // 42.4's stops, in order: no run, already attacked, another runner version,
 // altered read-back files. The digest is checked once the diff is known.
 export function checkRun(folder: FolderState, runId: string, info: RunnerInfo, manifest: Manifest): PlanState {
-  const quickAgain = tierCommand(info, 'quick');
+  const quickAgain = followUpCommand(info, { command: 'quick' });
   const dir = path.join(folder.dir, 'runs', runId);
   if (!RUN_ID.test(runId) || !existsSync(dir)) stopWith('run-not-found', `No run ${runId} in this repository. Run ${quickAgain} again.`);
   const plan = readJson(path.join(dir, ...SELECTION)) as PlanState | null;
-  const again = tierCommand(info, plan?.tier === 'standard' ? 'standard' : 'quick');
+  const given = typeof plan?.base?.given === 'string' ? plan.base.given : null;
+  const again = followUpCommand(info, { command: plan?.tier === 'standard' ? 'standard' : 'quick', base: given });
   const record = readJson(path.join(dir, 'record.json')) as { phase?: string } | null;
   // plan never writes attacks.jsonl, so its presence means an attack started,
   // even one that stopped, crashed or was killed before record.json changed.

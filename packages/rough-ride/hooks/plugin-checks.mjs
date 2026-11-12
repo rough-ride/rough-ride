@@ -65,15 +65,18 @@ export function claudeCodeVersion(env) {
   return /^\d+\.\d+\.\d+$/.test(last) ? last : null;
 }
 
-// The stop when Claude Code is below the floor; `tier` names the skill to run again.
-export function floorStop(own, claudeVersion, tier) {
+// The stop when Claude Code is below the floor; `again` is the command to run
+// again, such as /rough-ride:standard.
+export function floorStop(own, claudeVersion, again) {
   if (claudeVersion === null || compareSemver(claudeVersion, CLAUDE_FLOOR) >= 0) return null;
   return `rough-ride ${own} needs Claude Code ${CLAUDE_FLOOR} or later; this session runs ${claudeVersion}.` +
-    ` Older versions let a failed edit-blocking hook through. Update with claude update, restart Claude Code, then run /rough-ride:${tier} again.`;
+    ` Older versions let a failed edit-blocking hook through. Update with claude update, restart Claude Code, then run ${again} again.`;
 }
 
-export function floorMessage(pluginRoot, env) {
-  return floorStop(ownVersion(pluginRoot) || '', claudeCodeVersion(env), 'quick');
+// `skill` is the tier skill whose preflight asks; session start names quick.
+export function floorMessage(pluginRoot, env, skill) {
+  const tier = skill === 'standard' ? 'standard' : 'quick';
+  return floorStop(ownVersion(pluginRoot) || '', claudeCodeVersion(env), `/rough-ride:${tier}`);
 }
 
 export function packagesMessage(pluginRoot) {

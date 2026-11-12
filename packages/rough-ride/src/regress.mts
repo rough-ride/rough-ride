@@ -183,7 +183,7 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
   checkSignInEnv(flows, folder, ctx.env);
   const session = await openTargetSession({
     root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
-    start: ctx.start, againCommand: '/rough-ride:quick', browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
+    start: ctx.start, againCommand: followUpCommand(info, { command: 'regress', only: ctx.only }), browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
     elapsed: ctx.elapsed, run: { create: 'regress' }, reset: true,
   });
   const { target, hosts } = session;
@@ -290,10 +290,11 @@ export async function runRegress(ctx: RegressContext): Promise<RegressResult> {
   const commands: string[] = [];
   // No Fix and no Next line in CI mode (51.12).
   if (failedNames.length > 0 && !ci) {
-    const fix = `Fix, then run: ${followUpCommand(info, ['regress', ...failedNames.flatMap((n) => ['--only', n])])}`;
-    commands.push(fix.length > 400 ? `Fix, then run: ${followUpCommand(info, ['regress'])}` : fix);
+    const fix = `Fix, then run: ${followUpCommand(info, { command: 'regress', only: failedNames })}`;
+    commands.push(fix.length > 400 ? `Fix, then run: ${followUpCommand(info, { command: 'regress' })}` : fix);
   } else if (ctx.only.length > 0 && count('pass') === results.length && !ci) {
-    commands.push(info.pluginData ? 'Next: /rough-ride:quick attacks what the fix changed.' : `Next: ${followUpCommand(info, ['quick'])}`);
+    const next = followUpCommand(info, { command: 'quick' });
+    commands.push(info.pluginData ? `Next: ${next} attacks what the fix changed.` : `Next: ${next}`);
   }
   const reportPath = printed(path.join(folder.dir, 'runs', run.id, 'report.txt'));
   const head1 = [`rough-ride regress`, formatDuration(ctx.elapsed()), `run ${run.id}`, ...(info.version.startsWith('0.') ? [PRE_RELEASE] : [])].join(' | ');

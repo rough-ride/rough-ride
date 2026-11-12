@@ -149,6 +149,30 @@ test('with a plugin data folder: the floor stop exits 69, an unread version proc
   assert.ok(!on.stdout.includes('Edit guard'));
 });
 
+test('with a plugin data folder, every stop names the command that was run, not quick', () => {
+  const data = scratchDir();
+  const old = { env: { AI_AGENT: 'claude-code_2-1-250_agent' } };
+  const floorOf = (args) => run([...args, '--plugin-data', data], old).stdout.match(/then run (.+) again\./)?.[1];
+  // The adversary's plan call carries the tier the skill named.
+  assert.equal(floorOf(['plan', 'standard']), '/rough-ride:standard');
+  assert.equal(floorOf(['standard']), '/rough-ride:standard');
+  assert.equal(floorOf(['regress', '--only', 'a-500-1f2e3d']), '/rough-ride:regress a-500-1f2e3d');
+  assert.equal(floorOf(['repro', '20261025-141207-plan-k3fz/r01']), '/rough-ride:repro 20261025-141207-plan-k3fz/r01');
+
+  // A regress whose app is not running says to run regress again, its tests
+  // included. With a plugin data folder only committed files count.
+  const repo = gitRepo();
+  mkdirSync(path.join(repo, '.rough-ride', 'tests'), { recursive: true });
+  mkdirSync(path.join(repo, '.rough-ride', 'flows'), { recursive: true });
+  writeFileSync(path.join(repo, '.rough-ride', 'config.yaml'), 'schema: 0.1.0\ntarget:\n  url: http://127.0.0.1:9\n  start: npm run dev\n');
+  writeFileSync(path.join(repo, '.rough-ride', 'flows', 'create-note.yaml'), 'schema: 0.1.0\nsignedIn: false\nsteps:\n  - goto: /notes/new\n');
+  writeFileSync(path.join(repo, '.rough-ride', 'tests', 'create-note-500-a41f0c.yaml'), 'schema: 0.1.0\nflow: create-note\nattack: {fault: "500", sticky: true, request: "POST /api/notes #1", page: /notes/new}\nchecks: [values-survive]\ncontext: {timezone: UTC, locale: en-US}\nfound: {finding: "Typed values lost", run: 20261025-141207-quick-k3fz, runner: 0.1.0, date: 2026-10-25}\n');
+  sh(repo, 'add', '-A');
+  sh(repo, 'commit', '-qm', 'base');
+  const down = run(['regress', '--only', 'create-note-500-a41f0c', '--plugin-data', data], { cwd: repo });
+  assert.match(down.stdout, /^Nothing answers at http:\/\/127\.0\.0\.1:9\. Start the app in a background shell \(npm run dev in .+\), then run \/rough-ride:regress create-note-500-a41f0c again\.$/m, down.stdout);
+});
+
 test('a stop after the protected-files check reports protectedLines and protected; a usage stop reports null', () => {
   const repo = gitRepo();
   writeFileSync(path.join(repo, 'README.md'), 'x\n');

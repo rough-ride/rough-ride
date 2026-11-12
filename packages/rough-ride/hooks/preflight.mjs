@@ -20,6 +20,8 @@ import {
 
 const pluginRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const pluginData = process.argv[2] || null;
+// The tier skill whose preflight line this is, for the floor stop's "run again".
+const skill = process.argv[3] || null;
 const session = process.env.CLAUDE_CODE_SESSION_ID;
 
 if (pluginData && validSession(session)) {
@@ -31,7 +33,7 @@ if (pluginData && validSession(session)) {
 }
 
 const blocking = [
-  floorMessage(pluginRoot, process.env),
+  floorMessage(pluginRoot, process.env, skill),
   runnerNodeMessage(process.versions, process.execPath),
   packagesMessage(pluginRoot),
 ].filter(Boolean);

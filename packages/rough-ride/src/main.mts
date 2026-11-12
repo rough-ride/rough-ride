@@ -2,7 +2,7 @@
 // or with --json one JSON document on stdout and the text on stderr.
 
 import { canon } from '../hooks/path-check.mjs';
-import { HELP, parseArgs, type Subcommand } from './args.mjs';
+import { HELP, parseArgs, type ParsedArgs, type Subcommand } from './args.mjs';
 import { makeStop, StopError } from './exit.mjs';
 import { checkRootEntry, locationNotes } from './folder.mjs';
 import { findGitRoot } from './git.mjs';
@@ -24,7 +24,7 @@ import path from 'node:path';
 import { checkRootEntry as entry } from './folder.mjs';
 import { onInterrupt } from './interrupt.mjs';
 import { canonicalJson, formatDuration, startClock } from './output.mjs';
-import { claudeFloorStop, followUpCommand, ownVersion, pluginDataMismatch, runnerInfo, runnerBlock, versionLine, type RunnerInfo } from './runner.mjs';
+import { claudeFloorStop, followUpCommand, ownVersion, pluginDataMismatch, runnerInfo, runnerBlock, versionLine, type Invocation, type RunnerInfo } from './runner.mjs';
 import { createRunOutput } from './runoutput.mjs';
 
 // Each later ticket moves its subcommand off this list.
@@ -62,7 +62,7 @@ export async function main(argv: string[]): Promise<void> {
   if (info.playwright === null) return output.stop(makeStop('packages-missing', [packagesMissing(info)]));
   // With a plugin data folder the runner repeats the preflight's checks, which
   // disableSkillShellExecution can skip (spec part 1 section 4).
-  const floor = claudeFloorStop(info, args.subcommand === 'standard' ? 'standard' : 'quick');
+  const floor = claudeFloorStop(info, floorAgain(args));
   if (floor !== null) return output.stop(makeStop('claude-code-too-old', [floor]));
   const mismatch = pluginDataMismatch(info);
   if (mismatch !== null) return output.stop(makeStop('plugin-data-mismatch', [mismatch]));
@@ -123,7 +123,7 @@ export async function main(argv: string[]): Promise<void> {
       if (isEmpty(diff)) {
         const header = [`rough-ride ${args.subcommand === 'plan' ? `plan ${args.rest[0]}` : args.subcommand}`, formatDuration(elapsed())];
         if (info.version.startsWith('0.')) header.push(PRE_RELEASE);
-        const regress = followUpCommand(info, ['regress']);
+        const regress = followUpCommand(info, { command: 'regress' });
         return output.finish({
           status: 'nothing-to-attack',
           exitCode: 0,
@@ -195,6 +195,15 @@ export async function main(argv: string[]): Promise<void> {
     if (error instanceof StopError) return output.stop(error.stop, { run: error.run, tail: error.tail });
     throw error;
   }
+}
+
+// What a floor stop says to run again: this call's tier, regress or repro. The
+// adversary's --run calls never reach it, since its plan call stops first.
+function floorAgain(args: ParsedArgs): Invocation {
+  if (args.subcommand === 'regress') return { command: 'regress', only: args.only };
+  if (args.subcommand === 'repro') return { command: 'repro', id: args.rest[0] ?? '', keepOpen: args.keepOpen };
+  const tier = args.subcommand === 'plan' ? args.rest[0] : args.subcommand;
+  return { command: tier === 'standard' ? 'standard' : 'quick', base: args.base };
 }
 
 function readStdin(): string {
