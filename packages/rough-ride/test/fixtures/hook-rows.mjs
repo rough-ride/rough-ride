@@ -110,6 +110,9 @@ export function guardWorld(pkg) {
     ['rule 3: attack --plan -', bash(cli(`attack --run ${RUN} --plan -`)), `deny: ${RULE3}`, B],
     ['rule 3: npx flow save', bash('npx --no rough-ride flow save create-note'), `deny: ${RULE3}`, B],
     ['rule 3: attack --run with no plan passes', bash(cli(`attack --run ${RUN}`)), '', B],
+    // The /rough-ride:regress and /rough-ride:repro skills' calls, from the main session.
+    ['rule 3: the regress skill call passes', bash(cli('regress --only create-note-500-a41f0c')), '', B],
+    ['rule 3: the repro skill call passes', bash(cli(`repro ${RUN}/r01`)), '', B],
     ['rule 3: flow save for the adversary passes', bash(cli(`flow save create-note:n1 --run ${RUN}`), adv), 'allow', B],
 
     // Rule 4: direct adversary spawns.

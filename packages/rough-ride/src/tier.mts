@@ -28,7 +28,7 @@ import { readSaved } from './flowsave.mjs';
 import { cutPlanned, parsePlan, validatePlan, type ParsedPlan, type PlanResult } from './plan.mjs';
 import { buildCatalogue, planCandidates, toRecord, type CatalogueRecord } from './catalogue.mjs';
 import { readLinks } from './link.mjs';
-import { adversaryCallTime, CATALOGUE, LIMITS, SELECTION, type PlanState } from './runcheck.mjs';
+import { adversaryCallTime, CATALOGUE, LIMITS, planAgain, SELECTION, type PlanState } from './runcheck.mjs';
 import { blockLines, blockWithHints, changedDuringRun, compareProtected, type ProtectedResult, extraNodeCodeNote, protectedJson, reportLines as protectedReport, summaryLines as protectedSummary } from './protected.mjs';
 import { Manifest } from './manifest.mjs';
 import { buildTest } from './regression.mjs';
@@ -150,6 +150,8 @@ export function apiOrigins(target: Target, results: FlowRunResult[], hosts: Host
 
 export async function runTier(ctx: TierContext): Promise<TierResult> {
   const { root, diff, info } = ctx;
+  // The --base this run was given, kept in every command it says to run next.
+  const givenBase = diff.base.given ? diff.base.ref : null;
   // Step 4: a writing invocation creates the folder and its .gitignore.
   const folder = ensureFolder(ctx.folder);
   // Step 5: every committed file, read once and checked before any is used.
@@ -189,7 +191,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   let patchBytes: Buffer = Buffer.alloc(0);
   const session = await openTargetSession({
     root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
-    start: ctx.start, againCommand: `/rough-ride:${ctx.subcommand}`, browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
+    start: ctx.start, againCommand: followUpCommand(info, { command: ctx.subcommand, base: givenBase }), browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
     elapsed: ctx.elapsed, progress: ctx.progress, noteUnfinishedRun: true, reset: true,
     run: ctx.mode === 'attack'
       ? { existing: { id: ctx.plan!.runId, dir: path.join(folder.dir, 'runs', ctx.plan!.runId) } as RunFolder, prune: true }
@@ -261,7 +263,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   // attack: what the adversary added between plan and attack (44.2, 44.3).
   const savedRecords = ctx.mode === 'attack' ? readSaved(folder, ctx.plan!.runId) : [];
   const savedInRun = new Set(savedRecords.filter((r) => r.kept).map((r) => r.name));
-  const linkResults = ctx.mode === 'attack' ? readLinks(folder, ctx.plan!.runId, manifest, followUpCommand(info, [ctx.plan!.tier])).links : [];
+  const linkResults = ctx.mode === 'attack' ? readLinks(folder, ctx.plan!.runId, manifest, followUpCommand(info, planAgain(ctx.plan!))).links : [];
   const bashBlocks = () => session.bashBlocks();
   try {
     clock.resetFinished(await session.reset());
@@ -936,7 +938,7 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
       runner: info.version,
       tier: tierName,
       digest: diff.digest,
-      base: { given: diff.base.given ? diff.base.ref : null },
+      base: { given: givenBase },
       planMs: clock.planMs() ?? 0,
       attacks: planList,
       flows: sel.ordered.map((o) => {
@@ -1161,16 +1163,16 @@ export async function runTier(ctx: TierContext): Promise<TierResult> {
   // The Fix line names the tests written now and the open tests that failed (25.8).
   const fixNames = [...newTests.map((p) => p.split('/').at(-1)!.replace(/\.yaml$/, '')), ...testResults.filter((r) => r.outcome === 'fail').map((r) => r.name)];
   if (fixNames.length > 0 && !ci) {
-    const fix = `Fix, then run: ${followUpCommand(info, ['regress', ...[...new Set(fixNames)].flatMap((n) => ['--only', n])])}`;
-    commands.push(fix.length > 400 ? `Fix, then run: ${followUpCommand(info, ['regress'])}` : fix);
+    const fix = `Fix, then run: ${followUpCommand(info, { command: 'regress', only: [...new Set(fixNames)] })}`;
+    commands.push(fix.length > 400 ? `Fix, then run: ${followUpCommand(info, { command: 'regress' })}` : fix);
   }
   if (shown.length > 0 && !ci) {
     const ids = shown.map((g) => reproId(ordinalOf(g.representative.outcome)));
     const others = ids.slice(1);
-    commands.push(`Investigate (keeps running; start it in the background): ${followUpCommand(info, ['repro', `${run.id}/${ids[0]}`, '--keep-open'])}${others.length > 0 ? ` (other findings: ${others.join(', ')})` : ''}`);
+    commands.push(`Investigate (keeps running; start it in the background): ${followUpCommand(info, { command: 'repro', id: `${run.id}/${ids[0]}`, keepOpen: true })}${others.length > 0 ? ` (other findings: ${others.join(', ')})` : ''}`);
   }
   // In quick, whenever any selected attack or test was cut (50.6, 52.2).
-  if (ctx.subcommand === 'quick' && (cutItems.length > 0 || testsOverBudget.length > 0) && ctx.mode !== 'plan') commands.push(`More attacks: ${followUpCommand(info, ['standard'])}`);
+  if (ctx.subcommand === 'quick' && (cutItems.length > 0 || testsOverBudget.length > 0) && ctx.mode !== 'plan') commands.push(`More attacks: ${followUpCommand(info, { command: 'standard', base: givenBase })}`);
   if (ctx.mode === 'plan') {
     const above = planList.filter((x) => x.aboveCut);
     const flowsAbove = new Set(above.map((x) => x.attack.flow)).size;

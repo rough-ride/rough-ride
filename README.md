@@ -31,16 +31,16 @@ Every finding comes with a repro you can replay in a visible browser and a regre
 
 ## Commands
 
-| Command | What it does |
-|---|---|
-| `quick` | Attack this branch's changes in about 5 minutes |
-| `standard` | The same, with a bigger budget |
-| `regress` | Run the committed regression tests |
-| `repro <id>` | Replay one finding in a visible browser |
-| `flow save` | Save a flow to `.rough-ride/flows/` |
-| `pr-comment` | Turn a CI run summary into a pull request comment |
+| Terminal | In Claude Code | What it does |
+|---|---|---|
+| `quick` | `/rough-ride:quick` | Attack this branch's changes in about 5 minutes |
+| `standard` | `/rough-ride:standard` | The same, with a bigger budget |
+| `regress [--only <name>]` | `/rough-ride:regress [names]` | Run the committed regression tests |
+| `repro <id>` | `/rough-ride:repro <id>` | Re-run one finding; in the terminal, `--keep-open` holds it in a visible browser |
+| `flow save` | terminal only | Save a flow to `.rough-ride/flows/` |
+| `pr-comment` | CI only | Turn a CI run summary into a pull request comment |
 
-Flags: `--start` starts and stops your app, `--base <ref>`, `--browser chrome|msedge|chromium`, `--json`.
+Terminal flags: `--start` starts and stops your app, `--base <ref>`, `--browser chrome|msedge|chromium`, `--json`.
 
 **Config:** a single Nuxt app needs no config. For any other app, set `target.url` (and `target.start` for `--start`) in `.rough-ride/config.yaml`; [`templates/config.yaml`](https://github.com/rough-ride/rough-ride/blob/main/packages/rough-ride/templates/config.yaml) lists every setting.
 

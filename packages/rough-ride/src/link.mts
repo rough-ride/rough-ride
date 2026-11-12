@@ -12,9 +12,9 @@ import { matchesExclude } from './flowrun.mjs';
 import { Manifest } from './manifest.mjs';
 import { formatDuration, type Note } from './output.mjs';
 import { compareProtected, summaryLines as protectedSummary } from './protected.mjs';
-import { runnerBlock, type RunnerInfo } from './runner.mjs';
+import { followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
 import type { RunReport } from './runoutput.mjs';
-import { callCount, checkRun, recordCall, tierCommand, type PlanState } from './runcheck.mjs';
+import { callCount, checkRun, planAgain, recordCall, type PlanState } from './runcheck.mjs';
 import type { Section } from './summary.mjs';
 import { routeMatches, samePage } from './tracing.mjs';
 import { writeAtomic } from './write.mjs';
@@ -160,7 +160,7 @@ export function runLink(ctx: LinkContext): { lines: string[]; document: Record<s
 
   const map = JSON.parse(readFileSync(path.join(folder.dir, 'runs', ctx.runId, 'diff-map.json'), 'utf8')) as { files: { path: string; class: string }[] };
   const data: RunData = { changed: map.files, plan, exclude: prot.config?.exclude ?? [] };
-  const existing = readLinks(folder, ctx.runId, manifest, tierCommand(info, plan.tier));
+  const existing = readLinks(folder, ctx.runId, manifest, followUpCommand(info, planAgain(plan)));
   let nextId = existing.links.filter((l) => l.id !== null).length + 1;
   const out: string[] = [];
   const results: LinkResult[] = [];

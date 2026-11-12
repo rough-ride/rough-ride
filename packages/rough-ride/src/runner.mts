@@ -116,8 +116,8 @@ export function pluginDataMismatch(info: RunnerInfo, platform: NodeJS.Platform =
   return `rough-ride: --plugin-data ${info.pluginData.path} is not this plugin copy's data folder (${derived}). Run the plugin's skills instead of typing this command.`;
 }
 
-export function claudeFloorStop(info: RunnerInfo, tier: string): string | null {
-  return info.pluginData === null ? null : floorStop(info.version, info.claudeCode.version, tier);
+export function claudeFloorStop(info: RunnerInfo, again: Invocation): string | null {
+  return info.pluginData === null ? null : floorStop(info.version, info.claudeCode.version, followUpCommand(info, again));
 }
 
 function editGuardOf(pluginData: string | null, env: NodeJS.ProcessEnv): 'on' | 'off' | 'n/a' {
@@ -246,16 +246,61 @@ export function environmentRecord(env: NodeJS.ProcessEnv, info: RunnerInfo) {
   return { os: { platform: process.platform, release: osRelease(), arch: process.arch }, ci: isCi(env), mode: info.pluginData ? 'session' : ciMode(env, info) ? 'ci' : 'terminal' };
 }
 
-const TIERS = new Set(['quick', 'standard']);
+// A command a summary or stop tells its reader to run next. Callers say what
+// to run; followUpCommand says it in the form of the runner that is running.
+export type Invocation =
+  | { command: 'quick' | 'standard'; base?: string | null }
+  | { command: 'regress'; only?: readonly string[] }
+  | { command: 'repro'; id: string; keepOpen?: boolean };
+
+// The plugin's slash commands, one skill each under skills/<name>/.
+export const SLASH_COMMANDS = ['quick', 'standard', 'regress', 'repro'] as const;
+
+// The slash form of an invocation, or null when its skill does not take one of
+// its fields: the tier skills take no arguments, so a run with --base is said
+// as the runner call, and the repro skill never holds Chrome open.
+function slashForm(inv: Invocation): string | null {
+  switch (inv.command) {
+    case 'quick':
+    case 'standard':
+      return pastedBase(inv.base) ? null : `/rough-ride:${inv.command}`;
+    case 'regress':
+      // The regress skill takes only names it can pass on safely; a person's own test file may be named otherwise.
+      if ((inv.only ?? []).some((name) => !SKILL_TEST_NAME.test(name))) return null;
+      return ['/rough-ride:regress', ...(inv.only ?? [])].join(' ');
+    case 'repro':
+      return inv.keepOpen ? null : `/rough-ride:repro ${inv.id}`;
+  }
+}
+
+const SKILL_TEST_NAME = /^[a-z0-9][a-z0-9-]*$/;
+// A --base is said back only when it pastes as one shell word; otherwise (a ref
+// with a space or shell character, or the empty-tree placeholder) the command
+// names the tier alone.
+const PLAIN_REF = /^[A-Za-z0-9._/@^~-]+$/;
+const pastedBase = (base: string | null | undefined): string | null => (base && PLAIN_REF.test(base) ? base : null);
+
+function invocationArgs(inv: Invocation): string[] {
+  switch (inv.command) {
+    case 'quick':
+    case 'standard': {
+      const base = pastedBase(inv.base);
+      return [inv.command, ...(base ? ['--base', base] : [])];
+    }
+    case 'regress':
+      return ['regress', ...(inv.only ?? []).flatMap((name) => ['--only', name])];
+    case 'repro':
+      return ['repro', inv.id, ...(inv.keepOpen ? ['--keep-open'] : [])];
+  }
+}
 
 // Follow-up commands use the form that ran the runner, because the reader
 // (often an agent) pastes them as they are.
-export function followUpCommand(info: RunnerInfo, args: string[]): string {
-  const rest = args.join(' ');
+export function followUpCommand(info: RunnerInfo, inv: Invocation): string {
+  const rest = invocationArgs(inv).join(' ');
   switch (info.source.kind) {
     case 'plugin':
-      if (args.length === 1 && TIERS.has(args[0]!)) return `/rough-ride:${args[0]}`;
-      return `node "${printed(info.cliPath)}" ${rest} --plugin-data "${printed(info.pluginData!.path)}"`;
+      return slashForm(inv) ?? `node "${printed(info.cliPath)}" ${rest} --plugin-data "${printed(info.pluginData!.path)}"`;
     case 'devDependency':
       return `npx --no rough-ride ${rest}`;
     case 'npx':

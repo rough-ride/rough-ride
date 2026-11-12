@@ -19,7 +19,7 @@ import { Manifest } from './manifest.mjs';
 import { formatDuration, type Note } from './output.mjs';
 import { blockLines, blockWithHints, compareFlow, compareProtected, summaryLines as protectedSummary } from './protected.mjs';
 import type { Section } from './summary.mjs';
-import { runnerBlock, type RunnerInfo } from './runner.mjs';
+import { followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
 import type { RunReport } from './runoutput.mjs';
 import type { RunFolder } from './runs.mjs';
 import { loadSchema } from './schema.mjs';
@@ -30,7 +30,7 @@ import { readLinks } from './link.mjs';
 import { moduleFiles, repoFiles, samePage } from './tracing.mjs';
 import { nuxtCandidates } from './target.mjs';
 import { openTargetSession } from './targetsession.mjs';
-import { callCount, checkRun, LIMITS, recordCall, tierCommand } from './runcheck.mjs';
+import { callCount, checkRun, LIMITS, planAgain, recordCall } from './runcheck.mjs';
 import { writeAtomic } from './write.mjs';
 
 export const MAX_INPUT = 24 * 1024;
@@ -227,7 +227,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
   const newLimitLine = (name: string) => `Not saved: ${name} (run ${runPlan!.runId} already saved ${limits!.newFlows} new flows, the ${runPlan!.tier} limit)`;
   const items: Item[] = [];
   if (runPlan) {
-    const again = tierCommand(info, runPlan.tier);
+    const again = followUpCommand(info, planAgain(runPlan));
     if (callCount(folder, runPlan.runId, 'flow save') >= limits!.flowSaveCalls) {
       const names = docs.map((d) => d.name).join(', ');
       for (const d of docs) d.refused = '';
@@ -315,7 +315,7 @@ export async function runFlowSave(ctx: FlowSaveContext): Promise<FlowSaveResult>
     // Under --run the run folder exists already, and flow save prunes nothing.
     const session = await openTargetSession({
       root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
-      start: ctx.start, againCommand: 'flow save', browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
+      start: ctx.start, againCommand: runPlan ? followUpCommand(info, planAgain(runPlan)) : 'flow save', browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
       elapsed: ctx.elapsed, run: runDir ? { existing: runDir, prune: false } : { create: 'flow' }, reset: true, read,
     });
     const { target } = session;

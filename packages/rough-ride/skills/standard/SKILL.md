@@ -5,10 +5,10 @@ context: fork
 agent: rough-ride:adversary
 background: false
 allowed-tools:
-  - Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/preflight.mjs" "${CLAUDE_PLUGIN_DATA}")
-  - PowerShell(node "${CLAUDE_PLUGIN_ROOT}/hooks/preflight.mjs" "${CLAUDE_PLUGIN_DATA}")
+  - Bash(node "${CLAUDE_PLUGIN_ROOT}/hooks/preflight.mjs" "${CLAUDE_PLUGIN_DATA}" standard)
+  - PowerShell(node "${CLAUDE_PLUGIN_ROOT}/hooks/preflight.mjs" "${CLAUDE_PLUGIN_DATA}" standard)
 ---
-!`node "${CLAUDE_PLUGIN_ROOT}/hooks/preflight.mjs" "${CLAUDE_PLUGIN_DATA}"`
+!`node "${CLAUDE_PLUGIN_ROOT}/hooks/preflight.mjs" "${CLAUDE_PLUGIN_DATA}" standard`
 
 Run rough-ride's standard tier on this repository, following your instructions.
 

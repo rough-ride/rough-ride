@@ -83,7 +83,8 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
   const m = /^(.+)\/(r\d{2,})$/.exec(ctx.id ?? '');
   if (!m || !RUN_ID.test(m[1]!)) stopWith('usage', `repro takes <run id>/r<n>, for example 20261025-141207-quick-k3fz/r01 (got ${escapeName(ctx.id ?? 'nothing')}).`);
   const [, runId, repro] = m!;
-  const tierCmd = followUpCommand(info, ['quick']);
+  // A missing or unreadable record needs a new tier run, not this repro again.
+  const tierCmd = followUpCommand(info, { command: 'quick' });
   const folder = ensureFolder(ctx.folder);
   const runDir = path.join(folder.dir, 'runs', runId!);
   const file = path.join(runDir, 'repros', `${repro}.json`);
@@ -114,7 +115,7 @@ export async function runRepro(ctx: ReproContext): Promise<ReproResult> {
   checkSignInEnv(flows, folder, ctx.env);
   const session = await openTargetSession({
     root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows,
-    start: ctx.start, againCommand: tierCmd, browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
+    start: ctx.start, againCommand: followUpCommand(info, { command: 'repro', id: `${runId}/${repro}`, keepOpen: ctx.keepOpen }), browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
     elapsed: ctx.elapsed, run: { create: 'repro' }, reset: true,
   });
   const { target, hosts } = session;

@@ -15,9 +15,9 @@ import { splitDocuments, staticRefusal, MAX_INPUT } from './flowsave.mjs';
 import { Manifest } from './manifest.mjs';
 import { formatDuration, type Note } from './output.mjs';
 import { compareProtected, summaryLines as protectedSummary } from './protected.mjs';
-import { runnerBlock, type RunnerInfo } from './runner.mjs';
+import { followUpCommand, runnerBlock, type RunnerInfo } from './runner.mjs';
 import type { RunReport } from './runoutput.mjs';
-import { callCount, checkRun, recordCall, tierCommand } from './runcheck.mjs';
+import { callCount, checkRun, planAgain, recordCall } from './runcheck.mjs';
 import { redactSecrets } from './secrets.mjs';
 import { checkEnv, checkSignInEnv, envReader } from './session.mjs';
 import type { Section } from './summary.mjs';
@@ -128,7 +128,7 @@ export async function runSnapshot(ctx: SnapshotContext): Promise<{ lines: string
     const config = prot.config;
     const session = await openTargetSession({
       root, folder, files, info, argv: ctx.argv, env: ctx.env, notes: ctx.notes, report: ctx.report, config, flows: prot.flows.map((e) => e.flow),
-      start: false, againCommand: tierCommand(info, plan.tier), browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
+      start: false, againCommand: followUpCommand(info, planAgain(plan)), browserFlag: ctx.browserFlag, ...(ctx.launch ? { launch: ctx.launch } : {}),
       elapsed: ctx.elapsed, run: null, reset: false, read,
     });
     try {

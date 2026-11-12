@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { claudeFloorStop, derivedPluginData, detectSource, followUpCommand, pluginDataMismatch, runnerBlock, runnerLine, versionSkew } from '../dist/runner.mjs';
+import { claudeFloorStop, derivedPluginData, detectSource, followUpCommand, pluginDataMismatch, runnerBlock, runnerLine, SLASH_COMMANDS, versionSkew } from '../dist/runner.mjs';
 import { EDIT_GUARD_OFF } from '../hooks/plugin-checks.mjs';
 import { scratchDir } from './helpers.mjs';
 
@@ -88,19 +88,40 @@ test('follow-up commands use the form that ran the runner', () => {
     { kind: 'plugin', detail: 'rough-ride@rough-ride', resolved: null },
     { cliPath: '/p/dist/cli.mjs', pluginData: { path: '/data', verified: false } },
   );
-  assert.equal(followUpCommand(plugin, ['quick']), '/rough-ride:quick');
-  assert.equal(followUpCommand(plugin, ['regress']), 'node "/p/dist/cli.mjs" regress --plugin-data "/data"');
-  assert.equal(
-    followUpCommand(info({ kind: 'devDependency', detail: 'package.json', resolved: null }), ['regress']),
-    'npx --no rough-ride regress',
-  );
-  // The More attacks line in quick, CI mode included (52.2).
-  assert.equal(followUpCommand(info({ kind: 'devDependency', detail: 'package.json', resolved: null }), ['standard']), 'npx --no rough-ride standard');
-  assert.equal(followUpCommand(info({ kind: 'npx', detail: null, resolved: null }), ['quick']), 'npx -y rough-ride@0.4.0 quick');
-  assert.equal(
-    followUpCommand(info({ kind: 'other', detail: '/home/u/x/dist/cli.mjs', resolved: null }), ['repro', 'a1']),
-    'node "/home/u/x/dist/cli.mjs" repro a1',
-  );
+  const dev = info({ kind: 'devDependency', detail: 'package.json', resolved: null });
+  const npx = info({ kind: 'npx', detail: null, resolved: null });
+  const other = info({ kind: 'other', detail: '/home/u/x/dist/cli.mjs', resolved: null });
+  const id = '20261025-141207-plan-k3fz/r01';
+  // A command with a skill is said as that skill, its arguments included.
+  assert.equal(followUpCommand(plugin, { command: 'quick' }), '/rough-ride:quick');
+  assert.equal(followUpCommand(plugin, { command: 'standard', base: null }), '/rough-ride:standard');
+  assert.equal(followUpCommand(plugin, { command: 'regress' }), '/rough-ride:regress');
+  assert.equal(followUpCommand(plugin, { command: 'regress', only: ['a-500-1f2e3d', 'b-400-0a0b0c'] }), '/rough-ride:regress a-500-1f2e3d b-400-0a0b0c');
+  assert.equal(followUpCommand(plugin, { command: 'repro', id }), `/rough-ride:repro ${id}`);
+  // A field its skill does not take keeps the runner call, so nothing is dropped.
+  assert.equal(followUpCommand(plugin, { command: 'quick', base: 'origin/dev' }), 'node "/p/dist/cli.mjs" quick --base origin/dev --plugin-data "/data"');
+  assert.equal(followUpCommand(plugin, { command: 'repro', id, keepOpen: true }), `node "/p/dist/cli.mjs" repro ${id} --keep-open --plugin-data "/data"`);
+  assert.equal(followUpCommand(dev, { command: 'regress' }), 'npx --no rough-ride regress');
+  assert.equal(followUpCommand(dev, { command: 'regress', only: ['a', 'b'] }), 'npx --no rough-ride regress --only a --only b');
+  // The More attacks line in quick, CI mode included (52.2), keeps the run's --base.
+  assert.equal(followUpCommand(dev, { command: 'standard' }), 'npx --no rough-ride standard');
+  assert.equal(followUpCommand(dev, { command: 'standard', base: 'origin/dev' }), 'npx --no rough-ride standard --base origin/dev');
+  assert.equal(followUpCommand(npx, { command: 'quick' }), 'npx -y rough-ride@0.4.0 quick');
+  assert.equal(followUpCommand(npx, { command: 'repro', id, keepOpen: true }), `npx -y rough-ride@0.4.0 repro ${id} --keep-open`);
+  assert.equal(followUpCommand(other, { command: 'repro', id: 'a1' }), 'node "/home/u/x/dist/cli.mjs" repro a1');
+  // A test name the regress skill would refuse keeps the runner call.
+  assert.equal(followUpCommand(plugin, { command: 'regress', only: ['Checkout_Flow'] }), 'node "/p/dist/cli.mjs" regress --only Checkout_Flow --plugin-data "/data"');
+  // A base that would not paste as one word is left out, not printed broken.
+  for (const base of ['empty tree', ':/fix login', 'a;b']) {
+    assert.equal(followUpCommand(dev, { command: 'standard', base }), 'npx --no rough-ride standard');
+    assert.equal(followUpCommand(plugin, { command: 'quick', base }), '/rough-ride:quick');
+  }
+  assert.equal(followUpCommand(dev, { command: 'quick', base: 'HEAD~2' }), 'npx --no rough-ride quick --base HEAD~2');
+});
+
+test('every slash command a follow-up can print has a skill, and every skill is one', () => {
+  const skills = readdirSync(new URL('../skills/', import.meta.url)).sort();
+  assert.deepEqual([...SLASH_COMMANDS].sort(), skills);
 });
 
 const PLUGIN = { kind: 'plugin', detail: 'rough-ride@rough-ride', resolved: null };
@@ -165,12 +186,15 @@ test('a --plugin-data that cannot be read is compared as written, not stopped fo
 test('the floor check runs only with a plugin data folder and a readable version', () => {
   const withData = (version) => info(PLUGIN, { pluginData: { path: '/d', verified: true }, claudeCode: { version, floorChecked: version !== null } });
   assert.equal(
-    claudeFloorStop(withData('2.1.250'), 'standard'),
+    claudeFloorStop(withData('2.1.250'), { command: 'standard' }),
     'rough-ride 0.4.0 needs Claude Code 2.1.299 or later; this session runs 2.1.250. Older versions let a failed edit-blocking hook through. Update with claude update, restart Claude Code, then run /rough-ride:standard again.',
   );
-  assert.equal(claudeFloorStop(withData('2.1.299'), 'quick'), null);
-  assert.equal(claudeFloorStop(withData(null), 'quick'), null);
-  assert.equal(claudeFloorStop(info(PLUGIN, { claudeCode: { version: '2.1.1', floorChecked: false } }), 'quick'), null);
+  // regress and repro name themselves, not quick.
+  assert.match(claudeFloorStop(withData('2.1.250'), { command: 'regress', only: ['a'] }), / then run \/rough-ride:regress a again\.$/);
+  assert.match(claudeFloorStop(withData('2.1.250'), { command: 'repro', id: 'x/r01' }), / then run \/rough-ride:repro x\/r01 again\.$/);
+  assert.equal(claudeFloorStop(withData('2.1.299'), { command: 'quick' }), null);
+  assert.equal(claudeFloorStop(withData(null), { command: 'quick' }), null);
+  assert.equal(claudeFloorStop(info(PLUGIN, { claudeCode: { version: '2.1.1', floorChecked: false } }), { command: 'quick' }), null);
 });
 
 test('the runner block: runner line, then the edit-guard line when off, then the skew line', () => {
