@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-search-ignores-url-changes",
+  "sentence": "On /journal the search box is initialised from route.query.q only once, so browser Back/Forward or in-app URL changes leave the search box and results out of sync with the URL.",
+  "verdict": "not-a-defect",
+  "evidence": "Code: pages/journal.vue reads route.query.q once and syncs search->URL with router.replace (one direction only). I ran this in the browser as demo user. Steps: Dashboard -> Journal (3 entries) -> search 'Courgette' (URL ?q=Courgette, 0 match) -> 'Tomato' (URL ?q=Tomato, 2 match) -> Back went to the Dashboard (router.replace does not add a history entry per search, so there is no stale journal state to step back into) -> Forward came back to /journal?q=Tomato with box 'Tomato' and 2 matching results, all in sync because the page remounts. So the reported Back/Forward desync did not happen. The one desync I could cause: on /journal?q=Tomato, clicking the 'Journal' nav link changes the URL to /journal, but the box still says 'Tomato' and the list stays filtered. The Plants list page, which was already in the initial commit (main:pages/plants/index.vue), uses the exact same pattern (ref initialised once from route.query + watch -> router.replace). It shows the same behaviour: /plants?q=Tomato -> click 'Plants' nav -> URL /plants, box still 'Tomato'. The journal page follows the app's existing URL-sync convention for search filters, and the request asked for nothing beyond a search box. The reported Back/Forward problem did not reproduce, and the remaining nav-link quirk is existing app-wide design, not a regression from this change.",
+  "severity": null,
+  "wallMs": 165720
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "beds-load-failure-clears-typed-values",
+  "sentence": "On /beds, when GET /api/beds fails, the text typed into the Add bed 'Name' field is cleared and the retry does not recover.",
+  "verdict": "not-a-defect",
+  "evidence": "Signed in as the demo user and opened /beds, which is server-rendered, so the first GET /api/beds the browser can intercept is the refresh after a POST. (1) Typed a name, clicked Add bed, made the first browser GET /api/beds return 500: the POST succeeded, the name field cleared, Nuxt useFetch retried the GET on its own and it succeeded, and the new bed's heading and 'Record past watering for <name>' button were visible within 1.5 s. The API list contained the bed. (2) Made every GET /api/beds return 500, typed a name, then clicked 'Water now' so the list refresh failed: the typed Name value was kept and the error alert was shown. (3) With every GET failing, submitted Add bed: the field cleared only because the POST had saved the bed, and after the failure was lifted a reload showed the bed. The field is cleared only after a successful save (Object.assign(newBed, emptyBed()) runs after the POST resolves), and that Add bed code is the same as on main. A failed load does not wipe typed values, and both the automatic retry and a reload recovered. The reporters' scripts most likely re-searched for a name that had been saved and then cleared, or used the unexpanded placeholder 'Bed ${unique}', which explains the 'not found' steps.",
+  "severity": null,
+  "wallMs": 98852
+}

@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3796, API http://localhost:8796/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-hf/verify-harvest-stats-stats-malformed-response-crash-stuck-loading/scratch.
+
+The reported problem: On /stats, when GET /api/stats/harvests returns a malformed or empty-object body, an uncaught TypeError (reading 'length') is thrown, no error is shown, and 'Loading stats…' stays on screen over the previous range's table and best plants.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Malformed stats response crashes rendering and leaves 'Loading stats…' stuck over stale data",
+  "where": "/stats",
+  "steps": "Probe stats-malformed, expectation malformed-no-page-error-and-not-stuck-loading",
+  "expected": "An unreadable response gives a visible error, no uncaught exception, and no stuck loading text",
+  "actual": "Uncaught TypeError 'Cannot read properties of undefined (reading 'length')'; 'Loading stats…' stays forever while the old 1 Jan–31 Dec table is still shown under From=1 Mar",
+  "evidence": "{\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\"]} | {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\"]}"
+ },
+ {
+  "title": "A malformed stats response throws an uncaught error and leaves 'Loading stats…' on screen with old data",
+  "where": "/stats",
+  "steps": "Probe stats-client-faults, expectation malformed-response-shows-error-not-crash",
+  "expected": "A visible error message, no uncaught exception, no lasting loading state",
+  "actual": "pageError 'Cannot read properties of undefined (reading 'length')'; the status line stays on 'Loading stats…' and the content from the previous range stays visible",
+  "evidence": "{\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"]} | {\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"]}"
+ },
+ {
+  "title": "Stats page crashes on a malformed stats response and sticks on 'Loading stats…' with the old table still shown",
+  "where": "/stats (GET /api/stats/harvests)",
+  "steps": "Probe malformed, expectation malformed-shows-error-not-crash",
+  "expected": "A visible error such as 'Could not load harvest stats.', no uncaught error, and no stale results",
+  "actual": "Uncaught TypeError \"Cannot read properties of undefined (reading 'length')\" (stats.plants.length); the page stays on 'Loading stats…' and keeps showing the previous range's table and best plants as if they were current",
+  "evidence": "{\"alerts\":[\"Loading stats…\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]} | {\"alerts\":[\"Loading stats…\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]}"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-hf/verify-harvest-stats-stats-malformed-response-crash-stuck-loading/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

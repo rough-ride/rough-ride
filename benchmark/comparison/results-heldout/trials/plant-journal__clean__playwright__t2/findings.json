@@ -1,0 +1,114 @@
+{
+  "findings": [
+    {
+      "title": "Journal requests have no timeout; a hanging add/save/delete leaves the button on 'Saving…' forever",
+      "where": "Plant detail page journal form / JournalEntryItem / Journal page (useApiClient, useApiFetch)",
+      "steps": "Open /plants/2, make POST /api/journal hang (never respond), type an entry and click Add entry, wait more than 10 s.",
+      "expected": "Request aborts after 10 s with a visible error; button becomes usable again, typed text kept.",
+      "actual": "After 13 s the button still reads 'Saving…' and is disabled; no error ever appears.",
+      "evidence": "Playwright: {btn:'Saving…', disabled:true} 13 s after click with a hanging route. No timeout option in useApiClient/useApiFetch.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Non-JSON 200 response on the Journal page is shown as a list of blank entries ('18 entries match')",
+      "where": "/journal",
+      "steps": "Make GET /api/journal return 200 with Content-Type text/html and body '<html>proxy</html>' (e.g. a proxy/login page), then type in the search box.",
+      "expected": "An error state saying the journal could not be loaded, with a retry.",
+      "actual": "The page says '18 entries match' (the length of the HTML string) and renders 18 cards that show only '–'. A response with null plant_name/body/entry_on also shows a blank card with '–'.",
+      "evidence": "main text: '18 entries match\\n\\n–\\n\\n–...'. The response is never checked to be an array.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors have no retry button (Journal page and plant detail journal)",
+      "where": "/journal and /plants/:id Journal section",
+      "steps": "Make GET /api/journal?* return 500/503, then open Journal from the nav, or open a plant from the Plants list.",
+      "expected": "Error message with a Retry button that reloads the data without a page reload.",
+      "actual": "Only 'Could not load the journal.' is shown, with no button. On /journal the only way back is to change the search text; on the plant page you have to reload. Meanwhile the plant page badge still says '2 entries' next to the error.",
+      "evidence": "/journal main text: 'Could not load the journal.'; buttons in main: []. Plant detail section: '2 entries … Could not load the journal.' and no retry control.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Entry length is counted in UTF-16 units on the client but in characters on the server: emoji entries are capped at 250, and longer valid entries can't be edited",
+      "where": "JournalEntryForm (plant detail add/edit)",
+      "steps": "1) In the New entry box paste 300 emoji ('🌱'). 2) Create a 500-emoji entry through the API (the server accepts it with 201), then click Edit and Save on the plant page.",
+      "expected": "Up to 500 characters allowed no matter which script is used; an entry the server accepted can be edited and saved.",
+      "actual": "1) The textarea stops at 250 emoji and says '0 characters left'. 2) The edit form says '-500 characters left' and Save is refused with 'Keep the entry to 500 characters.'",
+      "evidence": "Playwright: typedCodepoints 250, hint '0 characters left'; edit hint '-500 characters left', alert 'Keep the entry to 500 characters.' maxlength and .length count UTF-16 code units; pydantic max_length counts code points.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Out-of-range ids give 500 Internal Server Error on the journal endpoints",
+      "where": "POST /api/journal (plant_id), GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+      "steps": "POST {\"plant_id\":9223372036854775808,\"entry_on\":\"2026-01-01\",\"body\":\"x\"}; DELETE /api/journal/9223372036854775808; GET /api/journal?plant_id=9223372036854775808",
+      "expected": "4xx (422 or 404).",
+      "actual": "500 Internal Server Error (SQLite OverflowError on integers above 64 bits).",
+      "evidence": "curl: 'Internal Server Error 500' for all four calls; plant_id 99999999999999999999 also gives 500.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying a timed-out or failed add creates a duplicate entry (no idempotency)",
+      "where": "POST /api/journal from the plant detail page",
+      "steps": "Add an entry while the response gets lost (the server commits but the client sees a network error or timeout), then click Add entry again.",
+      "expected": "Only one entry is created.",
+      "actual": "The form keeps the text and shows an error. A second click sends a new POST with no idempotency key, so the server inserts a second, identical entry.",
+      "evidence": "addEntry() posts with no request key, and create_entry inserts with no dedupe check.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Long plant names make the Journal page scroll sideways at 375 px",
+      "where": "/journal",
+      "steps": "Create a plant named 'SupercalifragilisticSupercalifragilisticSupercalifragilistic', add a journal entry to it, set the viewport to 375 px and open /journal.",
+      "expected": "No horizontal scrolling; the plant name wraps.",
+      "actual": "document scrollWidth is 522 px. The .journal-feed__plant link has no overflow-wrap, so the card and the date stick out past the viewport.",
+      "evidence": "scrollWidth 522; elements overflowing: journal-feed__item card, journal-entry__head, journal-entry__date.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Search longer than 80 characters shows a raw validation message instead of results",
+      "where": "/journal search box",
+      "steps": "Type or paste 81 characters into Search.",
+      "expected": "The input is limited to 80 characters (maxlength), or a friendly message is shown.",
+      "actual": "The list is replaced by 'Query.q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "main text ends with 'Query.q: String should have at most 80 characters'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Server-local 'today' check can reject today's entry for users in other time zones",
+      "where": "POST/PUT /api/journal (JournalEntryIn.not_in_future)",
+      "steps": "As a user whose local date is ahead of the server's (e.g. UTC+10 in the morning, server on UTC), add an entry dated today. The form defaults to today.",
+      "expected": "Today's entry is accepted.",
+      "actual": "Server returns 422 'Journal date cannot be in the future.' because it compares with date.today() on the server, while the client's max/default use the browser's local date.",
+      "evidence": "schemas.py uses date.today(); utils/format.ts todayIso() uses the browser's local time.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Deleting or editing an entry that is already gone leaves the stale entry on the page",
+      "where": "Plant detail journal list",
+      "steps": "Open a plant in two tabs, delete an entry in tab A, then click Delete (or Edit then Save) on the same entry in tab B.",
+      "expected": "The list refreshes and the entry disappears. A repeat delete counts as done.",
+      "actual": "Tab B shows 'Journal entry not found.' and the deleted entry stays in the list until the page is reloaded; the list is not refreshed on error.",
+      "evidence": "removeEntry/save only refresh on success; DELETE returns 404 for missing ids.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Dates like year 0001 are accepted",
+      "where": "POST /api/journal",
+      "steps": "POST entry_on '0001-01-01'.",
+      "expected": "Implausible dates are refused with a visible reason.",
+      "actual": "201 Created; the entry is listed as the oldest, dated '1 Jan 1'.",
+      "evidence": "curl returned 201 with entry_on 0001-01-01 (test entry deleted afterwards).",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

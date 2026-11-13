@@ -1,0 +1,74 @@
+{
+  "id": "plant-journal__clean__playwright__t3",
+  "feature": "plant-journal",
+  "bug": "clean",
+  "arm": "playwright",
+  "trial": 3,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T11:30:22.116Z",
+  "materializeMs": 6840,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__clean__playwright__t3/variant/w2ei6t7p/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "11b0d988-3b9f-4201-b47f-cdb199bc0bf7",
+  "loadBefore": [
+    15.326171875,
+    19.60595703125,
+    16.9150390625
+  ],
+  "loadAfter": [
+    19.64306640625,
+    19.9794921875,
+    17.71923828125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 253902,
+  "reportedCostUsd": 0.7709297999999999,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 44,
+      "outputTokens": 12455,
+      "cacheReadInputTokens": 832109,
+      "cacheCreationInputTokens": 44404,
+      "webSearchRequests": 0,
+      "costUSD": 0.7709297999999999,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 3219,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 44404,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 21,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 8 bugs: 7 I saw in the running app and 1 I only suspect from the code. They're written to `out/findings.json`, which parses as valid JSON.\n\n1. **High, observed: requests never time out.** I made adding a journal entry hang. After 13 seconds the button still said \"Saving…\" and stayed disabled, with no error and no way to cancel. Nothing in the API client sets a timeout, so editing, deleting and loading the journal can hang the same way.\n2. **Medium, observed: no retry when the journal fails to load.** On the plant page and on the Journal page, a failed load shows only \"Could not load the journal.\" with no retry button. This happens whether the page is opened directly or through a link in the app. On the plant page the \"New entry\" form still shows next to the failed list.\n3. **Medium, observed: very large IDs crash the server.** An ID such as `99999999999999999999` returns 500 Internal Server Error instead of a 4xx. This happens on create (as the plant), edit, delete and the plant filter on the list.\n4. **Medium, observed: the Journal page is too wide on a phone.** A plant name of 80 characters with no spaces makes the page 927 px wide at 375 px, so it scrolls sideways.\n5. **Medium, partly observed: retries can make two changes.**\n   - Adding an entry has no protection against repeats, so a retry after a lost response creates a second entry. I didn't reproduce the duplicate itself, but I saw a request the browser had given up on still create an entry on the server.\n   - Deleting the same entry a second time returns 404 \"Journal entry not found.\", which the page shows as an error even though the entry is gone.\n6. **Low, observed: emoji count as two characters.** The character counter and the box's length limit count each emoji twice, so only 250 emoji fit even though the server accepts 500.\n7. **Low, observed: long searches show a raw validation message.** The search box accepts any length. Past 80 characters the results area is replaced by \"Query.q: String should have at most 80 characters\".\n8. **Low, suspected: today's date can be refused.** The form defaults to the browser's local date, but the server checks against its own date. A user whose local date is ahead of the server's could get \"Journal date cannot be in the future\" for today.\n\nThese work correctly:\n- A failed add or edit keeps everything the user typed.\n- A double click on \"Add entry\" saves one entry.\n- An older, slower search result doesn't replace a newer one.\n- Editing an entry in place, including changing its date, re-sorts the list.\n- An entry of only spaces is rejected with a 422.\n\nThe plant page and plants list also overflow at 375 px with a long plant name, but that comes from code this change didn't touch, so I didn't list it.\n\nI added test data to the app: a plant with an 80-character name, a few journal entries (one has a hidden control character in its text), and an edit that moved one entry's date to 1 Jan 2020.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 44,
+    "output": 12455,
+    "cacheRead": 832109,
+    "cacheWrite": 44404,
+    "requests": 21,
+    "toolCalls": {
+      "Bash": 10,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 9
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 8,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T11:34:57.928Z"
+}

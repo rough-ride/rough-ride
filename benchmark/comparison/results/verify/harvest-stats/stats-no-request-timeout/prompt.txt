@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3792, API http://localhost:8792/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-harvest-stats-stats-no-request-timeout/scratch.
+
+The reported problem: useApiFetch sets no timeout, so if GET /api/stats/harvests hangs, /stats shows 'Loading stats…' (or blocks navigation to Stats) indefinitely instead of failing after 10 seconds.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Stats request has no timeout, so 'Loading stats…' can stay forever",
+  "where": "/stats page (useApiFetch without timeout)",
+  "steps": "Make GET /api/stats/harvests hang (never respond), then change the To date. Wait more than 10 s.",
+  "expected": "After 10 s the request fails and an error with a retry is shown.",
+  "actual": "After 12 s the page still shows 'Loading stats…' with no error. The table had already been removed.",
+  "evidence": "Page text after 12 s: 'Stats ... From To This year  Loading stats…'."
+ },
+ {
+  "title": "Stats request has no timeout, so it can spin forever",
+  "where": "/stats page (GET /api/stats/harvests), also dashboard",
+  "steps": "Make the API hang (accept the connection but never answer) and open /stats or change a date.",
+  "expected": "The request fails after 10 seconds and the error state appears.",
+  "actual": "useApiFetch / useApiClient set no timeout, so 'Loading stats…' stays forever (and SSR navigation hangs).",
+  "evidence": "composables/useApi.ts: $fetch.create({ baseURL, credentials, headers, onResponseError }) with no timeout option; stats.vue calls useApiFetch with only { query }."
+ },
+ {
+  "title": "Stats request has no timeout",
+  "where": "/stats -> GET /api/stats/harvests",
+  "steps": "Open /stats while the API is hung or very slow.",
+  "expected": "The request fails after 10 s and shows an error with a retry.",
+  "actual": "useApiFetch sets no timeout, so the page can show 'Loading stats…' indefinitely. Combined with the missing error state, a timeout would also end up as the 'No harvests' empty state.",
+  "evidence": "frontend/app/composables/useApi.ts: $fetch.create has no timeout option, and stats.vue passes none."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-harvest-stats-stats-no-request-timeout/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

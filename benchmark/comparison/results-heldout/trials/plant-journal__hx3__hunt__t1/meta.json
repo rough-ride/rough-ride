@@ -1,0 +1,74 @@
+{
+  "id": "plant-journal__hx3__hunt__t1",
+  "feature": "plant-journal",
+  "bug": "hx3",
+  "arm": "hunt",
+  "trial": 1,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:22:14.379Z",
+  "materializeMs": 4826,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__hx3__hunt__t1/variant/gs3rmyiq/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "82b6796a-fb3b-4885-a565-3cd9b05d4bc9",
+  "loadBefore": [
+    4.431640625,
+    4.66943359375,
+    4.931640625
+  ],
+  "loadAfter": [
+    4.74609375,
+    4.67822265625,
+    4.83447265625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 329183,
+  "reportedCostUsd": 0.5311872000000001,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 30,
+      "outputTokens": 12652,
+      "cacheReadInputTokens": 372786,
+      "cacheCreationInputTokens": 40694,
+      "webSearchRequests": 0,
+      "costUSD": 0.5311872000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2101,
+      "cacheCreationEphemeral5mInputTokens": 40694,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 5m11s | run 20261112-182228-hunt-3dc4 | 5 confirmed, 0 dropped on re-run\ntarget: http://localhost:3790\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Failed journal entry delete removes the entry from the list anyway\n   where: /plants/:id Journal section (DELETE /api/journal/:id)\n   expected: When the delete request fails, the entry stays in the list next to the error, because it still exists on the server.\n   saw: {\"visible\":0,\"alerts\":[\"Injected 500\"]}\n   repro: .rough-ride/runs/20261112-182228-hunt-3dc4/probes/delete-fail.mjs (expectation \"failed-delete-keeps-entry-visible\")\n2. MEDIUM Malformed journal response on the plant page is drawn as junk entries with no error\n   where: /plants/:id Journal section (GET /api/journal?plant_id=)\n   expected: A visible error saying the journal could not be loaded.\n   saw: {\"url\":\"/plants/1\",\"alerts\":[],\"j\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\"],\"pageErrors\":[],\"hits\":1}\n   repro: .rough-ride/runs/20261112-182228-hunt-3dc4/probes/detail-load-faults.mjs (expectation \"journal-load-malformed-shows-error\")\n3. MEDIUM Bad journal payload on the plant page shows 'No journal entries yet' while the badge says 2 entries\n   where: /plants/:id Journal section\n   expected: An error, not an empty state.\n   saw: {\"url\":\"/plants/1\",\"alerts\":[],\"j\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"No journal entries yet\",\"Note what you see: first shoots, pests, the weather.\",\"Garden Log · a journal for one garden\"],\"pageErrors\":[],\"hits\":1}\n   repro: .rough-ride/runs/20261112-182228-hunt-3dc4/probes/detail-load-faults.mjs (expectation \"journal-load-empty-object-shows-error\")\n4. MEDIUM Journal page shows a malformed response as 14 blank entries\n   where: /journal (GET /api/journal)\n   expected: A visible load error.\n   saw: {\"url\":\"/journal\",\"alerts\":[\"14 entries\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"],\"pageErrors\":[]}\n   repro: .rough-ride/runs/20261112-182228-hunt-3dc4/probes/journal-page-shape.mjs (expectation \"journal-page-malformed-shows-error\")\n5. LOW    Search over 80 characters shows a raw validation message and hides all results\n   where: /journal search box\n   expected: The search box limits input to what the API accepts, or explains the limit in plain words.\n   saw: {\"alerts\":[\"Query.q: String should have at most 80 characters\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Query.q: String should have at most 80 characters\",\"Garden Log · a journal for one garden\"]}\n   repro: .rough-ride/runs/20261112-182228-hunt-3dc4/probes/journal-page.mjs (expectation \"long-search-not-raw-error\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-aa8bcfcbe7be7302f.jsonl",
+    "agent-aa8bcfcbe7be7302f.meta.json"
+  ],
+  "usage": {
+    "input": 30,
+    "output": 12652,
+    "cacheRead": 372786,
+    "cacheWrite": 40694,
+    "requests": 15,
+    "toolCalls": {
+      "Bash": 14,
+      "Read": 1
+    }
+  },
+  "findingCount": 5,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 ++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 105 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 276 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:27:56.453Z"
+}

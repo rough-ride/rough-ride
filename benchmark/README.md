@@ -5,12 +5,14 @@ The planted-bug benchmark for rough-ride (spec part 7). It sits outside `package
 ## Commands
 
 ```sh
-npm run bench -- materialize <app> <feature> [<bug>] [--work-dir <dir>] [--no-install]
+npm run bench -- materialize <app> <feature> [<bug>] [--work-dir <dir>] [--no-install] [--ports <web>,<api>]
 npm run bench -- materialize-base <app> [--work-dir <dir>] [--no-install]
 npm run bench -- lint [<app> ...]
 ```
 
-`materialize` turns committed patches into a fresh repository: base as one "Initial commit" on `main`, the feature (and the bug, for a buggy variant) as uncommitted changes, and the feature's `request.md` as an untracked `.rough-ride/specs/request.txt`. `lint` runs the portability rules and the hint lint.
+`materialize` turns committed patches into a fresh repository: base as one "Initial commit" on `main`, the feature (and the bug, for a buggy variant) as uncommitted changes, and the feature's `request.md` as an untracked `.rough-ride/specs/request.txt`. `lint` runs the portability rules and the hint lint. `--ports` moves the app to other ports, rewriting the app's own web and API port numbers in the materialised copy (lockfiles are left alone), so several copies can run at once.
+
+`comparison/` compares rough-ride with plain Claude Code on these apps: the method is in [comparison/DESIGN.md](comparison/DESIGN.md) and [comparison/DESIGN-hunt.md](comparison/DESIGN-hunt.md), the results in [comparison/REPORT.md](comparison/REPORT.md) and [comparison/REPORT-hunt.md](comparison/REPORT-hunt.md).
 
 ## Port registry
 
@@ -23,3 +25,4 @@ Web is `37NN` and API is `87NN`, where NN is the app number. These stay clear of
 | 02 | dev-split Next.js | 3702 | 8702 |
 | 03 | dev-split Vite + React + Express | 3703 | 8703 |
 | 04 to 19 | test-split apps, assigned when admitted | 37NN | 87NN |
+| 90 to 99 | comparison lanes (`comparison/lib.mjs` `lanePorts`), copies of an app moved with `--ports` | 3790 to 3799 | 8790 to 8799 |

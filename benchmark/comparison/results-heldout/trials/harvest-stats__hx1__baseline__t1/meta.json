@@ -1,0 +1,72 @@
+{
+  "id": "harvest-stats__hx1__baseline__t1",
+  "feature": "harvest-stats",
+  "bug": "hx1",
+  "arm": "baseline",
+  "trial": 1,
+  "lane": 2,
+  "ports": {
+    "web": 3792,
+    "api": 8792
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:33:47.119Z",
+  "materializeMs": 6672,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__hx1__baseline__t1/variant/9nsnuzf1/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "a1890db8-9fb8-4b43-9dd2-6b1cc17f7b73",
+  "loadBefore": [
+    5.28662109375,
+    5.0478515625,
+    4.96923828125
+  ],
+  "loadAfter": [
+    7.11962890625,
+    5.83642578125,
+    5.287109375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 102033,
+  "reportedCostUsd": 0.431182,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 18,
+      "outputTokens": 7234,
+      "cacheReadInputTokens": 262710,
+      "cacheCreationInputTokens": 29236,
+      "webSearchRequests": 0,
+      "costUSD": 0.431182,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2708,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 29236,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 9,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 7 bugs in the new Stats page and wrote them to `out/findings.json`. Two I saw in the running app; the other five come from reading the code. None is high severity.\n\n**Medium**\n1. **No way to retry after an error (observed).** When loading fails, the page shows only an error message with no Retry button. It only fetches again when a date changes, so once the server is back the user has to edit a date or reload the page.\n2. **Older answers can replace newer ones (suspected).** Every date change sends a request, and whichever answer arrives last is shown. If an earlier, slower request finishes after a later one, the date fields show one range and the table another. Typing a year into a date field sends several requests in a row, so this is easy to trigger.\n3. **No 10-second timeout (suspected).** No request on this page has a timeout, so a server that never answers leaves \"Loading stats…\" on screen forever.\n\n**Low**\n4. **Months without harvests are missing from the table (observed).** For 2025-01-01 to 2026-12-31 the columns go straight from Aug 2025 to Jun 2026. The request asks for weight per month over the chosen range.\n5. **Out-of-date line above the error (suspected).** After a failed load, the line under the date fields still shows the previous range's harvest count and dates.\n6. **Cleared date field (suspected).** If you clear From or To, the field stays blank while the results quietly use the default for this year.\n7. **Date fields don't follow URL changes (suspected).** Clicking \"Stats\" in the navigation while on `/stats?from=…` changes the URL but keeps the old range in the fields and the table.\n\n**Checked and fine:**\n- **Server checks:** the stats endpoint rejects bad, extreme and reversed dates with a 4xx and a readable message, never a 5xx.\n- **Dashboard:** the dashboard shows this year's best plant and its weight.\n- **375 px layout:** from reading the stylesheet, the date fields stack, long names are cut off with \"…\" and the table scrolls inside its own box.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 18,
+    "output": 7234,
+    "cacheRead": 262710,
+    "cacheWrite": 29236,
+    "requests": 9,
+    "toolCalls": {
+      "Bash": 8
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 7,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:35:45.079Z"
+}

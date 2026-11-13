@@ -1,0 +1,75 @@
+{
+  "id": "plant-journal__search-quote-crash__rough-ride__t1",
+  "feature": "plant-journal",
+  "bug": "search-quote-crash",
+  "arm": "rough-ride",
+  "trial": 1,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T10:45:45.986Z",
+  "materializeMs": 4796,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__search-quote-crash__rough-ride__t1/variant/9btvrhdv/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "56b43fc6-72af-4afd-a8d0-37a0e5905da3",
+  "loadBefore": [
+    9.25830078125,
+    7.84912109375,
+    9.0244140625
+  ],
+  "loadAfter": [
+    5.8427734375,
+    7.5615234375,
+    8.197265625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 903372,
+  "reportedCostUsd": 1.011472,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 30,
+      "outputTokens": 14170,
+      "cacheReadInputTokens": 537985,
+      "cacheCreationInputTokens": 124071,
+      "webSearchRequests": 0,
+      "costUSD": 1.011472,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 3781,
+      "cacheCreationEphemeral5mInputTokens": 124071,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 1,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride summary (copy this block unchanged) ---\nrough-ride attack | 8m26s | run 20261112-104600-plan-ebm3 | early preview: accuracy not measured yet, treat findings as leads to check\ndiff: main 679cd3d..working tree | 20 files -> 6 flows, 8 endpoints, 17 forms\ntarget: http://localhost:3791 (proven Nuxt dev server) | API http://localhost:8791 | Chrome 157.0.8103.52\nProtected files compared with local main (no remote). Commits on main count as reviewed, so rough-ride can't tell your commits there from an agent's.\nRan slower than planned: 72 attacks and 0 confirmation runs did not start before the standard budget ran out.\n+3 more notes (report.txt)\nProtected files: 5 changes since main, used as written (report.txt)\nRejected plan entry: attacks[0] (already selected)\nRejected plan entry: attacks[4] (already selected)\n+10 more flow lines (report.txt)\nHIGH  button \"Save plant\" stays busy after POST /api/plants fails with 500 | 9 attacks | repro r01\n      /plants/new | 500!, reset!, 400! on POST /api/plants #1; double-submit on POST /api/plants ... | fails: settles | page showed a record from journal-add-entry/GET /api/plants/{plant_id} #1/500!\nHIGH  button \"Add entry\" stays busy after POST /api/journal fails with 500 | 6 attacks | repro r02\n      /plants/{} | 500!, reset!, 400! on POST /api/journal #1; double-submit on POST /api/journa... | fails: settles | page showed a record from journal-add-entry/GET /api/plants/{plant_id} #1/500!\nHIGH  button \"Save plant\" stays busy after GET /api/journal fails with 500 | 4 attacks | repro r07\n      /plants/{} | 500!, 400!, reset!, 401! on GET /api/journal #1 | fails: settles, retry-recovers | page showed a record from journal-add-entry/label \"Name\"/specials\nHIGH  button \"Save plant\" stays busy after GET /api/plants/{plant_id} fails with 500 | 3 attacks | repro r08\n      /plants/{} | 500!, 400!, reset! on GET /api/plants/{plant_id} #1 | fails: settles, retry-recovers | page showed a record from journal-add-entry/label \"Name\"/specials\nHIGH  link \"Journal\" stays busy after GET /api/journal fails with 500 | 2 attacks | repro r18\n      /journal | 500!, empty-200! on GET /api/journal #3 | fails: settles, retry-recovers | page showed a record from journal-add-entry/GET /api/plants/{plant_id} #1/500!\nNew regression tests: .rough-ride/tests/journal-add-entry-500-f5ce30.yaml, .rough-ride/tests/journal-add-entry-500-cc77e9.yaml, .rough-ride/tests/journal-add-entry-500-9bf521.yaml, .rough-ride/tests/journal-add-entry-500-c3766c.yaml, .rough-ride/tests/journal-search-500-02368a.yaml. Commit them with your fix.\nNot shown: 6 more finding groups (report.txt)\nAttacks: 11 of 13 changed files and 7 of 11 changed endpoints attacked | 38 attacks: 2 passed, 35 failed, 1 not judged | 386 skipped | 114 over the standard budget\nNot attacked: backend/routers/journal.py delete_entry -> DELETE /api/journal/{entry_id} (no flow sends it from the browser)\nNot attacked: backend/routers/journal.py update_entry -> PUT /api/journal/{entry_id} (no flow sends it from the browser)\nNot attacked: backend/schemas.py JournalEntryIn -> PUT /api/journal/{entry_id} (no flow sends it from the browser)\n+3 more not attacked (report.txt)\nRequests your servers send are never attacked in v1, including data a page loads while it renders on the server. A page's data load is attacked only when a flow opens the page by in-app navigation and the browser sends the request.\nResilience contract: not in the root CLAUDE.md, .claude/CLAUDE.md, AGENTS.md or .claude/AGENTS.md. Pasted into the root CLAUDE.md, it tells coding agents which failures to design for; it changes nothing rough-ride attacks or judges. Text: https://github.com/rough-ride/rough-ride/blob/v0.1.4/docs/resilience-contract.md#the-text (also at ~/workspace/opensource/rough-ride/packages/rough-ride/templates/resilience-contract.md). The user decides; agents leave instruction files alone.\nFix, then run: /rough-ride:regress journal-add-entry-500-f5ce30 journal-add-entry-500-cc77e9 journal-add-entry-500-9bf521 journal-add-entry-500-c3766c journal-search-500-02368a\nInvestigate (keeps running; start it in the background): node \"~/workspace/opensource/rough-ride/packages/rough-ride/dist/cli.mjs\" repro 20261112-104600-plan-ebm3/r01 --keep-open --plugin-data \"~/.claude/plugins/data/rough-ride-inline\" (other findings: r02, r07, r08, r18)\nFull report: $TMPDIR/rr-bench/work/plant-journal__search-quote-crash__rough-ride__t1/variant/9btvrhdv/garden-log/.rough-ride/runs/20261112-104600-plan-ebm3/report.txt\nRunner: rough-ride 0.1.4 from plugin rough-ride | Node 26.13.0 | Playwright 1.64.1 | Claude Code 2.1.322 | plugin data: ~/.claude/plugins/data/rough-ride-inline (from --plugin-data, not verified)\n--- end of rough-ride summary ---\n```\n\nAdversary notes (not checked by the runner):\nSpec not checked: \"see them newest first\" (order of entries is outside text, count, path and request conditions)\nSpec not checked: \"edit an entry in place and delete one\" (edit needs an ambiguous Entry label; delete uses a confirm dialog)",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a3ef1327aebd4a271.jsonl",
+    "agent-a3ef1327aebd4a271.meta.json"
+  ],
+  "usage": {
+    "input": 30,
+    "output": 14170,
+    "cacheRead": 537985,
+    "cacheWrite": 124071,
+    "requests": 15,
+    "toolCalls": {
+      "Bash": 7,
+      "Read": 12
+    }
+  },
+  "findingCount": 11,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T11:01:01.752Z",
+  "findingsSource": "report.txt, every state"
+}

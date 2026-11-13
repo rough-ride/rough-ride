@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Journal entry body containing a NUL character causes 500 Internal Server Error",
+      "where": "POST /api/journal (and PUT /api/journal/{id})",
+      "steps": "POST /api/journal {\"plant_id\":1,\"entry_on\":\"2026-01-01\",\"body\":\"\\u0000x\"}",
+      "expected": "Entry saved or a 4xx with a clear reason",
+      "actual": "500 Internal Server Error (plain text). SQLite length() stops at the NUL, so CHECK(length(body) BETWEEN 1 AND 500) fails and the IntegrityError is not handled. The same input on /api/tasks returns 201.",
+      "evidence": "curl returned 'Internal Server Error 500'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Oversized plant_id / entry id causes 500 instead of 4xx",
+      "where": "POST /api/journal, GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+      "steps": "POST /api/journal with plant_id 99999999999999999999; GET /api/journal?plant_id=99999999999999999999; PUT or DELETE /api/journal/99999999999999999999",
+      "expected": "422 or 404",
+      "actual": "500 Internal Server Error (SQLite integer overflow; ids have no upper bound)",
+      "evidence": "All four requests returned HTTP 500",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal requests have no timeout; a hung request leaves the page spinning or 'Saving…' forever",
+      "where": "/journal search, /plants/{id} add/edit/delete entry",
+      "steps": "Make /api/journal requests hang (playwright route that delays 20s). Type a search on /journal, or click 'Add entry' on a plant page.",
+      "expected": "Fail after 10 s with a visible error and a working retry",
+      "actual": "After 13 s /journal still shows 'Loading entries…' with the previous query's results underneath. On the plant page, 'Add entry' still read 'Saving…' (disabled) after 12 s.",
+      "evidence": "innerText after 13 s: 'Loading entries… Tomato 2 Jul 2026 …'; submit button text 'Saving…' after 12 s",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal error states have no Retry button",
+      "where": "/journal and the Journal section of /plants/{id}",
+      "steps": "Route /api/journal* to return 500/502, then open /journal (or type a search) or open a plant from /plants",
+      "expected": "Error message with a Retry action that reloads without a page reload",
+      "actual": "Only 'Could not load the journal.' is shown, with no retry. On the plant page the only way to recover is to reload or add an entry. On /journal you have to change the search text.",
+      "evidence": "Buttons on the page after the error: 'Sign out|Clear search' (journal); 'Sign out|Edit|Delete plant|Delete…|Add entry' (plant detail)",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Search longer than 80 characters shows a raw validation error",
+      "where": "/journal search box",
+      "steps": "Type or paste 81+ characters into Search",
+      "expected": "Input limited to 80 (maxlength) or a friendly message",
+      "actual": "The page shows 'Query.q: String should have at most 80 characters' in place of results; the input has no maxlength",
+      "evidence": "Observed text 'Query.q: String should have at most 80 characters'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Long unbroken plant name in the journal feed causes horizontal scrolling at 375 px",
+      "where": "/journal",
+      "steps": "Create a plant named with 80 'W's, add a journal entry, open /journal at 375 px width",
+      "expected": "No sideways scrolling; the name wraps",
+      "actual": "document scrollWidth is 1568 px. .journal-feed is a CSS grid whose items keep min-width:auto, and the plant link has no overflow-wrap, so the whole card stretches.",
+      "evidence": "scrollWidth 1568 at 375 px with the long plant name; 375 once that plant was removed",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Search box is not synced with the URL; clicking 'Journal' in the nav while filtered keeps the old search",
+      "where": "/journal",
+      "steps": "Open /journal?q=tom, click 'Journal' in the top navigation (or use browser back/forward)",
+      "expected": "Search cleared and all entries shown, matching the URL",
+      "actual": "The URL becomes /journal but the search box still says 'tom' and the page shows '3 entries match'",
+      "evidence": "url=/journal, input='tom', results '3 entries match'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Retried create after a timeout or lost response makes a duplicate entry; retried delete reports an error",
+      "where": "POST/DELETE /api/journal",
+      "steps": "Submit an entry whose response is lost (server saved it), then click 'Add entry' again; or delete when the response is lost and retry",
+      "expected": "One change; the retry is idempotent",
+      "actual": "POST has no idempotency key, so the retry inserts a second entry. A retried DELETE returns 404 'Journal entry not found.', which is shown as an error even though the entry is gone.",
+      "evidence": "Code: create_entry inserts unconditionally; delete_entry raises 404 when the entry is missing; the form keeps the text after an error, which invites a retry",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "'Future date' check uses server date vs browser date",
+      "where": "POST/PUT /api/journal",
+      "steps": "Use the app from a timezone ahead of the server (e.g. UTC+12 while the server is UTC) and pick today's local date",
+      "expected": "Today's entry accepted",
+      "actual": "The server validator uses date.today() in the server's timezone and rejects it with 'Journal date cannot be in the future.', while the form's max (browser-local today) allows it",
+      "evidence": "schemas.JournalEntryIn.not_in_future vs utils/format.todayIso()",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Character counter/maxlength counts UTF-16 units, so emoji entries are capped below 500 characters",
+      "where": "Journal entry form",
+      "steps": "Type 251+ emoji (e.g. 🌱) into the Entry textarea",
+      "expected": "500 characters allowed (the server counts code points)",
+      "actual": "textarea maxlength=500 and the counter use String.length, so each emoji counts as 2 and input stops at 250 emoji",
+      "evidence": "The counter dropped by 7 for 'keep me' (correct) and by 14 for 'Edited text 😀' (the emoji counted as 2). The server accepted 500 'é' / combining sequences.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "dashboard-invalid-response-shown-as-empty",
+  "sentence": "When GET /api/waterings?limit=5 returns an empty object instead of a list, the dashboard Recent waterings card shows the 'No waterings yet' empty state instead of an error.",
+  "verdict": "confirmed",
+  "evidence": "The API really has 2 waterings (curl GET /api/waterings?limit=5 returns North bed 10 L and Shade corner 4 L). I signed in as demo, opened /beds, then made the browser return HTTP 200 with body {} for **/api/waterings?limit=5*. I clicked the Dashboard link, which navigates client-side so the request goes through the browser. The Recent waterings card showed 'No waterings yet / Use “Water now” on a bed to record one. / Go to beds' and no error. Code cause: pages/index.vue:120-147 shows the error only when wateringsError is set, shows the table when waterings.length is truthy, and otherwise falls to `v-else-if=\"waterings\"`, the empty state. {} is truthy and has no length, so a malformed response looks like an empty log. useApiFetch (composables/useApi.ts) does not check the response shape.",
+  "severity": "medium",
+  "wallMs": 96890
+}

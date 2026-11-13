@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-today-timezone-mismatch/scratch.
+
+The reported problem: The form defaults and limits the date to the browser's local today but the server validates against its own date.today(), so a user in a timezone ahead of the server gets 'Journal date cannot be in the future.' for today.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Default 'today' date can be refused as future when the browser's time zone is ahead of the server's",
+  "where": "New entry form on /plants/{id}",
+  "steps": "Use a browser in a time zone ahead of the server (e.g. UTC+14 when the server is on CET) and submit an entry with the default date (browser's today)",
+  "expected": "Today's entry is accepted",
+  "actual": "The server checks against its own date.today(), so it answers 422 'Journal date cannot be in the future.'",
+  "evidence": "TZ=Pacific/Kiritimati date gives 2026-11-13 while the server date is 2026-11-12; schemas.JournalEntryIn.not_in_future uses the server's date.today(); the client uses todayIso() in local time"
+ },
+ {
+  "title": "Today's date can be rejected as 'in the future' when the browser and server are in different time zones",
+  "where": "Plant detail > journal form, server validator JournalEntryIn.not_in_future",
+  "steps": "As a user in a time zone ahead of the server (e.g. UTC+12 in the morning), add an entry with the default date (today)",
+  "expected": "Today's entry is accepted",
+  "actual": "The client defaults to the local today, but the server compares with date.today() in its own time zone and answers 422 'Journal date cannot be in the future.' The client max/today is also fixed at SSR time, in the server's time zone",
+  "evidence": "schemas.py uses date.today(); JournalEntryForm.vue uses todayIso() evaluated during setup (SSR)"
+ },
+ {
+  "title": "Server-local 'today' check can reject today's entry for users in other time zones",
+  "where": "POST/PUT /api/journal (JournalEntryIn.not_in_future)",
+  "steps": "As a user whose local date is ahead of the server's (e.g. UTC+10 in the morning, server on UTC), add an entry dated today. The form defaults to today.",
+  "expected": "Today's entry is accepted.",
+  "actual": "Server returns 422 'Journal date cannot be in the future.' because it compares with date.today() on the server, while the client's max/default use the browser's local date.",
+  "evidence": "schemas.py uses date.today(); utils/format.ts todayIso() uses the browser's local time."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-today-timezone-mismatch/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

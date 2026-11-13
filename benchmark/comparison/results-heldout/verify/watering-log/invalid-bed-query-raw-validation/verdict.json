@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "invalid-bed-query-raw-validation",
+  "sentence": "Opening /waterings?bed=abc shows the raw backend validation text 'Query.bed id: Input should be a valid integer...' with a select that does not match the URL.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened http://localhost:3793/waterings?bed=abc. The page showed an alert with the raw FastAPI/pydantic text \"Query.bed id: Input should be a valid integer, unable to parse string as an integer\". The Bed combobox had no option selected (options were All beds / North bed / Shade corner, none matching 'abc'), a 'Clear filter' button appeared, and no list or empty state was shown. Cause in the code: frontend/app/pages/waterings.vue copies route.query.bed into bedFilter and sends it as bed_id without checking it, and backend routers/waterings.py declares bed_id: int with gt=0, so the backend returns a 422 whose detail apiErrorMessage shows word for word. A stale or edited link leaves the user with a technical error and a filter control that doesn't match it, instead of the bad filter being ignored or a friendly message.",
+  "severity": "low",
+  "wallMs": 35585
+}

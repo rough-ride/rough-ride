@@ -1,0 +1,14 @@
+id: hx1
+category: out-of-order
+provenance: hand-written
+layer: frontend
+reach: direct
+needsAppKnowledge: false
+flow: stats
+exposedBy:
+  - { timing: "slow response for the earlier range", action: "change From, then change To before the first load answers" }
+checks: [expected-value, shown-matches-inputs]
+symptom: "When an earlier range's stats answer after a later one, the page shows the earlier range: with From 1 Jul and To 31 Jul the table and range line show 1 Jul to 31 Dec"
+addedIn: 0.1.1
+review: single
+allowWords: []

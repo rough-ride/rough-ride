@@ -1,0 +1,114 @@
+{
+  "findings": [
+    {
+      "title": "Failed journal-entry delete still removes the entry from the list",
+      "where": "Plant detail page /plants/:id, Journal section (removeEntry in pages/plants/[id].vue)",
+      "steps": "Open /plants/1, make DELETE /api/journal/:id fail (500), click Delete on an entry and confirm.",
+      "expected": "The entry stays in the list (or comes back), next to an error.",
+      "actual": "The entry is removed up front and never restored when the request fails. The page shows 'Could not delete the entry.', but the list no longer has the entry, while the badge still says '3 entries'. The entry still exists on the server and reappears after a reload.",
+      "evidence": "Before: 3 entries. After the failed DELETE, the list showed only 'First flowers opened…' and 'ancient'; 'Tied the stems to canes.' was gone, and the badge said '3 entries'. The /journal page later still listed 'Tied the stems to canes.'",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal requests have no timeout; a stalled save leaves 'Saving…' up forever",
+      "where": "Plant detail Journal form (POST /api/journal), entry edit (PUT), delete, and /journal page loads",
+      "steps": "On /plants/2, make POST /api/journal hang. Type an entry and click 'Add entry'. Wait more than 10 seconds.",
+      "expected": "The request fails after 10 seconds with a visible error, and the button becomes usable again.",
+      "actual": "The button still said 'Saving…' and was disabled after 14 seconds, with no error. useApiClient sets no timeout.",
+      "evidence": "After 14 s: {btn:'Saving…', disabled:true}",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Retrying a timed-out entry creates a duplicate",
+      "where": "POST /api/journal",
+      "steps": "Submit an entry. The server saves it, but the response is lost or slow. Submit again.",
+      "expected": "One entry is created.",
+      "actual": "Each POST inserts a new row. There is no idempotency key and no duplicate check, so a retry after a timeout makes a duplicate entry.",
+      "evidence": "Read journal.py create_entry: a plain INSERT. In testing, a hung POST went through later on its own; a user retrying would have created a second copy.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal page error state has no retry",
+      "where": "/journal",
+      "steps": "Make GET /api/journal?… return 503 (HTML body). Open Journal from the nav.",
+      "expected": "An error message with a Retry button.",
+      "actual": "Only the 'Could not load the journal.' alert is shown, with no button. The only way to recover is to reload or change the search text.",
+      "evidence": "main text: 'Journal … Search … Could not load the journal.'; buttons in main: []",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal section on the plant page shows a load error with no retry and no empty state",
+      "where": "/plants/:id Journal section",
+      "steps": "Make GET /api/journal?plant_id=… fail with 500, then open a plant from the plants list.",
+      "expected": "An error message with a Retry button.",
+      "actual": "The alert 'Could not load the journal.' has no retry button. The only button in the section is 'Add entry'.",
+      "evidence": "section buttons: ['Add entry']",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Entries with emoji or other astral characters can be saved but not edited, and the counter goes negative",
+      "where": "JournalEntryForm (counter and validation) vs. server body max_length=500",
+      "steps": "Create an entry of 500 emoji through the API (the server counts code points and accepts it). Open the plant page, click Edit, then Save.",
+      "expected": "The client counts characters the same way the server does. An entry the server accepted can be edited and saved.",
+      "actual": "The counter reads '-500 characters left' and Save is refused with 'Keep the entry to 500 characters.' The client counts UTF-16 units, as does the textarea maxlength, so an emoji counts as 2 and users can type only 250 emoji.",
+      "evidence": "hint: '-500 characters left'; alert: 'Keep the entry to 500 characters.'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal endpoints return 500 for out-of-range IDs",
+      "where": "GET /api/journal?plant_id=…, PUT/DELETE /api/journal/{id}, POST /api/journal plant_id",
+      "steps": "curl GET /api/journal?plant_id=99999999999999999999; PUT and DELETE /api/journal/99999999999999999999; POST with plant_id 99999999999999999999.",
+      "expected": "A 4xx response (422 or 404).",
+      "actual": "500 Internal Server Error (SQLite integer overflow).",
+      "evidence": "GET 500, PUT 500, DELETE 500, POST 500",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Body containing a NUL character returns 500",
+      "where": "POST /api/journal (also PUT)",
+      "steps": "POST {plant_id:1, entry_on:'2026-01-01', body:'\\u0000abc'}",
+      "expected": "A 422 with a reason.",
+      "actual": "500 Internal Server Error. SQLite length() stops counting at the NUL, so the CHECK (length(body) BETWEEN 1 AND 500) fails and an IntegrityError goes unhandled.",
+      "evidence": "curl response: 'Internal Server Error 500'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal feed overflows sideways at 375 px when a plant name is long",
+      "where": "/journal",
+      "steps": "Create a plant with an 80-character name with no spaces and add a journal entry to it. Open /journal at 375 px wide.",
+      "expected": "No sideways scrolling; the long name wraps.",
+      "actual": "The page scrolls to 679 px wide. .journal-feed__plant has no overflow-wrap, and the grid item grows to fit the name.",
+      "evidence": "document scrollWidth 679; LI.journal-feed__item width 663; A.journal-feed__plant width 629",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Search over 80 characters shows a raw validation error instead of results or a clear limit",
+      "where": "/journal search box",
+      "steps": "Type 90 characters into Search.",
+      "expected": "The input is limited to 80 characters (maxlength), or a friendly message explains the limit.",
+      "actual": "The result list is replaced by 'Query.q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "main text ended with 'Query.q: String should have at most 80 characters'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "'Future date' check uses the server's date while the form uses the browser's",
+      "where": "JournalEntryIn.not_in_future (date.today()) vs. JournalEntryForm todayIso()",
+      "steps": "Use the app from a time zone ahead of the server's (for example UTC+13 late in the evening) and add an entry dated the local today.",
+      "expected": "Today's date is accepted.",
+      "actual": "The server can reject it with 'Journal date cannot be in the future.', even though the date picker allows it.",
+      "evidence": "Code reading.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "beds-uncaught-error-bed-post-timeout",
+  "sentence": "On /beds, when POST /api/beds hangs, the dev error overlay appears.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in as the demo user and opened /beds. Using Playwright routing I made POST /api/beds (Add bed) (1) hang forever: after 20s the button just read 'Adding…', with no pageerror, no console error, and no custom elements such as nuxt/vite error overlays in the DOM; (2) hang for 8s and then abort as timed out: the page showed the inline alert 'The garden server could not be reached.', the only console output was the browser's own 'Failed to load resource: net::ERR_TIMED_OUT', no pageerror and no overlay; (3) hang, then click 'Water now', go to the waterings page and come back: no pageerror and no overlay. In the code, addBed in beds.vue (which this diff does not touch) wraps the api() call in try/catch/finally and turns failures into addError via apiErrorMessage, so a hang or timeout cannot escape as an uncaught error.",
+  "severity": null,
+  "wallMs": 99872
+}

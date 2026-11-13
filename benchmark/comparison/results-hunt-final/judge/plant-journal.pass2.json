@@ -1,0 +1,122 @@
+{
+  "feature": "plant-journal",
+  "pass": 2,
+  "count": 17,
+  "missing": [],
+  "costUsd": 0.1356408,
+  "reports": [
+    {
+      "id": "F8d948927",
+      "planted": null,
+      "issue": "journal-page-malformed-response-shown-as-blank-entries",
+      "key": "plant-journal__clean__hunt__t3#0"
+    },
+    {
+      "id": "Fe75c85c9",
+      "planted": null,
+      "issue": "journal-nav-link-keeps-stale-search",
+      "key": "plant-journal__clean__hunt__t1#0"
+    },
+    {
+      "id": "F66aac37c",
+      "planted": null,
+      "issue": "detail-malformed-journal-shown-as-fake-entries",
+      "key": "plant-journal__clean__hunt__t1#2"
+    },
+    {
+      "id": "F0d5e437c",
+      "planted": null,
+      "issue": "journal-page-malformed-response-shown-as-blank-entries",
+      "key": "plant-journal__clean__hunt__t1#1"
+    },
+    {
+      "id": "F8e362b13",
+      "planted": null,
+      "issue": "journal-search-hang-loading-forever",
+      "key": "plant-journal__clean__hunt__t2#3"
+    },
+    {
+      "id": "F51b94c41",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__hunt__t2#0"
+    },
+    {
+      "id": "F04641b51",
+      "planted": "search-quote-crash",
+      "issue": "search-quote-crash",
+      "key": "plant-journal__search-quote-crash__hunt__t2#0"
+    },
+    {
+      "id": "F6fb76d97",
+      "planted": null,
+      "issue": "stale-add-error-not-cleared",
+      "key": "plant-journal__clean__hunt__t1#4"
+    },
+    {
+      "id": "F8a5b0abd",
+      "planted": "search-quote-crash",
+      "issue": "search-quote-crash",
+      "key": "plant-journal__search-quote-crash__hunt__t3#0"
+    },
+    {
+      "id": "Fe010028b",
+      "planted": null,
+      "issue": "journal-page-malformed-response-shown-as-blank-entries",
+      "key": "plant-journal__clean__hunt__t2#0"
+    },
+    {
+      "id": "F1ec2c011",
+      "planted": "search-quote-crash",
+      "issue": "search-quote-crash",
+      "key": "plant-journal__search-quote-crash__hunt__t1#0"
+    },
+    {
+      "id": "Fcab9a2c9",
+      "planted": null,
+      "issue": "journal-object-response-shown-as-no-match",
+      "key": "plant-journal__clean__hunt__t2#2"
+    },
+    {
+      "id": "Fcf161056",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__hunt__t1#0"
+    },
+    {
+      "id": "F406eb9f1",
+      "planted": "search-quote-crash",
+      "issue": "search-quote-crash",
+      "key": "plant-journal__search-quote-crash__hunt__t3#1"
+    },
+    {
+      "id": "F77bb9787",
+      "planted": null,
+      "issue": "detail-malformed-journal-shown-as-fake-entries",
+      "key": "plant-journal__clean__hunt__t2#1"
+    },
+    {
+      "id": "Fdd123581",
+      "planted": null,
+      "issue": "journal-nav-hang-keeps-old-page",
+      "key": "plant-journal__clean__hunt__t1#3"
+    },
+    {
+      "id": "F52a4e9ec",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__hunt__t3#0"
+    }
+  ],
+  "issues": {
+    "search-quote-crash": "Searching the journal for a term containing an apostrophe (e.g. O'Brien) makes GET /api/journal?q= return 500 because the term is pasted into the SQL, so the Journal page shows 'Could not load the journal.' instead of the matching entry.",
+    "failed-save-clears-text": "On the plant detail page, when saving a new journal entry fails (e.g. a 500 from POST /api/journal), the error is shown but the typed text is cleared from the textarea.",
+    "journal-page-malformed-response-shown-as-blank-entries": "On the Journal page, when GET /api/journal (with or without a search term) returns a non-list body such as a string, the page shows an entry count and blank '–' cards instead of an error.",
+    "journal-object-response-shown-as-no-match": "On the Journal page, when a search request to GET /api/journal returns a JSON object instead of a list, the page shows '0 entries match' / 'No entries match' instead of an error.",
+    "detail-malformed-journal-shown-as-fake-entries": "On the plant detail page, when GET /api/journal?plant_id= returns a non-list body, the journal section lists blank entries dated '–' with active Edit/Delete buttons instead of an error.",
+    "journal-search-hang-loading-forever": "On the Journal page, when a search request hangs, the page shows 'Loading entries…' indefinitely above the previous search's results with no timeout, error or retry.",
+    "journal-nav-hang-keeps-old-page": "When navigating to /journal while its request hangs, the URL changes but the previous page (e.g. Plants) stays displayed with no loading indicator or error.",
+    "journal-nav-link-keeps-stale-search": "Clicking the Journal nav link while a search is active changes the URL to /journal without q but leaves the search box filled and the filtered results shown.",
+    "stale-add-error-not-cleared": "On the plant detail page, after a failed 'Add entry' save, the error message stays visible even after the form is cleared and another journal entry is successfully edited and saved."
+  }
+}

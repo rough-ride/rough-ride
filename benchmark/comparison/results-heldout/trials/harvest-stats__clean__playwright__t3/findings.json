@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Stats request that hangs spins forever (no 10 s timeout)",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Open /stats, make /api/stats/harvests never respond (browser_route with no fulfil), change the From date, wait more than 10 s.",
+      "expected": "The request times out after 10 s and the page shows an error with a retry option.",
+      "actual": "After 12 s the page still says 'Loading stats…' and shows no error. useApiFetch/useFetch is called without a timeout.",
+      "evidence": "After 12 s, main text was '...From To This year Loading stats…'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats error state has no retry; recovering needs a date change or a reload",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests return 500, change the From date, then restore the API.",
+      "expected": "The error alert offers a 'Try again' button that reloads the stats once the server is back.",
+      "actual": "The page shows only 'Could not load harvest stats.' with no retry control (the only button is 'This year'). The error stays after the server recovers until the user edits a date or reloads.",
+      "evidence": "Buttons in main: ['This year']. 1.5 s after unrouting, the text was still 'Could not load harvest stats.'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Malformed or non-JSON 200 response crashes rendering and leaves the page stuck on old data",
+      "where": "/stats",
+      "steps": "Route /api/stats/harvests to return 200 text/html '<html>proxy page</html>' (or JSON whose plants/top_plants are null), then change the From date.",
+      "expected": "An error message such as 'Could not load harvest stats' with retry.",
+      "actual": "The template reads stats.plants.length on an undefined value and throws a Vue render error. The page stays frozen on 'Loading stats…' above the previous range's table, so the old data looks like the new result.",
+      "evidence": "Console: 'TypeError: Cannot read properties of undefined (reading 'length')' / '[Vue warn]: Unhandled error during execution of render function'. The page kept showing the 1 Jan–31 Dec table under 'Loading stats…'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing a date field silently uses this year's default and can produce a confusing error",
+      "where": "/stats From/To fields",
+      "steps": "On /stats, clear the From field (it shows blank), then set To = 2025-12-31.",
+      "expected": "A blank field is refused with a visible reason or treated as an open range, and the field matches the range actually used.",
+      "actual": "With From blank, the page shows '5 harvests from 1 Jan 2026 to 31 Dec 2026' because the server falls back to 1 Jan of the current year. After To is set to 2025-12-31, it shows 'The From date must be on or before the To date.' even though no From date is entered.",
+      "evidence": "With URL /stats?to=2025-12-31 and From empty, the alert read 'The From date must be on or before the To date.'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Months with no harvests are left out of the per-month table",
+      "where": "/stats table, GET /api/stats/harvests",
+      "steps": "Choose From 2025-01-01, To 2026-12-31 (sample data has harvests in Aug 2025 and Jun–Sep 2026).",
+      "expected": "One column for each month in the chosen range, with empty months shown as – or 0, so the per-month breakdown is complete and comparable.",
+      "actual": "Only months that have harvests become columns, so Aug 2025 sits directly next to Jun 2026 and the gap is hidden.",
+      "evidence": "API months for 0001-01-01..9999-12-31: ['2025-08','2026-06','2026-07','2026-08','2026-09'].",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Malformed date in the query shows a raw technical message",
+      "where": "GET /api/stats/harvests, /stats",
+      "steps": "Call /api/stats/harvests?from=2026-02-30 (or a 5-digit year, which the native date input allows).",
+      "expected": "A readable message such as 'From is not a valid date'.",
+      "actual": "A 422 with a pydantic detail, which apiErrorMessage renders as 'Query.from: Input should be a valid date or datetime, day value is outside expected range'.",
+      "evidence": "curl response: {\"detail\":[{\"loc\":[\"query\",\"from\"],\"msg\":\"Input should be a valid date or datetime, day value is outside expected range\"...}]} 422",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long plant names are unreadable at 375 px on the Stats page",
+      "where": "/stats at 375 px width",
+      "steps": "Create a plant with a long single-word name (e.g. 70 characters), log a harvest, and open /stats at 375 px.",
+      "expected": "The name wraps, and the weights stay visible next to it.",
+      "actual": "In Best plants the name is cut off with an ellipsis and can't be read in full. In the table the row header uses white-space: nowrap, so the name takes the whole visible width and every month and total column is pushed off-screen inside the scroll box. The page itself does not scroll sideways.",
+      "evidence": "Screenshot scratch/stats375.png: only the PLANT column is visible, and the long name is clipped.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

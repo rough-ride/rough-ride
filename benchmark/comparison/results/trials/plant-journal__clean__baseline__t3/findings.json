@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Journal endpoints return 500 for out-of-range integer ids",
+      "where": "POST /api/journal (plant_id), GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+      "steps": "Signed in, send POST /api/journal with {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-11-01\",\"body\":\"x\"}; or GET /api/journal?plant_id=99999999999999999999; or DELETE/PUT /api/journal/99999999999999999999",
+      "expected": "4xx validation error or 404",
+      "actual": "HTTP 500 Internal Server Error (plain text), because the SQLite integer overflows",
+      "evidence": "All four requests returned 'Internal Server Error 500' when I ran them with curl",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Adding an entry can be reported as failed after it was saved, so retrying makes a duplicate",
+      "where": "Plant detail page, Journal > Add entry",
+      "steps": "Add an entry while the follow-up refresh of /plants/{id} or /journal fails or hangs (for example a flaky network right after the POST). Then press Add entry again",
+      "expected": "Entry saved once; the user is told it was saved",
+      "actual": "addEntry wraps both the POST and refreshPlantAndJournal() in one try. A refresh failure shows 'Could not add the entry', the text stays in the form, and resubmitting POSTs again with no idempotency key, so the entry is created twice. The same happens when a POST times out on the client but succeeds on the server",
+      "evidence": "pages/plants/[id].vue addEntry(); POST /api/journal has no dedupe",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors offer no retry",
+      "where": "/journal page and the journal section of /plants/{id}",
+      "steps": "Open /journal or a plant page while GET /api/journal fails (server down or 5xx), then bring the server back",
+      "expected": "An error message with a Try again button that refetches",
+      "actual": "Only an AlertMessage is shown. There is no retry control, so the user has to reload or retype the search. On the plant page the entry list disappears with nothing to recover it except adding an entry",
+      "evidence": "journal.vue renders <AlertMessage v-if=loadError> with no button; [id].vue renders an AlertMessage for journalLoadError and never offers refreshJournal",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "No 10-second timeout on journal requests",
+      "where": "All journal fetches and mutations (useApiFetch/useApiClient)",
+      "steps": "Make the API stall when you add, save or delete an entry, or while the journal loads",
+      "expected": "Request fails after 10 s with a visible error and the buttons become usable again",
+      "actual": "No timeout is set, so 'Saving…' and disabled buttons, or 'Loading entries…', can stay forever",
+      "evidence": "useApi.ts $fetch.create has no timeout option, and the journal code passes none",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Long search text replaces the journal with a cryptic validation error",
+      "where": "/journal search box",
+      "steps": "Type or paste more than 80 characters into Search (or open /journal?q=<81 chars>)",
+      "expected": "Input limited to 80, or a clear message",
+      "actual": "The list is replaced by 'Query.q: String should have at most 80 characters'. The input has no maxlength",
+      "evidence": "The SSR HTML of /journal?q=aaaa…(81) contained role=alert 'Query.q: String should have at most 80 characters'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Emoji and other astral characters cut the 500-character limit roughly in half",
+      "where": "Journal entry form (add/edit)",
+      "steps": "Type or paste emoji-heavy text into the entry textarea",
+      "expected": "Up to 500 characters accepted, as the server allows (Python counts code points)",
+      "actual": "textarea maxlength and the counter use UTF-16 length, so only about 250 emoji are accepted and the 'characters left' count drops by 2 per emoji. The server accepts 500",
+      "evidence": "JournalEntryForm.vue uses :maxlength=500 and form.body.length; the server's max_length=500 counts code points",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long plant names can overflow the journal feed at 375px",
+      "where": "/journal feed item header",
+      "steps": "Create a plant whose name is one long word (up to 80 chars), add an entry, view /journal at 375px wide",
+      "expected": "Name wraps",
+      "actual": ".journal-feed__plant has no overflow-wrap (only .journal-entry__body has it), so a long unbroken name pushes the page sideways",
+      "evidence": "main.css journal styles",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Future-date check uses different 'today' on client and server",
+      "where": "Journal entry form / POST /api/journal",
+      "steps": "Near midnight, in a timezone ahead of the server, add an entry dated today (the default)",
+      "expected": "Today's date is accepted",
+      "actual": "The client allows its local today, but the server checks date.today() in its own timezone and rejects the entry with 'Journal date cannot be in the future'",
+      "evidence": "todayIso() (browser local) vs schemas.JournalEntryIn.not_in_future (server local)",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Plant journal list silently capped at 500 entries",
+      "where": "/plants/{id} journal section",
+      "steps": "A plant with more than 500 journal entries",
+      "expected": "All entries reachable",
+      "actual": "The page requests limit=500, so older entries vanish while the badge shows the full count",
+      "evidence": "[id].vue useApiFetch('/journal', {query:{plant_id, limit:500}})",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Journal search box does not follow URL changes (Back/Forward)",
+      "where": "/journal",
+      "steps": "Search 'tomato', then 'lettuce', then press browser Back",
+      "expected": "The search box and results match the URL",
+      "actual": "search is read from route.query only once and router.replace is used, so history and the box are not kept in sync",
+      "evidence": "journal.vue search ref initialised once from route.query.q",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

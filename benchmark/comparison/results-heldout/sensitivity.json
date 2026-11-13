@@ -1,0 +1,82 @@
+{
+  "asJudged": {
+    "baseline": {
+      "findings": 243,
+      "precision": 0.654,
+      "falseAlarmsPerRun": 3.11,
+      "distinctRealExtras": 27
+    },
+    "playwright": {
+      "findings": 250,
+      "precision": 0.648,
+      "falseAlarmsPerRun": 3.26,
+      "distinctRealExtras": 34
+    },
+    "hunt": {
+      "findings": 91,
+      "precision": 0.879,
+      "falseAlarmsPerRun": 0.41,
+      "distinctRealExtras": 15
+    }
+  },
+  "A": {
+    "baseline": {
+      "findings": 243,
+      "precision": 0.885,
+      "falseAlarmsPerRun": 1.04,
+      "distinctRealExtras": 33
+    },
+    "playwright": {
+      "findings": 250,
+      "precision": 0.884,
+      "falseAlarmsPerRun": 1.07,
+      "distinctRealExtras": 40
+    },
+    "hunt": {
+      "findings": 91,
+      "precision": 1,
+      "falseAlarmsPerRun": 0,
+      "distinctRealExtras": 19
+    }
+  },
+  "B": {
+    "baseline": {
+      "findings": 243,
+      "precision": 0.654,
+      "falseAlarmsPerRun": 3.11,
+      "distinctRealExtras": 27
+    },
+    "playwright": {
+      "findings": 250,
+      "precision": 0.648,
+      "falseAlarmsPerRun": 3.26,
+      "distinctRealExtras": 34
+    },
+    "hunt": {
+      "findings": 91,
+      "precision": 0.879,
+      "falseAlarmsPerRun": 0.41,
+      "distinctRealExtras": 15
+    }
+  },
+  "AB": {
+    "baseline": {
+      "findings": 243,
+      "precision": 0.885,
+      "falseAlarmsPerRun": 1.04,
+      "distinctRealExtras": 33
+    },
+    "playwright": {
+      "findings": 250,
+      "precision": 0.884,
+      "falseAlarmsPerRun": 1.07,
+      "distinctRealExtras": 40
+    },
+    "hunt": {
+      "findings": 91,
+      "precision": 1,
+      "falseAlarmsPerRun": 0,
+      "distinctRealExtras": 19
+    }
+  }
+}

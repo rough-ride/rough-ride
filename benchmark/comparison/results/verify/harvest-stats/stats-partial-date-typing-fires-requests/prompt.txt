@@ -1,0 +1,34 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3792, API http://localhost:8792/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-harvest-stats-stats-partial-date-typing-fires-requests/scratch.
+
+The reported problem: Typing a year digit by digit in a /stats date input fires a request per keystroke, and intermediate dates earlier than From flash a 422 validation error.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Intermediate date values while typing fire requests and flash errors",
+  "where": "/stats date inputs",
+  "steps": "Type a To date by hand in the date input, e.g. typing the year digit by digit.",
+  "expected": "Results update once a full, valid range is entered, with no error flashes.",
+  "actual": "Each keystroke gives a new valid date (e.g. year 0002), which immediately triggers a fetch. An intermediate To that is earlier than From returns 422 and briefly shows 'The From date must be on or before the To date.'",
+  "evidence": "The query is a computed value bound straight to v-model, with no debounce. The server answers 422 for from > to."
+ },
+ {
+  "title": "Typing a year in the date input fires a request on every keystroke and flashes a validation error",
+  "where": "/stats To/From inputs",
+  "steps": "In Chrome, put the cursor in the To field's year segment and type 2026.",
+  "expected": "No request for half-typed dates, or at least no error flash.",
+  "actual": "v-model updates to 0002-12-31, 0020-12-31, 0202-12-31 in turn. Each one starts a fetch and comes back 422 ('The From date must be on or before the To date.'), so the error alert flashes over the table before the full year is typed.",
+  "evidence": "The query is a computed directly on the v-model refs with no debounce or check. The API returns 422 for to < from (verified with curl)."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-harvest-stats-stats-partial-date-typing-fires-requests/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

@@ -1,0 +1,124 @@
+{
+  "findings": [
+    {
+      "title": "link \"Stats\" stays busy after GET /api/stats/harvests fails with 500",
+      "where": "/stats",
+      "steps": "In the browser: /stats | 500!, empty-200!, 400! on GET /api/stats/harvests #1 | fails: settles, retry-recovers | page showed a record from harvest-stats/POST /api/harvests #1/double-submit",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed hm6lzusi) after 10 s | retry-recovers: step 16 (expect heading \"Weight by plant and month\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed hm6lzusi) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10.2 s | retry-recovers: step 16 (expect heading \"Weight by plant and month\"): not visible after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed hm6lzusi) after 10 s | retry-recovers: step 16 (expect heading \"Weight by plant and month\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed hm6lzusi) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10.2 s | retry-recovers: step 16 (expect heading \"Weight by plant and month\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-112104-plan-m1i6",
+        "state": "shown",
+        "repro": "r01"
+      }
+    },
+    {
+      "title": "label \"From\" stays busy after GET /api/stats/harvests fails with 500",
+      "where": "/stats",
+      "steps": "In the browser: /stats | 500!, empty-200! on GET /api/stats/harvests #2 | fails: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed hm6lzusi) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed hm6lzusi) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed hm6lzusi) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed hm6lzusi) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-112104-plan-m1i6",
+        "state": "shown",
+        "repro": "r02"
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after POST /api/beds fails with 500",
+      "where": "/beds",
+      "steps": "In the browser: /beds | 500!, reset! on POST /api/beds #1; double-submit on POST /api/beds #1; 1 bad ... | fails: settles | page showed a record from harvest-stats/GET /api/stats/harvests #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-112104-plan-m1i6",
+        "state": "shown",
+        "repro": "r05"
+      }
+    },
+    {
+      "title": "button \"Log harvest\" stays busy after POST /api/harvests fails with 500",
+      "where": "/harvests/new",
+      "steps": "In the browser: /harvests/new | 500!, reset! on POST /api/harvests #1; double-submit on POST /api/harvests #1... | fails: settles | page showed a record from harvest-stats/GET /api/stats/harvests #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-112104-plan-m1i6",
+        "state": "shown",
+        "repro": "r07"
+      }
+    },
+    {
+      "title": "button \"Save plant\" stays busy after POST /api/plants fails with 500",
+      "where": "/plants/new",
+      "steps": "In the browser: /plants/new | 500!, reset! on POST /api/plants #1; double-submit on POST /api/plants #1 | fails: settles | page showed a record from harvest-stats/GET /api/stats/harvests #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-112104-plan-m1i6",
+        "state": "shown",
+        "repro": "r06"
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after GET /api/beds fails with 500",
+      "where": "/beds",
+      "steps": "In the browser: /beds | 500!, empty-200! on GET /api/beds #1 | fails: settles, values-survive, retry-recovers | page showed a record from harvest-stats/GET /api/stats/harvests #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10 s | values-survive: label \"Name\" held \"Bed nlggshdn\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10 s | values-survive: label \"Name\" held \"Bed nlggshdn\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-112104-plan-m1i6",
+        "state": "capped",
+        "repro": "r13"
+      }
+    },
+    {
+      "title": "button \"Save plant\" stays busy after GET /api/plants/{plant_id} fails with 500",
+      "where": "/plants/{}",
+      "steps": "In the browser: /plants/{} | 500! on GET /api/plants/{plant_id} #1 | fails: settles, retry-recovers | page showed a record from harvest-stats/GET /api/stats/harvests #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10 s | retry-recovers: no retry path without a reload",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 3fx003t4) after 10 s | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-112104-plan-m1i6",
+        "state": "capped",
+        "repro": "r14"
+      }
+    },
+    {
+      "title": "viewport 375 stays busy after the 375px viewport",
+      "where": "/beds",
+      "steps": "In the browser: /beds | viewport 375 | fails: settles | page showed a record from harvest-stats/GET /api/beds #1/empty-200!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 332ouhy5) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-112104-plan-m1i6",
+        "state": "capped",
+        "repro": "r19"
+      }
+    }
+  ]
+}

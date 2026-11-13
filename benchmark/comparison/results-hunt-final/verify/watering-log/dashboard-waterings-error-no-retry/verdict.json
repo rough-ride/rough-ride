@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "dashboard-waterings-error-no-retry",
+  "sentence": "When the dashboard Recent waterings request fails, the card shows only the error text with no retry control.",
+  "verdict": "not-a-defect",
+  "evidence": "Signed in as the demo user and routed **/api/waterings** to return 500 {\"detail\":\"boom\"}, then went to the dashboard by client-side navigation. The 'Recent waterings' card showed only alert 'boom' with no retry control, so the behaviour is real. But this is the app's existing convention, not a regression: in pages/index.vue the existing Summary and Upcoming tasks error states use the same AlertMessage with no retry button. AlertMessage.vue is a plain slot with no action. A grep of every .vue file finds no retry or 'try again' control anywhere in the app. The request also does not ask for retry. The waterings card matches how the other dashboard cards handle errors. The unused 'refresh' only matters if a retry was intended, and nothing shows it was.",
+  "severity": null,
+  "wallMs": 52518
+}

@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__clean__hunt__t1",
+  "feature": "harvest-stats",
+  "bug": "clean",
+  "arm": "hunt",
+  "trial": 1,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:10:18.341Z",
+  "materializeMs": 4952,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__clean__hunt__t1/variant/cuam64db/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "94671edc-2d35-468b-847e-1e43892e3d91",
+  "loadBefore": [
+    4.06787109375,
+    4.43603515625,
+    4.68115234375
+  ],
+  "loadAfter": [
+    6.60107421875,
+    5.76171875,
+    5.2138671875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 181707,
+  "reportedCostUsd": 0.41351059999999995,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 22,
+      "outputTokens": 8273,
+      "cacheReadInputTokens": 257063,
+      "cacheCreationInputTokens": 39310,
+      "webSearchRequests": 0,
+      "costUSD": 0.41351059999999995,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1305,
+      "cacheCreationEphemeral5mInputTokens": 39310,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 2m51s | run 20261112-181032-hunt-0972 | 1 confirmed, 0 dropped on re-run\ntarget: http://localhost:3791\n\nFindings (each reproduced twice from scratch)\n1. MEDIUM Malformed or incomplete stats response crashes the page and leaves the previous range's data under a permanent 'Loading stats…'\n   where: /stats (GET /api/stats/harvests)\n   expected: When the stats response is unusable (e.g. an empty object or invalid JSON), the page shows an error such as 'Could not load harvest stats.' and no uncaught error.\n   saw: {\"alerts\":[\"Loading stats…\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Supercalifragilisticexpialidociouscourgettevarietynamexxxxxxxxxxxxxxxxxxxxxxxxxx\",\"5 kg · O'Brien \\\"x\\\" <b>x</b> 🍅\",\"View\",\"Supercalifragilisticexpialidociouscourgettevarietynamexxxxxxxxxxxxxxxxxxxxxxxxxx\",\"NO. 2\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 3\",\"Tomato\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\"]}\n   repro: .rough-ride/runs/20261112-181032-hunt-0972/probes/order-mobile.mjs (expectation \"bad-response-shows-error-not-stale-data\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a761eb9bf83b55f67.jsonl",
+    "agent-a761eb9bf83b55f67.meta.json"
+  ],
+  "usage": {
+    "input": 22,
+    "output": 8273,
+    "cacheRead": 257063,
+    "cacheWrite": 39310,
+    "requests": 11,
+    "toolCalls": {
+      "Bash": 10,
+      "Read": 1
+    }
+  },
+  "findingCount": 1,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:13:32.782Z"
+}

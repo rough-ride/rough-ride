@@ -1,0 +1,26 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3797, API http://localhost:8797/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-hf/verify-harvest-stats-stats-cleared-to-extends-to-year-end/scratch.
+
+The reported problem: On /stats, clearing the To field while From is set silently queries up to 31 Dec of the current year while the To field stays blank.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Clearing the To date silently extends the range to the end of the current year",
+  "where": "/stats",
+  "steps": "Probe more, expectation cleared-to-not-silently-extended",
+  "expected": "An empty To field is refused or treated in a way that makes sense for the chosen range",
+  "actual": "From 2025-01-01 with To cleared shows '6 harvests from 1 Jan 2025 to 31 Dec 2026' while the To field stays blank",
+  "evidence": "{\"line\":\"6 harvests from 1 Jan 2025 to 31 Dec 2026\",\"fields\":[{\"label\":\"From\",\"value\":\"2025-01-01\"},{\"label\":\"To\",\"value\":\"\"}]} | {\"line\":\"6 harvests from 1 Jan 2025 to 31 Dec 2026\",\"fields\":[{\"label\":\"From\",\"value\":\"2025-01-01\"},{\"label\":\"To\",\"value\":\"\"}]}"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-hf/verify-harvest-stats-stats-cleared-to-extends-to-year-end/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

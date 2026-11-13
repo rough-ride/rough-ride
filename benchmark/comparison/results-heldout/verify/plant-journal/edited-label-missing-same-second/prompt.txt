@@ -1,0 +1,26 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3794, API http://localhost:8794/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-edited-label-missing-same-second/scratch.
+
+The reported problem: Editing a journal entry within the same second it was created shows no 'edited' label because timestamps have one-second resolution.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "'edited' label missing for edits made within the same second",
+  "where": "JournalEntryItem",
+  "steps": "Add an entry and edit it immediately.",
+  "expected": "The entry shows 'edited'.",
+  "actual": "edited compares updated_at !== created_at, and both have one-second resolution, so a quick edit shows no label.",
+  "evidence": "Both timestamps use datetime('now'), which has second precision."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-edited-label-missing-same-second/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

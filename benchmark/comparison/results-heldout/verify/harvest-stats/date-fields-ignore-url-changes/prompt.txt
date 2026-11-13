@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3794, API http://localhost:8794/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-date-fields-ignore-url-changes/scratch.
+
+The reported problem: On /stats, the date fields are read from the URL only at setup, so clicking the Stats nav link or using back/forward while on the page changes the URL but not the fields or data; triggered by picking a custom range and then navigating to /stats within the app.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Date fields don't follow the URL query after in-app navigation",
+  "where": "/stats",
+  "steps": "While on /stats with a custom range, use browser back/forward or an in-app link to /stats?from=X.",
+  "expected": "From/To fields and the table follow the URL.",
+  "actual": "dateFrom/dateTo are read from route.query only once at setup and never watched, so the fields and the URL can drift apart.",
+  "evidence": "stats.vue: refs initialised from route.query; only a watch from refs to router.replace exists, nothing in the other direction."
+ },
+ {
+  "title": "Date fields don't follow URL changes (Stats nav link / back) while on the page",
+  "where": "/stats",
+  "steps": "On /stats pick a non-default range (URL becomes /stats?from=...). Click 'Stats' in the main navigation.",
+  "expected": "The page resets to the current year, matching the URL /stats.",
+  "actual": "dateFrom/dateTo are read from route.query only once at setup. The component is reused, so the URL changes to /stats but the fields and table keep the old range.",
+  "evidence": "There is no watch on route.query in stats.vue. The refs are initialised once with queryDate(route.query.from, ...)."
+ },
+ {
+  "title": "Browser back/forward does not update the date range",
+  "where": "/stats",
+  "steps": "Change From a few times (the URL query updates through router.replace), then navigate to /stats?from=X from within the app while already on /stats, for example by clicking the 'Stats' nav link from /stats?from=2025-01-01.",
+  "expected": "The inputs and results follow the URL.",
+  "actual": "dateFrom/dateTo are read from route.query only once, on setup. Clicking the Stats nav link on a filtered /stats reuses the page, so the URL loses its query but the inputs and data keep the old range, and the 'Stats' link no longer resets to this year.",
+  "evidence": "stats.vue initializes refs from route.query once and has no watcher on route.query."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-date-fields-ignore-url-changes/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-raw-validation-message/scratch.
+
+The reported problem: On /stats, an invalid date (e.g. ?from=2026-02-30 or a five-digit year) shows the raw validation text 'Query.from: Input should be a valid date or datetime…' and the date input appears blank; triggered by opening such a URL or typing such a date.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Raw validation text with internal field path shown for a bad date in a link",
+  "where": "/stats?from=2026-02-30",
+  "steps": "Open /stats?from=2026-02-30 (the URL regex accepts any NNNN-NN-NN).",
+  "expected": "A readable message such as 'From is not a valid date', and the input shows the bad value or falls back to the default.",
+  "actual": "Alert reads 'Query.from: Input should be a valid date or datetime, day value is outside expected range'. The date input can't show 2026-02-30, so it looks blank while the error refers to it.",
+  "evidence": "SSR HTML: <div class=\"alert alert--error\" role=\"alert\">Query.from: Input should be a valid date or datetime, day value is outside expected range"
+ },
+ {
+  "title": "An invalid date shows a raw validation message",
+  "where": "/stats From/To fields to GET /api/stats/harvests",
+  "steps": "Type a 5-digit year into the From date input (browsers allow this), e.g. 20261-01-01.",
+  "expected": "A clear message such as 'Enter a valid From date'.",
+  "actual": "The API returns 422 with loc ['query','from']. apiErrorMessage turns that into 'Query.from: Input should be a valid date or datetime, invalid date separator, expected `-`'.",
+  "evidence": "curl ?from=20261-01-01 returns detail[0].loc=['query','from'] and msg 'Input should be a valid date or datetime, invalid date separator...'"
+ },
+ {
+  "title": "Malformed date in the query shows a raw technical message",
+  "where": "GET /api/stats/harvests, /stats",
+  "steps": "Call /api/stats/harvests?from=2026-02-30 (or a 5-digit year, which the native date input allows).",
+  "expected": "A readable message such as 'From is not a valid date'.",
+  "actual": "A 422 with a pydantic detail, which apiErrorMessage renders as 'Query.from: Input should be a valid date or datetime, day value is outside expected range'.",
+  "evidence": "curl response: {\"detail\":[{\"loc\":[\"query\",\"from\"],\"msg\":\"Input should be a valid date or datetime, day value is outside expected range\"...}]} 422"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-raw-validation-message/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

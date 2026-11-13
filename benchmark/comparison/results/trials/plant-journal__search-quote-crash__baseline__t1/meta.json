@@ -1,0 +1,89 @@
+{
+  "id": "plant-journal__search-quote-crash__baseline__t1",
+  "feature": "plant-journal",
+  "bug": "search-quote-crash",
+  "arm": "baseline",
+  "trial": 1,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T09:29:18.364Z",
+  "materializeMs": 6768,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__search-quote-crash__baseline__t1/variant/zmiaz82a/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "391ffdde-f51d-4f43-a86f-fa1fe2838b91",
+  "loadBefore": [
+    6.587890625,
+    5.67919921875,
+    7.40625
+  ],
+  "loadAfter": [
+    6.56884765625,
+    6.19580078125,
+    7.44287109375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 94722,
+  "reportedCostUsd": 0.4695496,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 14,
+      "outputTokens": 2610,
+      "cacheReadInputTokens": 156883,
+      "cacheCreationInputTokens": 25265,
+      "webSearchRequests": 0,
+      "costUSD": 0.2857526,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1497,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 25265,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-opus-4-8": {
+      "inputTokens": 6,
+      "outputTokens": 3606,
+      "cacheReadInputTokens": 106234,
+      "cacheCreationInputTokens": 4050,
+      "webSearchRequests": 0,
+      "costUSD": 0.18379700000000002,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1332,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 4050,
+      "canonicalModel": "claude-opus-4-8",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 10,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "Done. Findings written to `out/findings.json`.\n\n## Summary\n\nThe headline bug matches the request's hint (\"search-quote-crash\"):\n\n**1. Journal search crashes on a quote (HIGH, observed).** In `backend/routers/journal.py`, the search term is interpolated straight into the SQL with an f-string:\n```python\nclauses.append(f\"(j.body LIKE '%{term}%' OR p.name LIKE '%{term}%')\")\n```\nNo parameterization. A normal user searching for something like `O'Neil` gets a **500**, and the Journal page just shows \"Could not load the journal.\" with no results. This is also a classic SQL-injection hole, and it violates the rule that the server must answer bad input with a 4xx, never a 5xx. Confirmed via curl: `q=O'Neil` → HTTP 500.\n\n**2. `%` and `_` act as LIKE wildcards (LOW, observed).** Same interpolation means searching for a literal `%` returns every entry; `_` matches any character. No ESCAPE clause.\n\n**3. Journal page error state has no retry (MEDIUM, suspected from code).** `journal.vue` renders only an `AlertMessage` on `loadError` with no retry control — `refresh` is destructured but never surfaced. Same gap for the journal section on the plant detail page. The resilience spec requires a retry that works without a reload.\n\nThe rest of the change (double-submit guards, preserved input on failed submit, future-date validation, cascade delete, mobile text wrapping with `overflow-wrap: anywhere`) looked sound in the time I had.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 16,
+    "output": 6163,
+    "cacheRead": 227296,
+    "cacheWrite": 28631,
+    "requests": 8,
+    "toolCalls": {
+      "Bash": 7,
+      "Write": 1
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 3,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T09:31:10.006Z"
+}

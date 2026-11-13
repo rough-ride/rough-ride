@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "waterings-uncaught-error-beds-malformed",
+  "sentence": "On /waterings, when GET /api/beds returns malformed JSON or 500, an unhandled render error and dev error overlay appear.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in as demo user. With Playwright routes making GET /api/beds return 200 'malformed-json!' or 500 {\"detail\":\"boom\"}, I went to /waterings by clicking the client-side link from the dashboard (so the beds request ran in the browser, not cached). In both cases /waterings rendered normally: the filter showed only 'All beds', the watering list and total were correct, there was no Vue render error, no pageerror and no error overlay (only the expected 'Failed to load resource 500' network logs). The code explains this: waterings.vue uses `beds ?? []` in a v-for, so a null or string value can't throw. I also tried it from /beds: broke /api/beds, clicked 'Water now', then went to /waterings, and /waterings was still fine. The '[Vue warn] Unhandled error during execution of render function' the report quotes does happen, but on /beds: `TypeError: beds.value?.reduce is not a function` at pages/beds.vue, when the beds refresh after 'Water now' gets malformed JSON. That is a separate defect in the beds page, not the reported /waterings problem. Side effect: the test recorded one real 'Water now' watering for North bed (12 Nov 2026 14:42).",
+  "severity": null,
+  "wallMs": 163186
+}

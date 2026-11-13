@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "dashboard-nan-after-malformed-tasks",
+  "sentence": "On /, when GET /api/tasks/upcoming returns malformed JSON, the page shows the text 'NaN'.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user in Playwright, then routed GET **/api/tasks/upcoming** to return status 200, application/json, with the truncated body '{\"id\": 1, \"title\": \"broken'. Then went client-side from /beds to / via the Dashboard link. The 'Upcoming tasks' card showed 26 rows of '– · Due in NaN days' (main text contained 'NaN'). Cause: ofetch/destr cannot parse the body, so it falls back to the raw string. pages/index.vue then checks `tasks && tasks.length`, which is truthy for the string, so `v-for` renders one TaskItem per character. For each row, dueLabel(undefined) -> daysUntil gives NaN. No error state is shown. Note: this code path is not touched by the watering change. The Upcoming tasks section, TaskItem.vue and useApi.ts are the same as in main, so this defect already existed rather than being caused by the change. The new Recent waterings section was not involved.",
+  "severity": "low",
+  "wallMs": 117791
+}

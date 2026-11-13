@@ -1,0 +1,14 @@
+id: hx2
+category: logic
+provenance: hand-written
+layer: backend
+reach: direct
+needsAppKnowledge: false
+flow: stats
+exposedBy:
+  - { input: a second plant with the same name as an existing one (another variety) and a harvest in range }
+checks: [expected-value]
+symptom: "Two plants with the same name (e.g. two Tomato varieties) are merged in the weight-by-month table: their months are summed into one row, while Best plants lists them separately"
+addedIn: 0.1.1
+review: single
+allowWords: []

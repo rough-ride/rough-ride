@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-no-retry-after-error",
+  "sentence": "When the stats request fails, /stats offers no Retry control, so the user must change a date or reload the page to refetch the same range after the server recovers.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the behaviour: signed in as the demo user, opened /stats, made GET **/api/stats/harvests** return 500 with a text/plain body using a Playwright route, then changed From to 2026-02-01. The page showed 'Could not load harvest stats.' and the only buttons were 'Sign out' and 'This year'. After removing the route, the page stayed on the error until the date changed or the page was reloaded. But the request never asks for a Retry control, and the page does have a clear error state (AlertMessage with role=alert), so report 2's claim that there is 'no error state' and the page keeps saying 'no harvests' is wrong. This also matches how the rest of the app works: grep finds no Retry control anywhere in the frontend. The dashboard's summary and tasks errors (index.vue:61,96), the beds load error (beds.vue:151) and tasks.vue all show the same AlertMessage with no retry button. Stats follows the existing pattern, and changing the range or reloading recovers. A missing Retry button is a possible enhancement for the whole app, not a defect in this change.",
+  "severity": null,
+  "wallMs": 93260
+}

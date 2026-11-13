@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "hx4",
+  "key": "null-fields-rendered-raw",
+  "sentence": "When API fields are null, the plants list shows 'null journal entries' and journal feed items render with empty plant name and body and only '–' as date.",
+  "verdict": "not-a-defect",
+  "evidence": "I reproduced it only with mocked responses. After signing in as demo@example.com, I used Playwright page.route to rewrite the real GET /api/plants response so that journal_count was null for the first plant, and the plant card then read 'null journal entries'. I also rewrote GET /api/journal so the first entry had plant_name, body and entry_on set to null. That feed item showed an empty plant link, an empty body and '–' for the date ('3 entries\\n\\n–'). The real API cannot send these nulls. journal_count comes from COUNT(DISTINCT j.id), which is never NULL in SQLite (0 when there are no rows). JournalEntryOut and PlantOut (schemas.py) declare plant_name: str, body: str, entry_on: date and journal_count: int as required, non-optional fields used as response_model, so FastAPI would fail rather than send null. The journal_entries columns are NOT NULL, and plants.name is NOT NULL with an inner JOIN. The frontend types (types/api.ts) declare these fields non-nullable, and the new code handles them the same way the app already handles existing fields such as bed_name and harvest_grams. formatDate's '–' fallback for a missing date is existing, deliberate behaviour. Without mocking, the real app showed correct values ('1 journal entry', '2 journal entries', real plant names and dates). The odd output only appears when the server breaks its own typed contract, which no real request can make it do.",
+  "severity": null,
+  "wallMs": 66745
+}

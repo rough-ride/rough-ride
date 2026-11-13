@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "watering-saved-but-refresh-failure-reported",
+  "sentence": "On /beds, when POST /api/waterings succeeds but the follow-up GET /api/beds refresh fails, the save is reported as failed or the bed list is replaced by 'Could not load beds.', inviting a duplicate retry.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /beds. GET /api/waterings returned 2 rows. In Playwright I made only GET **/api/beds* return 503 {\"detail\":\"Service unavailable\"}, then clicked the first 'Water now' (North bed). The POST went through: GET /api/waterings then returned 3 rows, the new one id 3, bed North bed, watered_at 2026-11-12 13:40:20. The page's main text became 'Beds / Add a bed ... Add bed / All beds / Service unavailable'. Every bed card was gone, the only button left was 'Add bed', and there was no 'Watered North bed.' message and no retry or reload control. Cause in the code (beds.vue recordWatering): after the POST it calls useFetch refresh(). refresh() does not throw; it sets loadError and clears beds, so the v-if on the bed list hides every card. The success notice (waterNotice), which belongs to a bed card, disappears with it. The user cannot tell the watering was saved and gets no way back except reloading the page. When the list comes back and they click again, a duplicate is recorded, since the POST has no dedupe. Variant not reproduced: the first report says the user would see 'Could not record the watering.' That did not happen here, because refresh() swallows the error. The user-facing defect (a saved watering with no confirmation, the list replaced by an error, and an invitation to retry and create a duplicate) is real.",
+  "severity": "medium",
+  "wallMs": 104054
+}

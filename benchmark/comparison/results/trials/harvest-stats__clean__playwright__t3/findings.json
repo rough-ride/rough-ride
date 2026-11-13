@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Stats page crashes on a malformed or unreadable 200 response (null fields, {} or HTML body)",
+      "where": "/stats (frontend/app/pages/stats.vue, utils/format.ts formatMonth)",
+      "steps": "Sign in, open the Dashboard, mock GET /api/stats/harvests to return 200 with '{}', or an HTML body, or months[].month = null. Click 'Stats' in the nav.",
+      "expected": "An error state saying the stats could not be read, with a retry.",
+      "actual": "Rendering throws. The URL changes to /stats but the Dashboard content stays on screen and the Nuxt error dialog opens. The template reads stats.plants.length and formatMonth(null).slice without any checks.",
+      "evidence": "Console: 'TypeError: Cannot read properties of null (reading 'slice') at formatMonth (utils/format.ts:20)' and '[Vue warn]: Unhandled error during execution of render function at <Stats>'. With '{}' and with an HTML body the page stayed on Dashboard content at URL /stats and an 'Error details' dialog was present.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Stats request has no timeout; a hung API leaves 'Loading stats…' up forever",
+      "where": "/stats -> GET /api/stats/harvests",
+      "steps": "On /stats, make /api/stats/harvests hang (delay 14s+), then change the From date.",
+      "expected": "The request fails after 10 seconds and the page shows an error with a retry.",
+      "actual": "After 12 s the page still showed 'Loading stats…'. Under it, the previous range's table stayed visible, and its caption still named the old range. useApiFetch sets no timeout.",
+      "evidence": "Page text after 12 s: 'Loading stats… Best plants … Harvest weight per plant and month, 1 Jan 2026 to 31 Dec 2026' while From was 2025-06-01.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats error state has no retry button",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests return 500 (HTML body), then change a date.",
+      "expected": "The error message comes with a 'Try again' action that refetches once the server is back.",
+      "actual": "Only 'Could not load harvest stats.' is shown. The only way to retry is to edit a date to a different value or reload the page.",
+      "evidence": "There are no buttons in main apart from 'This year'. The page offers no way to refetch the same range.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Long plant variety overflows the 375px layout in 'Best plants'",
+      "where": "/stats, Best plants cards (.stat__hint)",
+      "steps": "Create a plant whose name and variety are an unbroken 80-character word, log a harvest for it this year, and open /stats at 375 px width.",
+      "expected": "The page fits 375 px and long text wraps or is truncated.",
+      "actual": "The document scrollWidth is 548 px, so the page scrolls sideways. The .stat__hint text with the variety has no wrapping or overflow handling, and it widens the ol.stats grid.",
+      "evidence": "document.documentElement.scrollWidth = 548 with real data (929 with longer mocked text). .stat__hint scrollWidth was 885 inside a 290 px card. The Dashboard stayed at 375.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing the From date shows a misleading 'From must be on or before To' error",
+      "where": "/stats date fields",
+      "steps": "Open /stats?from=2025-01-01&to=2025-12-31 and clear the From field.",
+      "expected": "A blank From either uses an obvious default or is refused with a clear reason about the field being empty.",
+      "actual": "The client leaves 'from' out of the request and the server silently uses 1 Jan of the current year, which is after the To date. The page shows 'The From date must be on or before the To date.' while From is blank. Clearing To instead silently uses 31 Dec of the current year, which the empty input does not show.",
+      "evidence": "URL became /stats?to=2025-12-31 and the alert read 'The From date must be on or before the To date.'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid date in the URL shows a blank field and a raw validation message",
+      "where": "/stats?from=2026-02-30",
+      "steps": "Open /stats?from=2026-02-30 directly.",
+      "expected": "The bad query value is ignored (falls back to the default) or the From field is shown as invalid.",
+      "actual": "The From input is empty because the browser rejects the value. The request still sends it and the page shows 'Query.from: Input should be a valid date or datetime, day value is outside expected range'.",
+      "evidence": "Page text: 'Query.from: Input should be a valid date or datetime, day value is outside expected range'; inputValue('#stats-from') = ''.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Months with no harvests are left out of the per-month table",
+      "where": "/stats table, GET /api/stats/harvests",
+      "steps": "Open /stats with the default range (whole of 2026).",
+      "expected": "A column for every month in the chosen range, showing 0 or – where nothing was harvested.",
+      "actual": "Only months that have harvests appear (Jun, Jul, Aug, Sept 2026). The other months of the range are missing, so gaps cannot be seen. The backend builds the months list only from rows that have data.",
+      "evidence": "Header: 'PLANT JUN 2026 JUL 2026 AUG 2026 SEPT 2026 TOTAL' for range 1 Jan–31 Dec 2026.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

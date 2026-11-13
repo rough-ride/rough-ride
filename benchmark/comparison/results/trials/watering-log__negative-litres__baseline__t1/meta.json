@@ -1,0 +1,72 @@
+{
+  "id": "watering-log__negative-litres__baseline__t1",
+  "feature": "watering-log",
+  "bug": "negative-litres",
+  "arm": "baseline",
+  "trial": 1,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T09:54:22.130Z",
+  "materializeMs": 24505,
+  "repo": "$TMPDIR/rr-bench/work/watering-log__negative-litres__baseline__t1/variant/n0964zla/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/beds.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/beds.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/waterings.py\n?? frontend/app/pages/waterings.vue\n",
+  "sessionId": "fc9a88bf-dbc1-413a-a555-7187b5260565",
+  "loadBefore": [
+    28.9423828125,
+    15.9609375,
+    12.7294921875
+  ],
+  "loadAfter": [
+    14.86181640625,
+    15.20654296875,
+    12.798828125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 90424,
+  "reportedCostUsd": 0.404051,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 16,
+      "outputTokens": 6482,
+      "cacheReadInputTokens": 227215,
+      "cacheCreationInputTokens": 28613,
+      "webSearchRequests": 0,
+      "costUSD": 0.404051,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1441,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 28613,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 9,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 8 bugs (5 seen in the running app, 3 from reading the code) and wrote them to `out/findings.json`.\n\n**Seen in the running app:**\n1. **Negative and zero litres are accepted (high).** The form's own error message says the amount must be \"greater than zero\", but the page only rejects exactly 0, and the server has no lower limit. Saving -5, 0 or -1e308 succeeds, and the waterings page and dashboard then show \"-5 L\" and \"0 L\".\n2. **Huge negative amounts break the layout (medium).** A watering of -1e308 litres shows as a number over 400 characters long that doesn't wrap, so the page scrolls sideways at 375 px. Negative amounts also distort the \"in total\" figure, which disappears once the total drops to zero or below.\n3. **Some bad input gets a server error instead of a validation error (medium).** Litres sent as `NaN`, and very large bed or watering ids, return a plain-text \"Internal Server Error\" (500). This affects creating, listing and deleting waterings.\n4. **A bad bed filter shows raw validation text, and nothing offers a retry (medium).** Opening `/waterings?bed=abc` shows \"Query.bed id: Input should be a valid integer…\" and the bed dropdown goes blank. When loading fails, neither the waterings page nor the dashboard's \"Recent waterings\" section has a way to try again without reloading.\n5. **Very old dates are accepted (low).** A date of 0001-01-01 is saved and shows as \"1 Jan 1\".\n\n**Suspected from the code:**\n- **The waterings page ignores a failed bed list (low).** If the beds request fails, the filter just shows \"All beds\", as if there were no beds.\n- **Water now can create duplicates and can spin forever (medium).** One shared \"busy\" flag covers every bed. If you water bed A and then bed B, A finishing re-enables B's button while B's request is still running, so B can be submitted twice. Requests also have no 10-second timeout, so \"Watering…\" can stay on screen indefinitely.\n- **\"Today\" uses the server's date (low).** The future-date check uses the server's date, but the date picker allows the browser's today. Someone in a time zone ahead of the server can be told today's date \"cannot be in the future\".\n\nMy testing added six waterings, mostly to North bed (ids 3–8), including the -5, -3, 0, -1e308 and year-1 entries. They are still in the app's data.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 16,
+    "output": 6482,
+    "cacheRead": 227215,
+    "cacheWrite": 28613,
+    "requests": 8,
+    "toolCalls": {
+      "Bash": 8
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 8,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |   4 +-\n backend/db.py                    |  14 ++++-\n backend/routers/beds.py          |   8 ++-\n backend/schemas.py               |  29 +++++++++\n frontend/app/assets/css/main.css |  24 ++++++-\n frontend/app/layouts/default.vue |   1 +\n frontend/app/pages/beds.vue      | 133 ++++++++++++++++++++++++++++++++++++++-\n frontend/app/pages/index.vue     |  44 ++++++++++++-\n frontend/app/types/api.ts        |  17 +++++\n frontend/app/utils/format.ts     |  26 ++++++++\n 10 files changed, 292 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T09:56:33.492Z"
+}

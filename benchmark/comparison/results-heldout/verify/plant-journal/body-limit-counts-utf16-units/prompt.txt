@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3794, API http://localhost:8794/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-body-limit-counts-utf16-units/scratch.
+
+The reported problem: The journal entry form's maxlength and character counter count UTF-16 units, so emoji count double (about 250 fit) and server-accepted 500-emoji entries cannot be edited and saved.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "The textarea limit counts emoji as 2 characters, unlike the server",
+  "where": "/plants/:id journal form",
+  "steps": "Type emoji such as 🌱 into the Entry field.",
+  "expected": "500 characters as the server counts them (code points).",
+  "actual": "maxlength and the 'characters left' counter use UTF-16 length, so only 250 emoji fit and the counter drops by 2 per emoji, although the server would accept 500.",
+  "evidence": "Code: remaining = 500 - form.body.length; the textarea has maxlength=500. The server uses Pydantic max_length (code points)."
+ },
+ {
+  "title": "Character limit counts UTF-16 units, so emoji entries are capped at about 250",
+  "where": "Journal entry textarea",
+  "steps": "Type or paste 300 emoji into the entry field",
+  "expected": "Up to 500 characters accepted (the server counts code points)",
+  "actual": "textarea maxlength and the 'characters left' counter use .length (UTF-16 units), so each emoji uses 2 and the text is cut off at 250 emoji",
+  "evidence": "JournalEntryForm.vue: :maxlength=500 and remaining = 500 - form.body.length; the server's max_length counts code points"
+ },
+ {
+  "title": "Character counter counts UTF-16 units, not characters",
+  "where": "JournalEntryForm",
+  "steps": "Type emoji into the entry text.",
+  "expected": "The counter and the 500 limit match the server's limit, which counts characters.",
+  "actual": "Each emoji counts as 2, so the textarea maxlength stops at about 250 emoji even though the server would accept 500.",
+  "evidence": "Typing 'Retry test 🌱 <b>x</b> \"q\"' (25 characters) showed '474 characters left'."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-body-limit-counts-utf16-units/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

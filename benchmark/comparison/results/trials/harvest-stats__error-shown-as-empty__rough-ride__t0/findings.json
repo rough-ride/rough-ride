@@ -1,0 +1,154 @@
+{
+  "findings": [
+    {
+      "title": "link \"Stats\" stays busy after GET /api/stats/harvests fails with 500",
+      "where": "/stats",
+      "steps": "In the browser: /stats | 500!, empty-200!, 400!, reset!, 401!, 429! on GET /api/stats/harvests #1 | fails: settles, retry-recovers | page showed a record from harvest-stats/GET /api/plants/{plant_id} #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed srfackim) after 10.1 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed srfackim) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10.1 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed srfackim) after 10.1 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed srfackim) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10.1 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-083651-plan-vjjt",
+        "state": "shown",
+        "repro": "r01"
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after POST /api/beds fails with 500",
+      "where": "/beds",
+      "steps": "In the browser: /beds | 500!, reset! on POST /api/beds #1; double-submit on POST /api/beds #1; 2 bad ... | fails: settles, retry-recovers | page showed a record from harvest-stats/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed srfackim) after 10 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10.1 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed srfackim) after 10 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10.1 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-083651-plan-vjjt",
+        "state": "shown",
+        "repro": "r03"
+      }
+    },
+    {
+      "title": "button \"Save plant\" stays busy after POST /api/plants fails with 500",
+      "where": "/plants/new",
+      "steps": "In the browser: /plants/new | 500!, reset! on POST /api/plants #1; double-submit on POST /api/plants #1 | fails: settles | page showed a record from harvest-stats/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed srfackim) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed srfackim) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-083651-plan-vjjt",
+        "state": "shown",
+        "repro": "r04"
+      }
+    },
+    {
+      "title": "goto /beds stays busy after a signed-out reload of /beds",
+      "where": "/beds",
+      "steps": "In the browser: /beds | signed-out-reload on page /beds #1 | fails: settles | page showed a record from harvest-stats/GET /api/plants/{plant_id} #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-083651-plan-vjjt",
+        "state": "shown",
+        "repro": "r23"
+      }
+    },
+    {
+      "title": "link \"Stats\" stays busy after a reload of /stats",
+      "where": "/stats",
+      "steps": "In the browser: /stats | refresh on page /stats #1 | fails: settles | page showed a record from harvest-stats/GET /api/plants/{plant_id} #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-083651-plan-vjjt",
+        "state": "shown",
+        "repro": "r22"
+      }
+    },
+    {
+      "title": "link \"Stats\" stays busy after a signed-out reload of /stats",
+      "where": "/stats",
+      "steps": "In the browser: /stats | signed-out-reload on page /stats #1 | fails: settles | page showed a record from harvest-stats/GET /api/plants/{plant_id} #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-083651-plan-vjjt",
+        "state": "capped",
+        "repro": "r24"
+      }
+    },
+    {
+      "title": "button \"Log harvest\" stays busy after POST /api/harvests fails with 500",
+      "where": "/harvests/new",
+      "steps": "In the browser: /harvests/new | 500!, reset! on POST /api/harvests #1; double-submit on POST /api/harvests #1... | fails: settles, retry-recovers | page showed a record from harvest-stats/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10.1 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10.1 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10 s | retry-recovers: step 14 (expect link \"View Plant ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-083651-plan-vjjt",
+        "state": "capped",
+        "repro": "r05"
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after GET /api/beds fails with 500",
+      "where": "/beds",
+      "steps": "In the browser: /beds | 500!, empty-200! on GET /api/beds #1 | fails: settles, values-survive, retry-recovers | page showed a record from harvest-stats/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10 s | values-survive: label \"Name\" held \"Bed ack6fhqc\", then \"\" after the failed request | retry-recovers: step 4 (click link \"Add plant to Bed ${unique}\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10 s | values-survive: label \"Name\" held \"Bed ack6fhqc\", then \"\" after the failed request | retry-recovers: step 4 (click link \"Add plant to Bed ${unique}\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-083651-plan-vjjt",
+        "state": "capped",
+        "repro": "r11"
+      }
+    },
+    {
+      "title": "button \"Save plant\" stays busy after GET /api/plants/{plant_id} fails with 500",
+      "where": "/plants/{}",
+      "steps": "In the browser: /plants/{} | 500! on GET /api/plants/{plant_id} #1 | fails: settles, retry-recovers | page showed a record from harvest-stats/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10 s | retry-recovers: no retry path without a reload",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0eu9186a) after 10 s | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-083651-plan-vjjt",
+        "state": "capped",
+        "repro": "r12"
+      }
+    },
+    {
+      "title": "viewport 375 stays busy after the 375px viewport",
+      "where": "/beds",
+      "steps": "In the browser: /beds | viewport 375 | fails: settles | page showed a record from harvest-stats/GET /api/plants/{plant_id} #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0axnivnc) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-083651-plan-vjjt",
+        "state": "capped",
+        "repro": "r17"
+      }
+    }
+  ]
+}

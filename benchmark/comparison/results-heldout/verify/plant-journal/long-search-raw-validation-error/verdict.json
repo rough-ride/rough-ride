@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "long-search-raw-validation-error",
+  "sentence": "Typing more than 80 characters into the /journal search box (no maxlength) makes the API return 422 and the page replaces results with a raw 'String should have at most 80 characters' message.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /journal. Typed 81 'a' characters into the Search input (#journal-search). The input took all 81 characters and has no maxlength attribute. The URL changed to ?q=<81 a>, the results area disappeared, and the page body showed only 'Query.q: String should have at most 80 characters' (the console logged one error). In the code, backend/routers/journal.py declares q: str = Query(default='', max_length=80), so the API returns a 422. pages/journal.vue sends the trimmed search value straight to the API, does not limit the input length, and shows apiErrorMessage(loadError), which turns the FastAPI validation detail into 'Query.q: <msg>'. The user gets a raw, technical validation message in place of results, with no maxlength and no friendly explanation.",
+  "severity": "low",
+  "wallMs": 39492
+}

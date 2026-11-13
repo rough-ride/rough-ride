@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "title": "Harvests on the To date are excluded from stats (range is end-exclusive)",
+      "where": "GET /api/stats/harvests and /stats page",
+      "steps": "Sample data has a Lettuce harvest of 150 g on 2026-09-30. Open /stats?from=2026-09-01&to=2026-09-30 (or call the API with from=2026-09-30&to=2026-09-30).",
+      "expected": "The 150 g Lettuce harvest is counted, because the To date is part of the range the user picked.",
+      "actual": "The page says '0 harvests from 1 Sept 2026 to 30 Sept 2026' and 'No harvests in this range'. A single-day range always comes back empty. The SQL in backend/routers/stats.py uses `harvested_on < ?` with date_to, so the To day is left out of the table, the totals and top_plants. In the default range this also drops harvests made on 31 Dec.",
+      "evidence": "The API returned months:[], plants:[], harvest_count:0 for from=to=2026-09-30. With from=2026-07-01&to=2026-07-20 it returned only the 450 g Tomato harvest and left out the Courgette 1200 g harvest dated 2026-07-20. The page text showed the empty state.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Dashboard top plant leaves out 31 Dec harvests, unlike the dashboard's own yearly totals",
+      "where": "GET /api/dashboard/summary (dashboard 'Top plant this year')",
+      "steps": "Log a large harvest dated 31 Dec of the current year for a plant that is not the current leader, then open the dashboard.",
+      "expected": "Top plant and its grams cover the whole year, the same as harvest_grams_year (which uses BETWEEN).",
+      "actual": "top_plant now comes from top_plants(), which uses `< year_end` (31 Dec). Harvests on 31 Dec count toward the year's harvest total but not toward the top plant, so the two numbers can disagree. The old code used BETWEEN, so this is a regression.",
+      "evidence": "dashboard.py: harvest totals use `BETWEEN ? AND ?`, while top_plants in stats.py uses `>= ? AND < ?` with date(year,12,31).",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats error state has no way to retry",
+      "where": "/stats",
+      "steps": "Make GET /api/stats/harvests return 500 (mocked with a text/plain body), then click 'Stats' in the nav.",
+      "expected": "An error message with a Retry button that fetches again without reloading the page.",
+      "actual": "Only the alert 'Could not load harvest stats.' appears. There is no retry button, so the only way to retry is to change a date or reload the page.",
+      "evidence": "Snapshot of the main area: form, an empty paragraph, and alert 'Could not load harvest stats.'. No button.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout, so a hung API leaves 'Loading stats…' on screen forever",
+      "where": "/stats (useApiFetch for /stats/harvests)",
+      "steps": "Make /api/stats/harvests hang (never respond), then open /stats or change a date.",
+      "expected": "The request fails after 10 s and the page shows an error with a retry option.",
+      "actual": "useApiFetch/useApiClient set no `timeout`, so the request waits indefinitely and the page keeps showing 'Loading stats…'.",
+      "evidence": "No timeout option in composables/useApi.ts or in stats.vue.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing a date field silently uses a different range than the field shows",
+      "where": "/stats From/To inputs",
+      "steps": "Clear the From field (or the To field).",
+      "expected": "Either refuse the empty value with a visible reason, or show the range actually used in the field.",
+      "actual": "The empty value is left out of the query, and the server quietly uses 1 Jan (or 31 Dec) of the current year. The field stays blank while the results are for a range the user never chose. Setting To to an earlier year with From cleared leads to a 422 error that is hard to understand.",
+      "evidence": "In stats.vue, the `query` computed leaves out empty values, and stats.py falls back to year_bounds(today).",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

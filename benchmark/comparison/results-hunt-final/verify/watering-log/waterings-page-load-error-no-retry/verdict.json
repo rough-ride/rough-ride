@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "waterings-page-load-error-no-retry",
+  "sentence": "When GET /api/waterings fails on /waterings, only the error text is shown with no retry control, so the user must reload the page.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the behaviour: signed in as the demo user, routed **/api/waterings* to a 500 {\"detail\":\"Injected 500\"}, then went from /beds to /waterings using the nav link (a client-side fetch; a direct load is rendered on the server and is not affected by the browser route). The page showed only the alert 'Injected 500' and no Retry button. After removing the route, changing the bed filter fetched again and loaded the list ('1 watering, 10 L in total'), so the user can recover without reloading. The missing retry control matches how the whole app already works: AlertMessage is a plain alert slot, and every page that existed before this change (plants/index.vue, plants/[id].vue, plants/new.vue, tasks.vue, harvests/new.vue, the existing dashboard summary and tasks sections, and the beds list) shows a load error as text with no retry. No page in the app has a retry control. The request did not ask for one. The new page follows the app's existing pattern for load errors, so this is not a defect in this change.",
+  "severity": null,
+  "wallMs": 64223
+}

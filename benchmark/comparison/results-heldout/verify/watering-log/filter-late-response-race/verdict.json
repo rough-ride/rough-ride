@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "hx6",
+  "key": "filter-late-response-race",
+  "sentence": "On /waterings, quickly switching the bed filter on a slow connection may let an earlier response overwrite the newer filter's results because there is no request ordering.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in and opened /waterings (beds: North bed id 1, Shade corner id 2). Using Playwright page.route I delayed GET /api/waterings?bed_id=1 by 4s and bed_id=2 by 0.3s, then switched the Bed filter to North bed and 150ms later to Shade corner. The bed_id=2 response arrived first and the bed_id=1 response arrived about 4s later. After both had arrived the list still showed only Shade corner ('1 watering, 4 L in total'), the select read 2 and the URL was ?bed_id=2. In a second run I delayed the unfiltered 'All beds' request by 4s, then switched to North bed. Again the late response arrived last and the list correctly stayed on North bed only ('1 watering, 10 L in total'). The page uses Nuxt 4 useFetch with a reactive query, so the request key changes with the filter and data always follows the current key. A stale response for an old key never replaces what is shown. The report itself was code review only.",
+  "severity": null,
+  "wallMs": 104877
+}

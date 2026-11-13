@@ -1,0 +1,14 @@
+id: search-quote-crash
+category: missing-input-guard
+provenance: hand-written
+layer: backend
+reach: direct
+needsAppKnowledge: false
+flow: journal
+exposedBy:
+  - { badInput: quote, field: Search }
+checks: [no-5xx, visible-error-message]
+symptom: "Searching the journal for text with an apostrophe (don't) fails with a 500 and the search shows an error; the term is pasted into the SQL"
+addedIn: 0.1.1
+review: single
+allowWords: []

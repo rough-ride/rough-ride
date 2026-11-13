@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "error-shown-as-empty",
+  "key": "dashboard-undefined-on-malformed-summary",
+  "sentence": "When GET /api/dashboard/summary returns malformed JSON, the dashboard renders the text 'undefined'.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /plants. Used a Playwright route to make GET /api/dashboard/summary return 200 application/json with the truncated body '{\"plant_count\": 3, '. Then clicked the Dashboard link to navigate to / on the client. ofetch/destr treats the unparsable body as a plain string, so `summary` is a non-empty string, the v-else-if='summary' branch renders, and every field is undefined. The dashboard showed 'In undefined beds', 'HARVESTED IN UNDEFINED' and 'undefined harvests', with an empty Plants value. No error message appeared. Caveat: this text comes from the Plants and Harvested cards in frontend/app/pages/index.vue, which `git diff main` shows were not changed. The only dashboard card the change touched, 'Top plant this year', handled the bad data and showed 'None yet' / 'By harvest weight'. So the defect is real and visible on the changed page, but it existed before this change and only appears when the server sends a broken response.",
+  "severity": "low",
+  "wallMs": 101600
+}

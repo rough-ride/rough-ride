@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "raw-validation-message",
+  "sentence": "On /stats, an invalid date (e.g. ?from=2026-02-30 or a five-digit year) shows the raw validation text 'Query.from: Input should be a valid date or datetime…' and the date input appears blank; triggered by opening such a URL or typing such a date.",
+  "verdict": "confirmed",
+  "evidence": "Logged in as the demo user via POST /api/auth/login. GET /api/stats/harvests?from=2026-02-30 returned 422 with a pydantic detail: loc ['query','from'], msg 'Input should be a valid date or datetime, day value is outside expected range'. The router (backend/routers/stats.py) declares the parameter as `date | None` and does not handle bad dates itself. Fetching the page http://localhost:3795/stats?from=2026-02-30 with the session cookie gave SSR HTML containing <div class=\"alert alert--error\" role=\"alert\">Query.from: Input should be a valid date or datetime, day value is outside expected range. The raw field path and pydantic wording reach the user, unlike the friendly message the app wrote for the from>to case. The input renders as <input id=\"stats-from\" value=\"2026-02-30\" type=\"date\">. A native date input cannot show an impossible date, so it looks blank while the error refers to it.",
+  "severity": "low",
+  "wallMs": 28481
+}

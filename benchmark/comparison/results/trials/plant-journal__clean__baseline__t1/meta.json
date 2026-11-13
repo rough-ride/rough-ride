@@ -1,0 +1,72 @@
+{
+  "id": "plant-journal__clean__baseline__t1",
+  "feature": "plant-journal",
+  "bug": "clean",
+  "arm": "baseline",
+  "trial": 1,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T09:06:29.988Z",
+  "materializeMs": 6823,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__clean__baseline__t1/variant/aygou5dp/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "57a25879-28bf-438b-9bf0-a7ca3ba4ff2e",
+  "loadBefore": [
+    10.32177734375,
+    11.515625,
+    14.3798828125
+  ],
+  "loadAfter": [
+    6.814453125,
+    10.00634765625,
+    13.4296875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 115783,
+  "reportedCostUsd": 0.49937699999999996,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 18,
+      "outputTokens": 9150,
+      "cacheReadInputTokens": 273565,
+      "cacheCreationInputTokens": 32699,
+      "webSearchRequests": 0,
+      "costUSD": 0.49937699999999996,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2410,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 32699,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 9,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 13 bugs and wrote them to `out/findings.json`. Seven I reproduced through the API (\"observed\"); six come only from reading the code (\"suspected\"). I had no browser and could not stop the server, so none of the network-failure or narrow-screen checks were run on the actual pages.\n\n**Medium**\n- **No retry on the Journal page (suspected):** when loading fails it shows only a message. The only ways back are typing in the search box or reloading.\n- **No retry on the plant page's journal (suspected):** same problem. The message stays until you add or delete an entry.\n- **No request timeout (suspected):** the new journal code adds no timeout to any request. If the API hangs, \"Saving…\" or \"Loading entries…\" stays up forever and the buttons stay disabled.\n- **Duplicate entries on retry (suspected):** adding an entry is a plain insert with no protection against repeats. The form keeps the text after an error, so a user retrying after a lost response gets two identical entries.\n- **Server errors on huge ids (observed):** very large ids or `plant_id` values on create, list, edit and delete return a plain-text 500 instead of a 4xx. The existing plant and harvest endpoints already do this; the new ones do it too.\n\n**Low**\n- **Emoji count double (observed):** the server accepted an entry of 500 emoji, but the form counts each emoji as 2 characters. Editing that entry shows \"-500 characters left\" and Save is refused even with no changes. New entries are cut off at 250 emoji.\n- **Implausible dates (observed):** the date has no lower limit; an entry dated 0001-01-01 was saved (201).\n- **Long searches (observed):** a search over 80 characters swaps the list for a raw validation message (\"Q: String should have at most 80 characters\").\n- **Accented letters (observed):** search ignores case only for plain ASCII letters. \"épinards\" doesn't find \"ÉPINARDS\"; \"tomato\" does find \"Tomato\".\n- **Deleting an already-deleted entry (observed):** the API returns 404, so the page shows \"Journal entry not found.\" and the old entry stays in the list.\n- **500-entry cap (suspected):** a plant's journal fetches only the newest 500 entries while the badge shows the full count. Older entries can't be seen, edited or deleted.\n- **Search vs. URL (suspected):** the search box is filled from the URL once and never follows it again, so Back/Forward can leave the box and results disagreeing with the URL.\n- **Time zones (suspected):** \"not in the future\" is checked against the server's date. A user whose time zone is ahead of the server can have the form's default \"today\" refused.\n\nI left test data in the app: a 500-emoji entry on Tomato (id 6) and an \"Été chaud, ÉPINARDS\" entry on Lettuce (id 7). Entries 4 and 5 were created and then deleted.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 18,
+    "output": 9150,
+    "cacheRead": 273565,
+    "cacheWrite": 32699,
+    "requests": 9,
+    "toolCalls": {
+      "Bash": 8
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 13,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T09:08:42.477Z"
+}

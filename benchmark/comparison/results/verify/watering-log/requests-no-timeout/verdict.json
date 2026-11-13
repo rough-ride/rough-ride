@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "requests-no-timeout",
+  "sentence": "Watering requests (Water now, Save watering, waterings list, delete, dashboard) have no 10 s timeout, so a hanging API leaves 'Watering…'/'Saving…'/'Loading waterings…' on screen indefinitely.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the behaviour: signed in as the demo user, opened /beds, used Playwright page.route to hang every request whose URL contains 'water' (never answered), clicked 'Water now' on North bed. After 15 s the button still read 'Watering…' and was disabled, with no error shown. However, the 10 s timeout the reports expect is not in the request (which only asks for Water now, past-watering form, last-watered display, dashboard top 5 and a filtered list) and is not an app convention: composables/useApi.ts (useApiClient/useApiFetch) is unchanged by this diff (git diff main --stat does not list it), and neither the main branch nor the working tree contains any timeout/AbortSignal anywhere in frontend or backend. Every existing request (Add bed, Edit/Delete bed, plants, harvests, tasks) uses the same shared client and behaves the same way under a hanging API. The new watering calls follow the app's established request handling; the missing timeout is a pre-existing, app-wide trait, not a regression or an unmet requirement of this change.",
+  "severity": null,
+  "wallMs": 132781
+}

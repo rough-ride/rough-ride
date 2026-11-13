@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-requests-no-timeout",
+  "sentence": "Journal requests have no client timeout, so when the API hangs the add/save/delete buttons stay disabled on 'Saving…' or the list stays on 'Loading entries…' indefinitely instead of failing after 10 s.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the behaviour: signed in as the demo user, opened /plants/1 (Tomato), used Playwright to route non-GET /api/journal requests so they never get a response, typed an entry and clicked 'Add entry'. 15 s later the button still read 'Saving… [disabled]' and no alert was shown. So the behaviour is real. But it is not a defect introduced by this change and nothing asked for a timeout. (1) The request text says nothing about timeouts or a 10 s limit. The '10 s' expectation in the reports is made up. (2) The journal code uses the app's existing useApiClient/useApiFetch from composables/useApi.ts. That file is unchanged from main (`git diff main -- frontend/app/composables` is empty). No file in frontend or backend contains a timeout or AbortSignal. Every existing feature (auth, beds, harvests/new, index, plants/new, plants/[id], tasks) calls the same client with no timeout, so a hung API leaves their buttons in the same busy state. The journal follows the app's established request convention, and when a request does fail, its errors are caught and shown. Leaving out a client timeout is an app-wide design choice, not a fault in the journal feature. Side note: while I tried a comparison test with a hung harvest delete, the Playwright MCP accepted a confirm dialog, and one demo harvest (600 g on 3 Aug 2026, Tomato) was deleted.",
+  "severity": null,
+  "wallMs": 160962
+}

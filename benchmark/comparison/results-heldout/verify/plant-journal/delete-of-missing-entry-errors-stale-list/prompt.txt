@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3794, API http://localhost:8794/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-delete-of-missing-entry-errors-stale-list/scratch.
+
+The reported problem: Deleting an entry that is already gone (second tab or retried delete) returns 404 'Journal entry not found.' as an error and the stale entry stays listed because the list only refreshes on success.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Deleting an entry that is already gone leaves it on the page with an error",
+  "where": "/plants/{id} Journal, Delete",
+  "steps": "Open a plant's journal in two tabs, delete an entry in one tab, then delete the same entry in the other tab (or retry a delete whose response was lost)",
+  "expected": "The entry disappears (the delete is treated as done), or the list refreshes",
+  "actual": "The second DELETE returns 404, the page shows 'Journal entry not found.' and the stale entry stays listed because no refresh happens on error",
+  "evidence": "Second DELETE /api/journal/4 returned 404 {\"detail\":\"Journal entry not found.\"}; removeEntry only refreshes on success"
+ },
+ {
+  "title": "Deleting or editing an entry that is already gone leaves the stale entry on the page",
+  "where": "Plant detail journal list",
+  "steps": "Open a plant in two tabs, delete an entry in tab A, then click Delete (or Edit then Save) on the same entry in tab B.",
+  "expected": "The list refreshes and the entry disappears. A repeat delete counts as done.",
+  "actual": "Tab B shows 'Journal entry not found.' and the deleted entry stays in the list until the page is reloaded; the list is not refreshed on error.",
+  "evidence": "removeEntry/save only refresh on success; DELETE returns 404 for missing ids."
+ },
+ {
+  "title": "A delete that succeeded on the server but failed in the browser leaves the deleted entry on screen; retrying then errors",
+  "where": "/plants/:id journal entry Delete; DELETE /api/journal/:id",
+  "steps": "Make DELETE /api/journal/:id reach the server but return 504. Click Delete on an entry and confirm, then click Delete on it again.",
+  "expected": "Retrying a delete makes one change and the UI matches the server (treat 404 on retry as already deleted, or refresh the list after a failure).",
+  "actual": "'Could not delete the entry.' is shown and the deleted entry and the old count stay on the page. The list is not refreshed after a failure, and a retry against the already-deleted id gets 'Journal entry not found.'",
+  "evidence": "After the failed delete the section still listed every entry and '4 entries'. The server had removed the row. removeEntry only refreshes on success."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-delete-of-missing-entry-errors-stale-list/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

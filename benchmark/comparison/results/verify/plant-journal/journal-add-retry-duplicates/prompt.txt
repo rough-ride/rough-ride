@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3792, API http://localhost:8792/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-plant-journal-journal-add-retry-duplicates/scratch.
+
+The reported problem: Retrying 'Add entry' after a POST /api/journal whose response was lost or timed out creates a duplicate entry because the endpoint has no idempotency key or dedupe.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Retrying an add after a timeout or network error creates duplicate entries",
+  "where": "POST /api/journal",
+  "steps": "Submit an entry, lose the response (timeout or network drop after the server commits), then click Add entry again.",
+  "expected": "One entry is created.",
+  "actual": "The POST has no idempotency key or duplicate guard, so a retry creates a second identical entry. A retried delete shows 'Journal entry not found.' as an error even though the delete succeeded.",
+  "evidence": "create_entry inserts unconditionally. A second DELETE of the same id returned 404."
+ },
+ {
+  "title": "Retrying an add after a timeout or network failure can create a duplicate entry",
+  "where": "POST /api/journal",
+  "steps": "Add an entry while the connection is slow, so the request reaches the server but the response is lost or the client gives up. Click 'Add entry' again.",
+  "expected": "One entry is created (for example, with an idempotency key or by de-duplicating).",
+  "actual": "Each POST inserts a new row with no idempotency key. A request I had held pending in the browser was still committed later (entry 'hang', id 7) even though the UI never confirmed it, so a retry would have made a second copy.",
+  "evidence": "After the hung-POST test, GET /api/journal listed the 'hang' entry, which the UI never showed as saved."
+ },
+ {
+  "title": "Retrying a journal entry after a lost/timed-out response creates a duplicate entry",
+  "where": "Plant detail page, New entry form (POST /api/journal)",
+  "steps": "Open /plants/1, type 'Lost response test', click Add entry. Make the POST reach the server but lose the response (Playwright route: route.fetch() then abort('timedout')). The form shows 'The garden server could not be reached.' Click Add entry again.",
+  "expected": "Creating an entry is idempotent (e.g. a client-generated idempotency key), so the retry makes only one entry",
+  "actual": "Two identical entries are created",
+  "evidence": "After the retry the list showed 2 entries with the body 'Lost response test'. POST has no idempotency key and the server inserts on every call."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-plant-journal-journal-add-retry-duplicates/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

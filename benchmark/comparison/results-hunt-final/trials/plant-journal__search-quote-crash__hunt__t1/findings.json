@@ -1,0 +1,19 @@
+{
+  "findings": [
+    {
+      "title": "Journal search with an apostrophe fails: search term is pasted into SQL, so the server returns 500 and the page shows 'Could not load the journal.'",
+      "where": "/journal search box -> GET /api/journal?q=O'Brien (backend/routers/journal.py list_entries)",
+      "steps": "Probe search-quote-ui, expectation ui-apostrophe-search-finds-entry",
+      "expected": "Searching O'Brien lists the entry 'Gave O'Brien compost today'",
+      "actual": "GET /api/journal?q=O'Brien returns 500 Internal Server Error (with no CORS header, so the browser blocks it), and the page shows only 'Could not load the journal.' The query is built with f\"(j.body LIKE '%{term}%' ...)\", so SQL can also be injected through it.",
+      "evidence": "{\"alerts\":[\"Could not load the journal.\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Could not load the journal.\",\"Garden Log · a journal for one garden\"]} | {\"alerts\":[\"Could not load the journal.\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Could not load the journal.\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-192924-hunt-25c9",
+        "probe": "search-quote-ui",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

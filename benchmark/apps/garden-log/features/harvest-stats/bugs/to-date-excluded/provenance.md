@@ -1,0 +1,1 @@
+Written by hand for the comparison benchmark (benchmark/comparison/). Out-of-catalogue control: a plain off-by-one in the date filter that no fault injection or bad input exposes. The clean feature uses an inclusive BETWEEN; this variant compares with < on the To date.

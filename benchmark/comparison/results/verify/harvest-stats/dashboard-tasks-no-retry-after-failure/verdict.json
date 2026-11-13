@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "error-shown-as-empty",
+  "key": "dashboard-tasks-no-retry-after-failure",
+  "sentence": "After GET /api/tasks/upcoming fails on the dashboard, there is no way to retry without a page reload.",
+  "verdict": "confirmed",
+  "evidence": "I added a Playwright route that makes GET **/api/tasks/upcoming* return 500 {\"detail\":\"boom\"}, then signed in as demo@example.com. The client-side navigation to / then rendered the 'Upcoming tasks' section with only an alert reading 'boom'. There was no Retry/Try again button, and the summary cards loaded normally. I then removed the route so the API was healthy again and clicked the 'Dashboard' nav link while on /. The section still showed the 'boom' alert and no tasks, so the only way to recover is a full page reload. The code agrees: in frontend/app/pages/index.vue tasksError renders a bare <AlertMessage> with no action, and refreshTasks is only called after a task toggle, which is impossible while the list is not shown. AlertMessage.vue is just a slot, and no page in frontend/app has a retry control. Note: this code is unchanged from main, so the defect predates the harvest-stats change rather than being introduced by it. There is a workaround (reload), so severity is low.",
+  "severity": "low",
+  "wallMs": 64272
+}

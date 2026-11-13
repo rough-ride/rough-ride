@@ -1,0 +1,109 @@
+{
+  "findings": [
+    {
+      "title": "No way to retry without a reload after GET /api/dashboard/summary fails with 500",
+      "where": "/",
+      "steps": "In the browser: / | 500!, 400!, reset!, 429! on GET /api/dashboard/summary #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-122006-plan-kva4",
+        "state": "shown",
+        "repro": "r15"
+      }
+    },
+    {
+      "title": "\"undefined\" shown on / after GET /api/dashboard/summary returns malformed JSON",
+      "where": "/",
+      "steps": "In the browser: / | malformed-json! on GET /api/dashboard/summary #1 | fails: no-broken-text",
+      "expected": "",
+      "actual": "no-broken-text: \"undefined\" in a new line",
+      "evidence": "no-broken-text: \"undefined\" in a new line",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-122006-plan-kva4",
+        "state": "shown",
+        "repro": "r32"
+      }
+    },
+    {
+      "title": "Uncaught error on /stats after GET /api/stats/harvests is rate limited (429)",
+      "where": "/stats",
+      "steps": "In the browser: /stats | 429!, malformed-json! on GET /api/stats/harvests #1 | fails: no-uncaught-error",
+      "expected": "",
+      "actual": "no-uncaught-error: overlay: dev error overlay | no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function",
+      "evidence": "no-uncaught-error: overlay: dev error overlay | no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-122006-plan-kva4",
+        "state": "not-confirmed",
+        "repro": "r06"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/auth/me fails with 500",
+      "where": "/login",
+      "steps": "In the browser: /login | 500!, 400!, reset!, 429! on GET /api/auth/me #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-122006-plan-kva4",
+        "state": "shown",
+        "repro": "r17"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/tasks/upcoming fails with 500",
+      "where": "/",
+      "steps": "In the browser: / | 500!, 400!, reset!, 429! on GET /api/tasks/upcoming #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-122006-plan-kva4",
+        "state": "shown",
+        "repro": "r18"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after POST /api/auth/login fails with 500",
+      "where": "/login",
+      "steps": "In the browser: /login | 500!, reset!, 400!, 429! on POST /api/auth/login #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s",
+      "evidence": "retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-122006-plan-kva4",
+        "state": "shown",
+        "repro": "r16"
+      }
+    },
+    {
+      "title": "\"NaN\" shown on / after GET /api/tasks/upcoming returns malformed JSON",
+      "where": "/",
+      "steps": "In the browser: / | malformed-json! on GET /api/tasks/upcoming #1 | fails: no-broken-text",
+      "expected": "",
+      "actual": "no-broken-text: \"NaN\" in a new line",
+      "evidence": "no-broken-text: \"NaN\" in a new line",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-122006-plan-kva4",
+        "state": "capped",
+        "repro": "r37"
+      }
+    }
+  ]
+}

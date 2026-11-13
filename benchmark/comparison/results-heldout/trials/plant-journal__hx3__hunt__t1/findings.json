@@ -1,0 +1,79 @@
+{
+  "findings": [
+    {
+      "title": "Failed journal entry delete removes the entry from the list anyway",
+      "where": "/plants/:id Journal section (DELETE /api/journal/:id)",
+      "steps": "Probe delete-fail, expectation failed-delete-keeps-entry-visible",
+      "expected": "When the delete request fails, the entry stays in the list next to the error, because it still exists on the server.",
+      "actual": "The entry is removed from the list straight away and is not put back when the DELETE returns 500. The page shows the error, but the entry is gone from view (the list falls back to 'No journal entries yet' while the badge says '1 entry'), even though the server still has it.",
+      "evidence": "{\"visible\":0,\"alerts\":[\"Injected 500\"]} | {\"visible\":0,\"alerts\":[\"Injected 500\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-182228-hunt-3dc4",
+        "probe": "delete-fail",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Malformed journal response on the plant page is drawn as junk entries with no error",
+      "where": "/plants/:id Journal section (GET /api/journal?plant_id=)",
+      "steps": "Probe detail-load-faults, expectation journal-load-malformed-shows-error",
+      "expected": "A visible error saying the journal could not be loaded.",
+      "actual": "No alert appears. The list shows made-up entries with date '–', blank text and Edit/Delete buttons.",
+      "evidence": "{\"url\":\"/plants/1\",\"alerts\":[],\"j\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\"],\"pageErrors\":[],\"hits\":1} | {\"url\":\"/plants/1\",\"alerts\":[],\"j\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\"],\"pageErrors\":[],\"hits\":1}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-182228-hunt-3dc4",
+        "probe": "detail-load-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Bad journal payload on the plant page shows 'No journal entries yet' while the badge says 2 entries",
+      "where": "/plants/:id Journal section",
+      "steps": "Probe detail-load-faults, expectation journal-load-empty-object-shows-error",
+      "expected": "An error, not an empty state.",
+      "actual": "When the list request returns {}, the page shows 'No journal entries yet' next to a '2 entries' badge, and no error.",
+      "evidence": "{\"url\":\"/plants/1\",\"alerts\":[],\"j\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"No journal entries yet\",\"Note what you see: first shoots, pests, the weather.\",\"Garden Log · a journal for one garden\"],\"pageErrors\":[],\"hits\":1} | {\"url\":\"/plants/1\",\"alerts\":[],\"j\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"No journal entries yet\",\"Note what you see: first shoots, pests, the weather.\",\"Garden Log · a journal for one garden\"],\"pageErrors\":[],\"hits\":1}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-182228-hunt-3dc4",
+        "probe": "detail-load-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Journal page shows a malformed response as 14 blank entries",
+      "where": "/journal (GET /api/journal)",
+      "steps": "Probe journal-page-shape, expectation journal-page-malformed-shows-error",
+      "expected": "A visible load error.",
+      "actual": "The page says '14 entries' and lists 14 cards dated '–' with no plant name or text, and shows no error.",
+      "evidence": "{\"url\":\"/journal\",\"alerts\":[\"14 entries\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"],\"pageErrors\":[]} | {\"url\":\"/journal\",\"alerts\":[\"14 entries\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"],\"pageErrors\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-182228-hunt-3dc4",
+        "probe": "journal-page-shape",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Search over 80 characters shows a raw validation message and hides all results",
+      "where": "/journal search box",
+      "steps": "Probe journal-page, expectation long-search-not-raw-error",
+      "expected": "The search box limits input to what the API accepts, or explains the limit in plain words.",
+      "actual": "The box takes any length. At 81 or more characters the API returns 422 and the page shows 'Query.q: String should have at most 80 characters' in place of the results.",
+      "evidence": "{\"alerts\":[\"Query.q: String should have at most 80 characters\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Query.q: String should have at most 80 characters\",\"Garden Log · a journal for one garden\"]} | {\"alerts\":[\"Query.q: String should have at most 80 characters\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Query.q: String should have at most 80 characters\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "low",
+      "tool": {
+        "run": "20261112-182228-hunt-3dc4",
+        "probe": "journal-page",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

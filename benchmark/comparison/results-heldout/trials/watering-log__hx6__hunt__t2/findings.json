@@ -1,0 +1,49 @@
+{
+  "findings": [
+    {
+      "title": "Waterings page crashes on a non-list response from GET /api/waterings (uncaught 'waterings.value?.reduce is not a function')",
+      "where": "/waterings (GET /api/waterings)",
+      "steps": "Probe client-faults, expectation malformed-shows-error",
+      "expected": "A malformed or non-array response shows an error message on the Waterings page",
+      "actual": "An uncaught TypeError 'waterings.value?.reduce is not a function' is thrown, navigation never completes, and the user stays on the previous page with no error shown",
+      "evidence": "{\"url\":\"/waterings\",\"alerts\":[],\"text\":[\"Sunlight\",\"Full sun\",\"Partial shade\",\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\",\"2\",\"HARVESTED\"],\"pe\":[\"waterings.value?.reduce is not a function\"]} | {\"url\":\"/waterings\",\"alerts\":[],\"text\":[\"Sunlight\",\"Full sun\",\"Partial shade\",\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\",\"2\",\"HARVESTED\"],\"pe\":[\"waterings.value?.reduce is not a function\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-174349-hunt-1b6a",
+        "probe": "client-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Bed filter on the Waterings page is lost on reload: the page writes ?bed_id= to the URL but reads only ?bed=",
+      "where": "/waterings",
+      "steps": "Probe filter-reload, expectation filter-survives-reload",
+      "expected": "After choosing a bed in the filter and reloading (or sharing the URL /waterings?bed_id=1), the same bed stays selected and only its waterings are listed",
+      "actual": "After the reload the URL still says ?bed_id=1, but the filter goes back to 'All beds' and every bed's waterings are listed",
+      "evidence": "{\"sel\":\"\",\"url\":\"/waterings?bed_id=1\",\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"4 waterings, 14 L in total\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\",\"ACTIONS\",\"12 Nov 2026, 17:44\\tShade corner\\t–\\tDelete\",\"watering of Shade corner\",\"12 Nov 2026, 17:44\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\",\"watering of Shade corner\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\",\"watering of North bed\"]} | {\"sel\":\"\",\"url\":\"/waterings?bed_id=1\",\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"4 waterings, 14 L in total\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\",\"ACTIONS\",\"12 Nov 2026, 17:44\\tShade corner\\t–\\tDelete\",\"watering of Shade corner\",\"12 Nov 2026, 17:44\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\",\"watering of Shade corner\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\",\"watering of North bed\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-174349-hunt-1b6a",
+        "probe": "filter-reload",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A small accepted amount is shown as '0 L'",
+      "where": "/beds record past watering form",
+      "steps": "Probe past-form, expectation tiny-litres-shown-sensibly",
+      "expected": "An amount of 0.001 litres is either refused (the input's step/min is 0.1) or shown as a non-zero amount",
+      "actual": "The server stores 0.001 and the confirmation says 'Recorded 0 L on 10 Nov 2026.'",
+      "evidence": "{\"r3\":{\"created\":1,\"newest\":{\"id\":6,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-10\",\"watered_at\":null,\"litres\":0.001},\"alerts\":[\"Recorded 0 L on 10 Nov 2026.\"]},\"t\":[\"Recorded 0 L on 10 Nov 2026.\"]} | {\"r3\":{\"created\":1,\"newest\":{\"id\":6,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-10\",\"watered_at\":null,\"litres\":0.001},\"alerts\":[\"Recorded 0 L on 10 Nov 2026.\"]},\"t\":[\"Recorded 0 L on 10 Nov 2026.\"]}",
+      "status": "observed",
+      "severity": "low",
+      "tool": {
+        "run": "20261112-174349-hunt-1b6a",
+        "probe": "past-form",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

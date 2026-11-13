@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-plant-journal-journal-ancient-date-accepted/scratch.
+
+The reported problem: POST/PUT /api/journal accepts implausible past dates such as 0001-01-01 (201 Created) with no lower bound, showing them as '1 Jan 1' at the bottom of the list.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Journal date accepts year 0001 and any ancient date",
+  "where": "POST/PUT /api/journal, journal form",
+  "steps": "POST {\"plant_id\":1,\"entry_on\":\"0001-01-01\",\"body\":\"x\"} or pick year 0001 in the date input.",
+  "expected": "Implausible dates refused with a reason (e.g. before plant was planted or before 1900).",
+  "actual": "201 Created; entry is stored and shown as '1 Jan 1' at the bottom of the journal.",
+  "evidence": "API returned 201 with entry_on 0001-01-01. Form has :max but no :min, schema only checks not-in-future."
+ },
+ {
+  "title": "Implausible dates such as year 0001 are accepted",
+  "where": "POST/PUT /api/journal",
+  "steps": "POST entry_on=0001-01-01",
+  "expected": "A lower bound (for example after 1900) that refuses the date with a reason.",
+  "actual": "201 Created; the entry is stored and shown as 1 Jan 0001 at the bottom of the list.",
+  "evidence": "curl returned 201 with entry_on 0001-01-01."
+ },
+ {
+  "title": "Journal accepts absurd past dates such as year 0001",
+  "where": "POST/PUT /api/journal, plant detail date field",
+  "steps": "POST {plant_id:1, entry_on:'0001-01-01', body:'x'}",
+  "expected": "Reject implausible dates with a visible reason (only future dates are rejected)",
+  "actual": "201 Created; entry dated 1 Jan 1 is stored and sorts to the bottom",
+  "evidence": "Response 201 with entry_on 0001-01-01"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-plant-journal-journal-ancient-date-accepted/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

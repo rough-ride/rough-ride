@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "hx3",
+  "key": "search-no-debounce-stale-results",
+  "sentence": "The /journal search fires a request per keystroke with no debounce, so on a slow network an older response can overwrite newer results.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in as the demo user and opened /journal. Used page.route so the response for the first keystroke (q=l, which matches 2 entries) was held back by 4s while the next one (q=le, which matches 1 entry, Lettuce) went through at once. Then I typed 'le' with 150ms between keys. Each keystroke did send its own request (there is no debounce). But when q=le was sent, Nuxt's useFetch (dedupe 'cancel' by default) aborted the q=l request: the browser logged a requestfailed for q=l with net::ERR_ABORTED. The page showed '1 entry match' (Lettuce) 1s after typing and still showed it 6s later, after the delayed q=l response was released. Stale results never replaced the newer ones. Having no debounce only means a few extra small requests, and the request did not ask for a debounce.",
+  "severity": null,
+  "wallMs": 104250
+}

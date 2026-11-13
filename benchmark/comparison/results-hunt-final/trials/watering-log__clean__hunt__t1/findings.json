@@ -1,0 +1,79 @@
+{
+  "findings": [
+    {
+      "title": "Waterings page crashes when the list response is not an array",
+      "where": "/waterings (GET /api/waterings)",
+      "steps": "Probe client-faults, expectation list-malformed-shows-error",
+      "expected": "A visible error that the waterings could not be loaded, and no uncaught error",
+      "actual": "Uncaught 'waterings.value?.reduce is not a function'. The page never renders: the browser stays on the Beds content with no alert.",
+      "evidence": "{\"hits\":1,\"alerts\":[],\"sec\":[\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"]} | {\"hits\":1,\"alerts\":[],\"sec\":[\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-193836-hunt-d57f",
+        "probe": "client-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Waterings page crashes on an empty-object list response",
+      "where": "/waterings (GET /api/waterings)",
+      "steps": "Probe client-faults, expectation list-empty-object-shows-error",
+      "expected": "A visible error, and no uncaught error",
+      "actual": "Uncaught 'waterings.value?.reduce is not a function' (twice). The page does not render and no alert is shown.",
+      "evidence": "{\"hits\":1,\"alerts\":[],\"sec\":[\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\",\"waterings.value?.reduce is not a function\"]} | {\"hits\":1,\"alerts\":[],\"sec\":[\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\",\"waterings.value?.reduce is not a function\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-193836-hunt-d57f",
+        "probe": "client-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard shows a bad recent-waterings response as 'No waterings yet'",
+      "where": "/ Recent waterings (GET /api/waterings?limit=5)",
+      "steps": "Probe client-faults, expectation dash-empty-object-shows-error",
+      "expected": "A visible error that recent waterings could not be loaded",
+      "actual": "The empty state 'No waterings yet' appears, so a failure looks like there is no data.",
+      "evidence": "{\"hits\":1,\"alerts\":[],\"sec\":[\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\",\"Go to beds\"],\"pageErrors\":[]} | {\"hits\":1,\"alerts\":[],\"sec\":[\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\",\"Go to beds\"],\"pageErrors\":[]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-193836-hunt-d57f",
+        "probe": "client-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard renders a garbage row from a malformed recent-waterings response",
+      "where": "/ Recent waterings (GET /api/waterings?limit=5)",
+      "steps": "Probe client-faults, expectation dash-malformed-shows-error",
+      "expected": "A visible error",
+      "actual": "The table shows a row reading 'Never | (blank) | –' and no alert.",
+      "evidence": "{\"hits\":1,\"alerts\":[],\"sec\":[\"Recent waterings\",\"All waterings\",\"The five most recent waterings\",\"WHEN\\tBED\\tAMOUNT\",\"Never\\t\\t–\"],\"pageErrors\":[]} | {\"hits\":1,\"alerts\":[],\"sec\":[\"Recent waterings\",\"All waterings\",\"The five most recent waterings\",\"WHEN\\tBED\\tAMOUNT\",\"Never\\t\\t–\"],\"pageErrors\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-193836-hunt-d57f",
+        "probe": "client-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Past watering accepts tiny amounts and reports them as '0 L'",
+      "where": "/beds Record past watering form (POST /api/waterings)",
+      "steps": "Probe tiny-litres, expectation tiny-amount-refused-or-shown-correctly",
+      "expected": "0.004 L is refused (the field's min is 0.1), or it is shown as the amount actually saved",
+      "actual": "It is saved, the notice says 'Recorded 0 L on 2 Nov 2026.', and the waterings list shows '0 L'.",
+      "evidence": "{\"alerts\":[\"Recorded 0 L on 2 Nov 2026.\"]} | {\"alerts\":[\"Recorded 0 L on 2 Nov 2026.\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-193836-hunt-d57f",
+        "probe": "tiny-litres",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

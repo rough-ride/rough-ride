@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "out-of-range-id-500",
+  "sentence": "Journal endpoints (POST plant_id, GET ?plant_id=, PUT/DELETE /api/journal/{id}) return 500 instead of 4xx when given integers larger than 64 bits.",
+  "verdict": "confirmed",
+  "evidence": "Logged in as the demo user and called the API with curl. With id 99999999999999999999 and with 9223372036854775808 (2^63), all four journal calls returned 'Internal Server Error' [500]: POST /api/journal {plant_id:N,entry_on:2026-01-01,body:x}, GET /api/journal?plant_id=N, PUT /api/journal/N and DELETE /api/journal/N. With 9223372036854775807 (the largest 64-bit integer) the same calls gave the correct answers: 422 'Choose an existing plant.', 200 [], 404, 404. Code: in routers/journal.py and schemas.py the ids are only checked with gt=0 and have no upper limit, so Python's sqlite3 raises OverflowError when it binds the value, and nothing turns that into a 4xx. Note: the existing GET /api/plants/99999999999999999999 also returns 500, so this weakness was already in the app before the change. The new journal endpoints copy it rather than add it. Only hand-made API requests can hit this; the UI cannot send such ids, and no data is lost.",
+  "severity": "low",
+  "wallMs": 51291
+}

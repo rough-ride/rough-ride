@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Journal endpoints return 500 for out-of-range integer ids",
+      "where": "POST /api/journal, PUT/DELETE /api/journal/{id}, GET /api/journal?plant_id=",
+      "steps": "Signed in, send POST /api/journal with plant_id 99999999999999999999, or PUT/DELETE /api/journal/99999999999999999999, or GET /api/journal?plant_id=99999999999999999999",
+      "expected": "4xx validation or not-found response",
+      "actual": "HTTP 500 Internal Server Error (plain-text body); SQLite integer overflow is not caught",
+      "evidence": "curl got 500 'Internal Server Error' for all four requests",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Search over 80 characters shows a raw validation error instead of being limited or explained",
+      "where": "/journal search box",
+      "steps": "Type or paste more than 80 characters into the Journal search box (or open /journal?q=<81 chars>)",
+      "expected": "Input is capped at 80 characters (maxlength) or a clear message is shown; results still work",
+      "actual": "The whole list is replaced by the alert 'Query.q: String should have at most 80 characters' (API returns 422), and the input has no maxlength",
+      "evidence": "SSR of /journal?q=aaaa...(81) rendered role=alert 'Query.q: String should have at most 80 characters'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Emoji and other non-BMP characters count double: the server allows 500, the UI allows only about 250 and blocks saving existing entries",
+      "where": "Plant detail > Journal entry form (add and edit)",
+      "steps": "Try to type 300 emoji in a new entry; or create an entry with 500 '🌱' through the API (accepted, 201), then click Edit and Save on the plant page",
+      "expected": "Limit of 500 characters is counted the same way on client and server",
+      "actual": "textarea maxlength and form.body.length count UTF-16 code units, so each emoji uses 2 of the 500. The counter shows '-500 characters left' for the stored entry and saving fails with 'Keep the entry to 500 characters.', even though the server accepted it",
+      "evidence": "API accepted a 500-emoji body (201); JournalEntryForm.vue uses :maxlength=500 and form.body.length (UTF-16), while Pydantic and SQLite length() count code points",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors have no retry button",
+      "where": "/journal page and the Journal section of /plants/:id",
+      "steps": "Make GET /api/journal fail (server down or 5xx), open /journal or a plant page",
+      "expected": "The error state has a Retry button that reloads the list without reloading the page",
+      "actual": "Only an AlertMessage is shown, with no retry control. On /journal the only way to retry is to change the search text; on the plant page you have to reload",
+      "evidence": "journal.vue renders only <AlertMessage v-if=loadError> and never calls refresh. [id].vue shows the journalLoadError alert with no button",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal requests have no timeout",
+      "where": "/journal, /plants/:id journal add/edit/delete",
+      "steps": "Make the API hang (accept the connection but never answer), then load /journal or click Add entry / Save entry",
+      "expected": "Requests fail after 10 seconds with a visible error, and buttons become enabled again",
+      "actual": "useApiClient/useApiFetch set no timeout, so 'Loading entries…' or 'Saving…' with a disabled button can stay forever",
+      "evidence": "composables/useApi.ts: $fetch.create without a timeout option; the new journal code uses it as is",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying an add after a timeout or lost response creates a duplicate entry",
+      "where": "Plant detail > New entry (POST /api/journal)",
+      "steps": "Submit an entry whose response is lost or slow (network drop after the server commits), see the error, click Add entry again",
+      "expected": "One entry is created",
+      "actual": "There is no idempotency key or duplicate check, so each retry inserts another entry. A retried delete instead shows 'Journal entry not found.' as an error even though it was deleted",
+      "evidence": "journal.py create_entry inserts unconditionally; delete returns 404 on a second call and the UI shows it as a failure",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Today's date can be rejected as 'in the future' when the browser and server are in different time zones",
+      "where": "Plant detail > journal form, server validator JournalEntryIn.not_in_future",
+      "steps": "As a user in a time zone ahead of the server (e.g. UTC+12 in the morning), add an entry with the default date (today)",
+      "expected": "Today's entry is accepted",
+      "actual": "The client defaults to the local today, but the server compares with date.today() in its own time zone and answers 422 'Journal date cannot be in the future.' The client max/today is also fixed at SSR time, in the server's time zone",
+      "evidence": "schemas.py uses date.today(); JournalEntryForm.vue uses todayIso() evaluated during setup (SSR)",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Search result count is misleading when it is capped at 50",
+      "where": "/journal search",
+      "steps": "Search for a common word that matches more than 50 entries",
+      "expected": "Shows that the results are truncated (e.g. 'Showing first 50 matches')",
+      "actual": "Says '50 entries match' and silently drops the rest. The plant page also loads at most 500 entries while the badge shows the full count",
+      "evidence": "journal.vue: LATEST_LIMIT=50 for search too; resultText shows count only; [id].vue uses limit 500",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long plant names in the Journal feed can overflow at 375 px",
+      "where": "/journal feed item header",
+      "steps": "Create a plant with an 80-character name without spaces, add an entry, view /journal at 375 px wide",
+      "expected": "Name wraps",
+      "actual": ".journal-feed__plant has no overflow-wrap (only .journal-entry__body does), so the long link can push the card wider than the screen",
+      "evidence": "main.css: overflow-wrap: anywhere only on .journal-entry__body",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

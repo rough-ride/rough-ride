@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "title": "Harvests on the To date are left out of the stats",
+      "where": "GET /api/stats/harvests and /stats page",
+      "steps": "Sign in. GET /api/stats/harvests?from=2026-07-20&to=2026-07-20 (there is a 1200 g Courgette harvest on 2026-07-20). Also try from=2026-09-01&to=2026-09-30 (150 g Lettuce on 2026-09-30).",
+      "expected": "The range includes both ends, so the 2026-07-20 and 2026-09-30 harvests are counted.",
+      "actual": "Both ranges come back empty (harvest_count 0, plants []). from=2026-07-01&to=2026-07-20 shows only the 450 g Tomato and drops the 1200 g Courgette. The SQL uses `harvested_on < to` instead of `<=`.",
+      "evidence": "{\"date_from\":\"2026-07-20\",\"date_to\":\"2026-07-20\",\"months\":[],\"plants\":[],\"total_grams\":0,\"harvest_count\":0,\"top_plants\":[]} [200]",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "The default 'this year' range and the dashboard's top plant leave out Dec 31 harvests",
+      "where": "/stats default range; GET /api/dashboard/summary top_plant",
+      "steps": "Log a big harvest dated 31 Dec of the current year, then open /stats with the default range and look at the dashboard's 'Top plant this year' card.",
+      "expected": "The Dec 31 harvest counts toward this year's stats and the best plant.",
+      "actual": "year_bounds gives an end of 12-31 and top_plants uses `< 12-31`, so Dec 31 is skipped. The dashboard's harvest total still uses BETWEEN and counts it, so the two numbers on the dashboard disagree.",
+      "evidence": "dashboard.py now calls top_plants(conn, year_from, year_to) where year_to=date(y,12,31); stats.py filters `h.harvested_on < ?`. This is the same root cause as the To-date bug.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "The stats error state has no Retry",
+      "where": "/stats page",
+      "steps": "Open /stats while the API is down or returns 5xx.",
+      "expected": "An error message with a Retry button that reloads the data in place.",
+      "actual": "Only an AlertMessage is shown. There is no retry control; the only way to retry is to change a date or reload the page.",
+      "evidence": "stats.vue: <AlertMessage v-if=\"statsError\"> with no refresh() button.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats requests have no 10-second timeout",
+      "where": "/stats page and dashboard (useApiFetch)",
+      "steps": "Make the API hang (accept the connection but never respond), then open /stats.",
+      "expected": "The request fails after 10 seconds and shows an error with Retry.",
+      "actual": "useApiFetch/useApiClient set no timeout, so the page shows 'Loading stats…' forever.",
+      "evidence": "useApi.ts: $fetch.create({...}) and useFetch are called without a timeout option.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "A cleared date field still shows blank while the server uses a hidden default, causing confusing errors",
+      "where": "/stats From/To fields",
+      "steps": "Clear the To field, then set From to 2027-01-01.",
+      "expected": "Either refuse the blank field with a visible reason, or show the date actually used.",
+      "actual": "The query leaves out 'to', so the backend falls back to 2026-12-31 and returns 422 'The From date must be on or before the To date.' while the To field is visibly empty. Clearing From in the same way silently uses Jan 1.",
+      "evidence": "stats.vue query computed drops empty values; stats.py defaults missing dates to the current year bounds.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

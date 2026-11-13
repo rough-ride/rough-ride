@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "ancient-date-accepted",
+  "sentence": "A past watering dated far in the past (e.g. 0001-01-01) is accepted by the form and POST /api/waterings and listed as '1 Jan 1'.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced via API: POST /api/waterings {bed_id:1, watered_on:'0001-01-01', litres:1} returned 201 (id 3), then deleted. Code: WateringIn only rejects future dates (not_in_future); beds.vue date input sets only :max=today. However this exactly mirrors the pre-existing app convention on main: HarvestIn.harvested_on has the same future-only validator and no lower bound, and POST /api/harvests with harvested_on 0001-01-01 is also accepted with 201 (created id 7, deleted). The request asks only for recording a past watering with a date; it sets no lower bound. 0001-01-01 is a valid ISO date and '1 Jan 1' is the correct rendering of it by the en-GB formatter (UTC, no shift), so the display is accurate, not corrupted. Accepting an implausible but valid user-typed past date is consistent with the app's established design rather than a regression or a broken requirement.",
+  "severity": null,
+  "wallMs": 41746
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-load-error-no-retry",
+  "sentence": "When GET /api/journal fails, the /journal page and the plant detail journal section show only 'Could not load the journal.' with no Retry control, requiring a reload or search edit to recover.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced in the running app: signed in as the demo user, made every GET to **/api/journal** return 500 with the Playwright route, then moved around client-side. On /journal, main showed only the error text from the API detail ('boom') and had no buttons. On /plants/2 the Journal section showed the error, the only button was 'Add entry', and there was no retry. Code agrees: journal.vue never takes refresh from useApiFetch, and the journal AlertMessage in [id].vue has no action. AlertMessage is just a slot. But this is how the whole app already handles load errors, from the original commit: no page in main has a retry control (git grep -i retry main finds nothing). Plants index, beds and tasks all show a bare AlertMessage on load failure. I checked in the browser: with GET /api/plants failing, /plants showed only the error and no buttons in main. With GET /api/tasks failing, /tasks showed the error plus only its normal form and filter buttons. The request does not ask for retry controls. The journal views follow the existing pattern, so this is not a regression or a gap against the request.",
+  "severity": null,
+  "wallMs": 116231
+}

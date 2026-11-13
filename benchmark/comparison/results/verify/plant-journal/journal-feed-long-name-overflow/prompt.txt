@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-plant-journal-journal-feed-long-name-overflow/scratch.
+
+The reported problem: On /journal at 375 px width, a long unbroken plant name in .journal-feed__plant has no overflow-wrap and pushes the page into horizontal scrolling.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Long plant names can overflow the journal feed at 375px",
+  "where": "/journal feed item header",
+  "steps": "Create a plant whose name is one long word (up to 80 chars), add an entry, view /journal at 375px wide",
+  "expected": "Name wraps",
+  "actual": ".journal-feed__plant has no overflow-wrap (only .journal-entry__body has it), so a long unbroken name pushes the page sideways",
+  "evidence": "main.css journal styles"
+ },
+ {
+  "title": "Long plant names overflow the Journal feed at 375 px",
+  "where": "/journal feed item plant link",
+  "steps": "Create a plant with an 80-character unbroken name, add a journal entry, view /journal at 375 px wide",
+  "expected": "Name wraps",
+  "actual": ".journal-feed__plant has no overflow-wrap (only .journal-entry__body has one), so the unbroken name pushes the card wider than the screen and the page scrolls sideways",
+  "evidence": "main.css: overflow-wrap:anywhere only on .journal-entry__body"
+ },
+ {
+  "title": "Journal page overflows sideways at 375 px with a long plant name",
+  "where": "/journal",
+  "steps": "Create a plant named with 80 characters and no spaces (allowed by the API), add an entry, open /journal at 375 px wide.",
+  "expected": "No horizontal scrolling; the long name wraps.",
+  "actual": "document scrollWidth is 679 px against a 375 px viewport. The .journal-feed__plant link has no overflow-wrap, so the whole feed card widens.",
+  "evidence": "scrollWidth/clientWidth = 679/375; the overflowing elements are A.journal-feed__plant and its row (right edge 662 px)."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-plant-journal-journal-feed-long-name-overflow/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

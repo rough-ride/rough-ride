@@ -1,0 +1,14 @@
+diff --git a/frontend/app/assets/css/main.css b/frontend/app/assets/css/main.css
+index e89a58b..e2e19c2 100644
+--- a/frontend/app/assets/css/main.css
++++ b/frontend/app/assets/css/main.css
+@@ -1040,8 +1040,7 @@ textarea:focus-visible {
+ 
+   .form__grid,
+   .details,
+-  .filters,
+-  .water-form {
++  .filters {
+     grid-template-columns: 1fr;
+   }
+ 

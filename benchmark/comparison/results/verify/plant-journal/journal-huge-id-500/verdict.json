@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-huge-id-500",
+  "sentence": "Sending an integer id larger than 64 bits as plant_id or entry id to POST/PUT/DELETE/GET /api/journal returns 500 Internal Server Error from SQLite overflow instead of a 4xx.",
+  "verdict": "confirmed",
+  "evidence": "Signed in via POST /api/auth/login with DEMO credentials (200), then used curl against the running API. With ids 99999999999999999999 and 9223372036854775808 (2^63): POST /api/journal {plant_id:<big>,entry_on:'2026-01-01',body:'x'} -> 500 'Internal Server Error'; PUT /api/journal/<big> -> 500; DELETE /api/journal/<big> -> 500; GET /api/journal?plant_id=<big> -> 500. Control: DELETE /api/journal/9223372036854775807 (max int64) -> 404 'Journal entry not found.' Code: routers/journal.py has unbounded int path params, and JournalEntryCreate.plant_id / the plant_id query only check gt=0, so Python ints that don't fit in 64 bits reach sqlite3, which raises OverflowError, and nothing handles it. The same thing already happens in existing endpoints (GET /api/plants/<big>, POST /api/harvests, DELETE /api/harvests/<big> all return 500), so this is an existing app-wide pattern that the new journal endpoints copy and add to. It only happens with crafted API input that the UI never sends, and no data is changed or exposed.",
+  "severity": "low",
+  "wallMs": 49148
+}

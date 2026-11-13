@@ -1,0 +1,72 @@
+{
+  "id": "harvest-stats__clean__baseline__t1",
+  "feature": "harvest-stats",
+  "bug": "clean",
+  "arm": "baseline",
+  "trial": 1,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:08:57.042Z",
+  "materializeMs": 5419,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__clean__baseline__t1/variant/wqqbqx0f/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "0a17fa11-e4ee-48f1-b4ff-33387cb22060",
+  "loadBefore": [
+    4.70361328125,
+    4.52685546875,
+    4.73193359375
+  ],
+  "loadAfter": [
+    4.1591796875,
+    4.4755859375,
+    4.7001953125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 68261,
+  "reportedCostUsd": 0.3348932,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 16,
+      "outputTokens": 4844,
+      "cacheReadInputTokens": 209146,
+      "cacheCreationInputTokens": 24515,
+      "webSearchRequests": 0,
+      "costUSD": 0.3348932,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1514,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 24515,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 8,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found six bugs in the stats change and saved them to `out/findings.json`: two medium and four low. Two I saw happen against the running API; the other four I only suspect from reading the code. I didn't open the pages in a browser because no browser tool was available, so the layout at 375 px and the session-expiry flow on this page weren't tested.\n\n**Medium (suspected)**\n1. **No retry when stats fail to load.** `/stats` shows an error message but no Retry button. To recover, the user has to change a date or reload the page.\n2. **No timeout on the stats request.** Nothing sets a 10 s limit, so a hung API leaves \"Loading stats…\" on screen forever.\n\n**Low**\n3. **Clearing the From date gives a misleading error (observed).** If From is blank and To is in an earlier year, the server quietly uses 1 January this year as From. It then refuses with \"The From date must be on or before the To date\", though the user never set a From date. `?to=2025-06-01` returns 422 with that message.\n4. **Months without harvests are missing from the table (observed).** For the default Jan–Dec 2026 range, only Jun–Sep appear, so empty months in the middle of a range drop out silently.\n5. **Bad dates produce raw technical text (suspected).** A five-digit year typed into the date field would be sent to the server, rejected with 422, and shown as \"Query.from: Input should be a valid date…\".\n6. **Date fields don't follow the address bar (suspected).** From and To are read from the URL only when the page first loads. After back/forward or an in-app link to `/stats?from=…`, the fields and the URL can disagree.\n\nThings that held up:\n- The server answered every bad date I tried with a 422, never a 5xx: invalid month, text, a To before the From, and a five-digit year.\n- The stats numbers and the dashboard's top plant match the sample data.\n- The new date-range filter still stacks into one column on narrow screens.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 16,
+    "output": 4844,
+    "cacheRead": 209146,
+    "cacheWrite": 24515,
+    "requests": 8,
+    "toolCalls": {
+      "Bash": 7
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 6,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:10:18.283Z"
+}

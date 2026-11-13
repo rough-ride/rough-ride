@@ -1,0 +1,84 @@
+{
+  "findings": [
+    {
+      "title": "Negative (and zero) litres accepted by the past-watering form and API",
+      "where": "Beds page 'Record past watering' form; POST /api/waterings",
+      "steps": "On /beds open 'Record past watering', enter litres -5 and save (or POST {\"bed_id\":1,\"watered_on\":\"2026-11-01\",\"litres\":-5}). Also POST litres 0 or 'Water now' body with litres -3.",
+      "expected": "Refused with a visible reason ('greater than zero') in the form, and a 422 from the server",
+      "actual": "Client only rejects exactly 0, so -5 is sent; the server's WateringIn.litres only has le=10000, no lower bound, so -5, -1e308 and 0 all return 201 and show as '-5 L', '0 L' on the waterings page and dashboard",
+      "evidence": "POST litres -5 -> 201 {litres:-5.0}; litres -1e308 -> 201; litres 0 -> 201; the /waterings page renders '-5 L' and '-3 L'",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Extreme negative litres render as a huge number string that breaks the layout",
+      "where": "/waterings page, dashboard Recent waterings",
+      "steps": "POST a watering with litres -1e308, open /waterings at 375px width",
+      "expected": "Value refused, or shown compactly",
+      "actual": "The Amount cell shows '-100,000,000,000,...,000 L' (over 400 characters, no wrapping), which forces sideways scrolling; negatives also skew the 'in total' sum, which disappears once the total is <= 0",
+      "evidence": "SSR HTML of /waterings contains '-100,000,000,000,000,...,000 L'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "NaN litres and out-of-range ids return 500 Internal Server Error",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":1,\"watered_on\":\"2026-11-01\",\"litres\":NaN}; POST {\"bed_id\":99999999999999999999}; GET /api/waterings?bed_id=99999999999999999999; DELETE /api/waterings/99999999999999999999",
+      "expected": "4xx validation error",
+      "actual": "500 Internal Server Error (plain text, not JSON)",
+      "evidence": "All four requests returned 'Internal Server Error' with status 500",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Bad ?bed= query gives raw validation text and no way to recover except Clear filter; no retry on load errors",
+      "where": "/waterings page (and dashboard Recent waterings)",
+      "steps": "Open /waterings?bed=abc, or open /waterings or the dashboard while the API is down",
+      "expected": "Invalid filter ignored or explained clearly; the error state offers a Retry button",
+      "actual": "Shows 'Query.bed id: Input should be a valid integer, unable to parse string as an integer'; the select shows a blank option. The waterings error state and the dashboard's 'Recent waterings' error have no retry (the dashboard doesn't even destructure refresh), so the user has to reload",
+      "evidence": "SSR HTML of /waterings?bed=abc contains an alert with 'Query.bed id: Input should be a valid integer...'; no retry control in the template",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Beds list failure on the waterings page goes unreported; the filter is silently empty",
+      "where": "/waterings bed filter",
+      "steps": "Make GET /api/beds fail while /waterings loads",
+      "expected": "An error that says the bed list could not be loaded, with a retry",
+      "actual": "bedsResult.error is ignored and the dropdown shows only 'All beds', as if there were no beds",
+      "evidence": "waterings.vue only destructures { data: beds } from bedsResult",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "No request timeout or idempotency on watering POST; a hung or retried request can duplicate waterings",
+      "where": "Beds page Water now / Save watering",
+      "steps": "Slow API: click Water now on bed A, then on bed B; A finishes and clears wateringBedId while B is still pending, so B's button is enabled again and can be clicked a second time. Requests also have no 10s timeout",
+      "expected": "One watering per intent; the button stays disabled until its own request finishes; requests time out after 10s with an error",
+      "actual": "A single shared wateringBedId is cleared by whichever request finishes first, which allows a duplicate submit; $fetch has no timeout, so 'Watering…' can spin forever",
+      "evidence": "beds.vue recordWatering: finally { wateringBedId.value = null }; useApiClient has no timeout option",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Server-local date used for 'today' check: users ahead of the server time zone cannot record today's watering",
+      "where": "POST /api/waterings watered_on validation",
+      "steps": "Browser in UTC+13 just after midnight; pick today (allowed by input max=todayIso()) and save",
+      "expected": "Accepted",
+      "actual": "'Watering date cannot be in the future.' because date.today() is the server's local date",
+      "evidence": "schemas.py not_in_future uses date.today(); the frontend max uses the browser's local date",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Very old dates (year 1) accepted",
+      "where": "POST /api/waterings",
+      "steps": "POST watered_on 0001-01-01",
+      "expected": "Refused as implausible, or at least shown correctly",
+      "actual": "201; the list shows '1 Jan 1'",
+      "evidence": "Rendered row '1 Jan 1 North bed 1 L'",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "id": "harvest-stats__hx1__baseline__t3",
+  "feature": "harvest-stats",
+  "bug": "hx1",
+  "arm": "baseline",
+  "trial": 3,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:57:25.339Z",
+  "materializeMs": 5690,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__hx1__baseline__t3/variant/b54s6lhy/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "611d9334-d2ba-4b4a-a7cc-72bd222f9745",
+  "loadBefore": [
+    4.08349609375,
+    3.99169921875,
+    5.0634765625
+  ],
+  "loadAfter": [
+    4.56103515625,
+    4.19287109375,
+    5.02587890625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 95169,
+  "reportedCostUsd": 0.43069040000000003,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 20,
+      "outputTokens": 7144,
+      "cacheReadInputTokens": 285932,
+      "cacheCreationInputTokens": 28818,
+      "webSearchRequests": 0,
+      "costUSD": 0.43069040000000003,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2667,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 28818,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 10,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "The Stats feature does what the request asks, but I found seven problems: three medium and four low. Three of them I saw in the running app; the other four come from reading the code. I had no browser, so I tested through the API and the server-rendered pages. The findings are in `out/findings.json`.\n\n**What works:**\n- The table with a total row, the three best plants, \"Stats\" in the navigation, and the best plant on the dashboard.\n- The From and To dates default to this year.\n- From after To and malformed dates get a 422 from the server, not a 5xx.\n- An expired session redirects to sign-in.\n\n**Problems found:**\n1. **No retry when loading fails** (medium, observed). The error message has no Retry button. The page only reloads data when a date changes, so getting the same range back takes a full page reload.\n2. **A late answer can replace newer results** (medium, suspected). If you change the dates twice quickly, whichever response arrives last is shown, even if it's for the older range. Nothing checks whether a response is still current or cancels the earlier request.\n3. **No 10-second timeout** (medium, suspected). The request helper in `useApi.ts` sets no timeout, so a server that never answers leaves \"Loading stats…\" on screen forever.\n4. **Unreadable message for bad dates** (low, observed). `/stats?from=2026-02-30` shows \"Query.from: Input should be a valid date or datetime, …\", the server's internal wording.\n5. **Old summary stays next to an error** (low, suspected). After a load succeeds and a later one fails, the old line \"5 harvests from 1 Jan 2026 to 31 Dec 2026\" stays visible above the error.\n6. **Months without harvests are left out** (low, observed). The default range shows only Jun–Sep 2026, and a 2025–2026 range jumps straight from Aug 2025 to Jun 2026. The request asks for weight per month over the chosen range, so empty months arguably belong in the table.\n7. **Dates don't follow the address bar** (low, suspected). The page reads the dates from the URL only once. Clicking \"Stats\" in the navigation, or going back or forward, while a custom range is showing changes the URL but leaves the old range and data on screen.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 20,
+    "output": 7144,
+    "cacheRead": 285932,
+    "cacheWrite": 28818,
+    "requests": 10,
+    "toolCalls": {
+      "Bash": 9
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 7,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T16:59:16.159Z"
+}

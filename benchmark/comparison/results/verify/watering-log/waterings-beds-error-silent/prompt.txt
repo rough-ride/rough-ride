@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3791, API http://localhost:8791/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-watering-log-waterings-beds-error-silent/scratch.
+
+The reported problem: On /waterings, a failing GET /api/beds is ignored and the bed filter silently offers only 'All beds' with no error or retry.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Bed filter list fails silently when /beds fails to load",
+  "where": "/waterings",
+  "steps": "Open /waterings while GET /api/beds fails (but /waterings succeeds)",
+  "expected": "An error saying the beds could not be loaded, with a retry",
+  "actual": "The bed dropdown only offers 'All beds' and no error is shown. bedsResult.error is never read",
+  "evidence": "waterings.vue: const { data: beds } = bedsResult; beds ?? [] in the select"
+ },
+ {
+  "title": "Bed list failure on the waterings page is silent; the filter shows no beds",
+  "where": "/waterings",
+  "steps": "Open /waterings while GET /api/beds fails but /api/waterings succeeds.",
+  "expected": "An error saying the beds could not be loaded, with a retry.",
+  "actual": "bedsResult.error is ignored, so the Bed dropdown just shows 'All beds' with no options and gives no reason.",
+  "evidence": "waterings.vue: `const { data: beds } = bedsResult`. The error is never shown."
+ },
+ {
+  "title": "Bed filter fails silently when the beds request fails",
+  "where": "/waterings",
+  "steps": "Make GET /api/beds fail while GET /api/waterings succeeds, then open /waterings",
+  "expected": "An error explaining that the bed list could not be loaded, with a retry",
+  "actual": "bedsResult.error is ignored. The filter dropdown shows only 'All beds' as if no beds existed, and a ?bed= value from a link has no matching option.",
+  "evidence": "waterings.vue: `const { data: beds } = bedsResult`. The error is never read."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-watering-log-waterings-beds-error-silent/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

@@ -1,0 +1,19 @@
+{
+  "findings": [
+    {
+      "title": "Double-clicking \"Water now\" records two waterings",
+      "where": "/beds (POST /api/waterings)",
+      "steps": "Probe water-now-double, expectation one-watering-per-double-click",
+      "expected": "One double-click on \"Water now\" (request delayed 1.5 s) creates exactly one watering; the button is disabled while the request runs",
+      "actual": "Two POST /api/waterings requests both returned 201 and the waterings list went from 2 to 4, with two identical North bed entries at the same time. The Water now button has no :disabled binding while its request runs",
+      "evidence": "{\"before\":4,\"after\":6,\"newest\":[{\"id\":6,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":\"2026-11-12 18:22:24\",\"litres\":null},{\"id\":5,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":\"2026-11-12 18:22:24\",\"litres\":null},{\"id\":4,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":\"2026-11-12 18:21:54\",\"litres\":null}]} | {\"before\":6,\"after\":8,\"newest\":[{\"id\":8,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":\"2026-11-12 18:22:30\",\"litres\":null},{\"id\":7,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":\"2026-11-12 18:22:30\",\"litres\":null},{\"id\":6,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":\"2026-11-12 18:22:24\",\"litres\":null}]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-192124-hunt-965c",
+        "probe": "water-now-double",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Out-of-range plant_id / entry id returns 500 instead of 4xx",
+      "where": "POST /api/journal, PUT/DELETE /api/journal/{id}",
+      "steps": "Signed in, POST /api/journal with {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-01-01\",\"body\":\"x\"} (or 9223372036854775808); PUT /api/journal/9223372036854775808; DELETE /api/journal/99999999999999999999",
+      "expected": "422/404 with a readable reason",
+      "actual": "HTTP 500 Internal Server Error (SQLite integer overflow; plant_id has only gt=0 and path ids have no upper bound)",
+      "evidence": "curl returned 'Internal Server Error 500' for all four requests",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal search over 80 chars shows a raw validation error, with no input limit and no retry",
+      "where": "/journal search box (GET /api/journal?q=)",
+      "steps": "Open /journal and type or paste a search term of 81+ characters (or open /journal?q=<81 chars>)",
+      "expected": "The input limits length or the page explains the limit in plain words; the error state has a retry",
+      "actual": "The list is replaced by an error 'Query.q: String should have at most 80 characters'. The input has no maxlength and there is no retry button",
+      "evidence": "SSR HTML of /journal?q=aaaa…(81) contains role=alert 'Query.q: String should have at most 80 characters'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load error states have no retry",
+      "where": "/journal page and the Journal section on /plants/[id]",
+      "steps": "Make GET /api/journal fail (server down or 5xx) and open /journal or a plant's page",
+      "expected": "Error message with a Retry button that refetches without a reload",
+      "actual": "Only an AlertMessage is shown ('Could not load the journal.'); no retry control. On the plant page the only way to recover is to reload or add/delete an entry",
+      "evidence": "journal.vue and plants/[id].vue render <AlertMessage v-if=loadError/journalLoadError> with no button calling refresh",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal requests have no timeout: Saving… can stay on forever",
+      "where": "Add entry / Save entry / Delete entry on /plants/[id]; /journal load",
+      "steps": "Make the API hang (accept the connection but never answer) and click Add entry or Save entry",
+      "expected": "Fails after 10 s with a visible error; button re-enabled",
+      "actual": "useApiClient/useApiFetch set no timeout, so the button stays disabled showing 'Saving…' (or 'Loading entries…') indefinitely",
+      "evidence": "composables/useApi.ts: $fetch.create and useFetch get no timeout option; new journal code passes none either",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying a create after a timeout/network error makes duplicate entries",
+      "where": "POST /api/journal from the New entry form",
+      "steps": "Submit an entry, let the response get lost (timeout/network drop after the server commits), click Add entry again",
+      "expected": "One entry",
+      "actual": "No idempotency key or dedupe: each POST inserts a new row, so the entry shows twice",
+      "evidence": "create_entry inserts unconditionally; the form keeps the text after a failure, so the retry sends it again",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Character limit counts UTF-16 units on the client but code points on the server; emoji entries can't be saved or edited",
+      "where": "JournalEntryForm (new and edit) on /plants/[id]",
+      "steps": "Type emoji in the entry (e.g. 300 🌱), or edit an entry made of 500 🌱 (the API accepts it: POST returned 201)",
+      "expected": "The same 500-character limit as the server",
+      "actual": "textarea maxlength=500 and form.body.length count each emoji as 2, so you get only 250 emoji and a wrong 'characters left' count. Editing an existing 500-emoji entry fails with 'Keep the entry to 500 characters.' even when nothing was changed",
+      "evidence": "API accepted a 500×🌱 body (201); JournalEntryForm uses form.body.length and :maxlength",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long plant names overflow the Journal feed at 375 px",
+      "where": "/journal feed item plant link",
+      "steps": "Create a plant with an 80-character unbroken name, add a journal entry, view /journal at 375 px wide",
+      "expected": "Name wraps",
+      "actual": ".journal-feed__plant has no overflow-wrap (only .journal-entry__body has one), so the unbroken name pushes the card wider than the screen and the page scrolls sideways",
+      "evidence": "main.css: overflow-wrap:anywhere only on .journal-entry__body",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Plant detail journal silently stops at 500 entries",
+      "where": "/plants/[id] Journal section",
+      "steps": "A plant with more than 500 journal entries",
+      "expected": "All entries, or a 'more' option",
+      "actual": "The page fetches limit=500 with no paging; the badge says e.g. '520 entries' but only 500 are listed",
+      "evidence": "plants/[id].vue useApiFetch('/journal', {query:{plant_id, limit: 500}})",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Journal page shows a stale count next to the load error",
+      "where": "/journal",
+      "steps": "Load /journal, then make the next search request fail",
+      "expected": "Only the error state",
+      "actual": "results-count still shows the previous count (e.g. '3 entries') above the error, because it renders whenever entries is non-null and never checks loadError",
+      "evidence": "journal.vue: <span v-else-if=\"entries\">{{ resultText }}</span> doesn't check loadError",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

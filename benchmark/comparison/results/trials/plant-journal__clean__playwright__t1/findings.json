@@ -1,0 +1,114 @@
+{
+  "findings": [
+    {
+      "title": "Retrying a journal entry after a lost/timed-out response creates a duplicate entry",
+      "where": "Plant detail page, New entry form (POST /api/journal)",
+      "steps": "Open /plants/1, type 'Lost response test', click Add entry. Make the POST reach the server but lose the response (Playwright route: route.fetch() then abort('timedout')). The form shows 'The garden server could not be reached.' Click Add entry again.",
+      "expected": "Creating an entry is idempotent (e.g. a client-generated idempotency key), so the retry makes only one entry",
+      "actual": "Two identical entries are created",
+      "evidence": "After the retry the list showed 2 entries with the body 'Lost response test'. POST has no idempotency key and the server inserts on every call.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal requests have no timeout, so 'Saving…' can spin forever",
+      "where": "Plant detail page journal form/edit/delete, Journal page (useApiClient / useApiFetch)",
+      "steps": "Make POST /api/journal hang (route that never answers for 14 s), then click Add entry.",
+      "expected": "The request fails after 10 s with a visible error and the button is enabled again",
+      "actual": "12 s after the click the button still said 'Saving…' and stayed disabled. It only recovered when the mocked request was aborted at 14 s. A real hang would never recover.",
+      "evidence": "The submit button text was 'Saving…' at 12 s. $fetch.create in composables/useApi.ts sets no timeout, and neither do the new journal calls.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Deleting again after a lost response shows 'Journal entry not found.' and leaves the deleted entry on screen",
+      "where": "Plant detail page, journal entry Delete (DELETE /api/journal/{id})",
+      "steps": "Click Delete on an entry and confirm. Make the server process the DELETE but lose the response (route.fetch then abort). The page shows 'The garden server could not be reached.' and the entry stays in the list. Click Delete on it again.",
+      "expected": "The retry counts as success (the entry is already gone) and the list refreshes",
+      "actual": "The error 'Journal entry not found.' appears and the deleted entry stays in the list. The list is not refreshed when a delete fails.",
+      "evidence": "Alert text: 'Journal entry not found.'. The count of 'Lost response test' items stayed at 2 although one was deleted on the server.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors have no retry button (Journal page and plant detail journal)",
+      "where": "/journal and /plants/:id Journal section",
+      "steps": "Make GET /api/journal?... return 500 or 502 (HTML body). Open /journal, or go from /plants to a plant.",
+      "expected": "The error state has a Retry button that refetches without a reload",
+      "actual": "Only 'Could not load the journal.' is shown. There is no retry control, and the only way back is to reload or (on /journal) change the search text.",
+      "evidence": "The journal section's buttons were only ['Add entry']. The /journal page's buttons were only ['Clear search'] while the error showed.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Unreadable or non-list journal response is shown as 'No journal entries yet'",
+      "where": "/journal (and plant detail journal list)",
+      "steps": "Open /plants, then make GET /api/journal?** return 200 with body {\"detail\":\"weird\"}, then click the Journal nav link.",
+      "expected": "An error state saying the journal could not be read",
+      "actual": "The page shows '0 entries' and the empty state 'No journal entries yet', which presents a broken response as an empty list",
+      "evidence": "Main text: '0 entries / No journal entries yet / Open a plant and write the first entry in its journal.'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal page scrolls sideways at 375 px when a plant has a long name",
+      "where": "/journal (journal-feed__plant link)",
+      "steps": "Create a plant named 'Supercalifragilistic' x4 (80 chars, no spaces) and add an entry to it. Open /journal at a 375 px wide viewport.",
+      "expected": "No horizontal scrolling. The long name wraps.",
+      "actual": "document scrollWidth is 679 px against a 375 px viewport. The feed card (li.journal-feed__item) extends to x=679.",
+      "evidence": ".journal-feed__plant / .journal-entry__head has no overflow-wrap:anywhere or min-width:0. The journal section on the plant detail page wraps correctly.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal body that starts with a NUL character causes a 500",
+      "where": "POST/PUT /api/journal",
+      "steps": "POST /api/journal {\"entry_on\":\"2025-01-01\",\"body\":\"\\u0000x\",\"plant_id\":1}",
+      "expected": "4xx validation error",
+      "actual": "500 Internal Server Error. SQLite length() stops at the NUL and returns 0, so the CHECK (length(body) BETWEEN 1 AND 500) fails with an unhandled IntegrityError. Pydantic accepted the value.",
+      "evidence": "curl returned 'Internal Server Error 500'. 'nul\\u0000x' returned 201.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Very large ids return 500 instead of 4xx on journal endpoints",
+      "where": "PUT/DELETE /api/journal/{entry_id}, POST /api/journal (plant_id), GET /api/journal?plant_id=",
+      "steps": "DELETE /api/journal/99999999999999999999, PUT the same path, POST with plant_id 99999999999999999999, or GET /api/journal?plant_id=99999999999999999999",
+      "expected": "404 or 422",
+      "actual": "500 Internal Server Error (SQLite OverflowError on the integer bind)",
+      "evidence": "All four calls returned HTTP 500. The ids have no upper bound (le=) in the router or schema.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Client limits emoji entries to 250 although the server accepts 500 characters",
+      "where": "Plant detail New entry / edit form (JournalEntryForm)",
+      "steps": "Paste 300 '🌱' emoji into the Entry textarea",
+      "expected": "Up to 500 characters (code points) are accepted, matching the request and the server",
+      "actual": "The textarea silently cuts the text to 250 emoji and the counter says '0 characters left'. maxlength and form.body.length count UTF-16 units.",
+      "evidence": "The input held 250 code points and the hint read '0 characters left'. The API accepted a body of 500 emoji (201).",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Search longer than 80 characters shows a raw validation message instead of results",
+      "where": "/journal search box",
+      "steps": "Type 90 characters into Search",
+      "expected": "The input limits the length (maxlength) or explains it clearly. The search still works.",
+      "actual": "The results disappear and 'Query.q: String should have at most 80 characters' appears. The input has no maxlength.",
+      "evidence": "Main text showed 'Query.q: String should have at most 80 characters'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Today's entry can be refused because client and server use different time zones for 'today'",
+      "where": "POST/PUT /api/journal (not_in_future validator)",
+      "steps": "Use the app from a time zone ahead of the server's (e.g. UTC+10 early morning while the server is still on the previous date). Add an entry with the default date (today).",
+      "expected": "Today's date in the user's time zone is accepted",
+      "actual": "The server compares against date.today() in its own time zone and returns 'Journal date cannot be in the future.', while the client default and max use the browser's local date",
+      "evidence": "Code: schemas.JournalEntryIn.not_in_future uses date.today(). JournalEntryForm uses todayIso() (browser local).",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

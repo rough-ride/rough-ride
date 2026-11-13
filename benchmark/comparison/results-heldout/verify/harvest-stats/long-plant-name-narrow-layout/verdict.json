@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "long-plant-name-narrow-layout",
+  "sentence": "On /stats at 375 px width, a long unbroken plant name is truncated in Best plants and the nowrap table row header pushes all month and total columns out of view (or makes the page scroll sideways); triggered by creating a plant with a very long name and viewing the page on a narrow screen.",
+  "verdict": "confirmed",
+  "evidence": "Used the API to create plant id 4 with an 80-character unbroken name ('Supercalifragilisticexpialidociousbeanstalkwithaverylongnamethatneverbreaksxxx'; 80 is the schema maximum) and a 900 kg harvest on 2026-11-01. Signed in through the UI and opened /stats at a 375x800 viewport. Best plants No. 1 shows 'Supercalifragilis…'. Its .stat__value has white-space: nowrap and text-overflow: ellipsis (scrollWidth 1257 vs clientWidth 290) and no title attribute, so the full name can't be read there. In the table, the new rule .stats-table th[scope=row] { white-space: nowrap } makes the plant column about 595 px wide inside a .table-scroll that is 309 px wide (scrollWidth 1100). Every month header (Jun to Nov 2026) and the Total column start at x>=628 and are outside the visible box, so on load you see only plant names and no weights, including in the Total row. The page itself does not scroll sideways (document scrollWidth 375), which matches the reports. Screenshot: scratch/playwright/stats375.png. Note: the ellipsis style on .stat__value already existed (dashboard stat cards); the nowrap row header is new in this change. The table can still be scrolled sideways, so the data is reachable but hidden at phone width.",
+  "severity": "medium",
+  "wallMs": 76941
+}

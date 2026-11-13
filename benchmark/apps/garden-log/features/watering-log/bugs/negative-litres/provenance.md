@@ -1,0 +1,1 @@
+Written by hand for the comparison benchmark (benchmark/comparison/). The clean feature refuses amounts of zero or less in the form, the input (min), the API (gt=0) and the table (CHECK). This variant lets negative amounts through all four.

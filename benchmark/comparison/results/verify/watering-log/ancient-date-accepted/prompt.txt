@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-watering-log-ancient-date-accepted/scratch.
+
+The reported problem: A past watering dated far in the past (e.g. 0001-01-01) is accepted by the form and POST /api/waterings and listed as '1 Jan 1'.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Absurd past dates are accepted (for example 0001-01-01)",
+  "where": "/beds Record past watering form; POST /api/waterings",
+  "steps": "Enter the date 0001-01-01 and 1 litre, or POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\",\"litres\":1}.",
+  "expected": "The date is refused with a reason, or a reasonable lower bound is enforced.",
+  "actual": "It is saved with 201 and appears in the history as year 1.",
+  "evidence": "The POST returned 201 with id 5 and watered_on 0001-01-01 (deleted afterwards). Only future dates are validated."
+ },
+ {
+  "title": "No date lower bound: year 0001 accepted",
+  "where": "POST /api/waterings / past-watering form",
+  "steps": "POST watered_on 0001-01-01",
+  "expected": "Refused as implausible, or at least shown correctly",
+  "actual": "201; the list shows '1 Jan 1'",
+  "evidence": "API 201 and the /waterings row '1 Jan 1'"
+ },
+ {
+  "title": "Absurd dates and tiny amounts are accepted and display badly",
+  "where": "POST /api/waterings, past watering form, /waterings list",
+  "steps": "POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\",\"litres\":0.0001}. The UI date field accepts the same values since it only sets max.",
+  "expected": "A date far in the past is refused, or at least shown sensibly. An amount that rounds to 0 is refused, or shown accurately.",
+  "actual": "The server returns 201. The list then shows \"1 Jan 1\" and \"0 L\". This row was test data and was deleted afterwards.",
+  "evidence": "The waterings table showed the row \"1 Jan 1 | North bed | 0 L\"."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-watering-log-ancient-date-accepted/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

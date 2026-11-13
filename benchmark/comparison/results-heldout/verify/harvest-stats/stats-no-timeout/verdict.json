@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-no-timeout",
+  "sentence": "On /stats, a stats request that never answers leaves 'Loading stats…' on screen indefinitely (often above the previous range's results) with no timeout or error; triggered by making /api/stats/harvests hang and opening the page or changing a date.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced: signed in as demo, opened /stats (default 2026 range, 2.6 kg table), routed **/api/stats/harvests** to never respond, set From to 2026-07-01. After 20 s the page still showed 'Loading stats…' above the old 1 Jan-31 Dec 2026 table and Best plants, with no error or retry. However this is the app's existing convention, not something the change introduced: the app has no request timeouts anywhere (useApiFetch/useApiClient in composables/useApi.ts set no timeout; grep finds no timeout/AbortController in the frontend), and stats.vue copies the pre-existing plants/index.vue pattern ('Loading plants…' while status==='pending', previous results stay visible). Doing the same to the unchanged /plants page (hang **/api/plants**, type 'tom' in search) gives the same result: 'Loading plants…' forever above the old, unfiltered list. The request did not ask for timeout or retry handling. The new page matches how the rest of the app is meant to work. Real errors (non-hang) are handled by the AlertMessage branch.",
+  "severity": null,
+  "wallMs": 202728
+}

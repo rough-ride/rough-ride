@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "hx5",
+  "key": "success-shown-when-refresh-fails",
+  "sentence": "On /beds, after 'Water now' succeeds but the follow-up beds refresh fails, the success notice is shown while 'Last watered' stays stale with no error.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in as the demo user, opened /beds, and used Playwright routing to fail GET /api/beds only after the 'Water now' POST /api/waterings returned 201. With a 500 response (detail 'boom'), the bed list went away and the section showed only the error alert 'boom'. With a network abort it showed 'Could not load beds.'. Neither run showed the 'Watered X.' success notice, and no stale 'Last watered' value was presented as current. useFetch's refresh() does not throw, but it sets loadError (shown as an alert at beds.vue:208) and clears data, so the bed cards and the notice inside them are not rendered. The behaviour described in the report did not occur.",
+  "severity": null,
+  "wallMs": 85280
+}

@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Stats error state has no retry; after a failed load the user cannot retry without reloading or changing dates",
+      "where": "/stats (frontend/app/pages/stats.vue)",
+      "steps": "Open /stats while the API is unreachable or returns 5xx (or let a range request fail). Bring the API back.",
+      "expected": "The error message offers a 'Try again' button that refetches the current range.",
+      "actual": "Only an AlertMessage with text is shown. There is no retry button and refresh() is never exposed. The only ways to recover are a full reload or editing a date to a different value.",
+      "evidence": "The template renders <AlertMessage v-if=\"statsError\"> with only a message slot. loadStats runs only from watch(query).",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Out-of-order range responses can overwrite newer results",
+      "where": "/stats loadStats",
+      "steps": "Change the From date, then quickly change it again (each date segment edit fires a request). The first request responds slowly.",
+      "expected": "Only the response for the latest range is shown.",
+      "actual": "Every response assigns stats.value without a request id check or abort. A late answer for an old range replaces the newer one, so the table and the date inputs disagree.",
+      "evidence": "watch(query, loadStats) has no cancellation or staleness guard. The status is also set to 'success' by whichever request finishes first.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats requests have no timeout and can show 'Loading stats…' forever",
+      "where": "/stats (useApiClient / useApiFetch)",
+      "steps": "Make the API hang (accept the connection, never reply) and change the date range.",
+      "expected": "The request fails after 10 seconds and shows an error with a retry.",
+      "actual": "$fetch.create has no timeout set, so the request and the 'Loading stats…' text stay pending indefinitely.",
+      "evidence": "No timeout option in useApiClient or in the stats calls.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Months without harvests are left out of the per-month table",
+      "where": "GET /api/stats/harvests, /stats table",
+      "steps": "Open /stats?from=2025-08-01&to=2026-06-30 (sample data has harvests in Aug 2025 and Jun 2026).",
+      "expected": "The table has one column per calendar month in the range (zeros or dashes for empty months), so per-month totals can be read for the chosen range.",
+      "actual": "Only months that have harvests appear. Aug 2025 is followed directly by Jun 2026, and Sep 2025 to May 2026 are missing with no sign of the gap.",
+      "evidence": "Rendered headers: Plant, Aug 2025, Jun 2026, Total. The API 'months' list is built from SELECT DISTINCT month over the harvest rows.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid date validation errors show raw technical text such as 'Query.from: Input should be a valid date or datetime…'",
+      "where": "/stats with an invalid date, e.g. /stats?from=2026-02-30 or a 5-digit year typed into the date input",
+      "steps": "Open /stats?from=2026-02-30.",
+      "expected": "A clear message naming the From field, e.g. 'From: enter a valid date', with the field highlighted.",
+      "actual": "The alert reads 'Query.from: Input should be a valid date or datetime, day value is outside expected range'. The From input shows blank because the browser cannot display the invalid value.",
+      "evidence": "SSR HTML contained: <div class=\"alert alert--error\" role=\"alert\">Query.from: Input should be a valid date or datetime, day value is outside expected range. apiErrorMessage strips only 'body' from loc, not 'query'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Clearing a date field silently falls back to this year's bound, which can contradict what is shown",
+      "where": "/stats From/To inputs",
+      "steps": "Set From to 2027-03-01 (next year), then clear the To field.",
+      "expected": "Either a blank field is refused with a visible reason, or the range used matches what the inputs show.",
+      "actual": "A blank field is left out of the query and the server substitutes 1 Jan or 31 Dec of the current year. Here the server returns 'The From date must be on or before the To date.' even though To is empty. In other cases the results cover a range that the blank inputs don't show.",
+      "evidence": "In the query computed property, empty values are dropped. Backend: date_to = date_to or year_end. GET /api/stats/harvests?from=2027-01-01 -> 422 'The From date must be on or before the To date.'",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

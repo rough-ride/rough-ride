@@ -1,0 +1,79 @@
+{
+  "findings": [
+    {
+      "title": "Clicking the Journal nav link while a search is active clears the URL but keeps the search box and filtered results",
+      "where": "/journal",
+      "steps": "Probe journalpage, expectation nav-link-state-consistent",
+      "expected": "Opening /journal from the nav shows the unfiltered latest entries with an empty search box, matching the URL",
+      "actual": "URL becomes /journal with no q, but the search box still says 'courgette' and only Courgette entries are listed",
+      "evidence": "{\"url\":\"/journal\",\"box\":\"courgette\",\"shown\":[\"Courgette\",\"Courgette\",\"Courgette\"]} | {\"url\":\"/journal\",\"box\":\"courgette\",\"shown\":[\"Courgette\",\"Courgette\",\"Courgette\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-194018-hunt-0d27",
+        "probe": "journalpage",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Malformed journal list response is rendered as fake entries on the Journal page",
+      "where": "/journal (GET /api/journal)",
+      "steps": "Probe faults2, expectation journal-malformed-not-shown-as-results",
+      "expected": "A non-list response shows an error, not search results",
+      "actual": "A string body is shown as '4 entries match' with four entries whose plant, date and text are blank or '–'",
+      "evidence": "{\"items\":4,\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"4 entries match\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"]} | {\"items\":4,\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"4 entries match\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-194018-hunt-0d27",
+        "probe": "faults2",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Malformed journal response on plant detail shows fake entries with Edit/Delete buttons",
+      "where": "/plants/:id journal section (GET /api/journal?plant_id=)",
+      "steps": "Probe faults2, expectation detail-malformed-journal-not-fake-entries",
+      "expected": "An error saying the journal could not be loaded",
+      "actual": "4 blank entries dated '–' with Edit and Delete buttons labelled 'entry from –', and no alert",
+      "evidence": "4 | 4",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-194018-hunt-0d27",
+        "probe": "faults2",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Navigating to Journal while its request hangs leaves the old page shown with no loading indicator",
+      "where": "/journal",
+      "steps": "Probe hang, expectation hang-shows-loading-or-error",
+      "expected": "The Journal page shows 'Loading entries…' or an error",
+      "actual": "After 13 s the URL is /journal but the Plants page is still displayed with no sign of loading",
+      "evidence": "{\"url\":\"/journal\",\"headings\":[\"Plants\",\"Courgette\",\"Lettuce\",\"Tomato\"],\"alerts\":[\"3 plants\"]} | {\"url\":\"/journal\",\"headings\":[\"Plants\",\"Courgette\",\"Lettuce\",\"Tomato\"],\"alerts\":[\"3 plants\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-194018-hunt-0d27",
+        "probe": "hang",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Failed 'Add entry' error stays visible after later successful journal actions",
+      "where": "/plants/:id journal section",
+      "steps": "Probe faults2, expectation stale-add-error-cleared-after-successful-edit",
+      "expected": "The add-entry error clears when the user does something else that succeeds, or at least when the form is cleared",
+      "actual": "'Injected 500' stays above the new-entry form after the text is cleared and another entry is edited and saved",
+      "evidence": "[\"Injected 500\"] | [\"Injected 500\"]",
+      "status": "observed",
+      "severity": "low",
+      "tool": {
+        "run": "20261112-194018-hunt-0d27",
+        "probe": "faults2",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

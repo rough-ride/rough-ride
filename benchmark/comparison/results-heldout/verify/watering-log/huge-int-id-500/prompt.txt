@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-huge-int-id-500/scratch.
+
+The reported problem: Watering endpoints (POST bed_id, GET ?bed_id=, DELETE /{id}) return 500 instead of 4xx for integers beyond 64 bits because SQLite overflows.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Huge integer ids cause 500 on watering endpoints",
+  "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+  "steps": "POST {\"bed_id\":99999999999999999999,\"litres\":2}; GET /api/waterings?bed_id=99999999999999999999; DELETE /api/waterings/99999999999999999999",
+  "expected": "4xx (422/404)",
+  "actual": "500 Internal Server Error, because SQLite overflows on an integer larger than 64 bits. A user who edits the ?bed= URL on the waterings page sees a generic error.",
+  "evidence": "curl: all three returned 'Internal Server Error [500]'"
+ },
+ {
+  "title": "Bed ids or watering ids beyond 64-bit cause 500 errors",
+  "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+  "steps": "POST {\"bed_id\":99999999999999999999}; GET /api/waterings?bed_id=99999999999999999999; DELETE /api/waterings/99999999999999999999.",
+  "expected": "4xx validation or not-found response.",
+  "actual": "500 Internal Server Error, because SQLite raises an OverflowError on the integer.",
+  "evidence": "curl returned 'Internal Server Error 500' for all three requests."
+ },
+ {
+  "title": "Oversized bed_id / watering id makes the watering endpoints return 500",
+  "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+  "steps": "Signed in, POST {\"bed_id\":99999999999999999999}; GET /api/waterings?bed_id=99999999999999999999; DELETE /api/waterings/99999999999999999999",
+  "expected": "4xx validation or not-found response",
+  "actual": "HTTP 500 Internal Server Error (plain text) on all three",
+  "evidence": "curl returned 'Internal Server Error 500' for each; bed_id is `int` with gt=0 but no upper bound, so sqlite raises OverflowError"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-huge-int-id-500/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

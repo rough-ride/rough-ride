@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "create-retry-duplicate-entry",
+  "sentence": "POST /api/journal has no idempotency key or dedupe, so retrying Add entry on the plant page after a lost or timed-out response creates a duplicate entry.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the mechanics: signed in as demo, opened /plants/2 (Courgette), and used page.route to let the first POST /api/journal reach the server (route.fetch) and then abort it client-side as 'timedout'. The form showed 'The garden server could not be reached.' and kept the text. Clicking Add entry again sent a second POST, and GET /api/journal?q=<text> returned two identical entries (ids 4 and 5); both are visible on the page, so the user can see and delete the extra one. The code matches: create_entry in backend/routers/journal.py inserts unconditionally and addEntry() sends no request key. But the request (dated entries, newest first, edit/delete, Journal page with search, counts) never asks for idempotent creates. The app's existing create endpoints (e.g. create_harvest in backend/routers/harvests.py) work the same way, and the codebase has no idempotency or dedupe anywhere. The duplicate needs a response lost after the server commits, and the result is visible and easy to undo. This is ordinary non-idempotent POST behaviour consistent with the app's design, not a regression or something the feature should have handled. (The side note about a retried delete giving 404 is the same lost-response scenario.)",
+  "severity": null,
+  "wallMs": 99140
+}

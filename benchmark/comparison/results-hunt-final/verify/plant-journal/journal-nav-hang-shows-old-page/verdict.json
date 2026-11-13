@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-nav-hang-shows-old-page",
+  "sentence": "Navigating to /journal while its API request hangs changes the URL but keeps the previous Plants page displayed with no loading indicator or error.",
+  "verdict": "not-a-defect",
+  "evidence": "Signed in as the demo user, opened /plants, set a Playwright route that never answers **/api/journal**, then clicked the Journal nav link. After 3 s and again after 13 s the URL was /journal but the headings were still Plants/Courgette/Lettuce/Tomato and 'Loading entries…' was not shown, so the reported behaviour does happen. The cause: pages/journal.vue does `await useApiFetch(...)` at the top level, and Nuxt holds client-side navigation until that promise resolves. That is the pattern every page in the app already uses (tasks.vue, beds.vue, plants/index.vue, harvests/new.vue, plants/new.vue, all present before this change), and the app has no NuxtLoadingIndicator. As a control I hung **/api/tasks** and went from Plants to the existing Tasks page: same result, URL /tasks with the Plants page still shown and no indicator. The Journal page behaves the way the existing pages are built to behave. The change did not introduce this, and the request says nothing about loading states during navigation. (Side note: the 'Loading entries…' text only shows while search refetches are pending, not during the first navigation.)",
+  "severity": null,
+  "wallMs": 114929
+}

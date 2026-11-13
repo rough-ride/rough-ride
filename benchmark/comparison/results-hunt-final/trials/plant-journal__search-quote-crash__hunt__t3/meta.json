@@ -1,0 +1,74 @@
+{
+  "id": "plant-journal__search-quote-crash__hunt__t3",
+  "feature": "plant-journal",
+  "bug": "search-quote-crash",
+  "arm": "hunt",
+  "trial": 3,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T18:31:03.890Z",
+  "materializeMs": 6725,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__search-quote-crash__hunt__t3/variant/azfbmp0i/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "0476809f-dbdd-45f1-889a-778144b2bf63",
+  "loadBefore": [
+    9.4296875,
+    10.455078125,
+    8.97509765625
+  ],
+  "loadAfter": [
+    9.677734375,
+    10.203125,
+    9.01708984375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 93772,
+  "reportedCostUsd": 0.2277472,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 22,
+      "outputTokens": 5434,
+      "cacheReadInputTokens": 149921,
+      "cacheCreationInputTokens": 17799,
+      "webSearchRequests": 0,
+      "costUSD": 0.2277472,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 526,
+      "cacheCreationEphemeral5mInputTokens": 17799,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 1,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 1m23s | run 20261112-193120-hunt-2274 | 2 confirmed, 0 dropped on re-run\ntarget: http://localhost:3790\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Journal search with an apostrophe crashes the API (search term pasted into SQL)\n   where: /journal search box -> GET /api/journal?q=\n   expected: Searching O'Brien lists the entry \"Met O'Brien at the fence\"\n   saw: {\"alerts\":[\"Could not load the journal.\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Could not load the journal.\",\"Garden Log · a journal for one garden\"],\"reqs\":[{\"method\":\"GET\",\"url\":\"http://localhost:8790/api/journal?limit=50&q=O%27Brien\",\"status\":null,\"fault\":\"net::ERR_FAILED\"},{\"method\":\"GET\",\"url\":\"http://localhost:8790/api/journal?limit=50&q=O%27Brien\",\"status\":null,\"fault\":\"net::ERR_FAILED\"}]}\n   repro: .rough-ride/runs/20261112-193120-hunt-2274/probes/ui-search-quote.mjs (expectation \"ui-apostrophe-search-finds-entry\")\n2. HIGH   API journal search returns 500 for a term containing a quote\n   where: GET /api/journal?q=O'Brien\n   expected: 200 with the matching entries\n   saw: {\"status\":500,\"text\":\"Internal Server Error\"}\n   repro: .rough-ride/runs/20261112-193120-hunt-2274/probes/search-quote.mjs (expectation \"api-apostrophe-search-not-5xx\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-abe567089e3812f36.jsonl",
+    "agent-abe567089e3812f36.meta.json"
+  ],
+  "usage": {
+    "input": 22,
+    "output": 5434,
+    "cacheRead": 149921,
+    "cacheWrite": 17799,
+    "requests": 11,
+    "toolCalls": {
+      "Bash": 10,
+      "Read": 1
+    }
+  },
+  "findingCount": 2,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T18:32:53.573Z"
+}

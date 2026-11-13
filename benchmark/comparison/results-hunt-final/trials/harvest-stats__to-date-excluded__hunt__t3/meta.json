@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__to-date-excluded__hunt__t3",
+  "feature": "harvest-stats",
+  "bug": "to-date-excluded",
+  "arm": "hunt",
+  "trial": 3,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T18:38:45.892Z",
+  "materializeMs": 4864,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__to-date-excluded__hunt__t3/variant/j07tmitn/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "338d502d-1bc5-4adf-99a4-cdbb9f97f3a5",
+  "loadBefore": [
+    11.93505859375,
+    11.46630859375,
+    9.9462890625
+  ],
+  "loadAfter": [
+    5.52099609375,
+    9.36328125,
+    9.31982421875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 118066,
+  "reportedCostUsd": 0.2559162,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 20,
+      "outputTokens": 5809,
+      "cacheReadInputTokens": 151531,
+      "cacheCreationInputTokens": 21870,
+      "webSearchRequests": 0,
+      "costUSD": 0.2559162,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 571,
+      "cacheCreationEphemeral5mInputTokens": 21870,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 1m48s | run 20261112-193859-hunt-dc36 | 2 confirmed, 0 dropped on re-run\ntarget: http://localhost:3790\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Harvests on the To date are left out of the stats (and Dec 31 out of the dashboard top plant)\n   where: GET /api/stats/harvests and /stats page\n   expected: A harvest of 777 g on 2026-03-15 is counted for from=2026-03-15&to=2026-03-15 (the To date is inclusive)\n   saw: {\"status\":200,\"total\":0,\"count\":0}\n   repro: .rough-ride/runs/20261112-193859-hunt-dc36/probes/to-date-inclusive.mjs (expectation \"api-single-day-includes-harvest\")\n2. MEDIUM A malformed stats response throws an uncaught error and leaves 'Loading stats…' on screen with old data\n   where: /stats\n   expected: A visible error message, no uncaught exception, no lasting loading state\n   saw: {\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"]}\n   repro: .rough-ride/runs/20261112-193859-hunt-dc36/probes/stats-client-faults.mjs (expectation \"malformed-response-shows-error-not-crash\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a56b4d32def7269d1.jsonl",
+    "agent-a56b4d32def7269d1.meta.json"
+  ],
+  "usage": {
+    "input": 20,
+    "output": 5809,
+    "cacheRead": 151531,
+    "cacheWrite": 21870,
+    "requests": 10,
+    "toolCalls": {
+      "Bash": 9,
+      "Read": 1
+    }
+  },
+  "findingCount": 2,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T18:40:56.873Z"
+}

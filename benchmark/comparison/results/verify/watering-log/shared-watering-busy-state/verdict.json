@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "shared-watering-busy-state",
+  "sentence": "On /beds, clicking 'Water now' on a second bed while the first request is pending uses one shared busy flag and message, re-enabling a pending bed's button (allowing duplicates) and overwriting the other bed's notice.",
+  "verdict": "confirmed",
+  "evidence": "beds.vue has one wateringBedId ref plus single waterNotice/waterError refs. recordWatering sets wateringBedId = bed.id and clears both messages at the start, and sets wateringBedId = null in finally. In the running app (/beds, signed in as demo) I held all POST /api/waterings with page.route. I clicked 'Water now' on North bed: it showed 'Watering…' and was disabled. Then I clicked 'Water now' on Shade corner: North bed's button went straight back to 'Water now' and became enabled (Adis=false) while its POST was still held. I released Shade's POST: both buttons were enabled and only 'Watered Shade corner.' was shown. I clicked North bed again while its first POST was still held, which sent a 3rd POST. After releasing everything, GET /api/waterings showed two North bed waterings saved at the same second (ids 5 and 6, both 2026-11-12 13:36:18), so a real duplicate was recorded. At the end only 'Watered North bed.' was shown and Shade corner's success notice was gone. The single shared flag both re-enables a pending bed's button (allowing duplicate records) and overwrites the other bed's notice, as reported. I did not check the timeout claim in report 2.",
+  "severity": "medium",
+  "wallMs": 122970
+}

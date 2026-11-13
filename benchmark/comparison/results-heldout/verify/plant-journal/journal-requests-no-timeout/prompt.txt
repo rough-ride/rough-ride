@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3794, API http://localhost:8794/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-journal-requests-no-timeout/scratch.
+
+The reported problem: Journal fetches and mutations set no timeout, so when the API hangs the Add/Save button stays disabled on 'Saving…' or /journal stays on 'Loading entries…' indefinitely.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Journal requests have no timeout; a stalled save leaves 'Saving…' up forever",
+  "where": "Plant detail Journal form (POST /api/journal), entry edit (PUT), delete, and /journal page loads",
+  "steps": "On /plants/2, make POST /api/journal hang. Type an entry and click 'Add entry'. Wait more than 10 seconds.",
+  "expected": "The request fails after 10 seconds with a visible error, and the button becomes usable again.",
+  "actual": "The button still said 'Saving…' and was disabled after 14 seconds, with no error. useApiClient sets no timeout.",
+  "evidence": "After 14 s: {btn:'Saving…', disabled:true}"
+ },
+ {
+  "title": "Journal requests have no timeout; Saving… can spin forever",
+  "where": "Add/edit/delete journal entry, Journal page",
+  "steps": "Make the API hang (accept the connection but never answer), then click 'Add entry' or 'Save entry'.",
+  "expected": "The request fails after 10 seconds with a visible error, and the button is enabled again.",
+  "actual": "useApiClient/useApiFetch set no timeout, so the button stays on 'Saving…' and stays disabled indefinitely.",
+  "evidence": "composables/useApi.ts: $fetch.create has no timeout option. The new journal calls use it unchanged."
+ },
+ {
+  "title": "No request timeout or idempotency for journal saves",
+  "where": "Plant detail: Add entry / Save entry / Delete",
+  "steps": "Submit an entry while the API hangs, then retry.",
+  "expected": "The request fails after 10 seconds with a visible error, and a retry does not create a duplicate.",
+  "actual": "useApiClient sets no timeout, so the 'Saving…' button can stay disabled indefinitely. POST /api/journal has no idempotency key, so a retry after a lost response creates a duplicate entry.",
+  "evidence": "useApi.ts $fetch.create has no timeout option. create_entry inserts on every POST."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-journal-requests-no-timeout/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

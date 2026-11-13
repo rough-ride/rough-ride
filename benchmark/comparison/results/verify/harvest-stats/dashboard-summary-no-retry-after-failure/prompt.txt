@@ -1,0 +1,34 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3790, API http://localhost:8790/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-harvest-stats-dashboard-summary-no-retry-after-failure/scratch.
+
+The reported problem: After GET /api/dashboard/summary fails on the dashboard, there is no way to retry without a page reload.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "No way to retry without a reload after GET /api/dashboard/summary fails with 500",
+  "where": "/",
+  "steps": "In the browser: / | 500!, 400!, reset!, 429! on GET /api/dashboard/summary #1 | fails: retry-recovers",
+  "expected": "",
+  "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+  "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload"
+ },
+ {
+  "title": "No way to retry without a reload after GET /api/dashboard/summary fails with 500",
+  "where": "/",
+  "steps": "In the browser: / | 500!, 400!, reset!, 429! on GET /api/dashboard/summary #1 | fails: retry-recovers",
+  "expected": "",
+  "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+  "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-harvest-stats-dashboard-summary-no-retry-after-failure/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

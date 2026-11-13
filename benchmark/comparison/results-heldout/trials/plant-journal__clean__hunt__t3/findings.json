@@ -1,0 +1,49 @@
+{
+  "findings": [
+    {
+      "title": "Journal page shows a malformed (non-list) response as 'No journal entries yet'",
+      "where": "/journal (GET /api/journal)",
+      "steps": "Probe journal-page, expectation empty-object-not-shown-as-empty",
+      "expected": "A bad response from the journal list shows a visible error, not an empty journal",
+      "actual": "When the response is {} the page shows '0 entries' and 'No journal entries yet', as if the garden had no entries",
+      "evidence": "{\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"0 entries\",\"No journal entries yet\",\"Open a plant and write the first entry in its journal.\",\"Go to plants\",\"Garden Log · a journal for one garden\"],\"alerts\":[\"0 entries\"]} | {\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"0 entries\",\"No journal entries yet\",\"Open a plant and write the first entry in its journal.\",\"Go to plants\",\"Garden Log · a journal for one garden\"],\"alerts\":[\"0 entries\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-185135-hunt-9ae0",
+        "probe": "journal-page",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A search longer than 80 characters shows a raw validation error instead of results",
+      "where": "/journal search box (GET /api/journal?q=)",
+      "steps": "Probe journal-page, expectation long-search-no-error",
+      "expected": "The search box limits input to what the API accepts, or long searches are handled and show results or 'No entries match'",
+      "actual": "The search box has no maxlength, the API answers 422, and the page shows the alert 'Query.q: String should have at most 80 characters' with no results",
+      "evidence": "{\"alerts\":[\"Query.q: String should have at most 80 characters\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Query.q: String should have at most 80 characters\",\"Garden Log · a journal for one garden\"]} | {\"alerts\":[\"Query.q: String should have at most 80 characters\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Query.q: String should have at most 80 characters\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185135-hunt-9ae0",
+        "probe": "journal-page",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Journal search stuck on 'Loading entries…' with stale 'No entries match' when the request hangs",
+      "where": "/journal (GET /api/journal)",
+      "steps": "Probe journal-hang, expectation hang-not-stuck-loading",
+      "expected": "A hung request times out and shows an error with a way to retry",
+      "actual": "After 13 s the page still shows 'Loading entries…' next to the previous search's 'No entries match' for the new term 'Tied', which does match an entry. No timeout and no error.",
+      "evidence": "{\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Loading entries…\",\"No entries match\",\"Try a different word or plant name.\",\"Clear search\",\"Garden Log · a journal for one garden\"],\"alerts\":[\"Loading entries…\"]} | {\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Loading entries…\",\"No entries match\",\"Try a different word or plant name.\",\"Clear search\",\"Garden Log · a journal for one garden\"],\"alerts\":[\"Loading entries…\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185135-hunt-9ae0",
+        "probe": "journal-hang",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

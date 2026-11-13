@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "tiny-litres-shown-as-zero",
+  "sentence": "Recording a past watering with a tiny positive amount (e.g. 0.001 L) is accepted despite the 0.1 field minimum and is displayed as '0 L' in the notice, dashboard and waterings list.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user. On /beds I opened 'Record past watering' for North bed, typed 0.004 in Litres (the input has min=0.1 step=0.1, but the form is novalidate and the client only checks > 0), and saved. POST /api/waterings returned 201 with litres 0.004 (WateringIn only has gt=0). The notice said 'Recorded 0 L on 12 Nov 2026.', /waterings listed '12 Nov 2026  North bed  0 L', and the dashboard's Recent waterings showed '12 Nov 2026  North bed  0 L'. The cause is formatLitres using maximumFractionDigits: 2. So the stated 0.1 minimum is not enforced, and a recorded positive amount is shown as zero. I deleted the test row afterwards (DELETE returned 204).",
+  "severity": "low",
+  "wallMs": 105640
+}

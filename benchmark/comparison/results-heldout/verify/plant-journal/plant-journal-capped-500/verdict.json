@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "plant-journal-capped-500",
+  "sentence": "The plant detail journal fetches at most 500 entries with no paging or notice, so older entries are unreachable while the badge shows the full count.",
+  "verdict": "confirmed",
+  "evidence": "Code: [id].vue fetches useApiFetch('/journal', {query:{plant_id, limit: 500}}) and the backend caps limit at le=500 (limit=501 returns 422), with no offset/cursor parameter. Reproduced: through the API I created plant 'Cap Test Plant' (id 4) and gave it 503 journal entries dated 2020-01-02..2021-05-19 ('Entry number 1'..'Entry number 503'). GET /api/plants/4 returned journal_count=503. In the browser I signed in as the demo user and opened /plants/4: the Journal badge read '503 entries', but the list showed exactly 500 items. The last one was '5 Jan 2020 Entry number 4', so entries 1-3 (the oldest) were missing. There was no 'show more'/pagination control and no 'showing N of M' notice. Those 3 entries cannot be seen, edited or deleted from the plant page. The Journal page only shows the latest entries, so it doesn't reach them either. Afterwards I deleted the test plant.",
+  "severity": "low",
+  "wallMs": 93527
+}

@@ -1,0 +1,75 @@
+{
+  "id": "watering-log__clean__playwright__t2",
+  "feature": "watering-log",
+  "bug": "clean",
+  "arm": "playwright",
+  "trial": 2,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T09:31:10.099Z",
+  "materializeMs": 7164,
+  "repo": "$TMPDIR/rr-bench/work/watering-log__clean__playwright__t2/variant/f3f73tf7/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/beds.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/beds.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/waterings.py\n?? frontend/app/pages/waterings.vue\n",
+  "sessionId": "41fb24a5-9965-48d0-9309-182ba05629e6",
+  "loadBefore": [
+    10.2060546875,
+    7.04248046875,
+    7.71630859375
+  ],
+  "loadAfter": [
+    23.9912109375,
+    12.4150390625,
+    9.57763671875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 298788,
+  "reportedCostUsd": 0.8526128000000002,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 52,
+      "outputTokens": 13426,
+      "cacheReadInputTokens": 1044064,
+      "cacheCreationInputTokens": 46884,
+      "webSearchRequests": 0,
+      "costUSD": 0.8526128000000002,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 3121,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 46884,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 25,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 10 bugs: 8 I saw happen in the running app and 2 I only suspect from the code. They're written to `out/findings.json`.\n\n**High**\n1. **\"Water now\" can record the same watering twice.** If the beds list fails to reload after a watering is saved, the whole list is replaced by \"Could not load beds.\" The success or error message lives inside the bed card, so it disappears too. The user can't tell whether it saved and will click again. Nothing on the server stops the repeat, so each click adds another watering. I saw this happen: the watering was saved but the page only showed the error.\n2. **Requests never time out.** When the server didn't answer, the button still said \"Watering…\" and was disabled after 12 seconds, with no error and no way to cancel. The new list, dashboard and delete requests have no timeout either.\n\n**Medium**\n3. **Two beds at once break each other's buttons.** All beds share one \"busy\" marker and one message slot. When I watered a second bed while the first bed's request was still pending, the first bed's button came back as \"Water now\" and could be clicked again, and one bed's message wiped out the other's.\n4. **No retry on errors.** The dashboard's \"Recent waterings\" section and the Waterings page show an error message with no Retry button. On the dashboard the only way back is a full page reload.\n5. **Sideways scrolling at 375 px.** With a 56-character bed name (the limit is 60), the page became wider than the 375 px screen on all three pages: 652 px on the dashboard, 737 px on Waterings and 685 px on Beds. The bed name in the table doesn't wrap.\n6. **The server crashes (500) instead of refusing bad input (422).** This happens for a bed id too large for the database and for a litres value too large to represent (`1e400`), on both saving and filtering.\n\n**Low**\n7. Tiny amounts like 0.001 litres are accepted but displayed as \"0 L\".\n8. A date of year 1 is accepted and displayed as \"1 Jan 1\".\n9. *(Suspected)* The browser and server each use their own idea of \"today\". A user whose time zone is ahead of the server can be told today's date is in the future, and \"Water now\" can record the server's date rather than theirs.\n10. *(Suspected)* If the beds request fails on the Waterings page, the bed filter quietly offers only \"All beds\" with no error shown.\n\n**What held up:** a failed save keeps everything typed in the form, and the error messages are readable. When I switched the filter quickly, a late answer didn't replace the newer one. With the sample data, all pages fit at 375 px.\n\nI removed all the test data I created (a test bed and seven waterings); only the two original sample waterings remain.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 52,
+    "output": 13426,
+    "cacheRead": 1044064,
+    "cacheWrite": 46884,
+    "requests": 25,
+    "toolCalls": {
+      "Bash": 11,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 11,
+      "Read": 1
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 10,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |   4 +-\n backend/db.py                    |  14 +++-\n backend/routers/beds.py          |   8 ++-\n backend/schemas.py               |  29 +++++++++\n frontend/app/assets/css/main.css |  24 ++++++-\n frontend/app/layouts/default.vue |   1 +\n frontend/app/pages/beds.vue      | 134 ++++++++++++++++++++++++++++++++++++++-\n frontend/app/pages/index.vue     |  44 ++++++++++++-\n frontend/app/types/api.ts        |  17 +++++\n frontend/app/utils/format.ts     |  26 ++++++++\n 10 files changed, 293 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T09:36:28.112Z"
+}

@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "title": "Failed stats request is shown as 'No harvests in this range' with no error or retry",
+      "where": "/stats page (frontend/app/pages/stats.vue)",
+      "steps": "Sign in, then open /stats?from=2026-12-01&to=2026-01-01 (API answers 422). Any other API failure (500, network down, timeout) takes the same path.",
+      "expected": "An error message (e.g. 'The From date must be on or before the To date.' or 'could not load stats') with a Retry button.",
+      "actual": "The page ignores `error` from useApiFetch. With stats null it shows the EmptyState 'No harvests in this range', so a failure looks like a successful empty result. There is no retry.",
+      "evidence": "curl of SSR /stats?from=2026-12-01&to=2026-01-01 with session cookie: the HTML contains 'No harvests in this range' and no alert; the API returns 422 {\"detail\":\"The From date must be on or before the To date.\"}",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Invalid date that passes the client regex (e.g. 2026-02-30) shows as empty results",
+      "where": "/stats?from=2026-02-30",
+      "steps": "Open /stats?from=2026-02-30. queryDate accepts it because it matches \\d{4}-\\d{2}-\\d{2}, and the server rejects it with 422.",
+      "expected": "Fall back to the default or show a validation error.",
+      "actual": "'No harvests in this range' is shown and the From input holds an invalid value.",
+      "evidence": "SSR HTML of /stats?from=2026-02-30 contains 'No harvests in this range'; API returns 422 'day value is outside expected range'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout, so the page can stay on 'Loading stats…' forever",
+      "where": "/stats (useApiFetch, composables/useApi.ts)",
+      "steps": "Make the API hang (stall the connection) and open /stats or change a date.",
+      "expected": "The request fails after 10 s and shows an error with a retry.",
+      "actual": "No timeout is passed to useFetch/$fetch, so 'Loading stats…' can spin indefinitely. Even after a failure, nothing but the empty state is shown (see above).",
+      "evidence": "grep finds no 'timeout' anywhere in frontend/app; stats.vue calls useApiFetch('/stats/harvests', { query }) with no timeout.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing a date field silently uses the year default while the input stays blank",
+      "where": "/stats From/To inputs",
+      "steps": "Clear the From input.",
+      "expected": "The input shows the date actually used, or the page says why it was rejected.",
+      "actual": "The query drops 'from' and the server defaults to 1 Jan of the current year. The input stays empty, while the summary line says 'from 1 Jan 2026'. If To is earlier than this year, the hidden default gives a 422, which then shows as 'No harvests'.",
+      "evidence": "stats.vue query computed omits empty values; stats.py defaults date_from to year_start.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Months with no harvests are left out of the per-month table",
+      "where": "GET /api/stats/harvests and the /stats table",
+      "steps": "GET /api/stats/harvests?from=0001-01-01&to=9999-12-31",
+      "expected": "Every month in the chosen range appears (at least between the first and last harvest), so the per-month view is continuous.",
+      "actual": "Only months that have harvests are returned: 2025-08 is followed directly by 2026-06, and the 9 months in between are missing, which hides the gap.",
+      "evidence": "Response months: 2025-08, 2026-06, 2026-07, 2026-08, 2026-09.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "findings": [
+    {
+      "title": "Journal page has no way to retry after the entries fail to load",
+      "where": "/journal (GET /api/journal)",
+      "steps": "Probe journal-faults-csr, expectation journal-page-retry-available",
+      "expected": "After a failed load, the error has a Retry / Try again control so the feed can be reloaded once the server recovers",
+      "actual": "Only the error text 'Injected 500' shows; the page has no retry button, so the user must reload the page or change the search to get the feed back",
+      "evidence": "[\"Sign out\"] | [\"Sign out\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-180125-hunt-2f55",
+        "probe": "journal-faults-csr",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Plant detail journal shows a load error with no way to retry",
+      "where": "/plants/:id Journal section (GET /api/journal?plant_id=...)",
+      "steps": "Probe journal-faults-csr, expectation detail-journal-retry-available",
+      "expected": "A Retry control next to the 'could not load the journal' error",
+      "actual": "The Journal section shows only the error and the 'Add entry' form; the entry list cannot be reloaded without reloading the page",
+      "evidence": "[\"Add entry\"] | [\"Add entry\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-180125-hunt-2f55",
+        "probe": "journal-faults-csr",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Malformed journal response is rendered as a list of blank entries instead of an error",
+      "where": "/journal (GET /api/journal)",
+      "steps": "Probe journal-faults-csr, expectation journal-malformed-shows-error",
+      "expected": "A non-list response is reported as 'Could not load the journal'",
+      "actual": "The page says '14 entries' and renders 14 empty cards showing only '–', with no error",
+      "evidence": "{\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"],\"pe\":[]} | {\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"],\"pe\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-180125-hunt-2f55",
+        "probe": "journal-faults-csr",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-empty-months-omitted",
+  "sentence": "The /stats per-month table only has columns for months that have harvests, so months in the chosen range with no harvests are missing rather than shown as zero.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /stats with the default range 2026-01-01 to 2026-12-31. The table header was 'Plant | Jun 2026 | Jul 2026 | Aug 2026 | Sept 2026 | Total', so Jan-May and Oct-Dec 2026 have no columns. The API agrees: GET /api/stats/harvests with the default range returns months ['2026-06','2026-07','2026-08','2026-09'], and from=2025-01-01&to=2026-12-31 returns ['2025-08','2026-06','2026-07','2026-08','2026-09'], jumping from Aug 2025 to Jun 2026. Cause: backend/routers/stats.py builds `months = sorted({row['month'] for row in rows})`, using only months that have harvest rows instead of every month in the From-To range. The page shows no note saying empty months are left out, so a 'per month for a chosen date range' table that hides empty months misleads the reader about gaps and seasonality. Totals are still correct.",
+  "severity": "low",
+  "wallMs": 55962
+}

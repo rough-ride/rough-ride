@@ -1,0 +1,34 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-harvest-stats-stats-date-fields-ignore-url-changes/scratch.
+
+The reported problem: On /stats the From/To fields are read from the URL only at setup, so pressing Back or clicking the Stats nav link changes the URL but leaves the old range shown.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Date fields don't follow URL changes (nav link, back/forward)",
+  "where": "/stats",
+  "steps": "On /stats pick a custom range (the URL becomes /stats?from=...). Click 'Stats' in the nav, or press Back.",
+  "expected": "The fields and results match the URL, e.g. reset to this year.",
+  "actual": "dateFrom/dateTo are read from route.query only once at setup and never watch the route. The URL changes but the page keeps the old range.",
+  "evidence": "stats.vue: the refs are set from route.query once. The only watch goes from refs to router, not the other way."
+ },
+ {
+  "title": "Date fields do not follow URL changes (back/forward, Stats nav link)",
+  "where": "/stats page",
+  "steps": "On /stats change From to 2026-03-01 (the URL gets ?from=2026-03-01). Press browser Back, or click 'Stats' in the main nav.",
+  "expected": "The fields and the results follow the URL (default range again).",
+  "actual": "dateFrom/dateTo are set from route.query only once, at setup, and the watch only goes refs -> URL. The URL changes but the fields and table keep showing the old range, so the URL and the page disagree.",
+  "evidence": "stats.vue: const dateFrom = ref(queryDate(route.query.from, ...)); there is no watch on route.query."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-harvest-stats-stats-date-fields-ignore-url-changes/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

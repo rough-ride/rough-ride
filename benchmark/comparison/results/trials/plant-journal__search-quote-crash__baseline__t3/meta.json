@@ -1,0 +1,72 @@
+{
+  "id": "plant-journal__search-quote-crash__baseline__t3",
+  "feature": "plant-journal",
+  "bug": "search-quote-crash",
+  "arm": "baseline",
+  "trial": 3,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T10:40:13.852Z",
+  "materializeMs": 6168,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__search-quote-crash__baseline__t3/variant/5rgekzlf/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "f189686a-2d8f-4614-a9df-54a35bb95f82",
+  "loadBefore": [
+    3.2255859375,
+    7.63134765625,
+    9.82421875
+  ],
+  "loadAfter": [
+    3.17041015625,
+    6.5234375,
+    9.17822265625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 85789,
+  "reportedCostUsd": 0.4178094,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 16,
+      "outputTokens": 6854,
+      "cacheReadInputTokens": 233287,
+      "cacheCreationInputTokens": 29251,
+      "webSearchRequests": 0,
+      "costUSD": 0.4178094,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1419,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 29251,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 9,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "The most serious problem: typing an apostrophe in the Journal search, as in \"it's\", crashes the server and the page says \"Could not load the journal.\" The cause is the same flaw that also lets a crafted search run as SQL. I tested the API with curl and fetched the server-rendered pages; I had no browser, so I couldn't check anything that only happens in the browser.\n\nI wrote 8 findings to `out/findings.json`. Five I saw in the running app; three come only from reading the code.\n\n**Seen in the app:**\n1. **High – a quote in the search crashes it, and the search can run as SQL.** `backend/routers/journal.py` pastes the search text straight into the SQL query. A search for \"it's\" returns a 500. The search `x' OR 1=1 OR '` returns every entry, which proves the text is run as SQL.\n2. **Medium – load errors offer no way to retry.** The Journal page and the journal section on the plant page show only an error message, with no Retry button.\n3. **Low – `%` and `_` act as wildcards.** Searching for `%` returns every entry instead of only entries containing a `%`.\n4. **Low – very large ids crash the server.** Huge numbers for `plant_id` or an entry id get a 500 instead of a 4xx. The existing plants endpoint has the same problem; the new journal endpoints add more ways to hit it.\n5. **Low – absurd dates are accepted.** An entry dated 0001-01-01 was saved; only future dates are refused.\n\n**From the code only:**\n6. **Medium – no 10-second timeout, and a retried add can make a duplicate.** \"Saving…\" can spin with no end. If the first add did reach the server, clicking again after the error creates a second identical entry.\n7. **Low – emoji count double in the entry form.** The form limits emoji entries to about 250, while the server accepts 500.\n8. **Low – long plant names may overflow at 375 px.** In the Journal feed, a long unbroken plant name has no wrapping rule and could cause sideways scrolling.\n\nThe main features work as asked: adding, editing and deleting entries, newest-first order, the count next to each plant, and journal entries being deleted along with their plant. Whitespace-only, null and future-dated entries are refused with a 422.\n\nI deleted the test entries and the test harvest I created.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 16,
+    "output": 6854,
+    "cacheRead": 233287,
+    "cacheWrite": 29251,
+    "requests": 8,
+    "toolCalls": {
+      "Bash": 8
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 8,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T10:41:53.300Z"
+}

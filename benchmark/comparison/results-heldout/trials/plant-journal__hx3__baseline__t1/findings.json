@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Failed journal delete removes the entry from the list anyway",
+      "where": "Plant detail page (/plants/:id), Journal section, Delete",
+      "steps": "Open a plant, click Delete on a journal entry, confirm, while the API is down or returns an error.",
+      "expected": "The entry stays in the list with an error saying it could not be deleted.",
+      "actual": "removeEntry filters the entry out of `journal` before calling the API and never puts it back on failure. The entry disappears while the alert says 'Could not delete the entry.', and the count badge disagrees with the list.",
+      "evidence": "pages/plants/[id].vue removeEntry: `journal.value = journal.value?.filter(...)` runs before the `await api(...)`. The catch block only sets journalError.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors have no retry, on the Journal page and on the plant page",
+      "where": "/journal and /plants/:id Journal section",
+      "steps": "Open /journal (or a plant page) while GET /api/journal fails.",
+      "expected": "An error message with a Retry button that reloads the entries.",
+      "actual": "Only an AlertMessage is shown, with no retry control. On the plant page the journal list area stays empty under the alert. The user has to reload the page.",
+      "evidence": "journal.vue: the <AlertMessage v-if=\"loadError\"> has no button and `refresh` is never destructured. [id].vue: journalLoadError alert has no retry.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Search over 80 characters shows a raw validation error",
+      "where": "/journal search box -> GET /api/journal?q=",
+      "steps": "Type or paste more than 80 characters into the Journal search box (or open /journal?q=<81 chars>).",
+      "expected": "The input limits the length, or the page shows a friendly message.",
+      "actual": "The page replaces the results with the error 'Query.q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "SSR of /journal?q=aaaa...(81) rendered: role=alert 'Query.q: String should have at most 80 characters'. The API returns 422.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal endpoints return 500 for oversized IDs",
+      "where": "POST /api/journal (plant_id), PUT /api/journal/{id}, GET /api/journal?plant_id=",
+      "steps": "POST {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-11-01\",\"body\":\"x\"}; PUT /api/journal/99999999999999999999; GET /api/journal?plant_id=99999999999999999999",
+      "expected": "A 4xx (422 or 404).",
+      "actual": "500 Internal Server Error. SQLite integer overflow is not caught; the IDs have no upper bound.",
+      "evidence": "All three requests returned 'Internal Server Error [500]'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal body containing a NUL character returns 500",
+      "where": "POST /api/journal",
+      "steps": "POST {\"plant_id\":1,\"entry_on\":\"2026-11-01\",\"body\":\"\\u0000\"}",
+      "expected": "A 422 with a reason, or the entry is saved.",
+      "actual": "500 Internal Server Error.",
+      "evidence": "curl returned 'Internal Server Error [500]'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Client counts 500 characters differently from the server: emoji entries are cut short, and valid long entries cannot be edited",
+      "where": "JournalEntryForm (new entry and in-place edit)",
+      "steps": "1) Type or paste emoji or other astral-plane characters into a new entry. 2) Edit an entry the server accepted with 500 emoji (POST via the API returned 201).",
+      "expected": "The limit is 500 characters, the same as the server (code points).",
+      "actual": "The textarea maxlength and the counter use UTF-16 length, so only 250 emoji fit and the counter says '0 characters left'. Editing a valid 500-emoji entry shows '-500 characters left', and validate() refuses to save it with 'Keep the entry to 500 characters'.",
+      "evidence": "The server accepted a body of 500×🌱 (201). The form uses form.body.length and :maxlength=500, and both count UTF-16 code units.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Journal search has no debounce, so late responses can overwrite newer results",
+      "where": "/journal search",
+      "steps": "Type quickly in the search box on a slow network.",
+      "expected": "Only results for the latest search term are shown.",
+      "actual": "Each keystroke starts a new request through the reactive useFetch query, with no debounce. Results can flicker, and if the earlier request is not cancelled, older results can replace newer ones.",
+      "evidence": "journal.vue passes the computed `query` straight to useApiFetch and has no debounce.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "No request timeout or idempotency for journal saves",
+      "where": "Plant detail: Add entry / Save entry / Delete",
+      "steps": "Submit an entry while the API hangs, then retry.",
+      "expected": "The request fails after 10 seconds with a visible error, and a retry does not create a duplicate.",
+      "actual": "useApiClient sets no timeout, so the 'Saving…' button can stay disabled indefinitely. POST /api/journal has no idempotency key, so a retry after a lost response creates a duplicate entry.",
+      "evidence": "useApi.ts $fetch.create has no timeout option. create_entry inserts on every POST.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Plant detail silently shows at most 500 entries",
+      "where": "/plants/:id Journal section",
+      "steps": "Create more than 500 entries for one plant.",
+      "expected": "All entries, or a 'showing latest N of M' notice.",
+      "actual": "The list is fetched with limit=500 and cut off silently, while the badge shows the full count.",
+      "evidence": "[id].vue: useApiFetch('/journal', {query:{plant_id, limit: 500}}).",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long unbroken plant name in the Journal feed can overflow at 375px",
+      "where": "/journal feed item header",
+      "steps": "Name a plant with a long unbroken string (up to 80 chars), add an entry, view /journal at 375px wide.",
+      "expected": "The name wraps.",
+      "actual": ".journal-feed__plant has no overflow-wrap. Only the body has overflow-wrap:anywhere, so the link can force sideways scrolling.",
+      "evidence": "main.css: overflow-wrap:anywhere only on .journal-entry__body.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

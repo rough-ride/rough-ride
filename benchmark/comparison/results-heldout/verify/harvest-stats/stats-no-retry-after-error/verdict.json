@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-no-retry-after-error",
+  "sentence": "On /stats, the error state shows only a message with no Retry button, so recovering requires changing a date or reloading; triggered by making /api/stats/harvests fail.",
+  "verdict": "not-a-defect",
+  "evidence": "Signed in as the demo user, routed GET **/api/stats/harvests** to 500 {\"detail\":\"boom\"}, then clicked Stats in the main nav. /stats showed the From/To fields (2026-01-01 / 2026-12-31) and a single alert reading 'boom'. There was no retry button; the only buttons were Sign out and, after changing the range, 'This year'. So the behaviour is real. But the request (.rough-ride/specs/request.txt) does not ask for a retry action, and no page in the app has one: beds.vue, tasks.vue, plants/index.vue, plants/new.vue and the dashboard (index.vue) all show load failures as an AlertMessage with only text. AlertMessage.vue is just a slot with no action. stats.vue follows the app's existing pattern. The page also re-fetches when a date changes, so recovery without a reload works. Adding Retry would be a nice extra, not a defect in this change.",
+  "severity": null,
+  "wallMs": 59212
+}

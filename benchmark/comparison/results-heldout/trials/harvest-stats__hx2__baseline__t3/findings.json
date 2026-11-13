@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "title": "Plants that share a name are merged into one row in the stats table, and the table disagrees with Best plants",
+      "where": "GET /api/stats/harvests (backend/routers/stats.py, GROUP BY p.name, month) and the /stats page",
+      "steps": "Have plant 'Tomato' (Sungold, id 1) with harvests. Create a second plant 'Tomato' variety 'Cherry RR' and log 2000 g on 2026-07-15. Open /stats or call GET /api/stats/harvests.",
+      "expected": "Two separate rows (Tomato · Sungold and Tomato · Cherry RR), each with its own weight, matching the Best plants list.",
+      "actual": "The query groups by plant name instead of plant id. Both tomatoes become one row labelled 'Tomato · Sungold' that links to plant 1 and shows 3050 g. Best plants (grouped by id) lists 'Tomato · Cherry RR 2000 g' as No. 1 and 'Tomato · Sungold 1050 g' as No. 3. Neither appears with those numbers in the table.",
+      "evidence": "plants: [(2,Courgette,1200),(3,Lettuce,350),(1,Tomato,Sungold,3050,[0,2450,600,0])]; top_plants: [{id 4, Tomato Cherry RR, 2000},{id 2, Courgette,1200},{id 1, Tomato Sungold,1050}]. The test plant and harvest were deleted afterwards.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "The stats error state has no retry button",
+      "where": "/stats page",
+      "steps": "Open /stats while the API fails, e.g. /stats?from=2026-12-01&to=2026-01-01, or with the API down or returning 5xx.",
+      "expected": "An error message with a Retry action that fetches again once the server is back, without a reload.",
+      "actual": "Only an AlertMessage with the error text is shown. There is no retry button, so the only way to recover is to change a date or reload the page.",
+      "evidence": "The SSR HTML shows 'The From date must be on or before the To date.' with no button. stats.vue does not use refresh from useApiFetch.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "The stats request has no 10 s timeout",
+      "where": "/stats page (useApiFetch('/stats/harvests')) and the dashboard summary",
+      "steps": "Make the API hang (accept the connection but never respond), then open /stats or change a date.",
+      "expected": "The request fails after 10 seconds and shows an error with a retry.",
+      "actual": "Neither useApiFetch nor the page sets a timeout, so 'Loading stats…' can stay up indefinitely.",
+      "evidence": "composables/useApi.ts and stats.vue pass no timeout option.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Months with no harvests are left out of the month columns",
+      "where": "GET /api/stats/harvests and the /stats table",
+      "steps": "Choose From 2000-01-01, To 2030-12-31 with sample data.",
+      "expected": "One column per month in the chosen range, or at least the months between the first and last harvest, so the 'per month' breakdown reads correctly.",
+      "actual": "Columns jump straight from Aug 2025 to Jun 2026. Empty months are left out, so readers cannot see the gap.",
+      "evidence": "months: [2025-08, 2026-06, 2026-07, 2026-08, 2026-09]",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "An invalid date shows a raw validation message",
+      "where": "/stats From/To fields to GET /api/stats/harvests",
+      "steps": "Type a 5-digit year into the From date input (browsers allow this), e.g. 20261-01-01.",
+      "expected": "A clear message such as 'Enter a valid From date'.",
+      "actual": "The API returns 422 with loc ['query','from']. apiErrorMessage turns that into 'Query.from: Input should be a valid date or datetime, invalid date separator, expected `-`'.",
+      "evidence": "curl ?from=20261-01-01 returns detail[0].loc=['query','from'] and msg 'Input should be a valid date or datetime, invalid date separator...'",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

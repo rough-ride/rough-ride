@@ -1,0 +1,14 @@
+id: hx3
+category: no-rollback
+provenance: hand-written
+layer: frontend
+reach: direct
+needsAppKnowledge: false
+flow: plant-detail
+exposedBy:
+  - { fault: 500, endpoint: "DELETE /api/journal/<id>" }
+checks: [state-matches-server, visible-error-message]
+symptom: "When deleting a journal entry fails, the error is shown but the entry disappears from the list anyway; it is still saved and comes back on reload"
+addedIn: 0.1.1
+review: single
+allowWords: []

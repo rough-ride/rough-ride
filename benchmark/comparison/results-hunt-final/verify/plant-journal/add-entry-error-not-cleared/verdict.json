@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "add-entry-error-not-cleared",
+  "sentence": "On the plant detail page, the error from a failed 'Add entry' save stays visible after the form is cleared and another journal action (such as editing an entry) succeeds.",
+  "verdict": "confirmed",
+  "evidence": "In the running app (signed in as the demo user, /plants/2 Courgette) I added a baseline entry. Then I routed POST /api/journal to a 500 {detail:'Injected 500'} and clicked 'Add entry'. The new-entry form showed 'Injected 500'. I removed the route and cleared the textarea, and the form still showed 'Injected 500' (500 characters left). I edited the first entry and saved it (PUT returned 200, the edit form closed). The new-entry form still showed 'Injected 500'. Code cause: in pages/plants/[id].vue, entryFormError is reset only at the start of addEntry(); onEntrySaved() and removeEntry() clear journalError but not entryFormError. JournalEntryForm.vue's shownError = localError ?? props.error, and neither typing nor clearing the body resets it. So a stale server failure message stays above an empty form after later journal actions succeed, which is misleading. It is cosmetic and nothing is lost, so severity is low.",
+  "severity": "low",
+  "wallMs": 99183
+}

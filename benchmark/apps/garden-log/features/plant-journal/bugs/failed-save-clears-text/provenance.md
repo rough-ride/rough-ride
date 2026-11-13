@@ -1,0 +1,1 @@
+Written by hand for the comparison benchmark (benchmark/comparison/). The clean feature clears the form only after a successful save. This variant clears it in finally, so it also clears after a failed save.

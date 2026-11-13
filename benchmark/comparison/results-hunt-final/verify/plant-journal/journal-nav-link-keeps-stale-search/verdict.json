@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-nav-link-keeps-stale-search",
+  "sentence": "On /journal with an active search, clicking the Journal nav link clears q from the URL but leaves the search box text and filtered results in place.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /journal (3 unfiltered entries: Tomato, Lettuce). Typed 'tomato' in the search box: URL became /journal?q=tomato and 2 Tomato entries showed. Then clicked the 'Journal' nav link: URL became /journal with no q, but the search box still said 'tomato', the page still showed only the 2 Tomato entries and '2 entries match'. With 'courgette' it was the same: URL /journal, box 'courgette', '0 entries match' instead of the 3 latest entries. Cause in the code: pages/journal.vue sets `search` from route.query.q only once, when the page is set up, and only watches search -> URL, never route.query -> search. The nav link navigates within the same page, so the page is reused and the URL and the shown state end up out of sync.",
+  "severity": "low",
+  "wallMs": 44742
+}

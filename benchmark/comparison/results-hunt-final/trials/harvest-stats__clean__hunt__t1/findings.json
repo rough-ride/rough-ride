@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Stats page crashes on a response missing fields; navigation to Stats silently fails",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe faults, expectation stats-empty-object-shows-error",
+      "expected": "A visible error message when the stats response is empty or malformed",
+      "actual": "Uncaught TypeError \"Cannot read properties of undefined (reading 'length')\" (stats.plants.length); clicking Stats leaves the user on the Dashboard with no error shown",
+      "evidence": "{\"alerts\":[],\"text\":[\"Dashboard\",\"Welcome back, Demo. Here is how the garden is doing.\",\"Add plant\",\"Log harvest\",\"Summary\",\"PLANTS\",\"3\",\"In 2 beds\",\"View\",\"plants\",\"HARVESTED IN 2026\",\"2.6 kg\",\"5 harvests\",\"TOP PLANT THIS YEAR\",\"Courgette\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\"],\"hits\":1} | {\"alerts\":[],\"text\":[\"Dashboard\",\"Welcome back, Demo. Here is how the garden is doing.\",\"Add plant\",\"Log harvest\",\"Summary\",\"PLANTS\",\"3\",\"In 2 beds\",\"View\",\"plants\",\"HARVESTED IN 2026\",\"2.6 kg\",\"5 harvests\",\"TOP PLANT THIS YEAR\",\"Courgette\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\"],\"hits\":1}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-192615-hunt-9c11",
+        "probe": "faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Stats request that never answers leaves 'Loading stats…' forever with the old range's results shown",
+      "where": "/stats",
+      "steps": "Probe hang, expectation hang-not-stuck-loading",
+      "expected": "After changing From to 2026-07-01 and the request hanging, a timeout or error and a way to retry; old results not presented as current",
+      "actual": "After 13 s the page still shows 'Loading stats…' with the previous 1 Jan-31 Dec table and best plants under the new From date, with no error and no timeout",
+      "evidence": "{\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"]} | {\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-192615-hunt-9c11",
+        "probe": "hang",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

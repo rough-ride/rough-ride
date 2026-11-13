@@ -1,0 +1,74 @@
+{
+  "id": "plant-journal__hx3__hunt__t2",
+  "feature": "plant-journal",
+  "bug": "hx3",
+  "arm": "hunt",
+  "trial": 2,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T18:17:01.883Z",
+  "materializeMs": 6806,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__hx3__hunt__t2/variant/pzgm5nr1/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "03d5377a-8bdf-44fa-affe-2679ff408dd4",
+  "loadBefore": [
+    4.95556640625,
+    4.7880859375,
+    6.72021484375
+  ],
+  "loadAfter": [
+    4.7529296875,
+    5.29443359375,
+    6.55419921875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 224608,
+  "reportedCostUsd": 0.4688762,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 30,
+      "outputTokens": 10349,
+      "cacheReadInputTokens": 325031,
+      "cacheCreationInputTokens": 39354,
+      "webSearchRequests": 0,
+      "costUSD": 0.4688762,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1700,
+      "cacheCreationEphemeral5mInputTokens": 39354,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 1,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 3m30s | run 20261112-191719-hunt-912a | 2 confirmed, 0 dropped on re-run\ntarget: http://localhost:3790\n\nFindings (each reproduced twice from scratch)\n1. HIGH   A journal entry disappears from the plant page when deleting it fails\n   where: /plants/:id Journal section (DELETE /api/journal/:id)\n   expected: When the delete request fails, the entry stays in the list next to the error, because it is still in the database.\n   saw: {\"visible\":0,\"alerts\":[\"Injected 500\"]}\n   repro: .rough-ride/runs/20261112-191719-hunt-912a/probes/delete-fail.mjs (expectation \"failed-delete-keeps-entry-visible\")\n2. MEDIUM A malformed journal response is shown as a list of blank entries\n   where: /journal (GET /api/journal)\n   expected: An unreadable response shows an error, not entries.\n   saw: {\"items\":14,\"alerts\":[\"14 entries\"],\"t\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\"]}\n   repro: .rough-ride/runs/20261112-191719-hunt-912a/probes/journal-malformed.mjs (expectation \"malformed-response-shown-as-error-not-entries\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-aaf377e279f2b4d62.jsonl",
+    "agent-aaf377e279f2b4d62.meta.json"
+  ],
+  "usage": {
+    "input": 30,
+    "output": 10349,
+    "cacheRead": 325031,
+    "cacheWrite": 39354,
+    "requests": 15,
+    "toolCalls": {
+      "Bash": 15,
+      "Read": 1
+    }
+  },
+  "findingCount": 2,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 ++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 105 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 276 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T18:21:01.216Z"
+}

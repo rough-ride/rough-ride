@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "title": "Harvests on the 'To' date are left out of the stats",
+      "where": "GET /api/stats/harvests and /stats page",
+      "steps": "Sign in. Open /stats?from=2026-07-15&to=2026-07-15 (there is a Tomato harvest of 450 g on 2026-07-15), or call GET /api/stats/harvests?from=2026-07-01&to=2026-07-20 (Courgette 1200 g was harvested on 2026-07-20).",
+      "expected": "The range includes both ends: 1 harvest of 450 g for 15 Jul, and Courgette 1200 g counted in 1–20 Jul.",
+      "actual": "The 15 Jul range returns 0 harvests and the page shows 'No harvests in this range'. The 1–20 Jul range shows only Tomato 450 g and leaves out the Courgette harvest from 20 Jul. Both queries use `harvested_on < to` where they should use `<=`.",
+      "evidence": "API returned {\"plants\":[],\"harvest_count\":0} for from=to=2026-07-15. The SSR page showed '0 harvests from 15 Jul 2026 to 15 Jul 2026' and 'No harvests in this range'. For 1–20 Jul total_grams was 450.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Default range and dashboard 'Top plant this year' leave out 31 December",
+      "where": "/stats default range, GET /api/dashboard/summary",
+      "steps": "Log a harvest dated 31 Dec of the current year (possible once that date arrives), then look at the dashboard top plant and at /stats with the default range.",
+      "expected": "A harvest on 31 Dec counts toward this year's totals and the best plant.",
+      "actual": "top_plants() uses `< year_end` (12-31), so 31 Dec harvests are dropped. The dashboard used BETWEEN before this change, so this is a regression. It can also make the top plant disagree with harvest_grams_year, which still uses BETWEEN.",
+      "evidence": "Code: routers/stats.py top_plants uses `h.harvested_on < ?` with year_bounds() end = 12-31. dashboard.py now calls it in place of the old BETWEEN query.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats error state has no retry",
+      "where": "/stats page",
+      "steps": "Open /stats while the API is down or returns 5xx.",
+      "expected": "An error message with a Retry button that refetches without reloading the page.",
+      "actual": "Only an AlertMessage is shown. There is no retry control, and the only way to retry is to change a date or reload the page.",
+      "evidence": "stats.vue renders <AlertMessage v-if=\"statsError\"> with no button and does not use the refresh() returned by useApiFetch.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout",
+      "where": "/stats page, dashboard",
+      "steps": "Make the API hang (slow or stalled response) and open /stats.",
+      "expected": "The request fails after 10 seconds with a visible error.",
+      "actual": "useApiFetch/$fetch.create sets no timeout, so 'Loading stats…' can stay on screen forever.",
+      "evidence": "composables/useApi.ts has no timeout option. stats.vue passes none either.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Bad date in the URL shows a raw technical validation message",
+      "where": "/stats",
+      "steps": "Open /stats?from=2026-02-30 (it matches the page's regex but is not a real date).",
+      "expected": "A friendly reason, or a fallback to the default date.",
+      "actual": "The page shows the raw API message, roughly 'Query.from: Input should be a valid date or datetime, day value is outside expected range'.",
+      "evidence": "The API returns 422 with loc [query, from]. apiErrorMessage only strips 'body' from loc, not 'query'. queryDate() checks only the \\d{4}-\\d{2}-\\d{2} pattern.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

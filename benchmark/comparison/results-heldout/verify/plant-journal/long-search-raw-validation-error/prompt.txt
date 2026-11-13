@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3794, API http://localhost:8794/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-long-search-raw-validation-error/scratch.
+
+The reported problem: Typing more than 80 characters into the /journal search box (no maxlength) makes the API return 422 and the page replaces results with a raw 'String should have at most 80 characters' message.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Search longer than 80 characters gives a raw validation message instead of results",
+  "where": "/journal search box",
+  "steps": "Type or paste 81+ characters in Search.",
+  "expected": "The input is limited to 80 characters, or the page shows a friendly reason.",
+  "actual": "The list is replaced with 'Query.q: String should have at most 80 characters'. The input has no maxlength.",
+  "evidence": "The page text showed 'Query.q: String should have at most 80 characters'."
+ },
+ {
+  "title": "A search longer than 80 characters shows a raw validation error instead of results",
+  "where": "/journal search box -> GET /api/journal?q=",
+  "steps": "On /journal, type or paste more than 80 characters into Search.",
+  "expected": "The input limits the length or the page shows a friendly reason. Results are not replaced by an error.",
+  "actual": "The page shows 'Query.q: String should have at most 80 characters' in place of the list. The input has no maxlength.",
+  "evidence": "GET /journal?q=<81 'a'> rendered alert 'Query.q: String should have at most 80 characters'; the API returns 422 with max_length 80."
+ },
+ {
+  "title": "Search over 80 characters shows a raw validation error",
+  "where": "/journal search box",
+  "steps": "Type or paste 81+ characters into Search",
+  "expected": "Input limited, or a friendly message",
+  "actual": "The API returns 422 (q max_length 80) and the page swaps the results for 'Q: String should have at most 80 characters'. The input has no maxlength.",
+  "evidence": "curl GET /api/journal?q=<81 a> -> 422 string_too_long"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-long-search-raw-validation-error/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

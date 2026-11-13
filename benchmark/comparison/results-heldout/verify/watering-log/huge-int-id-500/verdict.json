@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "huge-int-id-500",
+  "sentence": "Watering endpoints (POST bed_id, GET ?bed_id=, DELETE /{id}) return 500 instead of 4xx for integers beyond 64 bits because SQLite overflows.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo via POST /api/auth/login, then curl with the session cookie against the running API: POST /api/waterings {\"bed_id\":99999999999999999999,\"litres\":2} -> 'Internal Server Error' 500; GET /api/waterings?bed_id=99999999999999999999 -> 500; DELETE /api/waterings/99999999999999999999 -> 500; DELETE /api/waterings/9223372036854775808 (2^63) -> 500, while 9223372036854775807 -> 404 'Watering not found.' Code: routers/waterings.py and schemas.WateringIn declare bed_id/watering_id as int (gt=0) with no upper bound, so sqlite3 raises OverflowError when binding the value. Expected 422/404. Note: the existing DELETE /api/beds/{huge} also returns 500, so the pattern is older than this change, but the new watering endpoints have it too. Impact is limited to hand-crafted or edited URLs/requests.",
+  "severity": "low",
+  "wallMs": 51898
+}

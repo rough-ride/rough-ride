@@ -1,0 +1,84 @@
+{
+  "findings": [
+    {
+      "title": "Negative litres accepted by the past-watering form and the API",
+      "where": "Beds page 'Record past watering' form; POST /api/waterings",
+      "steps": "On /beds click 'Record past watering' for North bed, enter -3 in Litres and click Save watering. Or POST {\"bed_id\":1,\"watered_on\":\"2026-11-10\",\"litres\":-5}.",
+      "expected": "The form refuses it with a visible reason (amount must be greater than zero) and the API answers 422.",
+      "actual": "The form shows the success message 'Recorded -3 L on 12 Nov 2026.' and the API returns 201. The client check only rejects litres === 0, despite its message saying 'greater than zero'. WateringIn.litres has le=10000 but no lower bound. Negative rows then show as '-3 L' on /waterings and lower the 'N L in total' sum (it showed '6 L in total' for +10, +4, -5, -3).",
+      "evidence": "Saw the success status and the '-3 L' and '-5 L' rows on /waterings. curl returned 201 with litres -5.0.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "API accepts zero, -infinity and tiny amounts; 'Water now' entries have no amount",
+      "where": "POST /api/waterings",
+      "steps": "POST {\"bed_id\":1,\"litres\":0}, {\"bed_id\":1,\"watered_on\":\"2026-11-10\",\"litres\":\"-inf\"} or litres 1e-9.",
+      "expected": "4xx for amounts that are not positive and finite.",
+      "actual": "All return 201. '-inf' is stored and comes back as litres null. 1e-9 is shown as '0 L'.",
+      "evidence": "curl responses 201 (test rows deleted afterwards).",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "A very large bed_id or watering id gives a 500",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":99999999999999999999,\"litres\":1}, or GET /api/waterings?bed_id=99999999999999999999, or DELETE /api/waterings/99999999999999999999.",
+      "expected": "A 4xx validation error.",
+      "actual": "Internal Server Error 500 (the integer overflows SQLite).",
+      "evidence": "curl printed 'Internal Server Error 500' for all three.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page and dashboard 'Recent waterings' error states have no retry",
+      "where": "/waterings and the dashboard",
+      "steps": "Make /api/waterings* return 500 (browser_route). On /waterings change the Bed filter, or open the dashboard through client-side navigation.",
+      "expected": "An error message with a Retry button that reloads the data once the server is back.",
+      "actual": "/waterings shows only 'Could not load waterings.' with no retry. The dashboard section only shows an AlertMessage, and its refresh function is not even destructured. The only way to recover is to reload or change the filter.",
+      "evidence": "Snapshot: alert 'Could not load waterings.' with no button. index.vue reads only { data, error } from wateringsResult.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Beds list failure on the waterings page is silent; the filter shows only 'All beds'",
+      "where": "/waterings bed filter",
+      "steps": "Make GET /api/beds fail while opening /waterings.",
+      "expected": "An error saying the beds could not be loaded, with a retry.",
+      "actual": "bedsResult.error is ignored. The select silently offers only 'All beds', so the user cannot filter and is not told why.",
+      "evidence": "waterings.vue: const { data: beds } = bedsResult; no error handling.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Requests have no 10-second timeout",
+      "where": "Beds 'Water now' / 'Save watering', /waterings, dashboard",
+      "steps": "Make POST /api/waterings hang, then click Water now.",
+      "expected": "The request fails after 10 s with a visible error and the button is enabled again.",
+      "actual": "useApiClient and useApiFetch set no timeout, so the button stays on 'Watering…' / 'Saving…' and disabled for as long as the request hangs.",
+      "evidence": "No timeout option in composables/useApi.ts or in the new calls.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying a timed-out watering creates a duplicate",
+      "where": "POST /api/waterings",
+      "steps": "Click Water now, let the response be lost or time out, then click again.",
+      "expected": "One watering is recorded.",
+      "actual": "There is no idempotency key or de-duplication, so every retry inserts another row.",
+      "evidence": "create_watering always INSERTs.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "An answer to an old filter can replace newer results on /waterings",
+      "where": "/waterings bed filter",
+      "steps": "Slow down the response for bed A, then quickly switch the filter to bed B.",
+      "expected": "Only bed B's results are shown.",
+      "actual": "This depends on useFetch cancelling the previous request. The code adds no guard of its own against late answers.",
+      "evidence": "Reading the code only.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

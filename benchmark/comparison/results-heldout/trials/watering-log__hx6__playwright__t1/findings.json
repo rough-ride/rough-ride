@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Bed filter on Waterings page is lost on reload/shared link (query param mismatch bed vs bed_id)",
+      "where": "/waterings (frontend/app/pages/waterings.vue)",
+      "steps": "Open /waterings (or via 'Watering history' link, which uses ?bed=1). Choose 'Shade corner' in the Bed filter. URL becomes /waterings?bed_id=2. Reload the page or open that URL.",
+      "expected": "Filter stays on Shade corner, showing only its waterings.",
+      "actual": "Page reads route.query.bed but writes bed_id, so after reload the filter resets to 'All beds' and every watering is listed.",
+      "evidence": "URL after selecting was http://localhost:3792/waterings?bed_id=2; after reload select value was '' and the list showed waterings from all beds.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Water now on a second bed re-enables the first bed's button; double watering recorded and notices lost",
+      "where": "/beds Water now (single shared wateringBedId / waterNotice)",
+      "steps": "With a slow network (POST /api/waterings delayed 2.5 s), click 'Water now' on North bed, then 'Water now' on Shade corner, then 'Water now' on North bed again.",
+      "expected": "North bed's button stays disabled until its request finishes; one watering per click intent; each bed shows its own result.",
+      "actual": "wateringBedId is overwritten by the second bed, so North bed's button is re-enabled while its request is in flight and a second click creates a duplicate. The first request to finish sets wateringBedId to null and re-enables everything. Only one success notice is kept (Shade corner's was lost).",
+      "evidence": "North bed waterings count went 5 -> 7. northDisabledWhilePending=false. Only alert visible: 'Watered North bed.'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Watering requests have no timeout; Water now spins forever when the server does not answer",
+      "where": "/beds Water now and Save watering; /waterings Delete; dashboard and waterings GETs",
+      "steps": "Make POST /api/waterings hang (no response). Click 'Water now' on a bed and wait more than 10 s.",
+      "expected": "The request fails after 10 s with a visible error and the button is enabled again.",
+      "actual": "After 14 s the button still said 'Watering…' and was disabled. No timeout is set in useApiClient or useApiFetch.",
+      "evidence": "Button text 'Watering… North bed', disabled=true after 14 s.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page and dashboard 'Recent waterings' error states have no retry",
+      "where": "/waterings, / (dashboard Recent waterings section)",
+      "steps": "Make GET /api/waterings return 503. Navigate in the app to Waterings, then to Dashboard.",
+      "expected": "An error message with a Retry button that reloads the data once the server is back.",
+      "actual": "Only 'Could not load waterings.' / 'Could not load recent waterings.' is shown, with no retry control (the dashboard doesn't even destructure refresh for waterings). The user has to reload the whole page.",
+      "evidence": "Only button on the page was 'Sign out' in both cases.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page hides a failed bed list: the filter silently shows only 'All beds'",
+      "where": "/waterings bed filter",
+      "steps": "Make GET /api/beds fail while opening /waterings through the app.",
+      "expected": "An error saying the beds could not be loaded, with a retry.",
+      "actual": "bedsResult.error is ignored. The dropdown just has fewer or no bed options and no message.",
+      "evidence": "Code: `const { data: beds } = bedsResult`, with no error handling. Rendering falls back to `beds ?? []`.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Very large IDs return 500 Internal Server Error from watering endpoints",
+      "where": "GET /api/waterings?bed_id=, POST /api/waterings, DELETE /api/waterings/{id}",
+      "steps": "curl GET /api/waterings?bed_id=99999999999999999999; POST {\"bed_id\":99999999999999999999}; DELETE /api/waterings/99999999999999999999",
+      "expected": "4xx (422 or 404).",
+      "actual": "500 Internal Server Error, because the int exceeds SQLite's 64-bit range and raises OverflowError. Neither bed_id nor watering_id has an upper bound.",
+      "evidence": "HTTP 500 'Internal Server Error' for all three requests.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "When the list refresh fails after Water now, the whole bed list is replaced by an error with no retry",
+      "where": "/beds Water now",
+      "steps": "Make GET /api/beds return 500 and click 'Water now' on a bed.",
+      "expected": "The watering is confirmed and the existing bed list stays, or a retry is offered.",
+      "actual": "The watering was saved, but the list area becomes only 'Could not load beds.', with no retry. The success notice and the beds disappear.",
+      "evidence": "Watering count went 4 -> 5. Main area text after the click: 'All beds\\nCould not load beds.'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Extreme dates and tiny amounts are accepted and display oddly ('1 Jan 1', '0 L')",
+      "where": "POST /api/waterings, /beds past-watering form, /waterings, dashboard",
+      "steps": "Record a past watering dated 0001-01-01 with litres 0.000000001 (through the form or the API).",
+      "expected": "An unrealistic date or amount is refused with a reason, or the amount is shown correctly.",
+      "actual": "Accepted with 201. It is listed as '1 Jan 1' and '0 L', and it appears in the dashboard's recent waterings.",
+      "evidence": "Waterings table row: '1 Jan 1  North bed  0 L'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "'Water now' date uses the server's local date and the future-date check uses the server's today, not the gardener's",
+      "where": "POST /api/waterings (backend/routers/waterings.py, schemas.WateringIn)",
+      "steps": "Use the browser in a time zone ahead of the server (e.g. UTC+10 when the server is UTC), shortly after local midnight. Record a past watering for today (the form's default and max is the browser's today).",
+      "expected": "Today's watering is accepted.",
+      "actual": "The server rejects it with 'Watering date cannot be in the future.' because it compares with date.today() on the server. 'Water now' entries also get watered_on from the server's date, which can differ from the displayed local time.",
+      "evidence": "Code: not_in_future uses date.today(); watered_on = now.astimezone().date(); the form uses the client's todayIso().",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "No idempotency for creating waterings; retrying after a timeout or lost response creates duplicates",
+      "where": "POST /api/waterings",
+      "steps": "Click Water now. The response is lost after the server commits, so the user sees an error and clicks again.",
+      "expected": "Only one watering is recorded.",
+      "actual": "Each POST inserts a new row. There is no idempotency key or dedupe.",
+      "evidence": "Code review. Combined with the missing timeout and the refresh issue above, the user is invited to retry.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

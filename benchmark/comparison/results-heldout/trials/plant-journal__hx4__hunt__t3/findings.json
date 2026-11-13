@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Adding journal entries multiplies a plant's harvest count and harvested weight",
+      "where": "GET /api/plants, GET /api/plants/{id}, /plants and /plants/{id}",
+      "steps": "Probe harvest-count, expectation harvest-count-unchanged-by-journal",
+      "expected": "harvest_count equals the number of harvests (3) whatever the number of journal entries",
+      "actual": "harvest_count is 12 (3 harvests x 4 journal entries). The new LEFT JOIN on journal_entries in PLANT_SELECT repeats each harvest row once per entry, so COUNT(h.id) is inflated. The detail page shows '2 harvests, 2.4 kg total' with only one harvest row listed",
+      "evidence": "{\"harvest_count\":18,\"harvests\":3,\"jc\":6} | {\"harvest_count\":24,\"harvests\":3,\"jc\":8}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-184533-hunt-2f84",
+        "probe": "harvest-count",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Harvested weight inflated by the number of journal entries",
+      "where": "GET /api/plants/{id}, plants list 'HARVESTED' figure",
+      "steps": "Probe harvest-count, expectation harvest-grams-unchanged-by-journal",
+      "expected": "harvest_grams equals the sum of the plant's harvests (1350 g)",
+      "actual": "harvest_grams is 5400 (shown as 5.4 kg on /plants), because SUM(h.weight_grams) runs over rows multiplied by the journal join",
+      "evidence": "{\"harvest_grams\":13500,\"actualSum\":1350} | {\"harvest_grams\":16200,\"actualSum\":1350}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-184533-hunt-2f84",
+        "probe": "harvest-count",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

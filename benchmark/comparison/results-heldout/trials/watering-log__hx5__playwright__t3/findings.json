@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Water now / Save watering requests never time out; button stays on 'Watering…' and disabled forever",
+      "where": "/beds (POST /api/waterings); also GET /api/waterings on /waterings and dashboard",
+      "steps": "On /beds make POST /api/waterings hang (route that never responds), click 'Water now' on North bed, wait 40+ seconds.",
+      "expected": "Request fails after 10 s with a visible error; button re-enabled.",
+      "actual": "Button still reads 'Watering…' and is disabled after ~45 s; no error. useApiClient/useApiFetch set no timeout, so list loads on /waterings would likewise show 'Loading waterings…' indefinitely.",
+      "evidence": "Button state after wait: ['Watering…\\nNorth bed', disabled=true].",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Retrying Water now after a lost response creates a duplicate watering",
+      "where": "/beds, POST /api/waterings",
+      "steps": "Make the POST reach the server but drop the response (network error). Page shows 'The garden server could not be reached.' Click 'Water now' again.",
+      "expected": "One watering recorded (idempotency key or dedupe).",
+      "actual": "Two waterings recorded for Shade corner one second apart (ids 4 and 5, 17:09:29 and 17:09:30).",
+      "evidence": "GET /api/waterings listed two Shade corner entries with watered_at 17:09:29 and 17:09:30 after one failed and one successful click.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Watering list and dashboard error states have no retry",
+      "where": "/waterings, dashboard 'Recent waterings'",
+      "steps": "Make GET /api/waterings return 500, open the dashboard and click 'All waterings'.",
+      "expected": "Error message with a Retry button that reloads the list once the server is back.",
+      "actual": "Only 'Could not load waterings.' with no button in main (the only way to recover is changing the filter or reloading). The dashboard section also shows only an alert; its refresh is not even destructured.",
+      "evidence": "main buttons list was empty in the error state; index.vue destructures only data and error for wateringsResult.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Past-watering form is crushed at 375 px: Date and Litres inputs are ~28 px wide",
+      "where": "/beds, 'Record past watering' form",
+      "steps": "Set the viewport to 375 px, open /beds and click 'Record past watering' for a bed.",
+      "expected": "Fields are usable (stacked on narrow screens).",
+      "actual": "The .water-form grid is '1fr 1fr auto', so the buttons take most of the width and the date and number inputs shrink to tiny boxes where no value is visible.",
+      "evidence": "Screenshot scratch/beds375.png: Date and Litres inputs are about 28 px wide next to 'Save watering' and 'Cancel'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Oversized bed_id / watering id gives 500 instead of 4xx",
+      "where": "GET /api/waterings?bed_id=, POST /api/waterings, DELETE /api/waterings/{id}",
+      "steps": "curl GET /api/waterings?bed_id=99999999999999999999; POST {\"bed_id\":99999999999999999999}; DELETE /api/waterings/99999999999999999999",
+      "expected": "422/404",
+      "actual": "500 Internal Server Error on all three (SQLite integer overflow). Reachable from the UI with /waterings?bed=99999999999999999999.",
+      "evidence": "HTTP codes 500, 500 'Internal Server Error', 500.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Beds load failure on the waterings page goes unnoticed: filter silently has only 'All beds'",
+      "where": "/waterings bed filter",
+      "steps": "Make GET /api/beds return 500 and navigate to /waterings from the dashboard link.",
+      "expected": "Error saying the beds could not be loaded, with a retry.",
+      "actual": "The select shows only 'All beds', with no message; the beds error is ignored.",
+      "evidence": "select options length = 1; no alert shown.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Tiny litre amounts are accepted but shown as '0 L'",
+      "where": "/beds past-watering form, waterings list, dashboard",
+      "steps": "Record a past watering with litres 0.001 (or POST litres 1e-300).",
+      "expected": "Either reject amounts below a sensible minimum (input has min=0.1) or show the real value.",
+      "actual": "Saved, and the notice says 'Recorded 0 L on 12 Nov 2026.'; lists show 0 L. Client checks only >0 and the server only gt=0.",
+      "evidence": "Notice text 'Recorded 0 L on 12 Nov 2026.'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Implausible dates such as year 0001 are accepted",
+      "where": "POST /api/waterings",
+      "steps": "POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\",\"litres\":1}",
+      "expected": "Refused with a visible reason (no lower bound on the date).",
+      "actual": "201 Created.",
+      "evidence": "Response 201 with watered_on 0001-01-01.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid or unknown ?bed= in the URL shows a raw validation message or an unselected filter",
+      "where": "/waterings?bed=abc, /waterings?bed=999",
+      "steps": "Open /waterings?bed=abc, then /waterings?bed=999.",
+      "expected": "A friendly message, or the filter falls back to all beds.",
+      "actual": "bed=abc shows 'Query.bed id: Input should be a valid integer, unable to parse string as an integer'. bed=999 shows a blank select (selectedIndex -1) and 'No waterings for this bed'.",
+      "evidence": "Page text captured as described.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Watering two beds at once re-enables the first bed's button while its request is pending",
+      "where": "/beds",
+      "steps": "Click 'Water now' on bed A while its request is slow, then click 'Water now' on bed B.",
+      "expected": "Bed A's button stays disabled until its request finishes.",
+      "actual": "wateringBedId is a single ref, so it moves to B and A can be clicked again, which records a duplicate. A's error or notice can also be lost, because waterError and waterNotice are single values that are cleared.",
+      "evidence": "Code: beds.vue recordWatering sets wateringBedId.value = bed.id and clears it in finally.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

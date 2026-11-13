@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Journal search crashes (500) on an apostrophe or quote; SQL built by string interpolation",
+      "where": "GET /api/journal (q param); Journal page and plant detail journal",
+      "steps": "Sign in, go to the Journal page, and type a word containing an apostrophe into the search box, e.g. \"it's\" (or any text with a single quote). Equivalent API call: GET /api/journal?q=it's",
+      "expected": "The search runs and shows matching entries (or an empty-state), or at worst rejects bad input with a 4xx. An ordinary apostrophe is normal text a gardener types.",
+      "actual": "The request returns HTTP 500 Internal Server Error. The search term is substituted directly into the SQL with an f-string: clauses.append(f\"(j.body LIKE '%{term}%' OR p.name LIKE '%{term}%')\") in backend/routers/journal.py, so a single quote breaks the SQL. This is also a SQL-injection hole (the term is attacker-controlled and unparameterized). The repo already provides escape_like() and parameter binding in routers/common.py, which this code does not use.",
+      "evidence": "curl 'GET /api/journal?q=it%27s' returned 'Internal Server Error [500]'. Payloads containing a quote such as \"' OR 1=1 --\" also returned 500, confirming the term lands inside the SQL literal.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal search treats % and _ as wildcards instead of literal characters",
+      "where": "GET /api/journal (q param)",
+      "steps": "Search the journal for \"%\" (or \"_\").",
+      "expected": "Searching for \"%\" should match only entries whose text actually contains a percent sign (or return no matches), not every entry.",
+      "actual": "Because the term is placed inside a LIKE pattern without escaping, % and _ act as SQL wildcards. Searching \"%\" returns all entries; \"_\" matches any single character. Users can't search for these literal characters.",
+      "evidence": "curl 'GET /api/journal?q=%25' returned the full list of entries rather than only those containing a percent sign.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal page load/error state offers no retry",
+      "where": "Journal page (frontend/app/pages/journal.vue); also journal section of plant detail page",
+      "steps": "Cause the journal fetch to fail (e.g. search a quote to trigger the 500, or stop the API). Observe the error UI.",
+      "expected": "Per the resilience requirements, a page that loads data should present an error state with a retry control so the user can try again once the server is back, without reloading the page.",
+      "actual": "On failure the page only renders the AlertMessage text 'Could not load the journal.' There is no retry button; the user must reload. (The plant detail journal section shows the same alert-only pattern with no retry.)",
+      "evidence": "journal.vue renders only <AlertMessage v-if=\"loadError\"> with no retry action; plant [id].vue similarly shows journalLoadError via AlertMessage only.",
+      "status": "suspected",
+      "severity": "medium"
+    }
+  ]
+}

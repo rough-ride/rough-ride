@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-tiny-litres-shown-0l/scratch.
+
+The reported problem: Litre amounts below 0.005 (e.g. 0.001) are accepted by the form and API but displayed as '0 L' in notices, the dashboard and /waterings.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Tiny litres amounts are stored but displayed as '0 L'",
+  "where": "Waterings page, dashboard Recent waterings",
+  "steps": "Record a watering with litres 0.001 (server accepts any value > 0; the number input only hints step 0.1), then open /waterings",
+  "expected": "Amount is refused (below 0.1) or shown accurately",
+  "actual": "Row shows '0 L'",
+  "evidence": "SSR HTML of /waterings: '1 Jan 1 North bed 0 L' for litres 0.001 (formatLitres uses maximumFractionDigits 2)"
+ },
+ {
+  "title": "Small litre amounts are accepted but shown as '0 L'",
+  "where": "Beds page past-watering form / POST /api/waterings, dashboard and Waterings page",
+  "steps": "Record a past watering with litres 0.001 (the form has novalidate, so step/min don't stop it; the API accepts it)",
+  "expected": "Refuse amounts below the 0.1 step with a reason, or show the real value",
+  "actual": "Saved, then listed as '0 L' on the dashboard and Waterings page",
+  "evidence": "API returned 201 with litres 0.001; the dashboard HTML shows 'North bed 0 L'"
+ },
+ {
+  "title": "Tiny litre amounts are accepted but displayed as '0 L'",
+  "where": "/beds Record past watering, /waterings, dashboard",
+  "steps": "Record a past watering with litres 0.001 (the form uses novalidate and only checks > 0). The API also accepts 1e-7",
+  "expected": "Reject amounts below the 0.1 step/min, or show the actual value",
+  "actual": "Saved, and formatLitres (maximumFractionDigits 2) shows '0 L' in the notice and lists",
+  "evidence": "POST litres 0.0000001 returned 201 with litres 1e-7. formatLitres rounds to 2 decimals"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-tiny-litres-shown-0l/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

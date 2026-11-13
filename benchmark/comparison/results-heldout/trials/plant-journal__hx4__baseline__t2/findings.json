@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Harvest count and harvest weight are multiplied by the number of journal entries",
+      "where": "GET /api/plants, GET /api/plants/{id}; Plants list and plant detail pages",
+      "steps": "Open a plant that has harvests and give it 2 journal entries (Tomato in the sample data has 3 harvests totalling 1350 g). Open /plants or /plants/1.",
+      "expected": "3 harvests, 1.35 kg",
+      "actual": "6 harvests, 2.7 kg. The new LEFT JOIN journal_entries in PLANT_SELECT multiplies the harvest rows, and COUNT(h.id)/SUM(h.weight_grams) are not DISTINCT. The delete-plant confirmation shows the inflated count too.",
+      "evidence": "API: harvest_count=6, harvest_grams=2700, but the harvests array has 3 items summing to 1350. The SSR HTML of /plants/1 contains '6 harvests' and '2.7 kg'. Bed totals (separate query) show the correct 2550 g.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Out-of-range integer ids return 500 Internal Server Error",
+      "where": "POST /api/journal (plant_id), PUT/DELETE /api/journal/{entry_id}, GET /api/journal?plant_id=",
+      "steps": "POST /api/journal with {\"plant_id\":999999999999999999999,\"entry_on\":\"2026-11-01\",\"body\":\"x\"}, or PUT /api/journal/99999999999999999999999",
+      "expected": "4xx (422 or 404)",
+      "actual": "500 Internal Server Error (SQLite integer overflow; there is no upper bound on the ids)",
+      "evidence": "curl returned 'Internal Server Error 500' for all three requests",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors offer no retry",
+      "where": "/journal page and the Journal section of /plants/{id}",
+      "steps": "Make GET /api/journal fail (server down or 5xx), then open /journal or a plant page",
+      "expected": "An error message with a Retry button that refetches without a page reload",
+      "actual": "Only an AlertMessage is shown. Neither page exposes refresh(), so the only way to recover is to reload or edit the search text.",
+      "evidence": "journal.vue does not destructure refresh and renders no retry button; in [id].vue the journal alert has no action",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal requests have no timeout, so a hung request leaves 'Saving…' disabled forever",
+      "where": "Add/edit/delete journal entry on /plants/{id}; /journal",
+      "steps": "Make the API stall (accept the connection but never answer) and click Add entry or Save entry",
+      "expected": "The request fails after 10 s with a visible error and the button is enabled again",
+      "actual": "$fetch.create/useFetch are used without a timeout option. The button stays at 'Saving…' (disabled) and the list stays at 'Loading entries…' indefinitely.",
+      "evidence": "useApi.ts: no timeout in $fetch.create; the journal code passes none",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying an add after a timeout or network error creates duplicate entries",
+      "where": "POST /api/journal from the New entry form",
+      "steps": "Submit an entry. The server saves it but the response is lost or times out. Click Add entry again.",
+      "expected": "One entry",
+      "actual": "Two identical entries. There is no idempotency key or duplicate check, and the form keeps the text, which invites a resubmit.",
+      "evidence": "create_entry inserts unconditionally; the client sends no request id",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Search over 80 characters shows a raw validation message instead of being limited",
+      "where": "/journal search box",
+      "steps": "Type or paste more than 80 characters into Search",
+      "expected": "The input limits the length, or a friendly message appears",
+      "actual": "The page shows the error 'Query.q: String should have at most 80 characters' in place of results. The input has no maxlength.",
+      "evidence": "SSR of /journal?q=<81 a's> rendered an alert with 'Query.q: String should have at most 80 characters'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Long unbroken plant names in the journal feed can overflow at 375 px",
+      "where": "/journal feed item heading (.journal-feed__plant)",
+      "steps": "Create a plant named with 80 characters and no spaces, add a journal entry, then view /journal at 375 px wide",
+      "expected": "The name wraps",
+      "actual": "The entry body has overflow-wrap:anywhere but the plant link does not, so the page probably scrolls sideways",
+      "evidence": "CSS review: .journal-feed__plant has no overflow-wrap or min-width rule",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Implausible dates such as year 0001 are accepted",
+      "where": "POST/PUT /api/journal entry_on",
+      "steps": "POST an entry with entry_on 0001-01-01",
+      "expected": "A 422 with a reason (only future dates are refused)",
+      "actual": "201 Created; the entry sorts at the bottom with date '1 Jan 1'",
+      "evidence": "API returned 201 with entry_on 0001-01-01",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "500-character limit counts emoji twice in the browser but once on the server",
+      "where": "Journal entry form textarea",
+      "steps": "Type emoji into the entry",
+      "expected": "500 characters allowed, the same as the server",
+      "actual": "The textarea maxlength and the 'characters left' counter count UTF-16 code units, so only about 250 emoji fit, while the server accepts 500 emoji",
+      "evidence": "POST with 500 '🌱' returned 201; the form uses form.body.length and maxlength=500",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

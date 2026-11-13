@@ -1,0 +1,75 @@
+{
+  "id": "watering-log__negative-litres__playwright__t3",
+  "feature": "watering-log",
+  "bug": "negative-litres",
+  "arm": "playwright",
+  "trial": 3,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T12:31:12.846Z",
+  "materializeMs": 35454,
+  "repo": "$TMPDIR/rr-bench/work/watering-log__negative-litres__playwright__t3/variant/1q29kbf6/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/beds.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/beds.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/waterings.py\n?? frontend/app/pages/waterings.vue\n",
+  "sessionId": "69f23c7f-687c-4c69-b794-de7974ece6f7",
+  "loadBefore": [
+    36.72412109375,
+    21.80078125,
+    15.33935546875
+  ],
+  "loadAfter": [
+    16.3720703125,
+    20.490234375,
+    16.05126953125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 168902,
+  "reportedCostUsd": 0.48712980000000006,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 26,
+      "outputTokens": 7096,
+      "cacheReadInputTokens": 396409,
+      "cacheCreationInputTokens": 33228,
+      "webSearchRequests": 0,
+      "costUSD": 0.48712980000000006,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1315,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 33228,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 12,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 10 bugs and wrote them to `out/findings.json`. I saw 7 of them happen in the running app; the other 3 come from reading the code only.\n\n**Seen in the app:**\n1. **Negative litres are accepted (high).** The past-watering form only rejects exactly 0, and the server only sets a maximum (10,000) with no minimum. Entering -3 showed \"Recorded -3 L\"; the API also accepted -5 and -1e308. With a negative total, the \"… in total\" text disappears from the Waterings page.\n2. **The huge negative amount breaks the narrow layout (medium).** It shows as a 300-digit number, and at 375 px wide the page became 3,466 px wide.\n3. **No retry when waterings fail to load (medium).** With the API returning 500, the Waterings page shows only \"Could not load waterings.\" with no button. The dashboard's Recent waterings section has no retry either (I confirmed that one from the code).\n4. **\"Water now\" spins forever if the server never answers (medium).** The API client has no timeout; after 12 seconds the button still said \"Watering…\" and stayed disabled.\n5. **An oversized bed ID causes a server error (medium).** Posting `bed_id: 99999999999999999999` returns 500 instead of a 4xx.\n6. **Tiny amounts show as \"0 L\" (low).** 1e-9 litres was saved and displayed as 0 L.\n7. **Implausible dates are accepted (low).** The date 0001-01-01 was saved and shown as \"1 Jan 1\".\n\n**From the code only:**\n8. **Saving twice creates two waterings (low).** If a save is retried after a lost or slow response, the server simply inserts another row.\n9. **The bed filter fails silently (low).** If loading beds fails, the Waterings filter only offers \"All beds\" and shows no message.\n10. **Today's date can be refused (low).** The form's default date uses the browser's time zone, but the server checks \"not in the future\" against its own time zone, so a browser ahead of the server could see today rejected.\n\nMy testing left junk records in the app's data: watering rows with -5, -1e308, -3, 1e-9 and no litres, plus one dated 0001-01-01. They're on North bed and can be deleted from the Waterings page if you want clean sample data.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 26,
+    "output": 7096,
+    "cacheRead": 396409,
+    "cacheWrite": 33228,
+    "requests": 12,
+    "toolCalls": {
+      "Bash": 5,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 4,
+      "mcp__playwright__browser_snapshot": 1
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 10,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |   4 +-\n backend/db.py                    |  14 ++++-\n backend/routers/beds.py          |   8 ++-\n backend/schemas.py               |  29 +++++++++\n frontend/app/assets/css/main.css |  24 ++++++-\n frontend/app/layouts/default.vue |   1 +\n frontend/app/pages/beds.vue      | 133 ++++++++++++++++++++++++++++++++++++++-\n frontend/app/pages/index.vue     |  44 ++++++++++++-\n frontend/app/types/api.ts        |  17 +++++\n frontend/app/utils/format.ts     |  26 ++++++++\n 10 files changed, 292 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T12:35:03.629Z"
+}

@@ -1,0 +1,114 @@
+{
+  "findings": [
+    {
+      "title": "Bed filter on the Waterings page is lost on reload or when the link is shared",
+      "where": "/waterings",
+      "steps": "Open /waterings and pick 'Shade corner' in the Bed filter. The URL changes to ?bed_id=2. Reload the page or open that URL directly.",
+      "expected": "The list stays filtered to Shade corner.",
+      "actual": "The page reads ?bed= but writes ?bed_id=, so a reload shows 'All beds' and every watering. Back and forward don't update the filter either.",
+      "evidence": "SSR of /waterings?bed_id=2 shows 'All beds' selected and '3 waterings, 14 L in total' across both beds. /waterings?bed=2 is filtered. Code: waterings.vue reads route.query.bed but router.replace sets {bed_id}.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "A very large bed id gives a 500 on every watering endpoint",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":99999999999999999999}, or GET /api/waterings?bed_id=99999999999999999999, or DELETE /api/waterings/99999999999999999999.",
+      "expected": "A 4xx (422 or 404).",
+      "actual": "500 Internal Server Error with a plain-text body. Validation allows any int > 0, and SQLite overflows on it.",
+      "evidence": "All three requests returned 'Internal Server Error 500'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Small amounts show as '0 L'",
+      "where": "/waterings, dashboard Recent waterings, beds notice",
+      "steps": "Record a past watering with litres 0.001. The UI allows it with step 0.1 and novalidate, and the API accepts anything > 0.",
+      "expected": "The amount shown as it was saved, or refused.",
+      "actual": "It shows as '0 L'.",
+      "evidence": "After POST litres 0.001, the dashboard and /waterings rendered 'North bed 0 L'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Absurd past dates such as year 0001 are accepted",
+      "where": "POST /api/waterings, beds past-watering form",
+      "steps": "POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\"}, or type year 0001 in the date field.",
+      "expected": "A refusal with a reason (no lower bound on the date today).",
+      "actual": "201 Created. The entry is stored and shows in the history.",
+      "evidence": "The response was 201 with watered_on 0001-01-01.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Waterings list and dashboard widget have no retry when loading fails",
+      "where": "/waterings, dashboard Recent waterings",
+      "steps": "Stop the API or force an error (e.g. /waterings?bed=abc), then load the page.",
+      "expected": "An error state with a Retry button that refetches without a reload.",
+      "actual": "Only an AlertMessage with no retry. The dashboard doesn't even take refresh for waterings. With a bad bed in the URL, the raw message 'Query.bed id: Input should be a valid integer...' shows, and Clear filter is the only way out.",
+      "evidence": "SSR of /waterings?bed=abc shows 'Query.bed id: Input should be a valid integer, unable to parse string as an integer' with no retry control. Code: index.vue destructures only data/error for waterings.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Bed filter fails silently when the beds request fails",
+      "where": "/waterings",
+      "steps": "Make GET /api/beds fail (server error or timeout) while /api/waterings works.",
+      "expected": "An error telling the user the bed list could not load, with a retry.",
+      "actual": "The bedsResult error is ignored. The dropdown shows only 'All beds', as if there were no beds.",
+      "evidence": "Code: const { data: beds } = bedsResult; no error handling.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "No 10-second timeout on watering requests",
+      "where": "/beds Water now / Save watering, /waterings delete, list loads",
+      "steps": "Make the API hang (slow network) and click Water now.",
+      "expected": "The request fails after 10 s with a visible error, and the button is enabled again.",
+      "actual": "No timeout is set on useApiFetch or the $fetch client. The button stays on 'Watering…' (disabled) for as long as the request hangs.",
+      "evidence": "Code: useApiClient/$fetch.create and the useApiFetch calls set no timeout.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying 'Water now' or 'Save watering' after a timeout or network error records a second watering",
+      "where": "POST /api/waterings, /beds",
+      "steps": "Click Water now. The request reaches the server but the response is lost or slow. The user sees an error and clicks again.",
+      "expected": "One watering recorded.",
+      "actual": "POST has no idempotency key or dedupe, so each retry inserts another row.",
+      "evidence": "Code: create_watering always INSERTs; the client sends no request id.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying a delete shows an error even though the watering was deleted",
+      "where": "/waterings Delete",
+      "steps": "Delete a watering whose first response is lost or times out, then click Delete again.",
+      "expected": "The row is gone and no error is shown.",
+      "actual": "The second DELETE returns 404 'Watering not found.', which shows as an error, and the stale row stays until refresh.",
+      "evidence": "A repeat DELETE /api/waterings/4 returned 404 {\"detail\":\"Watering not found.\"}.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "A late list response can overwrite the newer filter's results",
+      "where": "/waterings",
+      "steps": "Quickly switch the Bed filter A -> B on a slow connection.",
+      "expected": "The list shown matches the selected bed.",
+      "actual": "Relies on useFetch's reactive query refetching. The change adds no request ordering. Low risk if Nuxt cancels the previous fetch.",
+      "evidence": "Code review only.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Past watering for 'today' can be refused when the browser and server are in different time zones",
+      "where": "/beds past-watering form",
+      "steps": "In a browser time zone ahead of the server, record a past watering with today's date (the form default).",
+      "expected": "Accepted.",
+      "actual": "The server checks date.today() in server-local time and answers 'Watering date cannot be in the future.' 'Water now' also stores watered_on as the server-local date, not the gardener's.",
+      "evidence": "Code: schemas.WateringIn.not_in_future uses date.today(); the client uses todayIso() max.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

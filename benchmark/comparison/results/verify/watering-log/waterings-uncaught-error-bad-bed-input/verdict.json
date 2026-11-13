@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "waterings-uncaught-error-bad-bed-input",
+  "sentence": "On /waterings, entering bad values into the 'Bed' filter select triggers the dev error overlay.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in as the demo user and opened /waterings (options: All beds, North bed=1, Shade corner=2). Picked the last option (Shade corner): URL became ?bed=2 and the list filtered. Picked the placeholder (All beds): URL went back to /waterings with 2 waterings shown. Neither produced an overlay. Then added bad option values to the Bed select and fired change events: 'abc', '999999', '-1', '<script>', '1.5'. Each time the page stayed up, with no Nuxt/Vite error overlay and no uncaught exception. The 422 responses showed inline as an alert (e.g. 'Query.bed id: Input should be a valid integer...'), and the nonexistent id showed '0 waterings'. The only console errors were the browser's 'Failed to load resource 422' network messages. A full SSR load of /waterings?bed=abc also rendered the page with the inline alert and a Clear filter button (screenshot scratch/playwright/bed-abc.png). The code matches: useFetch errors go to wateringsError and render through AlertMessage, never thrown.",
+  "severity": null,
+  "wallMs": 112171
+}

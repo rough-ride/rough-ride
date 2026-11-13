@@ -1,0 +1,26 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-null-fields-rendered-raw/scratch.
+
+The reported problem: When API fields are null, the plants list shows 'null journal entries' and journal feed items render with empty plant name and body and only '–' as date.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Null fields render as 'null journal entries' or a bare dash",
+  "where": "/plants list badge; /journal feed",
+  "steps": "Mock GET /api/plants with journal_count null, or GET /api/journal with plant_name/body/entry_on null, then navigate in the app.",
+  "expected": "A sensible fallback or an error",
+  "actual": "Plants card shows 'null journal entries'; the journal feed item shows an empty plant link and body, with only '–' for the date.",
+  "evidence": "Page text 'null journal entries'; journal feed '1 entry\\n\\n–'"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-null-fields-rendered-raw/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

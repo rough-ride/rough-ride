@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-blank-date-silent-default/scratch.
+
+The reported problem: On /stats, clearing the From or To field drops the parameter so the server silently uses this year's 1 Jan or 31 Dec, leaving the field blank while results use another range or showing 'The From date must be on or before the To date.'; triggered by clearing a date field, especially with the other date outside this year.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Clearing a date field silently uses this year's date and can give a confusing error",
+  "where": "/stats date range form",
+  "steps": "Open /stats?from=2025-01-01&to=2025-12-31 and clear the From field.",
+  "expected": "A blank field is either refused with a clear reason or treated as 'no lower bound'.",
+  "actual": "The client drops the parameter, so the server uses 2026-01-01. The page then says 'The From date must be on or before the To date.' even though From is empty. If To is in this year, blank From quietly means 1 Jan this year.",
+  "evidence": "Observed error text 'The From date must be on or before the To date.' with an empty From input."
+ },
+ {
+  "title": "Clearing To with a From date after this year gives a misleading 'From must be on or before To' error",
+  "where": "/stats",
+  "steps": "Probe inputs, expectation from-only-range-not-rejected",
+  "expected": "An empty To date is either accepted as an open end or refused with a reason about the empty field",
+  "actual": "With From=2027-03-01 and To empty, the server quietly uses 2026-12-31 as To and the page says 'The From date must be on or before the To date.', while still showing the old '5 harvests from 1 Jan 2026 to 31 Dec 2026' line",
+  "evidence": "{\"fields\":[{\"label\":\"From\",\"value\":\"2027-03-01\"},{\"label\":\"To\",\"value\":\"\"}],\"alerts\":[\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"The From date must be on or before the To date.\"]} | {\"fields\":[{\"label\":\"From\",\"value\":\"2027-03-01\"},{\"label\":\"To\",\"value\":\"\"}],\"alerts\":[\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"The From date must be on or before the To date.\"]}"
+ },
+ {
+  "title": "Clearing a date field silently falls back to the current year, which gives confusing errors and results",
+  "where": "/stats",
+  "steps": "Clear the From field and set To = 2025-06-30.",
+  "expected": "A blank date is refused with a clear reason, or it is treated as unbounded.",
+  "actual": "The empty param is dropped and the server defaults From to 2026-01-01, so the page says 'The From date must be on or before the To date.' even though From is blank. With only To cleared, the results quietly stop at 31 Dec this year.",
+  "evidence": "Page text: 'The From date must be on or before the To date.' at URL /stats?to=2025-06-30."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-blank-date-silent-default/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "malformed-watering-fields-rendered",
+  "sentence": "Waterings whose fields are null or malformed render as-is on /waterings and the dashboard (e.g. 'Never', blank bed, 'x L', raw 'garbage' date) instead of placeholders.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced in the browser: signed in as the demo user, mocked GET /api/waterings with page.route to return [{id:1,bed_id:1,bed_name:null,watered_on:null,watered_at:'garbage',litres:'x'},{id:2,...all null}], then went to /waterings and the dashboard by client-side navigation (on a full page load the server renders the page and the mock is skipped). /waterings rows: 'garbage\\t\\tx L\\tDelete watering of' and 'Never\\t\\t–\\tDelete watering of'; the dashboard showed the same. So the rendering the reports describe does happen. But the real backend cannot send this data. WateringOut (backend/schemas.py:146) declares bed_name: str, watered_on: date (required) and litres: float | None, and FastAPI validates responses against it. The list query uses an inner JOIN on beds (routers/waterings.py:18-20), and waterings.bed_id is NOT NULL with ON DELETE RESTRICT (db.py:38), so bed_name and watered_on are always present and litres is a number or null. Null litres already shows '–'. A bad date showing raw text matches how the existing formatDate/formatDateTime helpers treat bad values elsewhere in the app. The request does not ask the client to guard against payloads that break the API contract. The output only appears with a hand-made response that the server would reject, so it is not a defect a user could hit.",
+  "severity": null,
+  "wallMs": 74989
+}

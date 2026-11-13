@@ -1,0 +1,49 @@
+{
+  "findings": [
+    {
+      "title": "Failed stats request is shown as 'No harvests in this range'",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe stats-client-faults, expectation 500-not-shown-as-empty",
+      "expected": "When the stats request fails (500), the page shows a visible error and a way to retry",
+      "actual": "The page shows the empty state 'No harvests in this range / Pick a different date range, or log a harvest' with no error, so a server failure looks like the garden has no harvests",
+      "evidence": "{\"alerts\":[],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"No harvests in this range\",\"Pick a different date range, or log a harvest to see it here.\",\"Log harvest\",\"Garden Log · a journal for one garden\"]} | {\"alerts\":[],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"No harvests in this range\",\"Pick a different date range, or log a harvest to see it here.\",\"Log harvest\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-192902-hunt-24b7",
+        "probe": "stats-client-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Reversed date range (From after To) shows empty state instead of the server's validation message",
+      "where": "/stats?from=2026-12-01&to=2026-01-01",
+      "steps": "Probe stats-errors, expectation reversed-range-explained",
+      "expected": "The 422 reason 'The From date must be on or before the To date.' (or similar) is shown",
+      "actual": "The 422 is ignored and the page says 'No harvests in this range'",
+      "evidence": "{\"alerts\":[],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"No harvests in this range\",\"Pick a different date range, or log a harvest to see it here.\",\"Log harvest\",\"Garden Log · a journal for one garden\"],\"req\":[{\"method\":\"GET\",\"url\":\"http://localhost:8790/api/stats/harvests?from=2026-12-01&to=2026-12-31\",\"status\":null,\"fault\":\"net::ERR_ABORTED\"},{\"method\":\"GET\",\"url\":\"http://localhost:8790/api/stats/harvests?from=2026-12-01&to=2026-01-01\",\"status\":422,\"fault\":null},{\"method\":\"GET\",\"url\":\"http://localhost:3790/_nuxt/builds/meta/dev.json\",\"status\":… | {\"alerts\":[],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"No harvests in this range\",\"Pick a different date range, or log a harvest to see it here.\",\"Log harvest\",\"Garden Log · a journal for one garden\"],\"req\":[{\"method\":\"GET\",\"url\":\"http://localhost:8790/api/stats/harvests?from=2026-12-01&to=2026-12-31\",\"status\":200,\"fault\":null},{\"method\":\"GET\",\"url\":\"http://localhost:8790/api/stats/harvests?from=2026-12-01&to=2026-01-01\",\"status\":422,\"fault\":null},{\"method\":\"GET\",\"url\":\"http://localhost:3790/_nuxt/builds/meta/dev.json\",\"status\":200,\"fault\":nul…",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-192902-hunt-24b7",
+        "probe": "stats-errors",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Malformed stats response crashes rendering and leaves 'Loading stats…' stuck over stale data",
+      "where": "/stats",
+      "steps": "Probe stats-malformed, expectation malformed-no-page-error-and-not-stuck-loading",
+      "expected": "An unreadable response gives a visible error, no uncaught exception, and no stuck loading text",
+      "actual": "Uncaught TypeError 'Cannot read properties of undefined (reading 'length')'; 'Loading stats…' stays forever while the old 1 Jan–31 Dec table is still shown under From=1 Mar",
+      "evidence": "{\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\"]} | {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-192902-hunt-24b7",
+        "probe": "stats-malformed",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

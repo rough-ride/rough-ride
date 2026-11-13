@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3794, API http://localhost:8794/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-dashboard-non-array-shown-empty/scratch.
+
+The reported problem: When the dashboard's GET /api/waterings?limit=5 returns a non-array object, 'Recent waterings' shows the 'No waterings yet' empty state instead of an error.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Dashboard shows a bad watering response as 'No waterings yet'",
+  "where": "/ (GET /api/waterings?limit=5)",
+  "steps": "Probe dashboard-faults, expectation dash-empty-object-not-shown-as-empty",
+  "expected": "An error in Recent waterings",
+  "actual": "The 'No waterings yet' empty state, which looks like there is no data",
+  "evidence": "{\"s\":[\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\",\"Go to beds\",\"Garden Log · a journal for one garden\"],\"pe\":[]} | {\"s\":[\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\",\"Go to beds\",\"Garden Log · a journal for one garden\"],\"pe\":[]}"
+ },
+ {
+  "title": "Dashboard shows 'No waterings yet' when the waterings response is not a list",
+  "where": "/ (Recent waterings)",
+  "steps": "Probe dashboard-empty-object, expectation bad-response-not-shown-as-no-waterings",
+  "expected": "A visible load error, because waterings exist",
+  "actual": "Empty state 'No waterings yet' with no error, so a failed load looks like an empty log",
+  "evidence": "{\"section\":[\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\",\"Go to beds\",\"Garden Log · a journal for one garden\"],\"alerts\":[]} | {\"section\":[\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\",\"Go to beds\",\"Garden Log · a journal for one garden\"],\"alerts\":[]}"
+ },
+ {
+  "title": "Dashboard shows 'No waterings yet' when the recent-waterings response is invalid",
+  "where": "/ (GET /api/waterings?limit=5)",
+  "steps": "Probe misc, expectation dashboard-bad-response-not-shown-as-empty",
+  "expected": "An error saying recent waterings could not be loaded",
+  "actual": "The empty state 'No waterings yet' is shown, so a failure looks like there is no data",
+  "evidence": "{\"text\":[\"Waterings\",\"Add sowing, watering or pruning jobs to keep track of them here.\",\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\"],\"alerts\":[]} | {\"text\":[\"Waterings\",\"Add sowing, watering or pruning jobs to keep track of them here.\",\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\"],\"alerts\":[]}"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-dashboard-non-array-shown-empty/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

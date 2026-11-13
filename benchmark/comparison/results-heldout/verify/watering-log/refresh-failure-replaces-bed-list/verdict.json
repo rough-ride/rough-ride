@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "hx6",
+  "key": "refresh-failure-replaces-bed-list",
+  "sentence": "On /beds, if GET /api/beds fails after a successful 'Water now', the bed list and success notice are replaced by 'Could not load beds.' with no retry.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /beds, which showed 2 beds (North bed, Shade corner). Used Playwright to make GET **/api/beds return 500 (plain text body), then clicked 'Water now' on Shade corner. POST /api/waterings succeeded: the API's watering count went 3 -> 4. The main area then read only 'Beds / Add a bed form / All beds / Could not load beds.'. Both bed cards, the 'Watered Shade corner.' success notice and every Water now/Edit/Delete button were gone. The only button left was 'Add bed', so there was no retry. An earlier run with a JSON {detail:'boom'} 500 did the same thing (count 2 -> 3, list replaced by 'boom'). Cause in the code: recordWatering in frontend/app/pages/beds.vue awaits refresh() after the POST. A failed refresh clears `beds` (useFetch resets data on error) and sets loadError. The template renders the list only `v-if=\"beds && beds.length\"`, and the success notice is drawn inside each bed card, so both disappear. The user sees a failure even though the watering was saved, and the page has to be reloaded to recover.",
+  "severity": "medium",
+  "wallMs": 58588
+}

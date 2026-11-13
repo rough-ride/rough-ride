@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3791, API http://localhost:8791/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-plant-journal-journal-load-error-no-retry/scratch.
+
+The reported problem: When GET /api/journal fails, the /journal page and the plant detail Journal section show only 'Could not load the journal.' with no Retry control, so recovery requires a reload or changing the search.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Journal error states have no retry",
+  "where": "/journal page and the Journal section of /plants/:id",
+  "steps": "Make GET /api/journal fail (mocked a 500, or search with an apostrophe). Open /journal, or open a plant from the Plants list.",
+  "expected": "An error message plus a Retry button that loads the data again once the server is back.",
+  "actual": "Only the alert 'Could not load the journal.' appears. There is no retry control, so the user has to reload the page. On the plant page, the badge still says '3 entries' while the list failed to load.",
+  "evidence": "Plant section text: 'Journal / 3 entries / … Entries, newest first / Could not load the journal.' with no button. The journal page is the same."
+ },
+ {
+  "title": "Plant detail journal list error has no retry",
+  "where": "Plant detail page Journal section",
+  "steps": "Make GET /api/journal?plant_id=... fail and open a plant.",
+  "expected": "Error state with a retry button.",
+  "actual": "The code shows only an AlertMessage with no retry button (refreshJournal is never offered to the user).",
+  "evidence": "Code: pages/plants/[id].vue renders <AlertMessage v-if=\"journalLoadError\"> without any retry control."
+ },
+ {
+  "title": "Journal load error states have no retry",
+  "where": "/journal page and the Journal section of /plants/:id",
+  "steps": "Make GET /api/journal fail (e.g. search with a quote, or the API is down) and look at the page.",
+  "expected": "An error message with a Retry button that refetches without a reload.",
+  "actual": "Only an AlertMessage ('Could not load the journal.') is shown, with no retry control. On the Journal page the only way to recover is to change the search text. On the plant page the journal section has no way to retry.",
+  "evidence": "journal.vue and plants/[id].vue render <AlertMessage> for loadError/journalLoadError with no button; the SSR HTML for /journal?q=it's has no retry/try-again control"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-plant-journal-journal-load-error-no-retry/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

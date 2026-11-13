@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__to-date-excluded__hunt__t2",
+  "feature": "harvest-stats",
+  "bug": "to-date-excluded",
+  "arm": "hunt",
+  "trial": 2,
+  "lane": 2,
+  "ports": {
+    "web": 3792,
+    "api": 8792
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T18:23:14.114Z",
+  "materializeMs": 13040,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__to-date-excluded__hunt__t2/variant/40j30kb7/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "b0907329-fcea-4494-868b-8516e43ebdaa",
+  "loadBefore": [
+    15.720703125,
+    8.31201171875,
+    7.47314453125
+  ],
+  "loadAfter": [
+    6.89111328125,
+    7.939453125,
+    7.48681640625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 139342,
+  "reportedCostUsd": 0.24001499999999998,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 20,
+      "outputTokens": 5730,
+      "cacheReadInputTokens": 131350,
+      "cacheCreationInputTokens": 19813,
+      "webSearchRequests": 0,
+      "costUSD": 0.24001499999999998,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 684,
+      "cacheCreationEphemeral5mInputTokens": 19813,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 1,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 1m58s | run 20261112-192348-hunt-35eb | 2 confirmed, 0 dropped on re-run\ntarget: http://localhost:3792\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Harvests on the To date are left out of stats (and of the dashboard's best plant on 31 Dec)\n   where: /stats and GET /api/stats/harvests (also /api/dashboard/summary via top_plants)\n   expected: With From = To = 2026-09-30, the 150 g Lettuce harvest logged that day is counted (1 harvest, 150 g)\n   saw: {\"day\":\"2026-09-30\",\"expectedHarvests\":1,\"grams\":150,\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"0 harvests from 30 Sept 2026 to 30 Sept 2026\",\"No harvests in this range\",\"Pick a different date range, or log a harvest to see it here.\",\"Log harvest\",\"Garden Log · a journal for one garden\"]}\n   repro: .rough-ride/runs/20261112-192348-hunt-35eb/probes/to-inclusive.mjs (expectation \"single-day-range-includes-its-harvests\")\n2. MEDIUM Stats page crashes and stays on 'Loading stats…' with the old data when the stats response is malformed or empty\n   where: /stats\n   expected: A visible error message and no uncaught errors when /api/stats/harvests returns an unexpected body\n   saw: {\"alerts\":[\"Loading stats…\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\"]}\n   repro: .rough-ride/runs/20261112-192348-hunt-35eb/probes/stats-faults.mjs (expectation \"fault-empty-object-shows-error\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a62613d812e04c109.jsonl",
+    "agent-a62613d812e04c109.meta.json"
+  ],
+  "usage": {
+    "input": 20,
+    "output": 5730,
+    "cacheRead": 131350,
+    "cacheWrite": 19813,
+    "requests": 10,
+    "toolCalls": {
+      "Bash": 9,
+      "Read": 1
+    }
+  },
+  "findingCount": 2,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T18:25:58.212Z"
+}

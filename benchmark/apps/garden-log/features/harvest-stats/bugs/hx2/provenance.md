@@ -1,0 +1,1 @@
+Written by hand for the comparison benchmark (benchmark/comparison/), held-out set. The clean feature groups the per-month query by plant id. This variant groups it by plant name, so same-named plants share month buckets; the row's id and variety come from whichever row SQLite picks.

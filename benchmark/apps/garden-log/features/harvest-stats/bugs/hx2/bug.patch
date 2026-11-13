@@ -1,0 +1,15 @@
+diff --git a/backend/routers/stats.py b/backend/routers/stats.py
+index bd5a25b..1b0e576 100644
+--- a/backend/routers/stats.py
++++ b/backend/routers/stats.py
+@@ -59,8 +59,8 @@ def harvest_stats(
+                SUM(h.weight_grams) AS grams, COUNT(*) AS harvests
+         FROM harvests h JOIN plants p ON p.id = h.plant_id
+         WHERE h.harvested_on BETWEEN ? AND ?
+-        GROUP BY p.id, month
+-        ORDER BY p.name, p.id, month
++        GROUP BY p.name, month
++        ORDER BY p.name, month
+         """,
+         (date_from.isoformat(), date_to.isoformat()),
+     ).fetchall()

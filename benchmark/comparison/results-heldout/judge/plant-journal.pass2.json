@@ -1,0 +1,1258 @@
+{
+  "feature": "plant-journal",
+  "pass": 2,
+  "count": 204,
+  "missing": [],
+  "costUsd": 0.7782608,
+  "reports": [
+    {
+      "id": "F6cefe36f",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx4__playwright__t2#5"
+    },
+    {
+      "id": "F4c8c1428",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx4__baseline__t2#5"
+    },
+    {
+      "id": "Fc9adbe2d",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx3__playwright__t3#6"
+    },
+    {
+      "id": "F32a903d8",
+      "planted": null,
+      "issue": "implausible-ancient-date-accepted",
+      "key": "plant-journal__hx4__playwright__t1#6"
+    },
+    {
+      "id": "F240c26ac",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__baseline__t1#2"
+    },
+    {
+      "id": "F8e555e65",
+      "planted": "hx4",
+      "issue": "hx4",
+      "key": "plant-journal__hx4__playwright__t1#0"
+    },
+    {
+      "id": "F8d948927",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__clean__hunt__t3#0"
+    },
+    {
+      "id": "Fc109c081",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__playwright__t2#0"
+    },
+    {
+      "id": "F57785d67",
+      "planted": "hx3",
+      "issue": "hx3",
+      "key": "plant-journal__hx3__baseline__t1#0"
+    },
+    {
+      "id": "Fc809e352",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx4__baseline__t2#1"
+    },
+    {
+      "id": "F71467817",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__hx3__baseline__t1#9"
+    },
+    {
+      "id": "F9832ca93",
+      "planted": "hx4",
+      "issue": "hx4",
+      "key": "plant-journal__hx4__hunt__t3#1"
+    },
+    {
+      "id": "Fe28397a6",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__clean__baseline__t1#8"
+    },
+    {
+      "id": "F3ca183ee",
+      "planted": null,
+      "issue": "search-case-sensitive-non-ascii",
+      "key": "plant-journal__hx3__baseline__t3#9"
+    },
+    {
+      "id": "Fc31110a6",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__clean__playwright__t3#4"
+    },
+    {
+      "id": "F88acecac",
+      "planted": "hx3",
+      "issue": "hx3",
+      "key": "plant-journal__hx3__playwright__t1#0"
+    },
+    {
+      "id": "Fe75c85c9",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__hunt__t1#0"
+    },
+    {
+      "id": "F6b47526e",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__hx4__baseline__t1#8"
+    },
+    {
+      "id": "Fd40794a5",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__clean__baseline__t3#8"
+    },
+    {
+      "id": "F5b8555d6",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx3__playwright__t3#1"
+    },
+    {
+      "id": "F17e7e2a2",
+      "planted": "hx3",
+      "issue": "hx3",
+      "key": "plant-journal__hx3__baseline__t2#0"
+    },
+    {
+      "id": "F54b801c8",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__hx3__baseline__t3#8"
+    },
+    {
+      "id": "F6dd97acc",
+      "planted": "hx3",
+      "issue": "hx3",
+      "key": "plant-journal__hx3__hunt__t3#0"
+    },
+    {
+      "id": "Fe2c73fe5",
+      "planted": "hx3",
+      "issue": "hx3",
+      "key": "plant-journal__hx3__hunt__t2#0"
+    },
+    {
+      "id": "Fbd936f30",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx3__playwright__t2#1"
+    },
+    {
+      "id": "F66aac37c",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__clean__hunt__t1#2"
+    },
+    {
+      "id": "F1d45cc6a",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx4__playwright__t2#7"
+    },
+    {
+      "id": "F593a0b36",
+      "planted": "hx4",
+      "issue": "hx4",
+      "key": "plant-journal__hx4__playwright__t2#0"
+    },
+    {
+      "id": "F83f5355e",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx4__playwright__t1#4"
+    },
+    {
+      "id": "F960535b7",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__hx4__baseline__t1#7"
+    },
+    {
+      "id": "F22d167ad",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__clean__baseline__t2#5"
+    },
+    {
+      "id": "Ff779ddd0",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__clean__baseline__t3#0"
+    },
+    {
+      "id": "F5981b609",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__hx3__playwright__t3#9"
+    },
+    {
+      "id": "Feb888fea",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__hx4__baseline__t1#4"
+    },
+    {
+      "id": "Fcb91c7f9",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx4__playwright__t1#5"
+    },
+    {
+      "id": "F06a410fe",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__hx3__baseline__t2#5"
+    },
+    {
+      "id": "F6ab22cc5",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__clean__playwright__t1#5"
+    },
+    {
+      "id": "Fa0caa6aa",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx3__playwright__t2#3"
+    },
+    {
+      "id": "Faf6cc43c",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__clean__baseline__t1#4"
+    },
+    {
+      "id": "F58a108f6",
+      "planted": "hx4",
+      "issue": "hx4",
+      "key": "plant-journal__hx4__baseline__t2#0"
+    },
+    {
+      "id": "F0d5e437c",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__hunt__t1#1"
+    },
+    {
+      "id": "F45010933",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx3__hunt__t1#4"
+    },
+    {
+      "id": "Fc103b24a",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__hx3__hunt__t1#2"
+    },
+    {
+      "id": "F8e362b13",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__clean__hunt__t2#3"
+    },
+    {
+      "id": "F1a22c177",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx3__playwright__t1#6"
+    },
+    {
+      "id": "F98c88ade",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx3__baseline__t1#1"
+    },
+    {
+      "id": "F34824e9d",
+      "planted": "hx4",
+      "issue": "hx4",
+      "key": "plant-journal__hx4__playwright__t3#0"
+    },
+    {
+      "id": "F8c6d28f9",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx4__baseline__t2#3"
+    },
+    {
+      "id": "F783c1f8b",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx3__playwright__t1#5"
+    },
+    {
+      "id": "F415227a9",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__baseline__t2#4"
+    },
+    {
+      "id": "F38e1f8b9",
+      "planted": null,
+      "issue": "nul-in-body-500",
+      "key": "plant-journal__hx3__playwright__t3#4"
+    },
+    {
+      "id": "F4e890fe8",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__clean__playwright__t2#6"
+    },
+    {
+      "id": "Fd0ad551f",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx4__baseline__t1#5"
+    },
+    {
+      "id": "F53665158",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__baseline__t1#0"
+    },
+    {
+      "id": "F1dd72bc5",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__hx4__baseline__t3#10"
+    },
+    {
+      "id": "F76baf3e5",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx4__playwright__t1#2"
+    },
+    {
+      "id": "Fc8646941",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__clean__playwright__t2#3"
+    },
+    {
+      "id": "F11334f2d",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__hx3__playwright__t1#4"
+    },
+    {
+      "id": "F2909914d",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__clean__playwright__t1#10"
+    },
+    {
+      "id": "F83ecfe73",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__playwright__t1#1"
+    },
+    {
+      "id": "Fe0ee92b5",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx4__baseline__t3#6"
+    },
+    {
+      "id": "F5a0bf587",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx3__playwright__t3#2"
+    },
+    {
+      "id": "F474c1182",
+      "planted": null,
+      "issue": "nul-in-body-500",
+      "key": "plant-journal__hx3__baseline__t2#1"
+    },
+    {
+      "id": "F3ee1e899",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx4__baseline__t2#2"
+    },
+    {
+      "id": "Fb7c477fa",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__hx3__baseline__t3#4"
+    },
+    {
+      "id": "F7dac4597",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__clean__baseline__t2#2"
+    },
+    {
+      "id": "F53c90ae2",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx3__playwright__t2#4"
+    },
+    {
+      "id": "F58b9af2f",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx4__playwright__t2#1"
+    },
+    {
+      "id": "Fb6af5a80",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__hx4__playwright__t2#6"
+    },
+    {
+      "id": "Fed2823b5",
+      "planted": null,
+      "issue": "nul-in-body-500",
+      "key": "plant-journal__clean__playwright__t1#7"
+    },
+    {
+      "id": "Fffff9988",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__clean__baseline__t1#7"
+    },
+    {
+      "id": "F60fadcba",
+      "planted": null,
+      "issue": "nul-in-body-500",
+      "key": "plant-journal__clean__playwright__t3#0"
+    },
+    {
+      "id": "Fced0119f",
+      "planted": null,
+      "issue": "search-box-not-synced-with-url",
+      "key": "plant-journal__clean__playwright__t3#6"
+    },
+    {
+      "id": "F56984a0b",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__hx3__baseline__t2#7"
+    },
+    {
+      "id": "F0c8414ed",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__clean__playwright__t3#7"
+    },
+    {
+      "id": "F0b106efb",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__hx3__hunt__t3#1"
+    },
+    {
+      "id": "Ff2acf01d",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx3__baseline__t1#3"
+    },
+    {
+      "id": "F128ba9dc",
+      "planted": null,
+      "issue": "implausible-ancient-date-accepted",
+      "key": "plant-journal__hx4__baseline__t2#7"
+    },
+    {
+      "id": "F5a6b97dc",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx4__baseline__t1#2"
+    },
+    {
+      "id": "Ff9ba71f5",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__clean__playwright__t3#9"
+    },
+    {
+      "id": "F06276f75",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__hx3__playwright__t2#2"
+    },
+    {
+      "id": "Fbe3b67c1",
+      "planted": null,
+      "issue": "plant-journal-silently-capped-at-500",
+      "key": "plant-journal__clean__playwright__t1#11"
+    },
+    {
+      "id": "Fe010028b",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__clean__hunt__t2#0"
+    },
+    {
+      "id": "F2c57a1a9",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__hx4__playwright__t2#3"
+    },
+    {
+      "id": "F623e5d0d",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__hx3__playwright__t3#8"
+    },
+    {
+      "id": "F47d91ec3",
+      "planted": null,
+      "issue": "search-results-silently-capped-at-50",
+      "key": "plant-journal__clean__baseline__t2#7"
+    },
+    {
+      "id": "F523266d1",
+      "planted": null,
+      "issue": "search-no-debounce-stale-results",
+      "key": "plant-journal__hx3__baseline__t1#6"
+    },
+    {
+      "id": "F7937c7b1",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__hunt__t3#2"
+    },
+    {
+      "id": "F94d10496",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__hx3__hunt__t1#3"
+    },
+    {
+      "id": "F8c804479",
+      "planted": null,
+      "issue": "refresh-failure-after-add-hides-list",
+      "key": "plant-journal__clean__playwright__t1#3"
+    },
+    {
+      "id": "F9590411d",
+      "planted": "hx3",
+      "issue": "hx3",
+      "key": "plant-journal__hx3__hunt__t1#0"
+    },
+    {
+      "id": "F5d76091f",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx3__playwright__t2#6"
+    },
+    {
+      "id": "F69ec094a",
+      "planted": null,
+      "issue": "implausible-ancient-date-accepted",
+      "key": "plant-journal__hx4__playwright__t3#6"
+    },
+    {
+      "id": "Fb6cbad2c",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__clean__baseline__t3#7"
+    },
+    {
+      "id": "F0019a93b",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx3__baseline__t3#3"
+    },
+    {
+      "id": "F722f47a5",
+      "planted": "hx4",
+      "issue": "hx4",
+      "key": "plant-journal__hx4__baseline__t3#0"
+    },
+    {
+      "id": "Fa18c323d",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__hx3__baseline__t2#9"
+    },
+    {
+      "id": "F69a9e85d",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__hx4__baseline__t2#6"
+    },
+    {
+      "id": "Fc37e1b8c",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__playwright__t3#2"
+    },
+    {
+      "id": "F6562bcc0",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx3__playwright__t2#9"
+    },
+    {
+      "id": "F83c7a94f",
+      "planted": "hx3",
+      "issue": "hx3",
+      "key": "plant-journal__hx3__baseline__t3#0"
+    },
+    {
+      "id": "Fc2368a5d",
+      "planted": null,
+      "issue": "implausible-ancient-date-accepted",
+      "key": "plant-journal__hx3__baseline__t3#6"
+    },
+    {
+      "id": "F95621c68",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__clean__baseline__t3#4"
+    },
+    {
+      "id": "F928acb99",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__hx3__playwright__t2#10"
+    },
+    {
+      "id": "Fd44890d9",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx4__playwright__t2#2"
+    },
+    {
+      "id": "F6ab2e05d",
+      "planted": null,
+      "issue": "null-fields-rendered-raw",
+      "key": "plant-journal__hx4__playwright__t2#4"
+    },
+    {
+      "id": "Fef970360",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__hx3__playwright__t1#7"
+    },
+    {
+      "id": "F5537f204",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__clean__playwright__t2#8"
+    },
+    {
+      "id": "F8122c01c",
+      "planted": null,
+      "issue": "nul-in-body-500",
+      "key": "plant-journal__hx3__baseline__t1#4"
+    },
+    {
+      "id": "F21e59f4a",
+      "planted": null,
+      "issue": "plant-journal-silently-capped-at-500",
+      "key": "plant-journal__hx4__playwright__t1#9"
+    },
+    {
+      "id": "Fe0480684",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__playwright__t3#1"
+    },
+    {
+      "id": "Faed47daa",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx4__baseline__t3#2"
+    },
+    {
+      "id": "Fb91f6261",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__hunt__t2#4"
+    },
+    {
+      "id": "F443b4706",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__hx3__baseline__t2#8"
+    },
+    {
+      "id": "F236a1fa0",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx4__playwright__t1#1"
+    },
+    {
+      "id": "Fd80cf857",
+      "planted": null,
+      "issue": "plant-journal-silently-capped-at-500",
+      "key": "plant-journal__hx3__baseline__t1#8"
+    },
+    {
+      "id": "F0a559f00",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__hx3__hunt__t1#1"
+    },
+    {
+      "id": "Fb443f775",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__playwright__t2#2"
+    },
+    {
+      "id": "F8064d2df",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx4__baseline__t1#6"
+    },
+    {
+      "id": "F0ce75ed4",
+      "planted": "hx3",
+      "issue": "hx3",
+      "key": "plant-journal__hx3__playwright__t3#0"
+    },
+    {
+      "id": "F81100461",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx3__baseline__t3#2"
+    },
+    {
+      "id": "F0d4e9bc4",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__hx3__playwright__t2#5"
+    },
+    {
+      "id": "F7cb6f2da",
+      "planted": null,
+      "issue": "implausible-ancient-date-accepted",
+      "key": "plant-journal__clean__playwright__t2#10"
+    },
+    {
+      "id": "F2af4e097",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__baseline__t3#2"
+    },
+    {
+      "id": "F9a8a90aa",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx4__baseline__t1#1"
+    },
+    {
+      "id": "F3c03b944",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__clean__playwright__t1#0"
+    },
+    {
+      "id": "Faaaf6a8f",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__hx4__baseline__t3#5"
+    },
+    {
+      "id": "Ff989c7c5",
+      "planted": "hx4",
+      "issue": "hx4",
+      "key": "plant-journal__hx4__hunt__t1#0"
+    },
+    {
+      "id": "F0424e6bd",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__baseline__t3#1"
+    },
+    {
+      "id": "F3a4f4fdf",
+      "planted": null,
+      "issue": "control-characters-accepted-in-body",
+      "key": "plant-journal__clean__baseline__t3#6"
+    },
+    {
+      "id": "Fcab9a2c9",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__clean__hunt__t2#2"
+    },
+    {
+      "id": "Fdca6a098",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__hx4__baseline__t1#9"
+    },
+    {
+      "id": "F877e09a2",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__hx4__baseline__t2#4"
+    },
+    {
+      "id": "F7d8d965c",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx4__playwright__t3#5"
+    },
+    {
+      "id": "F987b7006",
+      "planted": null,
+      "issue": "delete-of-missing-entry-errors-and-leaves-stale-list",
+      "key": "plant-journal__clean__playwright__t2#9"
+    },
+    {
+      "id": "F7dc7e2f1",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx4__playwright__t3#2"
+    },
+    {
+      "id": "F57b36e67",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx4__playwright__t3#1"
+    },
+    {
+      "id": "F636c5937",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__hx4__baseline__t3#7"
+    },
+    {
+      "id": "F06d6fa07",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__playwright__t3#3"
+    },
+    {
+      "id": "F51d7d710",
+      "planted": "hx3",
+      "issue": "hx3",
+      "key": "plant-journal__hx3__playwright__t2#0"
+    },
+    {
+      "id": "Fbc4c4dc7",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__clean__playwright__t2#7"
+    },
+    {
+      "id": "F34bf7f93",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx3__baseline__t1#7"
+    },
+    {
+      "id": "Ff50dc03a",
+      "planted": null,
+      "issue": "delete-of-missing-entry-errors-and-leaves-stale-list",
+      "key": "plant-journal__clean__playwright__t1#4"
+    },
+    {
+      "id": "Fca88fe6e",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__hx3__playwright__t2#8"
+    },
+    {
+      "id": "Ff9ee713e",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__hx4__playwright__t1#8"
+    },
+    {
+      "id": "F46d4e5d6",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx3__baseline__t3#1"
+    },
+    {
+      "id": "F0598cc20",
+      "planted": null,
+      "issue": "delete-of-missing-entry-errors-and-leaves-stale-list",
+      "key": "plant-journal__hx4__playwright__t3#8"
+    },
+    {
+      "id": "Fb412b952",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx3__playwright__t3#3"
+    },
+    {
+      "id": "Fecdfff8e",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__baseline__t2#0"
+    },
+    {
+      "id": "F60eb4e37",
+      "planted": null,
+      "issue": "plant-journal-silently-capped-at-500",
+      "key": "plant-journal__hx4__baseline__t3#9"
+    },
+    {
+      "id": "F67c6e3bc",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__hx4__playwright__t1#7"
+    },
+    {
+      "id": "F982e345e",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__hx4__playwright__t2#8"
+    },
+    {
+      "id": "F7e5b0cc3",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__baseline__t3#5"
+    },
+    {
+      "id": "F2b6e92ac",
+      "planted": null,
+      "issue": "edited-label-missing-same-second",
+      "key": "plant-journal__clean__baseline__t3#9"
+    },
+    {
+      "id": "Feb9f5007",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__clean__baseline__t1#1"
+    },
+    {
+      "id": "Faa278d05",
+      "planted": "hx4",
+      "issue": "hx4",
+      "key": "plant-journal__hx4__hunt__t3#0"
+    },
+    {
+      "id": "Fa6625668",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__clean__playwright__t3#8"
+    },
+    {
+      "id": "F0c050a04",
+      "planted": "hx4",
+      "issue": "hx4",
+      "key": "plant-journal__hx4__hunt__t2#0"
+    },
+    {
+      "id": "Fa0007cd8",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx4__baseline__t3#3"
+    },
+    {
+      "id": "Fc6e50fe6",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__clean__playwright__t1#8"
+    },
+    {
+      "id": "F226f511b",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__hx3__baseline__t3#7"
+    },
+    {
+      "id": "Fc10ec2f2",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__hx3__baseline__t1#5"
+    },
+    {
+      "id": "Fe7e8647c",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__hx3__playwright__t3#7"
+    },
+    {
+      "id": "F97d218f8",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__baseline__t2#3"
+    },
+    {
+      "id": "F5eab28cf",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__clean__playwright__t3#5"
+    },
+    {
+      "id": "F6339d13c",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx3__playwright__t3#5"
+    },
+    {
+      "id": "F135520bc",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__clean__playwright__t1#9"
+    },
+    {
+      "id": "Fe8dae16a",
+      "planted": null,
+      "issue": "plant-journal-silently-capped-at-500",
+      "key": "plant-journal__clean__baseline__t1#9"
+    },
+    {
+      "id": "F623180e6",
+      "planted": "hx4",
+      "issue": "hx4",
+      "key": "plant-journal__hx4__baseline__t1#0"
+    },
+    {
+      "id": "F7b596689",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__clean__baseline__t3#3"
+    },
+    {
+      "id": "F03505624",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__hx3__playwright__t1#2"
+    },
+    {
+      "id": "Ff6a48b84",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx3__playwright__t1#3"
+    },
+    {
+      "id": "F0d10866d",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__hx4__playwright__t3#7"
+    },
+    {
+      "id": "F6f180be9",
+      "planted": null,
+      "issue": "nul-in-body-500",
+      "key": "plant-journal__hx4__baseline__t3#1"
+    },
+    {
+      "id": "F77bb9787",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__clean__hunt__t2#1"
+    },
+    {
+      "id": "F27c424a8",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__hx4__baseline__t3#8"
+    },
+    {
+      "id": "F758e74c6",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx3__baseline__t2#3"
+    },
+    {
+      "id": "Fe7a3067d",
+      "planted": null,
+      "issue": "long-plant-name-overflows-journal-feed",
+      "key": "plant-journal__clean__baseline__t2#8"
+    },
+    {
+      "id": "F9650633c",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx4__playwright__t3#4"
+    },
+    {
+      "id": "F959856f4",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__clean__baseline__t2#1"
+    },
+    {
+      "id": "F0fe1283b",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx3__baseline__t1#2"
+    },
+    {
+      "id": "F424ab480",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__playwright__t1#2"
+    },
+    {
+      "id": "Fd59b8a2f",
+      "planted": null,
+      "issue": "nul-in-body-500",
+      "key": "plant-journal__hx3__playwright__t2#7"
+    },
+    {
+      "id": "Fe6693e50",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__hx4__playwright__t1#3"
+    },
+    {
+      "id": "Fe431a69d",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__hx3__hunt__t2#1"
+    },
+    {
+      "id": "F9ed97ad2",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx3__baseline__t3#5"
+    },
+    {
+      "id": "F5c795fb4",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__clean__hunt__t3#1"
+    },
+    {
+      "id": "Ffe89faa6",
+      "planted": null,
+      "issue": "entry-length-counts-utf16-units",
+      "key": "plant-journal__hx4__baseline__t2#8"
+    },
+    {
+      "id": "Fde88897e",
+      "planted": null,
+      "issue": "add-retry-creates-duplicate-entry",
+      "key": "plant-journal__clean__playwright__t2#5"
+    },
+    {
+      "id": "F309a5f3c",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx4__baseline__t3#4"
+    },
+    {
+      "id": "F4092a66f",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__playwright__t2#4"
+    },
+    {
+      "id": "F2aedd06a",
+      "planted": null,
+      "issue": "delete-of-missing-entry-errors-and-leaves-stale-list",
+      "key": "plant-journal__clean__baseline__t1#5"
+    },
+    {
+      "id": "Ff113663b",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__hx3__baseline__t2#2"
+    },
+    {
+      "id": "Fdf603790",
+      "planted": null,
+      "issue": "search-over-80-raw-validation-error",
+      "key": "plant-journal__hx3__baseline__t2#6"
+    },
+    {
+      "id": "Ffe0ad5dd",
+      "planted": "hx4",
+      "issue": "hx4",
+      "key": "plant-journal__hx4__hunt__t1#1"
+    },
+    {
+      "id": "F81a20455",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__playwright__t1#6"
+    },
+    {
+      "id": "Fa3f2cdd8",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx3__playwright__t1#1"
+    },
+    {
+      "id": "F7370d5a9",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__clean__baseline__t2#6"
+    },
+    {
+      "id": "F1d851122",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__baseline__t1#3"
+    },
+    {
+      "id": "Fa34a5ee2",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx4__baseline__t1#3"
+    },
+    {
+      "id": "F87015ce2",
+      "planted": null,
+      "issue": "future-date-check-timezone-mismatch",
+      "key": "plant-journal__clean__baseline__t1#6"
+    },
+    {
+      "id": "F058ad168",
+      "planted": null,
+      "issue": "refresh-failure-after-add-hides-list",
+      "key": "plant-journal__hx4__playwright__t3#3"
+    },
+    {
+      "id": "Feec8f31c",
+      "planted": null,
+      "issue": "malformed-journal-response-not-shown-as-error",
+      "key": "plant-journal__clean__playwright__t2#1"
+    },
+    {
+      "id": "Fed172c3a",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__hx3__baseline__t2#4"
+    }
+  ],
+  "issues": {
+    "hx3": "On the plant detail page, a failed DELETE of a journal entry shows an error but removes the entry from the list anyway, although it is still saved and returns on reload.",
+    "hx4": "In the plants list and on the plant page (GET /api/plants and /api/plants/{id}), a plant's harvest count and harvested weight are multiplied by its number of journal entries.",
+    "journal-huge-id-500": "The journal endpoints (POST /api/journal, GET ?plant_id=, PUT/DELETE /api/journal/{id}) return 500 instead of a 4xx when given an integer id beyond 64 bits.",
+    "search-over-80-raw-validation-error": "On /journal, typing more than 80 characters into the search box (which has no maxlength) replaces the results with the raw API validation message 'Query.q: String should have at most 80 characters'.",
+    "implausible-ancient-date-accepted": "POST/PUT /api/journal accepts implausible dates such as 0001-01-01 and lists the entry as '1 Jan 1'.",
+    "journal-load-error-no-retry": "When GET /api/journal fails, the /journal page and the plant page Journal section show only 'Could not load the journal.' with no Retry control, so recovery needs a reload or a search change.",
+    "malformed-journal-response-not-shown-as-error": "When GET /api/journal returns a non-list body (an object, string or HTML), the /journal page and plant Journal section show an empty state or blank '–' entries instead of an error.",
+    "journal-requests-no-timeout": "Journal requests have no timeout, so when the API hangs, Add/Save/Delete stay disabled on 'Saving…' and /journal stays on 'Loading entries…' indefinitely.",
+    "long-plant-name-overflows-journal-feed": "On /journal at 375 px, a long unbroken plant name in a feed item has no overflow-wrap and pushes the page into horizontal scrolling.",
+    "entry-length-counts-utf16-units": "The journal entry form counts the 500-character limit in UTF-16 units (maxlength and counter), so only about 250 emoji fit and server-accepted emoji entries cannot be saved when edited.",
+    "search-case-sensitive-non-ascii": "Journal search uses SQLite LIKE, so searching 'église' does not match an entry containing 'Église'.",
+    "add-retry-creates-duplicate-entry": "Retrying Add entry on the plant page after a lost or timed-out POST /api/journal response creates a duplicate entry because there is no idempotency key or dedupe.",
+    "nul-in-body-500": "POST/PUT /api/journal with a body containing a NUL character returns 500 because the SQLite length CHECK constraint fails with an unhandled IntegrityError.",
+    "control-characters-accepted-in-body": "POST /api/journal accepts and stores bodies containing control characters such as NUL (for example 'a\\u0000b') instead of rejecting or sanitising them.",
+    "future-date-check-timezone-mismatch": "The server's not-in-future check uses its own date.today() while the form uses the browser's local date, so a user in a timezone ahead of the server can have today's entry rejected.",
+    "plant-journal-silently-capped-at-500": "The plant detail page fetches journal entries with limit=500 and silently hides older ones while the badge shows the full count.",
+    "search-results-silently-capped-at-50": "On /journal, search results are capped at 50 and the page says '50 entries match' with no indication that more exist.",
+    "search-no-debounce-stale-results": "The /journal search fires a request per keystroke with no debounce, so on a slow network an older response can overwrite newer results.",
+    "search-box-not-synced-with-url": "On /journal?q=tom, clicking Journal in the nav or using back/forward changes the URL to /journal but leaves the old search text and filtered results.",
+    "edited-label-missing-same-second": "A journal entry edited within the same second it was created shows no 'edited' label because timestamps have one-second precision.",
+    "null-fields-rendered-raw": "When API fields are null, the plants list shows 'null journal entries' and the journal feed shows empty plant name and body with only '–' for the date.",
+    "refresh-failure-after-add-hides-list": "On the plant page, if adding an entry succeeds but the following journal list refresh fails, the whole entry list is replaced by a no-retry error while the badge count increases.",
+    "delete-of-missing-entry-errors-and-leaves-stale-list": "Deleting a journal entry that is already gone (other tab or retry after a lost response) shows 'Journal entry not found.' and leaves the stale entry listed because the list is not refreshed on error."
+  }
+}

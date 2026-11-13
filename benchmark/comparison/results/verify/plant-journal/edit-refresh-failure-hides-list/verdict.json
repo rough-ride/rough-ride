@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "search-quote-crash",
+  "key": "edit-refresh-failure-hides-list",
+  "sentence": "On the plant detail page, if the list refresh after a successful entry edit fails, the whole journal list disappears and only 'Could not load the journal.' is shown, ignoring the PUT response.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo, opened /plants/1 (2 journal entries shown in .journal-list). Clicked Edit on the first entry, used Playwright route to make GET /api/journal?plant_id=1 fail, changed the text and clicked 'Save entry'. PUT /api/journal/2 returned 200, then the refetch GET failed. Afterwards .journal-list was gone (count 0). With an aborted request the section showed only 'Could not load the journal.'; with a 500 it showed only the server detail. No retry button appeared, and the badge still said '2 entries'. A direct API GET then confirmed the edit had been saved (body 'Edited again VERIFY-456'). Code: [id].vue onEntrySaved ignores the emitted updated entry and only calls refreshJournal(); the failed useFetch refresh clears data, so the v-if on the list hides every entry.",
+  "severity": "medium",
+  "wallMs": 64678
+}

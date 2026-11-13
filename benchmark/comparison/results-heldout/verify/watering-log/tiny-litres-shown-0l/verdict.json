@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "tiny-litres-shown-0l",
+  "sentence": "Litre amounts below 0.005 (e.g. 0.001) are accepted by the form and API but displayed as '0 L' in notices, the dashboard and /waterings.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user. On /beds I opened 'Record past watering' for North bed, entered 0.001 litres and submitted. POST /api/waterings returned 201 with {\"litres\":0.001}, since the schema only checks gt=0 and the client only checks > 0. The bed card notice then read 'Recorded 0 L on 12 Nov 2026.' /waterings listed the row as '12 Nov 2026 North bed 0 L', and the dashboard's Recent waterings also showed 'North bed 0 L'. The cause is formatLitres (frontend/app/utils/format.ts:40), which uses maximumFractionDigits 2, so a positive amount the app accepted is shown as zero, which contradicts the 'greater than zero' rule. I deleted the test watering (id 3) afterwards.",
+  "severity": "low",
+  "wallMs": 54952
+}

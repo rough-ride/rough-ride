@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Waterings bed filter is lost on reload: page writes ?bed_id= to the URL but only reads ?bed=",
+      "where": "/waterings",
+      "steps": "Probe filter-url, expectation filter-survives-reload",
+      "expected": "After choosing a bed in the filter and reloading, the same bed stays selected and only its waterings are listed",
+      "actual": "Choosing North bed changes the URL to /waterings?bed_id=1; reloading that URL resets the select to 'All beds' and lists waterings from every bed (the page only reads the 'bed' query parameter, which is what the beds page links use)",
+      "evidence": "{\"url\":\"/waterings?bed_id=1\",\"selVal\":\"\",\"target\":\"1\",\"before\":[\"WHEN\\tBED\\tAMOUNT\",\"12 Nov 2026, 17:37\\tNorth bed\\t–\\tDelete\",\"10 Nov 2026\\tNorth bed\\t3.5 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\"],\"after\":[\"WHEN\\tBED\\tAMOUNT\",\"12 Nov 2026, 17:37\\tNorth bed\\t–\\tDelete\",\"10 Nov 2026\\tNorth bed\\t3.5 L\\tDelete\",\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\"]} | {\"url\":\"/waterings?bed_id=1\",\"selVal\":\"\",\"target\":\"1\",\"before\":[\"WHEN\\tBED\\tAMOUNT\",\"12 Nov 2026, 17:37\\tNorth bed\\t–\\tDelete\",\"10 Nov 2026\\tNorth bed\\t3.5 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\"],\"after\":[\"WHEN\\tBED\\tAMOUNT\",\"12 Nov 2026, 17:37\\tNorth bed\\t–\\tDelete\",\"10 Nov 2026\\tNorth bed\\t3.5 L\\tDelete\",\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-173621-hunt-9c82",
+        "probe": "filter-url",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Hung filter request leaves the waterings page stuck on 'Loading waterings…' showing other beds' rows",
+      "where": "/waterings (GET /api/waterings?bed_id=)",
+      "steps": "Probe dash-fault, expectation hang-not-loading-forever",
+      "expected": "A request that never answers ends in a visible error or timeout, and rows for other beds are not shown under the chosen bed's filter",
+      "actual": "13 s after picking 'Shade corner' the page still says 'Loading waterings…' and still lists all four waterings, including North bed's, under the Shade corner filter. It never times out and shows no error",
+      "evidence": "[\"Loading waterings…\"] | [\"Loading waterings…\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-173621-hunt-9c82",
+        "probe": "dash-fault",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

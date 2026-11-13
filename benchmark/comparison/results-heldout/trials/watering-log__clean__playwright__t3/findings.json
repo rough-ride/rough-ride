@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Watering requests have no timeout: a hung 'Water now' spins forever",
+      "where": "/beds (Water now, Save watering); also /waterings delete and list fetches",
+      "steps": "On /beds, make POST /api/waterings hang (never answer), then click 'Water now' on a bed and wait more than 10 s.",
+      "expected": "The request is abandoned after 10 s, an error is shown and the button works again.",
+      "actual": "After 12 s the button still says 'Watering…' and stays disabled. There is no error and no way to cancel.",
+      "evidence": "Playwright route delayed the POST by 15 s. Bed card text at 12 s: 'Watering… North bed'. The useApiClient $fetch.create has no timeout option.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Double click on 'Water now' records two waterings",
+      "where": "/beds Water now -> POST /api/waterings",
+      "steps": "On /beds, click 'Water now' twice quickly (two click events before the next render).",
+      "expected": "One watering is recorded.",
+      "actual": "Two POSTs go out and two identical waterings are stored. Nothing on the request (such as an idempotency key) and nothing on the server prevents duplicates, so retrying after a timeout also duplicates.",
+      "evidence": "The route counter saw 2 POSTs. GET /api/waterings then returned ids 4 and 5, both North bed at 2026-11-12 17:52:58.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Huge bed_id makes the waterings API answer 500",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":9223372036854775808} (or 99999999999999999999) to /api/waterings. Or GET /api/waterings?bed_id=9223372036854775808. Or DELETE /api/waterings/9223372036854775808.",
+      "expected": "A 4xx validation error.",
+      "actual": "500 Internal Server Error, because SQLite overflows on an integer that does not fit in 64 bits. /waterings?bed=9223372036854775808 in the UI therefore shows a generic 'Could not load waterings.'",
+      "evidence": "curl gave 'Internal Server Error 500' for all three requests.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Recent waterings error on the dashboard and the waterings page error have no retry",
+      "where": "/ (Recent waterings section), /waterings",
+      "steps": "Make GET /api/waterings fail (500, or HTML 503), then open the dashboard through the nav, or go to /waterings through the 'All waterings' link.",
+      "expected": "An error message with a Retry button that loads the data again once the server is back.",
+      "actual": "Only 'Could not load recent waterings.' / 'Could not load waterings.' is shown, with no retry control. The dashboard does not even keep the refresh function for waterings, so the user has to reload the page.",
+      "evidence": "Dashboard section text: 'Recent waterings / All waterings / Could not load recent waterings.' Waterings page: 'Could not load waterings.' with no button.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Watering tables overflow 375 px with a long bed name",
+      "where": "/waterings, / (Recent waterings)",
+      "steps": "Create a bed with a 60-character name without spaces (the maximum the API allows), record a watering for it, and view /waterings and / at 375 px width.",
+      "expected": "No sideways scrolling; long names wrap.",
+      "actual": "The page scrolls sideways: document scrollWidth is 874 px on /waterings and 788 px on the dashboard. The Bed and Amount columns are pushed off screen. /plants and /tasks stay at 375 px.",
+      "evidence": "scrollWidth measurements. Overflowing elements are TH 'Bed' (right edge 697 px), TH 'Amount' (788 px) and TD 'North bed'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Very small litres are accepted and shown as '0 L'",
+      "where": "POST /api/waterings, /waterings, dashboard",
+      "steps": "POST {\"bed_id\":1,\"litres\":1e-300} (the UI form also accepts 0.001).",
+      "expected": "A minimum is enforced (such as the form's min of 0.1), or the value is shown faithfully.",
+      "actual": "The API stores it (201) and the tables show '0 L'.",
+      "evidence": "The response had litres 1e-300 and the table row read 'North bed  0 L'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Malformed bed filter in the URL shows a raw validation message",
+      "where": "/waterings?bed=abc",
+      "steps": "Open /waterings?bed=abc.",
+      "expected": "The invalid filter is ignored or a friendly message is shown.",
+      "actual": "The page shows 'Query.bed id: Input should be a valid integer, unable to parse string as an integer'. The bed select is blank.",
+      "evidence": "Page text as quoted.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Retried delete after a timeout reports 'Watering not found' and keeps the stale row",
+      "where": "/waterings Delete",
+      "steps": "Delete a watering whose request succeeds on the server but times out or fails on the client (or that was already deleted in another tab), then click Delete again.",
+      "expected": "The second delete is treated as done (idempotent) and the list refreshes.",
+      "actual": "The DELETE answers 404, the page shows an error, and the list is only refreshed on success, so the row stays visible.",
+      "evidence": "delete_watering raises not_found when the row is missing. removeWatering calls refresh() only in the try branch.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "'Water now' date and the future-date check use the server's time zone, not the gardener's",
+      "where": "POST /api/waterings, /beds past-watering form",
+      "steps": "Use a browser in a time zone ahead of the server, after midnight local time: pick today's date (the form's max is the browser's today) and save, or click Water now.",
+      "expected": "Today's date is accepted, and the recorded day matches the time shown.",
+      "actual": "The server checks the date against its own date.today() and rejects 'today' as 'Watering date cannot be in the future.' Water now stores watered_on in server-local time while the time is shown in the viewer's zone, so the entry can show a time on a different day and sort out of order.",
+      "evidence": "WateringIn.not_in_future uses date.today(). create_watering uses now.astimezone().date(). The frontend todayIso() uses the browser's local date.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

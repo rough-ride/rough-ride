@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Stats table merges plants that share a name, crediting one plant's harvests to the other",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe same-name-plants, expectation ui-sungold-total-is-1050",
+      "expected": "Each plant has its own row. Tomato · Sungold shows 450 g in Jul 2026 and 1.05 kg in total, which matches its 1.05 kg on the Best plants card.",
+      "actual": "The query groups by p.name instead of p.id. Sungold's July 450 g is added to the Tomato · Cherry RR row (950 g instead of 500 g), and Sungold shows only 600 g. Best plants still says Sungold 1.05 kg and Cherry 500 g, so the table and the cards disagree. For July only, the Sungold row is missing altogether.",
+      "evidence": "[\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Cherry RR\\t–\\t950 g\\t–\\t–\\t950 g\",\"Tomato · Sungold\\t–\\t–\\t600 g\\t–\\t600 g\"] | [\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Cherry RR\\t–\\t950 g\\t–\\t–\\t950 g\",\"Tomato · Sungold\\t–\\t–\\t600 g\\t–\\t600 g\"]",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-175847-hunt-a54c",
+        "probe": "same-name-plants",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "An unexpected stats response crashes the page and leaves 'Loading stats…' on screen",
+      "where": "/stats",
+      "steps": "Probe empty-object-crash, expectation no-uncaught-error-on-unexpected-body",
+      "expected": "If /api/stats/harvests returns a body without the expected fields, an error message appears and there is no uncaught exception.",
+      "actual": "An uncaught TypeError 'Cannot read properties of undefined (reading 'length')' is thrown, 'Loading stats…' stays on screen, and no error is shown. The same happens with malformed and empty-list responses.",
+      "evidence": "[\"Cannot read properties of undefined (reading 'length')\"] | [\"Cannot read properties of undefined (reading 'length')\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-175847-hunt-a54c",
+        "probe": "empty-object-crash",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+id: hx4
+category: logic
+provenance: hand-written
+layer: backend
+reach: direct
+needsAppKnowledge: false
+flow: plants
+exposedBy:
+  - { input: a plant with both harvests and two or more journal entries (Tomato in the sample data) }
+checks: [expected-value, no-regression]
+symptom: "A plant's harvest count and harvested weight are multiplied by its number of journal entries in the plants list and on its page (Tomato shows 6 harvests and 2.7 kg instead of 3 and 1.35 kg)"
+addedIn: 0.1.1
+review: single
+allowWords: []

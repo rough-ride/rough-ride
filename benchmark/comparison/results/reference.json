@@ -1,0 +1,191 @@
+{
+  "ranAt": "2026-11-12T08:49:46.841Z",
+  "rows": [
+    {
+      "variant": "harvest-stats/error-shown-as-empty",
+      "check": "error-shown-as-empty",
+      "pass": false,
+      "observed": {
+        "emptyStateShown": true,
+        "alerts": 0
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "harvest-stats/error-shown-as-empty",
+      "check": "to-date-excluded",
+      "pass": true,
+      "observed": {
+        "total_grams": 2600,
+        "expected": 2600
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "harvest-stats/to-date-excluded",
+      "check": "error-shown-as-empty",
+      "pass": true,
+      "observed": {
+        "emptyStateShown": false,
+        "alerts": 1
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "harvest-stats/to-date-excluded",
+      "check": "to-date-excluded",
+      "pass": false,
+      "observed": {
+        "total_grams": 2450,
+        "expected": 2600
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "harvest-stats/clean",
+      "check": "error-shown-as-empty",
+      "pass": true,
+      "observed": {
+        "emptyStateShown": false,
+        "alerts": 1
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "harvest-stats/clean",
+      "check": "to-date-excluded",
+      "pass": true,
+      "observed": {
+        "total_grams": 2600,
+        "expected": 2600
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/search-quote-crash",
+      "check": "search-quote-crash",
+      "pass": false,
+      "observed": {
+        "status": 500
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/search-quote-crash",
+      "check": "failed-save-clears-text",
+      "pass": true,
+      "observed": {
+        "textAfterFailedSave": "Picked the first ripe fruit."
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/failed-save-clears-text",
+      "check": "search-quote-crash",
+      "pass": true,
+      "observed": {
+        "status": 200
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/failed-save-clears-text",
+      "check": "failed-save-clears-text",
+      "pass": false,
+      "observed": {
+        "textAfterFailedSave": ""
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/clean",
+      "check": "search-quote-crash",
+      "pass": true,
+      "observed": {
+        "status": 200
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/clean",
+      "check": "failed-save-clears-text",
+      "pass": true,
+      "observed": {
+        "textAfterFailedSave": "Picked the first ripe fruit."
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/water-now-twice",
+      "check": "water-now-twice",
+      "pass": false,
+      "observed": {
+        "added": 2
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/water-now-twice",
+      "check": "negative-litres",
+      "pass": true,
+      "observed": {
+        "negativeSaved": false
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/negative-litres",
+      "check": "water-now-twice",
+      "pass": true,
+      "observed": {
+        "added": 1
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/negative-litres",
+      "check": "negative-litres",
+      "pass": false,
+      "observed": {
+        "negativeSaved": true
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/clean",
+      "check": "water-now-twice",
+      "pass": true,
+      "observed": {
+        "added": 1
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/clean",
+      "check": "negative-litres",
+      "pass": true,
+      "observed": {
+        "negativeSaved": false
+      },
+      "expected": true,
+      "asExpected": true
+    }
+  ]
+}

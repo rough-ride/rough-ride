@@ -1,0 +1,74 @@
+{
+  "id": "plant-journal__hx4__playwright__t1",
+  "feature": "plant-journal",
+  "bug": "hx4",
+  "arm": "playwright",
+  "trial": 1,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:47:11.584Z",
+  "materializeMs": 6156,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__hx4__playwright__t1/variant/i3ovha95/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "77671178-f20b-4e8c-8093-a1e4c33eb040",
+  "loadBefore": [
+    6.22119140625,
+    5.83056640625,
+    6.44091796875
+  ],
+  "loadAfter": [
+    2.39892578125,
+    4.25732421875,
+    5.595703125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 294178,
+  "reportedCostUsd": 0.7613642000000002,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 42,
+      "outputTokens": 12458,
+      "cacheReadInputTokens": 785861,
+      "cacheCreationInputTokens": 44358,
+      "webSearchRequests": 0,
+      "costUSD": 0.7613642000000002,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2692,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 44358,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 20,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 10 bugs: 8 I saw happen in the running app and 2 I only suspect from reading the code. They're written to `out/findings.json`.\n\n**High**\n1. **Harvest totals are inflated (seen).** Adding the journal to the plants query makes each harvest count once per journal entry. Tomato really has 3 harvests totalling 1,350 g. With 2 entries the API reported 6 harvests and 2,700 g; with 3 entries the Plants list showed \"Harvested 4.05 kg\". The cause is the extra `LEFT JOIN journal_entries` in `backend/routers/plants.py`.\n2. **Requests never time out (seen).** When the add-entry request hangs, the button still reads \"Saving…\" and is disabled after 12 seconds. When a search hangs on the Journal page, \"Loading entries…\" never ends and the old results stay on screen under the new search.\n\n**Medium**\n3. **No retry on the Journal page (seen).** When loading fails it shows \"Could not load the journal.\" with no Retry button.\n4. **No retry in a plant's journal section (seen).** Same problem on the plant detail page; the entry count badge still shows a number next to the error.\n5. **Huge IDs cause a server error (seen).** A very large plant or entry ID in create, list, edit or delete returns a 500 instead of a 4xx.\n6. **A retried add can create a duplicate entry (suspected).** Nothing stops a resubmit after a slow or lost response from making a second entry. In my hang test, the stuck request still reached the server and created the entry.\n\n**Low**\n7. **Long searches show a raw error (seen).** Typing more than 80 characters replaces the results with \"Query.q: String should have at most 80 characters\", and the search box has no length limit.\n8. **Ancient dates are accepted (seen).** A date of 0001-01-01 is saved and shown as \"1 Jan 1\".\n9. **Emoji count double in the character counter (seen).** So the text box stops at about 250 emoji, though the server would accept 500.\n10. **A plant's page shows at most 500 entries (suspected).** Older ones are hidden without notice, while the badge shows the full count.\n\nThese held up under testing:\n- Typed text survives a failed add or edit, and saving again works without a reload.\n- A double click on \"Add entry\" creates one entry.\n- A slow, older search result doesn't replace a newer one.\n- Null fields from the server show \"–\", not \"undefined\".\n- Pages fit 375 px wide, long words included.\n\nI left test entries in the app data: \"x\" dated 0001-01-01 on Tomato, plus \"hang test\" and \"double click test\" on Courgette, one of which I edited to \"edited body ✏️\".",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 42,
+    "output": 12458,
+    "cacheRead": 785861,
+    "cacheWrite": 44358,
+    "requests": 20,
+    "toolCalls": {
+      "Bash": 7,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 11
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 10,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   4 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 276 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T16:52:22.089Z"
+}

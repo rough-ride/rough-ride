@@ -1,0 +1,74 @@
+{
+  "id": "plant-journal__hx4__hunt__t1",
+  "feature": "plant-journal",
+  "bug": "hx4",
+  "arm": "hunt",
+  "trial": 1,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:42:41.073Z",
+  "materializeMs": 4794,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__hx4__hunt__t1/variant/572nhtd9/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "53411ecf-aef8-4389-a308-199112c02381",
+  "loadBefore": [
+    4.9130859375,
+    6.173828125,
+    6.7724609375
+  ],
+  "loadAfter": [
+    5.87890625,
+    6.01611328125,
+    6.59326171875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 170629,
+  "reportedCostUsd": 0.44497980000000004,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 28,
+      "outputTokens": 9764,
+      "cacheReadInputTokens": 307264,
+      "cacheCreationInputTokens": 37627,
+      "webSearchRequests": 0,
+      "costUSD": 0.44497980000000004,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1949,
+      "cacheCreationEphemeral5mInputTokens": 37627,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 1,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 2m41s | run 20261112-174254-hunt-9849 | 2 confirmed, 0 dropped on re-run\ntarget: http://localhost:3790\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Journal entries multiply a plant's harvest count and harvest weight\n   where: GET /api/plants/{id}, /plants list and plant detail page\n   expected: A plant with 2 harvests (100 g + 200 g) and 3 journal entries shows 2 harvests and 300 g\n   saw: {\"harvest_grams\":900}\n   repro: .rough-ride/runs/20261112-174254-hunt-9849/probes/harvest-inflation.mjs (expectation \"api-harvest-grams-not-multiplied\")\n2. HIGH   Harvest count on plant detail page inflated by journal entries\n   where: GET /api/plants/{id}\n   expected: harvest_count 2\n   saw: {\"harvest_count\":6,\"journal_count\":3}\n   repro: .rough-ride/runs/20261112-174254-hunt-9849/probes/harvest-inflation.mjs (expectation \"api-harvest-count-not-multiplied\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-aa32dad1b9b663807.jsonl",
+    "agent-aa32dad1b9b663807.meta.json"
+  ],
+  "usage": {
+    "input": 28,
+    "output": 9764,
+    "cacheRead": 307264,
+    "cacheWrite": 37627,
+    "requests": 14,
+    "toolCalls": {
+      "Bash": 13,
+      "Read": 1
+    }
+  },
+  "findingCount": 2,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   4 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 276 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T16:45:43.942Z"
+}

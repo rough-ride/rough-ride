@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-watering-log-oversized-integer-id-500/scratch.
+
+The reported problem: Sending a bed_id or watering id above 64 bits (e.g. 99999999999999999999) to POST/GET/DELETE /api/waterings returns a 500 Internal Server Error instead of a 4xx.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Out-of-range bed_id causes 500",
+  "where": "POST /api/waterings",
+  "steps": "POST {\"bed_id\":99999999999999999999}.",
+  "expected": "422 'Choose an existing bed.'",
+  "actual": "500 Internal Server Error (SQLite integer overflow).",
+  "evidence": "curl returned 'Internal Server Error 500'."
+ },
+ {
+  "title": "A very large bed_id or watering id gives a 500",
+  "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+  "steps": "POST {\"bed_id\":99999999999999999999,\"litres\":1}, or GET /api/waterings?bed_id=99999999999999999999, or DELETE /api/waterings/99999999999999999999.",
+  "expected": "A 4xx validation error.",
+  "actual": "Internal Server Error 500 (the integer overflows SQLite).",
+  "evidence": "curl printed 'Internal Server Error 500' for all three."
+ },
+ {
+  "title": "NaN litres and out-of-range ids return 500 Internal Server Error",
+  "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+  "steps": "POST {\"bed_id\":1,\"watered_on\":\"2026-11-01\",\"litres\":NaN}; POST {\"bed_id\":99999999999999999999}; GET /api/waterings?bed_id=99999999999999999999; DELETE /api/waterings/99999999999999999999",
+  "expected": "4xx validation error",
+  "actual": "500 Internal Server Error (plain text, not JSON)",
+  "evidence": "All four requests returned 'Internal Server Error' with status 500"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-watering-log-oversized-integer-id-500/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

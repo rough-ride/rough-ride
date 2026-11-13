@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "negative-litres",
+  "key": "beds-uncaught-error-after-beds-load-fails",
+  "sentence": "On /beds, when GET /api/beds returns malformed JSON or hangs, an unhandled render error and dev error overlay appear.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened the dashboard. Routed GET **/api/beds to return 200 application/json with the malformed body '{\"broken\": [1, 2', then clicked the 'Beds' nav link (client-side navigation). The URL changed to /beds, but the Beds page never rendered. The Dashboard content and title stayed on screen, and the Nuxt dev error overlay appeared with 'TypeError: beds.value?.reduce is not a function'. The console showed '[Vue warn]: Unhandled error during execution of render function at <Beds>'. Cause: ofetch/destr turns an unparseable body into a plain string, so `beds` becomes a string. The `totalPlants` computed in pages/beds.vue (beds.value?.reduce) then throws during render, and there is no guard or error message for the user, even though the page does have a loadError alert. The reduce line is unchanged from main, so the fault was already there before this change and was not added by it, but it still happens on the changed page. I did not separately test the hang variant; the malformed-JSON case alone reproduces the reported error and overlay.",
+  "severity": "low",
+  "wallMs": 71958
+}

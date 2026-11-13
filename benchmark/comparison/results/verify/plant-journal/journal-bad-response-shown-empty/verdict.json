@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-bad-response-shown-empty",
+  "sentence": "When GET /api/journal returns 200 with a non-list body, the Journal page shows '0 entries' and the 'No journal entries yet' empty state instead of an error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and landed on the dashboard. Used Playwright browser_route to make **/api/journal?** return 200 application/json {\"detail\":\"weird\"}, then clicked the Journal nav link (client-side navigation). The main text read: 'Journal / ... / 0 entries / No journal entries yet / Open a plant and write the first entry in its journal. / Go to plants'. No error alert appeared. Code confirms it: pages/journal.vue only shows AlertMessage when useFetch's `error` is set. The template checks `entries && entries.length`, which is falsy for an object, so it falls through to the `v-else-if=\"entries\"` empty state. resultText uses `entries.value?.length ?? 0`, which gives '0 entries'. Nothing checks that the response is an array, so a broken response looks like a real empty journal.",
+  "severity": "low",
+  "wallMs": 80564
+}

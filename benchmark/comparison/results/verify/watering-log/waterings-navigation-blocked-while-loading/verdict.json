@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "water-now-twice",
+  "key": "waterings-navigation-blocked-while-loading",
+  "sentence": "Clicking the Waterings nav link while GET /api/waterings hangs leaves the previous page on screen indefinitely with no loading indication.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and loaded /beds. Then I routed **/api/waterings** so it never responds (1 request was caught) and clicked the 'Waterings' nav link. I checked at 0.5 s, 3 s and 12 s. Each time the address bar and document title had already changed to /waterings and 'Waterings · Garden Log', but <main> still showed the Beds page (h1 'Beds', bed cards, 'Water now' buttons). Nothing on the page showed a load in progress: no aria-busy, progressbar, status or NuxtLoadingIndicator element. app.vue renders <NuxtPage/> with no <NuxtLoadingIndicator/>. The cause is in pages/waterings.vue: `await Promise.all([useApiFetch('/waterings'), useApiFetch('/beds')])` at the top level of the page setup, which makes the client-side route change wait for the fetch. There is no timeout, so the page never renders and its error/Retry state is never reached. The user is left looking at the Beds page under a Waterings URL, with no feedback. Other pages (beds, tasks) use the same top-level-await pattern, which softens this a bit, but the new page still leaves the user stuck with misleading UI.",
+  "severity": "medium",
+  "wallMs": 131259
+}

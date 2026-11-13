@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "date-fields-ignore-url-changes",
+  "sentence": "On /stats, the date fields are read from the URL only at setup, so clicking the Stats nav link or using back/forward while on the page changes the URL but not the fields or data; triggered by picking a custom range and then navigating to /stats within the app.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo user and opened /stats: From 2026-01-01, To 2026-12-31, '5 harvests from 1 Jan 2026 to 31 Dec 2026'. Set From to 2025-01-01: URL became /stats?from=2025-01-01, '6 harvests from 1 Jan 2025 to 31 Dec 2026', 'This year' button shown. Clicked the 'Stats' main-nav link: URL changed to /stats (no query) but From stayed 2025-01-01, the results still said '6 harvests from 1 Jan 2025...' and the 'This year' button was still shown. Then pushed /stats?from=2023-03-01 with the in-app router: URL updated, fields and data still showed 2025-01-01. Code agrees: stats.vue sets dateFrom/dateTo from route.query only once at setup, the only watcher goes from the refs to router.replace, and NuxtPage has no page-key, so the component is reused. The URL and the page drift apart, and the Stats nav link no longer resets to this year.",
+  "severity": "low",
+  "wallMs": 85939
+}

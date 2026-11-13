@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Stats page crashes on a malformed stats response and sticks on 'Loading stats…' with the old table still shown",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe malformed, expectation malformed-shows-error-not-crash",
+      "expected": "A visible error such as 'Could not load harvest stats.', no uncaught error, and no stale results",
+      "actual": "Uncaught TypeError \"Cannot read properties of undefined (reading 'length')\" (stats.plants.length); the page stays on 'Loading stats…' and keeps showing the previous range's table and best plants as if they were current",
+      "evidence": "{\"alerts\":[\"Loading stats…\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]} | {\"alerts\":[\"Loading stats…\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-194549-hunt-7be9",
+        "probe": "malformed",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Stats request that never answers leaves 'Loading stats…' on screen forever, with no error or retry",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe hang, expectation hang-not-loading-forever",
+      "expected": "After a reasonable wait, an error and a way to try again",
+      "actual": "After 14 s the page still shows 'Loading stats…' above the old range's table, with no timeout, error or retry",
+      "evidence": "{\"alerts\":[\"Loading stats…\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\"]} | {\"alerts\":[\"Loading stats…\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-194549-hunt-7be9",
+        "probe": "hang",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

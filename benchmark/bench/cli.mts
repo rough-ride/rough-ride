@@ -15,14 +15,17 @@ function main(argv: string[]): number {
   if (command === 'materialize') {
     const args = [...rest];
     const workDir = flag(args, '--work-dir');
+    const portsFlag = flag(args, '--ports');
     const noInstall = args.includes('--no-install');
     const positional = args.filter((a) => a !== '--no-install');
     const [app, feature, bug] = positional;
-    if (!app || !feature) {
-      console.error('Usage: npm run bench -- materialize <app> <feature> [<bug>] [--work-dir <dir>] [--no-install]');
+    const portsMatch = portsFlag === undefined ? null : /^(\d{4,5}),(\d{4,5})$/.exec(portsFlag);
+    if (!app || !feature || (portsFlag !== undefined && !portsMatch)) {
+      console.error('Usage: npm run bench -- materialize <app> <feature> [<bug>] [--work-dir <dir>] [--ports <web>,<api>] [--no-install]');
       return 64;
     }
-    console.log(materialize(app, feature, bug ?? null, { ...(workDir ? { workDir } : {}), install: !noInstall }));
+    const ports = portsMatch ? { web: Number(portsMatch[1]), api: Number(portsMatch[2]) } : undefined;
+    console.log(materialize(app, feature, bug ?? null, { ...(workDir ? { workDir } : {}), ...(ports ? { ports } : {}), install: !noInstall }));
     return 0;
   }
   if (command === 'materialize-base') {

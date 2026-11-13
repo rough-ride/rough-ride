@@ -1,0 +1,75 @@
+{
+  "id": "harvest-stats__to-date-excluded__playwright__t3",
+  "feature": "harvest-stats",
+  "bug": "to-date-excluded",
+  "arm": "playwright",
+  "trial": 3,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T12:35:03.726Z",
+  "materializeMs": 8282,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__to-date-excluded__playwright__t3/variant/ex5al77z/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "b229fb1a-e9be-4cf8-9d1c-0f003a370555",
+  "loadBefore": [
+    20.88232421875,
+    21.26953125,
+    16.4052734375
+  ],
+  "loadAfter": [
+    10.29638671875,
+    16.65673828125,
+    15.40869140625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 173690,
+  "reportedCostUsd": 0.450189,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 30,
+      "outputTokens": 6181,
+      "cacheReadInputTokens": 433805,
+      "cacheCreationInputTokens": 29961,
+      "webSearchRequests": 0,
+      "costUSD": 0.450189,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 747,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 29961,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 14,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "The new Stats page has one serious bug: harvests on the \"To\" date are left out of the totals. I found four smaller issues as well. All five are in `out/findings.json`, and four of them I saw in the running app.\n\n1. **Harvests on the \"To\" date are not counted (high, observed).** The stats query in `backend/routers/stats.py` checks `harvested_on < to`, which excludes the To date itself. The page still says the range runs \"to 20 Jul 2026\", so the wrong total looks believable.\n   - With From and To both set to 2026-07-20, the page says \"No harvests in this range\", even though there is a 1,200 g Courgette harvest that day.\n   - For 2026-07-01 to 2026-07-20, Courgette is missing and only the 450 g Tomato harvest is counted.\n\n2. **The dashboard's top plant leaves out 31 December (medium, suspected).** The dashboard now uses the same function, so the \"Top plant this year\" card stops counting at 31 December. The yearly harvest total on the same dashboard still includes that day, so the two can disagree. The old code included 31 December. I couldn't see this in the app because the app refuses harvests dated in the future, so it only shows up on 31 December itself.\n\n3. **No retry when the stats fail to load (medium, observed).** With the API returning a 500, the page shows \"Could not load harvest stats.\" and nothing else. The only ways to try again are changing a date or reloading.\n\n4. **No timeout on the stats request (medium, observed).** When the request never got an answer, the page still said \"Loading stats…\" after 12 seconds. The table had already disappeared and no error ever appeared.\n\n5. **A blank From field doesn't match the results (low, observed).** If you clear From, the server falls back to 1 January, so the results say \"from 1 Jan 2026\" while the field stays empty. The \"This year\" button also appears, even though this year's data is what's shown.\n\nWhat held up:\n- When an older request answered late, it did not overwrite newer results.\n- Pasting a From date later than the To date into the address bar shows a clear error message.\n- A bad date in the address bar gets a 422 rather than a server error.\n- The page fits 375 px wide without sideways scrolling.\n\nI didn't edit any files or leave behind any data changes. The one test harvest I tried to add was refused because it was dated in the future.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 30,
+    "output": 6181,
+    "cacheRead": 433805,
+    "cacheWrite": 29961,
+    "requests": 14,
+    "toolCalls": {
+      "Bash": 7,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 4,
+      "mcp__playwright__browser_snapshot": 1
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 5,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T12:38:15.754Z"
+}

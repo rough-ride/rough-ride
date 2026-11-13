@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Negative (and absurdly negative) litres are accepted by the form and the API",
+      "where": "Beds page 'Record past watering' form; POST /api/waterings",
+      "steps": "On /beds click 'Record past watering' for North bed, enter -3 in Litres, Save. Or POST /api/waterings {\"bed_id\":1,\"watered_on\":\"2026-11-01\",\"litres\":-1e308}.",
+      "expected": "Litres must be greater than zero; client and server refuse negatives with a visible reason / 422.",
+      "actual": "Form shows success 'Recorded -3 L on 12 Nov 2026.'; API returns 201 for -5 and -1e308. Client check only rejects exactly 0, schema only has le=10000 (no gt=0).",
+      "evidence": "Waterings list shows '-3 L', '-5 L' and '-100,000,000,...,000 L' rows; totals become negative so the '... in total' text disappears.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Tiny positive litres shown as '0 L'",
+      "where": "POST /api/waterings, /waterings and dashboard",
+      "steps": "POST litres 1e-9 (or type 0.000001 in the form).",
+      "expected": "Reject amounts below a sensible minimum or display them accurately.",
+      "actual": "Saved and displayed as '0 L'.",
+      "evidence": "Waterings table row '12 Nov 2026, 13:32 North bed 0 L'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Huge stored litres value breaks 375px layout",
+      "where": "/waterings, dashboard Recent waterings",
+      "steps": "Record a watering with litres -1e308 (accepted, see above), open /waterings at 375px width.",
+      "expected": "No horizontal scrolling.",
+      "actual": "Page scrollWidth 3466px at a 375px viewport due to the unwrapped number.",
+      "evidence": "document.documentElement.scrollWidth=3466, clientWidth=375.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page and dashboard watering error states have no retry",
+      "where": "/waterings, / (Recent waterings section)",
+      "steps": "Make GET /api/waterings return 500, navigate to Waterings via the nav link.",
+      "expected": "Error message with a Retry button that refetches without reload.",
+      "actual": "Only 'Could not load waterings.' with no button; dashboard section likewise shows only an alert (refresh is not even destructured).",
+      "evidence": "main contains no buttons in the error state.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "'Water now' spins forever when the request hangs (no timeout)",
+      "where": "/beds Water now, also Save watering and delete watering",
+      "steps": "Make POST /api/waterings never respond, click 'Water now' on a bed, wait 12s+.",
+      "expected": "Request times out after 10 s and shows an error; button re-enabled.",
+      "actual": "Button stays 'Watering…' and disabled indefinitely; the API client has no timeout.",
+      "evidence": "After 12 s bed card still shows 'Watering…'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Out-of-range bed_id causes 500",
+      "where": "POST /api/waterings",
+      "steps": "POST {\"bed_id\":99999999999999999999}.",
+      "expected": "422 'Choose an existing bed.'",
+      "actual": "500 Internal Server Error (SQLite integer overflow).",
+      "evidence": "curl returned 'Internal Server Error 500'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Dates far in the past accepted (year 0001)",
+      "where": "POST /api/waterings, past watering form",
+      "steps": "POST watered_on '0001-01-01', litres 2.",
+      "expected": "Reject implausible dates with a 4xx.",
+      "actual": "201; shown as '1 Jan 1' at the bottom of the list.",
+      "evidence": "Waterings row '1 Jan 1 North bed 2 L'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Retried/double save after a timeout creates duplicate waterings",
+      "where": "POST /api/waterings",
+      "steps": "Submit 'Water now' or 'Save watering'; if the response is lost/slow and the user clicks again after the request ends or reloads, a second row is created.",
+      "expected": "One change per user action (idempotency key or dedupe).",
+      "actual": "No idempotency; every POST inserts a new row.",
+      "evidence": "Code: create_watering always INSERTs.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Bed filter silently empty when beds fail to load",
+      "where": "/waterings",
+      "steps": "Make GET /api/beds fail and open /waterings.",
+      "expected": "Error shown for the bed filter.",
+      "actual": "bedsResult error is ignored; dropdown only shows 'All beds' with no message.",
+      "evidence": "Code: const { data: beds } = bedsResult, no error handling.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Today's date can be refused as 'in the future' across time zones",
+      "where": "Past watering form / POST /api/waterings",
+      "steps": "Browser in a time zone ahead of the server; keep default date (browser's today) and save.",
+      "expected": "Today is accepted.",
+      "actual": "Server compares with its own date.today() and returns 'Watering date cannot be in the future.'",
+      "evidence": "Code: todayIso uses browser local date, not_in_future uses server local date.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

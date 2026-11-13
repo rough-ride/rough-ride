@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__clean__hunt__t3",
+  "feature": "harvest-stats",
+  "bug": "clean",
+  "arm": "hunt",
+  "trial": 3,
+  "lane": 2,
+  "ports": {
+    "web": 3792,
+    "api": 8792
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:10:47.779Z",
+  "materializeMs": 4465,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__clean__hunt__t3/variant/ocecy4ds/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "b9b24e82-ac4e-4a23-b19b-9932350652c0",
+  "loadBefore": [
+    5.7314453125,
+    4.84423828125,
+    4.822265625
+  ],
+  "loadAfter": [
+    5.93798828125,
+    5.88818359375,
+    5.32080078125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 240544,
+  "reportedCostUsd": 0.4828446000000001,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 30,
+      "outputTokens": 11052,
+      "cacheReadInputTokens": 328623,
+      "cacheCreationInputTokens": 39192,
+      "webSearchRequests": 0,
+      "costUSD": 0.4828446000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1813,
+      "cacheCreationEphemeral5mInputTokens": 39192,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 1,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 3m47s | run 20261112-181101-hunt-58d3 | 2 confirmed, 0 dropped on re-run\ntarget: http://localhost:3792\n\nFindings (each reproduced twice from scratch)\n1. HIGH   A malformed stats response crashes the Stats page, which then shows 'Loading stats…' with the old table for the previous range\n   where: /stats (GET /api/stats/harvests)\n   expected: An error message such as 'Could not load harvest stats.' and no uncaught error\n   saw: {\"alerts\":[\"Loading stats…\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"SupercalifragilisticexpialidociousSquashSquashSquashSquashSquashSquashSquashXX\"]}\n   repro: .rough-ride/runs/20261112-181101-hunt-58d3/probes/stats-malformed.mjs (expectation \"malformed-shows-error-without-crash\")\n2. MEDIUM A stats request that never answers leaves the page on 'Loading stats…' forever, with old results still shown\n   where: /stats (GET /api/stats/harvests)\n   expected: The request times out with an error and a way to retry, or at least the old table is not shown as current\n   saw: {\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"SupercalifragilisticexpialidociousSquashSquashSquashSquashSquashSquashSquashXX\",\"5 kg · O'Brien \\\"x\\\" <b>x</b>\",\"View\",\"SupercalifragilisticexpialidociousSquashSquashSquashSquashSquashSquashSquashXX\",\"NO. 2\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 3\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"Weight by plant and month\",\"7.6 kg total\",\"Harvest weight per plant and month, 1 Jan 2026 to 31 Dec 2026\",\"PLANT\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tOCT 2026\\tTOTAL\",\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t–\\t1.2 kg\",\"Lettuce · Li…\n   repro: .rough-ride/runs/20261112-181101-hunt-58d3/probes/stats-hang.mjs (expectation \"hang-not-showing-stale-table-as-new-range\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a73b380ce8a3b9593.jsonl",
+    "agent-a73b380ce8a3b9593.meta.json"
+  ],
+  "usage": {
+    "input": 30,
+    "output": 11052,
+    "cacheRead": 328623,
+    "cacheWrite": 39192,
+    "requests": 15,
+    "toolCalls": {
+      "Bash": 14,
+      "Read": 1
+    }
+  },
+  "findingCount": 2,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:15:00.897Z"
+}

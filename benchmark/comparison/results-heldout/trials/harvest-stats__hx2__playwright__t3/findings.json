@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Plants with the same name are merged in the per-plant/month table, and their weights go to the wrong plant",
+      "where": "GET /api/stats/harvests (backend/routers/stats.py GROUP BY p.name, month); /stats table",
+      "steps": "Have plant 'Tomato' (Sungold, id 1) with harvests of 450 g in July and 600 g in August. Create a second plant 'Tomato' (Gardeners Delight, id 4) and log 500 g on 2026-07-10. Open /stats.",
+      "expected": "Sungold: Jul 450 g, Aug 600 g, total 1.05 kg. Gardeners Delight: Jul 500 g, total 500 g.",
+      "actual": "Gardeners Delight: Jul 950 g, total 950 g. Sungold: Aug 600 g only, total 600 g. On the same page, Best plants (which groups by id) says Sungold 1.05 kg and Gardeners Delight 500 g, so the two sections disagree.",
+      "evidence": "API plants[]: {plant_id 4, Gardeners Delight, monthly [0,950,0,0], total 950}, {plant_id 1, Sungold, monthly [0,0,600,0], total 600}; top_plants: Sungold 1050, Gardeners Delight 500. The page table showed the same numbers.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Stats error state has no retry; the only way to recover is to change the dates or reload",
+      "where": "/stats",
+      "steps": "Open /stats, make /api/stats/harvests return 500 (or go offline), then change the From date.",
+      "expected": "An error message with a Try again button that refetches.",
+      "actual": "Only 'Could not load harvest stats.' is shown. There is no retry button (the only button on the page is 'This year'). The same happens when the page is opened directly with the error.",
+      "evidence": "main buttons = ['This year'] while the error is shown.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout and spins 'Loading stats…' forever",
+      "where": "/stats (useApiFetch has no timeout)",
+      "steps": "Make /api/stats/harvests hang (no response), then change the From date.",
+      "expected": "Fails after about 10 s with an error and a retry.",
+      "actual": "'Loading stats…' was still shown after 13 s and never ended.",
+      "evidence": "Page text after 13 s: 'This year / Loading stats…'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats page overflows sideways at 375 px when a plant name is long",
+      "where": "/stats, Best plants list (ol.stats)",
+      "steps": "Create a plant with an 80-character name with no spaces, log a harvest for it, then open /stats at 375 px wide.",
+      "expected": "The name wraps and the page fits 375 px.",
+      "actual": "document scrollWidth is 520 px and the page scrolls sideways. ol.stats is 504 px wide because the long name in the card does not wrap. The table row headers are also white-space:nowrap, so the table is 1578 px wide inside its scroller.",
+      "evidence": "scrollWidth 520, window.scrollX could reach 145; overflowing elements: MAIN.page 520 > SECTION.section 504 > OL.stats 504.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "A malformed or null field in the stats response crashes the page with a TypeError overlay",
+      "where": "/stats (formatMonth(value.slice) and other fields read without checks)",
+      "steps": "Mock /api/stats/harvests to return 200 with months:[{month:null}], plants:[{monthly_grams:null,...}], top_plants:null, then change a date.",
+      "expected": "A handled error state, or safe placeholders.",
+      "actual": "An error dialog shows 'TypeError: Cannot read properties of null (reading 'slice')'. The page stays on 'Loading stats…' with the previous range's results still showing under the new URL.",
+      "evidence": "Error details dialog text: \"TypeError ... Cannot read properties of null (reading 'slice')\".",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Clearing both date fields shows full-year data while the fields stay blank and 'This year' still shows",
+      "where": "/stats",
+      "steps": "Clear the From and To inputs.",
+      "expected": "Either refuse the blank value with a message, or put the defaults back into the fields.",
+      "actual": "The inputs stay empty while the results say '... from 1 Jan 2026 to 31 Dec 2026'. The URL has no query, but the 'This year' button is still shown.",
+      "evidence": "After clearing: results-count says 'N harvests from 1 Jan 2026 to 31 Dec 2026', and the inputs are blank.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid date in the URL shows a raw validation message and a blank input",
+      "where": "/stats?from=2026-02-30",
+      "steps": "Open /stats?from=2026-02-30.",
+      "expected": "A friendly message, or a fallback to the default.",
+      "actual": "Shows 'Query.from: Input should be a valid date or datetime, day value is outside expected range'. The From input is blank because the browser rejects the value, so the user can't see what is wrong.",
+      "evidence": "Page text as quoted.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

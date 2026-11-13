@@ -1,0 +1,124 @@
+{
+  "findings": [
+    {
+      "title": "Retrying a journal entry submit after a timeout or lost response creates duplicate entries",
+      "where": "Plant detail page (/plants/:id) journal form; POST /api/journal",
+      "steps": "Open /plants/3. Make POST /api/journal reach the server but return a 504 to the browser (or hang). Type 'Dup test entry', click Add entry, see 'Could not add the entry.', click Add entry again.",
+      "expected": "Retrying makes one change, e.g. with an idempotency key or a client request id that the server dedupes.",
+      "actual": "Each attempt inserts a new row. Three attempts left three identical 'Dup test entry' rows (ids 10, 11, 12) for plant 3.",
+      "evidence": "GET /api/journal?plant_id=3 returned 12/11/10 'Dup test entry'. The form showed 'Could not add the entry.' each time and kept the text, which invites the retry.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal requests have no timeout: Add entry / Save entry stay on 'Saving…' forever and the Journal search stays on 'Loading entries…'",
+      "where": "/plants/:id (Add entry, Save entry), /journal search",
+      "steps": "Use browser_route to leave POST /api/journal, PUT /api/journal/:id or GET /api/journal?q=... unanswered. Submit or type a search, then wait more than 10 s.",
+      "expected": "The request fails after 10 s with a visible error and the button is enabled again.",
+      "actual": "After 12 s the submit button is still disabled and reads 'Saving…' (both add and edit). /journal still shows 'Loading entries…', with results from the previous search ('Lettuce') under the new query 'Courg'.",
+      "evidence": "Button innerText 'Saving…', disabled=true after 12 s. The /journal main text was 'Loading entries… Lettuce 14 May 2026 Thinned the seedlings.' with ?q=Courg. No timeout option in useApiClient/useApiFetch.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal page error state has no retry, and recovering the server does not recover the page",
+      "where": "/journal",
+      "steps": "Go to /journal (in-app link) while GET /api/journal returns 500. Then let the API work again.",
+      "expected": "The error message comes with a Retry button that reloads entries without a page reload.",
+      "actual": "Only 'Could not load the journal.' is shown. No buttons are on the page, and the page stays in the error state after the API recovers (the only way out is editing the search box or reloading).",
+      "evidence": "main buttons: []. After unroute the text was still 'Could not load the journal.'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Plant detail journal list: load errors have no retry, and the list vanishes after a failed refresh",
+      "where": "/plants/:id Journal section",
+      "steps": "Open /plants/3. Make GET /api/journal?plant_id=... fail (503), then add an entry.",
+      "expected": "The existing entries stay visible, or an error with a Retry button is shown.",
+      "actual": "The POST succeeds and the form is cleared, but the whole entry list is replaced by 'Could not load the journal.' with no retry control. The badge says '2 entries' while none are listed. The same no-retry message appears when the initial journal load fails.",
+      "evidence": "Section text: 'Journal 2 entries … Add entry … Could not load the journal.' with no list and no retry button.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "A delete that succeeded on the server but failed in the browser leaves the deleted entry on screen; retrying then errors",
+      "where": "/plants/:id journal entry Delete; DELETE /api/journal/:id",
+      "steps": "Make DELETE /api/journal/:id reach the server but return 504. Click Delete on an entry and confirm, then click Delete on it again.",
+      "expected": "Retrying a delete makes one change and the UI matches the server (treat 404 on retry as already deleted, or refresh the list after a failure).",
+      "actual": "'Could not delete the entry.' is shown and the deleted entry and the old count stay on the page. The list is not refreshed after a failure, and a retry against the already-deleted id gets 'Journal entry not found.'",
+      "evidence": "After the failed delete the section still listed every entry and '4 entries'. The server had removed the row. removeEntry only refreshes on success.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal page scrolls sideways at 375 px when a plant name is long",
+      "where": "/journal",
+      "steps": "Create a plant with an 80-character unbroken name (e.g. 'Supercalifragilistic' x4) and add a journal entry to it. Open /journal at 375 px wide.",
+      "expected": "Long plant names wrap and the page fits 375 px.",
+      "actual": "document scrollWidth is 679 px. The .journal-feed__plant link has no overflow-wrap, so the feed card, head and date are pushed off-screen.",
+      "evidence": "Elements overflowing: LI.journal-feed__item, DIV.journal-entry__head, TIME.journal-entry__date. scrollWidth=679.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Out-of-range ids in the new journal endpoints return 500 instead of 4xx",
+      "where": "GET /api/journal?plant_id=…, PUT/DELETE /api/journal/{id}, POST /api/journal (plant_id)",
+      "steps": "curl GET /api/journal?plant_id=99999999999999999999, PUT or DELETE /api/journal/99999999999999999999, POST with plant_id 99999999999999999999.",
+      "expected": "422 or 404.",
+      "actual": "500 Internal Server Error. sqlite overflows on integers above 2^63, and the id/plant_id fields have no upper bound.",
+      "evidence": "HTTP 500 'Internal Server Error' for all four requests.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "An entry body that starts with a NUL character returns 500",
+      "where": "POST/PUT /api/journal",
+      "steps": "POST {\"entry_on\":\"2026-01-01\",\"body\":\"\\u0000x\",\"plant_id\":1}",
+      "expected": "A 4xx validation error.",
+      "actual": "500. sqlite length() stops at NUL, so the CHECK(length(body) BETWEEN 1 AND 500) constraint fails with an IntegrityError that isn't caught.",
+      "evidence": "HTTP 500 'Internal Server Error'. The same body without the leading NUL is accepted.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Search longer than 80 characters gives a raw validation message and no client-side limit",
+      "where": "/journal search box; GET /api/journal?q=",
+      "steps": "Type 81 characters into the Journal search.",
+      "expected": "The input limits the length or shows a friendly reason.",
+      "actual": "The results are replaced by 'Query.q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "main text showed 'Query.q: String should have at most 80 characters'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Character limits differ between client and server for emoji and other astral characters",
+      "where": "JournalEntryForm (/plants/:id)",
+      "steps": "Paste 300 emoji into the Entry textarea.",
+      "expected": "The same 500-character limit everywhere, with an accurate counter.",
+      "actual": "The textarea maxlength and the 'N characters left' counter count UTF-16 code units, so only about 250 emoji fit and the counter shows twice the usage. The server counts code points and accepts 500 emoji (observed via the API: 201).",
+      "evidence": "POST with 500 emoji returned 201. The form uses form.body.length and maxlength=500.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Future-date check uses the server's clock, so a user ahead of the server's timezone can't save 'today'",
+      "where": "JournalEntryIn.not_in_future (backend/schemas.py); JournalEntryForm",
+      "steps": "Use a browser in UTC+13 just after local midnight. The form defaults the date to the local today and submits it.",
+      "expected": "Today's date in the user's timezone is accepted.",
+      "actual": "The server compares against date.today() on its own clock and returns 'Journal date cannot be in the future.'",
+      "evidence": "From the code: the client uses todayIso() (local time) and the server uses date.today().",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Plant detail shows at most 500 journal entries while the badge counts all of them",
+      "where": "/plants/:id",
+      "steps": "Give a plant more than 500 entries.",
+      "expected": "All entries are reachable (pagination or 'show more').",
+      "actual": "The list is capped by limit=500 with no indication, and the badge shows the full count.",
+      "evidence": "From the code: useApiFetch('/journal', {query:{plant_id, limit: 500}}).",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

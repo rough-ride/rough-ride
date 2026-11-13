@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "water-now-twice",
+  "key": "water-now-check-fails-after-reload",
+  "sentence": "After a reload of / or /waterings, the app check app-water-now-records-once fails, reporting zero POST /api/waterings sent where one was expected.",
+  "verdict": "not-a-defect",
+  "evidence": "Signed in as the demo user, then reloaded / and /waterings. Neither page has a 'Water now' control (browser_find for /water now/i found nothing on /waterings; on / the only text matches are the nav link and an empty-state hint). That matches the request, which puts 'Water now' only on the beds page; the dashboard shows recent waterings and /waterings is a filterable list. So when the check runs on those pages there is nothing to click and 0 POSTs is the expected result, not an app failure. The 401/429 GET responses in the reports come from injected faults on the GET list, which has nothing to do with the POST. On /beds, clicking 'Water now North bed' sent exactly one POST /api/waterings, which returned 201 Created. The check was run on pages the feature is not meant to be on.",
+  "severity": null,
+  "wallMs": 55828
+}

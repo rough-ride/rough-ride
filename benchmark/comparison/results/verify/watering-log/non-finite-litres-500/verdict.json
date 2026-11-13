@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "non-finite-litres-500",
+  "sentence": "POST /api/waterings with a non-finite litres value such as 1e400 (infinity) or NaN returns a 500 Internal Server Error instead of a 422.",
+  "verdict": "confirmed",
+  "evidence": "Logged in via POST /api/auth/login with the demo credentials, then sent POST /api/waterings with curl. {\"bed_id\":1,\"litres\":1e400}, {\"bed_id\":1,\"litres\":NaN}, Infinity and -Infinity all returned HTTP 500 'Internal Server Error'. For comparison, litres 20000, \"inf\" and \"nan\" (as strings) returned a proper 422 'Input should be less than or equal to 10000'. No rows were inserted (GET /api/waterings still lists 2 entries, litres 4.0 and 10.0), so data is safe. The likely cause is that FastAPI's 422 response echoes the rejected input, and a non-finite float can't be JSON-encoded. WateringIn.litres (schemas.py:131) is a plain float with gt=0, le=10000 and no allow_inf_nan=False. Other endpoints that take floats seem to fail the same way: a quick POST /api/beds with area_m2 1e400 also returned 500. But the new endpoint does return a 500 instead of a validation error for invalid input.",
+  "severity": "low",
+  "wallMs": 63846
+}

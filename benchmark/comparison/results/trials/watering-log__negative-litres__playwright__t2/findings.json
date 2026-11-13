@@ -1,0 +1,124 @@
+{
+  "findings": [
+    {
+      "title": "Negative litres accepted by the form and the API",
+      "where": "/beds 'Record past watering' form; POST /api/waterings",
+      "steps": "On /beds click 'Record past watering' for Shade corner, enter -3 litres, click Save watering. Or POST {\"bed_id\":1,\"watered_on\":\"2026-11-01\",\"litres\":-5}.",
+      "expected": "Refused with a visible message ('greater than zero'); the API answers 422.",
+      "actual": "Saved. The page shows 'Recorded -3 L on 12 Nov 2026.' and the dashboard lists -3 L. The API returns 201 with litres -5.0. The client only rejects exactly 0 (litres === 0), and WateringIn.litres has only le=10000, no gt=0.",
+      "evidence": "Saw the success notice and the -3 L row on the dashboard; curl returned 201 {\"litres\":-5.0}",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Extremely negative litres accepted and break the 375px layout",
+      "where": "POST /api/waterings; dashboard and /waterings",
+      "steps": "POST litres -1e308 (also allowed from the number input, which has no min). Open the dashboard or /waterings at 375px wide.",
+      "expected": "422 on bad input; the page fits 375px.",
+      "actual": "201 stored. The amount renders as '-100,000,000,…,000 L' (300+ digits). Page scrollWidth is 3466px on /waterings and 3380px on the dashboard against a 375px viewport.",
+      "evidence": "API 201 {\"litres\":-1e+308}; scrollWidth [3466,375]",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "NaN litres gives 500 Internal Server Error",
+      "where": "POST /api/waterings",
+      "steps": "POST raw body {\"bed_id\":1,\"watered_on\":\"2026-11-01\",\"litres\":NaN}",
+      "expected": "4xx validation error",
+      "actual": "500 Internal Server Error (plain text)",
+      "evidence": "curl: 'Internal Server Error 500'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Oversized bed_id gives 500 on create and list",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=",
+      "steps": "POST {\"bed_id\":99999999999999999999,\"litres\":1}, or GET /api/waterings?bed_id=99999999999999999999 (also reachable via /waterings?bed=99999999999999999999)",
+      "expected": "422 / 'Choose an existing bed'",
+      "actual": "500 Internal Server Error (SQLite integer overflow; no upper bound on bed_id)",
+      "evidence": "curl returned 'Internal Server Error 500' for both",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "No date lower bound: year 0001 accepted",
+      "where": "POST /api/waterings / past-watering form",
+      "steps": "POST watered_on 0001-01-01",
+      "expected": "Refused as implausible, or at least shown correctly",
+      "actual": "201; the list shows '1 Jan 1'",
+      "evidence": "API 201 and the /waterings row '1 Jan 1'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Recent waterings error on dashboard has no retry",
+      "where": "Dashboard 'Recent waterings'",
+      "steps": "Make GET /api/waterings?limit=5 fail (500), go to the dashboard via an app link",
+      "expected": "Error message with a Retry button that refetches",
+      "actual": "Only 'Could not load recent waterings.' with no retry; refresh isn't even destructured in index.vue, so a reload is the only way to recover.",
+      "evidence": "Section text: 'Recent waterings / All waterings / Could not load recent waterings.'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page error state has no retry; beds failure is silent and leaves the filter empty",
+      "where": "/waterings",
+      "steps": "Make GET /api/waterings and/or GET /api/beds fail, open Waterings via the nav link",
+      "expected": "Error with Retry. If beds fail, say so instead of offering a filter with no beds.",
+      "actual": "'Could not load waterings.' with no retry button. The beds error is ignored (its error isn't read), so the Bed select holds only 'All beds' with no explanation and stays that way after the server recovers, until a reload.",
+      "evidence": "Page text 'Bed / All beds / Could not load waterings.'; with only beds failing the select had no bed options",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Water now / Save watering hang forever, no timeout",
+      "where": "/beds Water now, Save watering; all watering fetches",
+      "steps": "Make POST /api/waterings never respond, click 'Water now'",
+      "expected": "Fails after 10 s with a visible error, and the button re-enables",
+      "actual": "After 12+ s the button still reads 'Watering…' and is disabled; no timeout is set on $fetch or useFetch.",
+      "evidence": "Button state ['Watering… North bed', disabled=true] after 12 s",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Watering recorded but the bed list vanishes into 'Could not load beds' when the refresh fails; retry makes duplicates",
+      "where": "/beds Water now",
+      "steps": "Make GET /api/beds fail (POST still works), click 'Water now Shade corner'",
+      "expected": "Confirm the save (or at least keep the list), with no duplicate on retry",
+      "actual": "The POST succeeded (a new watering exists), but refresh() failed. The whole bed list is replaced by 'Could not load beds.', and the per-bed success or error message is lost with it. recordWatering treats the refresh failure as a failed save ('Could not record the watering'), which invites the user to try again and record a duplicate. There is no idempotency key, so a retry after a timeout also creates a duplicate.",
+      "evidence": "Page text 'All beds / Could not load beds.'; API shows the new watering id 7 at 10:14:08",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Watering in flight on one bed re-enables another bed's button early (double submit possible)",
+      "where": "/beds",
+      "steps": "Click Water now on bed A while it is slow, then on bed B",
+      "expected": "Each bed's button stays disabled until its own request finishes",
+      "actual": "wateringBedId is a single ref. B overwrites it, so A's button re-enables while A's request is still pending, and A's finally sets it to null, re-enabling B too. A second click then records a duplicate.",
+      "evidence": "beds.vue recordWatering uses the shared wateringBedId",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid bed filter in URL shows a raw validation message",
+      "where": "/waterings?bed=abc",
+      "steps": "Open /waterings?bed=abc",
+      "expected": "Ignore the invalid filter or show a friendly message",
+      "actual": "Shows 'Query.bed id: Input should be a valid integer, unable to parse string as an integer'",
+      "evidence": "Page text",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Future-date check and 'Water now' date use the server's local date, not the gardener's",
+      "where": "POST /api/waterings",
+      "steps": "Run the browser in a time zone ahead of the server (e.g. UTC+12 at 01:00 local), record a past watering for today",
+      "expected": "Today's date is accepted",
+      "actual": "The server's date.today() is still yesterday, so it answers 'Watering date cannot be in the future.' 'Water now' also stores watered_on from the server's local date.",
+      "evidence": "schemas.py not_in_future uses date.today(); the client max uses the browser's todayIso()",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

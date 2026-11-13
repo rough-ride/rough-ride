@@ -1,0 +1,72 @@
+{
+  "id": "harvest-stats__hx2__baseline__t2",
+  "feature": "harvest-stats",
+  "bug": "hx2",
+  "arm": "baseline",
+  "trial": 2,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T18:09:36.441Z",
+  "materializeMs": 4613,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__hx2__baseline__t2/variant/g0hs5m22/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "b030ac56-8a6f-4208-a6ac-96c6c8e5c647",
+  "loadBefore": [
+    5.048828125,
+    7.40869140625,
+    8.6630859375
+  ],
+  "loadAfter": [
+    3.6923828125,
+    6.22802734375,
+    8.046875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 110372,
+  "reportedCostUsd": 0.4814142,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 24,
+      "outputTokens": 7051,
+      "cacheReadInputTokens": 380331,
+      "cacheCreationInputTokens": 33029,
+      "webSearchRequests": 0,
+      "costUSD": 0.4814142,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2122,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 33029,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 12,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found six problems and wrote them to `out/findings.json`. The most serious is that the stats table adds up the wrong numbers when two plants have the same name. I tested the API with curl; with no browser available, the page-level findings come from reading the code.\n\n1. **High (observed): plants with the same name get mixed up.** `backend/routers/stats.py` groups harvests by `p.name, month` instead of by plant id, and plant names don't have to be unique. I added a second \"Tomato\" (variety Roma) and logged two 5000 g harvests for it. Roma's July harvest then showed up in Sungold's row (Sungold 6050 g, Roma 5000 g). Meanwhile the \"Best plants\" list said Roma 10000 g and Sungold 1050 g, so the table and the top-three list disagree.\n2. **Medium (suspected): no retry on error.** When the stats request fails, the page shows the error text but no Retry button. The only ways to try again are changing a date or reloading.\n3. **Medium (suspected): no timeout.** No request in the frontend sets a timeout, so if the API hangs, \"Loading stats…\" stays on screen forever.\n4. **Low (suspected): raw validation text.** A URL like `/stats?from=2026-02-30` gets past the page's date check. The page then shows \"Query.from: Input should be a valid date…\" and the From field appears blank.\n5. **Low (observed): clearing a date field is confusing.** An empty field is left out of the request and the server fills in this year's start or end date. For example, From = 2027-01-01 with To cleared gives \"The From date must be on or before the To date\" while To looks empty.\n6. **Low (suspected): the inputs ignore later URL changes.** The page reads the dates from the URL only when it first loads. Clicking \"Stats\" in the nav while already on a filtered `/stats` clears the URL but keeps the old range and data.\n\nThe 375 px layout looks fine from the CSS: on narrow screens the date fields stack, and the table scrolls inside its own box. The server rejects bad dates with a 4xx, never a 5xx. I deleted the test plant and its harvests afterwards, so the sample data is back to how it was.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 24,
+    "output": 7051,
+    "cacheRead": 380331,
+    "cacheWrite": 33029,
+    "requests": 12,
+    "toolCalls": {
+      "Bash": 11
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 6,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T18:11:38.827Z"
+}

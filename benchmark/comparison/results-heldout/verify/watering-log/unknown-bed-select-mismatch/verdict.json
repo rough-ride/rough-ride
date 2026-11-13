@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "unknown-bed-select-mismatch",
+  "sentence": "Opening /waterings?bed=<nonexistent id> shows 'No waterings for this bed' while the Bed select shows 'All beds', so filter control and results disagree.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened http://localhost:3794/waterings?bed=999. The select #watering-bed has options ''/All beds, 1/North bed, 2/Shade corner. Its value reads '' and selectedIndex is -1 (no option matches '999'), so the control does not show any bed filter. Meanwhile the page reads '0 waterings' and 'No waterings for this bed' with 'Clear filter' buttons. Code: waterings.vue sets bedFilter straight from route.query.bed without checking it against the loaded beds, and passes it as bed_id. The backend only filters by w.bed_id and never checks that the bed exists, so it returns []. As a result the filter control and the results disagree, and the bed that doesn't exist is never reported. This only happens with a hand-edited or stale URL, so impact is low.",
+  "severity": "low",
+  "wallMs": 40850
+}

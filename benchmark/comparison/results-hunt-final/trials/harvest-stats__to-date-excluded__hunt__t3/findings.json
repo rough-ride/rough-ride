@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Harvests on the To date are left out of the stats (and Dec 31 out of the dashboard top plant)",
+      "where": "GET /api/stats/harvests and /stats page",
+      "steps": "Probe to-date-inclusive, expectation api-single-day-includes-harvest",
+      "expected": "A harvest of 777 g on 2026-03-15 is counted for from=2026-03-15&to=2026-03-15 (the To date is inclusive)",
+      "actual": "total_grams 0, harvest_count 0; the page says '0 harvests from 15 Mar 2026 to 15 Mar 2026' and 'No harvests in this range'. The query uses harvested_on < to, so the last day is always dropped",
+      "evidence": "{\"status\":200,\"total\":0,\"count\":0} | {\"status\":200,\"total\":0,\"count\":0}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-193859-hunt-dc36",
+        "probe": "to-date-inclusive",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A malformed stats response throws an uncaught error and leaves 'Loading stats…' on screen with old data",
+      "where": "/stats",
+      "steps": "Probe stats-client-faults, expectation malformed-response-shows-error-not-crash",
+      "expected": "A visible error message, no uncaught exception, no lasting loading state",
+      "actual": "pageError 'Cannot read properties of undefined (reading 'length')'; the status line stays on 'Loading stats…' and the content from the previous range stays visible",
+      "evidence": "{\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"]} | {\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-193859-hunt-dc36",
+        "probe": "stats-client-faults",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

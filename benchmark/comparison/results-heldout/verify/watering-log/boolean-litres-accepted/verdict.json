@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "hx5",
+  "key": "boolean-litres-accepted",
+  "sentence": "POST /api/waterings with litres set to JSON true returns 201 and stores 1 litre instead of a 422.",
+  "verdict": "confirmed",
+  "evidence": "Logged in via POST /api/auth/login with the demo credentials, then sent POST /api/waterings {\"bed_id\":1,\"litres\":true}. Got 201 {\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",...,\"litres\":1.0}, and GET /api/waterings?bed_id=1 listed it as 1.0 L. For comparison, litres:false returned 422 only because of the gt=0 rule (Pydantic coerced it to 0), and the string \"5\" was also accepted as 5.0. Cause: WateringIn in backend/schemas.py is a StrictModel that sets only extra='forbid', not strict=True, so Pydantic's lax mode turns a JSON boolean into a float. A boolean isn't a valid amount of litres, so a 422 is the expected result. The UI form sends numbers, so in practice only direct API clients hit this. I deleted the test rows afterwards.",
+  "severity": "low",
+  "wallMs": 29195
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "error-shown-as-empty",
+  "key": "login-no-retry-after-failure",
+  "sentence": "After POST /api/auth/login fails (500, reset, 400, 429), retrying from /login does not reach the Dashboard without a page reload.",
+  "verdict": "not-reproduced",
+  "evidence": "Using Playwright, I made the first POST /api/auth/login fail and let the second go through to the real API. I tried a 500 with a JSON detail, a 500 with a plain-text body, a connection reset, a 400 and a 429. Each failure showed an error alert on /login ('fail 500', 'The garden server could not be reached.' and so on). I then entered the credentials again and clicked Sign in on the same page, with no reload. All five times the second request was sent (route count 2), the page went to / and the 'Dashboard' heading appeared within 10 s. On failure, the login page deliberately clears the password field (pages/login.vue). If you click Sign in again without re-typing it, you get 'Enter your email and password.' rather than a hang. Once the password is typed again, it reaches the Dashboard. The change does not touch login.vue, useAuth or useApi.",
+  "severity": null,
+  "wallMs": 59484
+}

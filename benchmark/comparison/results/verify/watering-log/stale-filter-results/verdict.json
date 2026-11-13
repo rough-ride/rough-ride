@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "stale-filter-results",
+  "sentence": "On /waterings, rapidly changing or failing bed-filter refetches can leave a previous bed's rows displayed under the new filter or alongside the error.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in as the demo user and opened /waterings (beds: 1 North bed, 2 Shade corner). I drove the filter with Playwright and used page.route to fail, delay or hang requests. (1) North bed loaded, then the Shade corner request returned 500: the alert 'boom' appeared and the table was gone (0 rows, empty count). Nuxt useFetch clears data on error, so the previous bed's rows do not render next to the error. (2) The same test with a network abort showed 'Could not load waterings.' and 0 rows. (3) The North bed response was delayed 3s, then I switched to Shade corner after 200ms: only the Shade corner row showed, before and after the late North response would have arrived. The late answer did not overwrite the newer one, because useFetch cancels or ignores the superseded request. (4) North bed slow-failed (500 after 2.5s) after I had switched to Shade corner: Shade corner stayed shown with no error. (5) Rapid toggling 1->2->1->2 with bed 2 failing: only the error was shown, no rows. The only stale display I found was while a request was still pending or hung: the previous bed's rows stay visible together with 'Loading waterings…'. That is a normal keep-showing-while-loading state with a loading indicator, not the reported problem of rows next to an error or a late answer replacing newer results.",
+  "severity": null,
+  "wallMs": 124154
+}

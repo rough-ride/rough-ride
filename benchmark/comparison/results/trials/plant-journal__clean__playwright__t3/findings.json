@@ -1,0 +1,84 @@
+{
+  "findings": [
+    {
+      "title": "Journal requests have no timeout; a hung save leaves the form stuck on 'Saving…' forever",
+      "where": "Plant detail page (/plants/:id) journal form; also edit/delete and /journal page loads (useApiClient / useApiFetch)",
+      "steps": "Open /plants/3, type an entry, make POST /api/journal hang (never respond), click 'Add entry', wait more than 10 s.",
+      "expected": "The request times out after 10 s, an error is shown, the button is enabled again and the text is kept.",
+      "actual": "The button still reads 'Saving…' and stays disabled after 13 s. No error, no way to cancel. The same applies to PUT/DELETE and the journal GETs, since no timeout is set anywhere.",
+      "evidence": "After 13 s: submit button text 'Saving…', disabled=true.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal load error has no retry, on the plant page or on the Journal page",
+      "where": "/plants/:id Journal section and /journal",
+      "steps": "Make GET /api/journal return 500 (HTML body). Open a plant from the plants list, or click 'Journal' in the nav.",
+      "expected": "An error message with a Retry button that refetches without reloading the page.",
+      "actual": "Only 'Could not load the journal.' is shown, with no retry button (0 found). On the plant page the 'New entry' form is still shown next to the failed list. Recovering needs a full reload or, on /journal, changing the search text.",
+      "evidence": "Section text: 'Entries, newest first\\nCould not load the journal.'; retry buttons: 0. The same on /journal opened through client-side navigation.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Very large IDs give 500 Internal Server Error on the journal endpoints",
+      "where": "POST /api/journal (plant_id), PUT/DELETE /api/journal/{id}, GET /api/journal?plant_id=",
+      "steps": "POST /api/journal {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-01-01\",\"body\":\"x\"}; PUT or DELETE /api/journal/99999999999999999999; GET /api/journal?plant_id=99999999999999999999",
+      "expected": "4xx (422 or 404).",
+      "actual": "500 Internal Server Error. The integer overflows SQLite and nothing catches it, because the IDs have no upper bound.",
+      "evidence": "curl returned 'Internal Server Error 500' for all four requests.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Long plant names push the Journal page wider than a 375 px screen",
+      "where": "/journal",
+      "steps": "Create a plant with an 80-character name with no spaces (e.g. 'LongnameLongname…'), add a journal entry to it, then open /journal at 375 px wide.",
+      "expected": "The plant name wraps and the page fits 375 px.",
+      "actual": "The page scrolls sideways: document scrollWidth is 927 px. The .journal-feed__plant link has no overflow-wrap, so the feed card grows to 927 px.",
+      "evidence": "scrollWidth=927; the widest element is LI.journal-feed__item (right=927), which holds the long plant link.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying an add after a timeout or lost response creates a duplicate entry; retrying a delete shows 'not found'",
+      "where": "POST /api/journal, DELETE /api/journal/{id}",
+      "steps": "Submit an entry. The server commits it but the response is lost (network drop or proxy error), so the user clicks 'Add entry' again. Or delete an entry whose response is lost and try the delete again.",
+      "expected": "One change: the add is idempotent (e.g. an idempotency key), and a repeated delete counts as success.",
+      "actual": "POST has no idempotency, so every retry inserts another row. A second DELETE returns 404 'Journal entry not found.', which the page shows as an error even though the entry is gone.",
+      "evidence": "A second DELETE /api/journal/4 returned 404 {\"detail\":\"Journal entry not found.\"}. During testing, a POST that was abandoned in the browser still reached the server and created an entry ('Fail test ✨'), which shows the duplicate path is real.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Emoji count as 2 characters in the entry box, so the 500-character limit is not met",
+      "where": "JournalEntryForm (plant detail add/edit)",
+      "steps": "Type 'edited text 😀' (14 characters) in an entry.",
+      "expected": "The counter says 486 left, and 500 characters (the limit the server enforces) can be entered.",
+      "actual": "The counter and the textarea maxlength count UTF-16 code units: one emoji uses 2. An entry of 500 emoji is cut off at 250, even though the server accepts 500.",
+      "evidence": "For 'edited text 😀' the counter showed '486 characters left' (14 code points + 1 extra for the emoji).",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Search over 80 characters shows a raw validation message, and the input accepts any length",
+      "where": "/journal search box",
+      "steps": "Type 90 characters into Search.",
+      "expected": "The input is capped at 80 (maxlength), or a friendly message is shown.",
+      "actual": "The results area is replaced by 'Query.q: String should have at most 80 characters'.",
+      "evidence": "Page text after typing 90 characters: 'Query.q: String should have at most 80 characters'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "The 'no future dates' check uses the server's date, so it can reject today's entry for users in other time zones",
+      "where": "POST/PUT /api/journal (JournalEntryIn.not_in_future)",
+      "steps": "Use a browser whose local date is ahead of the server's (e.g. late evening, UTC+10 against a UTC server) and add an entry with the default date, today.",
+      "expected": "Today's date in the user's own time zone is accepted.",
+      "actual": "The client defaults to its local today, but the server compares with date.today() and returns 422 'Journal date cannot be in the future.'",
+      "evidence": "Code: schemas.py compares against date.today(); JournalEntryForm uses todayIso() (browser local time).",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}
