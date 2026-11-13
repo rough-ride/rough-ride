@@ -34,5 +34,5 @@ These touch scoring scripts only; no run, finding or verdict changed.
 - `verify.mjs` takes `BENCH_LANE_OFFSET`, so held-out verification could run on lanes 3 to 5 while the dev-set hunt runs still held lanes 0 to 2.
 - The dev-set hunt runs were judged in their own pool, not shuffled together with the first comparison's baseline and Playwright findings.
 - Each held-out `provenance.md` says "Written by hand": the separate agent wrote each bug itself rather than generating it by mutation. The two accounts describe the same thing.
-- Result files were scrubbed of this machine's temporary paths (`$BENCH_WORK` stands in for them), and `trial.mjs` and `verify.mjs` now write them that way.
+- Result files were scrubbed of this machine's paths (`$TMPDIR` stands in for its temporary folder, `~` for the home folder), and `trial.mjs` and `verify.mjs` now write them that way.
 - The engine's code is not in a release. The version that ran is commit `454cf506abdf` on the `stillhunter` branch.
