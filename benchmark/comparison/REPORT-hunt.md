@@ -1,6 +1,6 @@
 # Does /rough-ride:hunt beat plain Claude Code? Experiment report
 
-Run on 2026-11-12 with Claude Code 2.1.322 and `claude-opus-5-5` for every arm, judge and verifier. Method: [DESIGN-hunt.md](DESIGN-hunt.md), written before the final runs, on top of [DESIGN.md](DESIGN.md). The engine under test is the redesign `/rough-ride:hunt` (`packages/rough-ride/src/hunt.mts`, `src/probe-host.mts`, `agents/hunter.md`, `skills/hunt/SKILL.md`), frozen after the dev pilot. The engine is in no release; the tested version is on the `stillhunter` branch at commit `__HUNT_SHA__`.
+Run on 2026-11-12 with Claude Code 2.1.322 and `claude-opus-5-5` for every arm, judge and verifier. Method: [DESIGN-hunt.md](DESIGN-hunt.md), written before the final runs, on top of [DESIGN.md](DESIGN.md). The engine under test is the redesign `/rough-ride:hunt` (`packages/rough-ride/src/hunt.mts`, `src/probe-host.mts`, `agents/hunter.md`, `skills/hunt/SKILL.md`), frozen after the dev pilot. The engine is in no release; the tested version is on the `stillhunter` branch at commit [`454cf506abdf`](https://github.com/rough-ride/rough-ride/tree/454cf506abdfacde023249b7fa9ad39433ee0f45/packages/rough-ride).
 
 ## Answer
 
