@@ -242,7 +242,7 @@ test('only README.md changed: Nothing to attack, exit 0, nothing created under .
   const doc = JSON.parse(r.stdout);
   assert.equal(doc.status, 'nothing-to-attack');
   assert.equal(doc.summaryLines[1], 'Nothing to attack: the 1 changed files are tests, docs, tooling, generated or binary files.');
-  assert.match(doc.summaryLines[0], /^rough-ride quick \| [\d.]+s \| early preview: accuracy not measured yet, treat findings as leads to check$/);
+  assert.match(doc.summaryLines[0], /^rough-ride quick \| [\d.]+s \| early preview: benchmarked below Claude Code with a browser, treat findings as leads to check$/);
   assert.equal(existsSync(path.join(root, '.rough-ride')), false);
   const text = run(['quick'], { cwd: root });
   assert.equal(text.stdout.split('\n')[1], 'Nothing to attack: the 1 changed files are tests, docs, tooling, generated or binary files.');

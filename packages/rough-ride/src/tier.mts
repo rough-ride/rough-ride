@@ -55,9 +55,10 @@ import { moduleFiles, repoFiles } from './tracing.mjs';
 import { writeAtomic } from './write.mjs';
 import { CONTRACT_FILES, contractJson, contractLine, detectContract, summaryContractLine } from './contract.mjs';
 
-// Every 0.x run says it, on the header line and in report.txt, until the benchmark measures accuracy.
-export const PRE_RELEASE = 'early preview: accuracy not measured yet, treat findings as leads to check';
-export const PRE_RELEASE_REPORT = 'Early preview: how often rough-ride catches real bugs, and how often it raises false alarms, has not been measured yet. Treat findings as leads to check.';
+// Every 0.x run says it, on the header line and in report.txt: the benchmark
+// (benchmark/comparison/REPORT.md) measured this engine below Claude Code with a browser.
+export const PRE_RELEASE = 'early preview: benchmarked below Claude Code with a browser, treat findings as leads to check';
+export const PRE_RELEASE_REPORT = "Early preview: on the rough-ride benchmark, this engine's standard tier caught the planted bug in 5 of 18 runs, where Claude Code testing with a browser caught it in 18 of 18 with fewer false alarms (benchmark/comparison/REPORT.md in the rough-ride repository); quick was not measured. Treat findings as leads to check.";
 
 // 1 CPU -> 1 lane, 2 or 3 -> 2, 4 -> 3, 5 or more -> 4 (49.3).
 export function lanesFor(cpus: number): number {
