@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Stats page error state has no retry",
+      "where": "/stats (frontend/app/pages/stats.vue)",
+      "steps": "Open /stats while the API fails, e.g. /stats?from=2026-02-31, or with the API unreachable or returning 500.",
+      "expected": "An error message plus a Retry button that fetches again without a page reload.",
+      "actual": "Only an AlertMessage with text. No retry control and no refresh() is wired up. The only way out is to change a date or reload the page.",
+      "evidence": "The SSR HTML for /stats?from=2026-02-31 shows the error text and then the footer, with no button. The template has no retry element.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "No request timeout: 'Loading stats…' can spin forever",
+      "where": "/stats and dashboard (useApiFetch / useApiClient)",
+      "steps": "Load /stats or change a date while the API hangs and never answers.",
+      "expected": "The request fails after 10 seconds and shows an error with a retry.",
+      "actual": "useApiFetch/$fetch.create sets no timeout, so the page stays on 'Loading stats…' forever.",
+      "evidence": "composables/useApi.ts has no timeout option. stats.vue calls useApiFetch with no timeout.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Bad date in URL shows a raw technical validation message and a blank field",
+      "where": "/stats?from=2026-02-31",
+      "steps": "Open /stats?from=2026-02-31. A shared or edited link does this.",
+      "expected": "A friendly message such as 'From is not a valid date', or the bad value falls back to the default.",
+      "actual": "The page shows 'Query.from: Input should be a valid date or datetime, day value is outside expected range' and the From input is empty. queryDate() only checks the regex, not that the date is real.",
+      "evidence": "This text appears in the SSR HTML of /stats?from=2026-02-31.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Clearing a date field silently uses a hidden default, which can give a contradictory error",
+      "where": "/stats date range form; GET /api/stats/harvests",
+      "steps": "On /stats, clear the From field and set To to 2025-12-31. Or just clear From.",
+      "expected": "A blank field is refused with a clear reason, or the shown range matches the inputs.",
+      "actual": "The empty field is dropped from the query and the server uses Jan 1 or Dec 31 of the current year. With From blank and To = 2025-12-31 the page says 'The From date must be on or before the To date.' even though From is empty. With From blank alone, the inputs show nothing while the results cover 1 Jan to 31 Dec.",
+      "evidence": "GET /api/stats/harvests?to=2025-12-31 returns 422 {\"detail\":\"The From date must be on or before the To date.\"}",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Months with no harvests are left out of the per-month table",
+      "where": "/stats table; GET /api/stats/harvests",
+      "steps": "Choose From 2026-05-01 and To 2026-10-31.",
+      "expected": "A column for every month in the chosen range, with empty months shown as '–'.",
+      "actual": "Only months that have harvests appear (Jun to Sep). May and Oct are missing, and any gap month in the middle would be missing too, so the table hides gaps.",
+      "evidence": "The API months for that range are ['2026-06','2026-07','2026-08','2026-09'].",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Long unbroken variety text can overflow the Best plants card at 375px",
+      "where": "/stats Best plants",
+      "steps": "Create a plant with an 80-character variety that has no spaces, log a harvest, then view /stats at 375px wide.",
+      "expected": "The text wraps or is truncated inside the card.",
+      "actual": "stat__hint has no overflow-wrap and the stylesheet has no overflow-wrap/word-break rules, so the text runs out of the card and can cause sideways scrolling.",
+      "evidence": "main.css: .stat__hint has no wrapping rules, and grep finds no overflow-wrap anywhere.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Date fields don't follow URL changes (nav link, back/forward)",
+      "where": "/stats",
+      "steps": "On /stats pick a custom range (the URL becomes /stats?from=...). Click 'Stats' in the nav, or press Back.",
+      "expected": "The fields and results match the URL, e.g. reset to this year.",
+      "actual": "dateFrom/dateTo are read from route.query only once at setup and never watch the route. The URL changes but the page keeps the old range.",
+      "evidence": "stats.vue: the refs are set from route.query once. The only watch goes from refs to router, not the other way.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

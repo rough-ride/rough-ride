@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3796, API http://localhost:8796/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-hf/verify-watering-log-waterings-page-crash-non-list-response/scratch.
+
+The reported problem: When GET /api/waterings returns a non-array body (malformed or empty object), /waterings throws an uncaught 'waterings.value?.reduce is not a function' and never renders, leaving the previous page on screen with no error.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Waterings page crashes on a non-list response (reduce is not a function), navigation never completes",
+  "where": "/waterings, GET /api/waterings",
+  "steps": "Probe malformed, expectation waterings-malformed-shows-error",
+  "expected": "A visible error on the Waterings page",
+  "actual": "Uncaught 'waterings.value?.reduce is not a function'; the beds page stays on screen with no error shown",
+  "evidence": "{\"alerts\":[],\"text\":[\"Partial shade\",\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\",\"2\",\"HARVESTED\",\"2.55 kg\",\"LAST WATERED\",\"12 Nov 2026, 19:35\",\"Water now\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"]} | {\"alerts\":[],\"text\":[\"Partial shade\",\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\",\"2\",\"HARVESTED\",\"2.55 kg\",\"LAST WATERED\",\"12 Nov 2026, 19:35\",\"Water now\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"]}"
+ },
+ {
+  "title": "Waterings page crashes on a malformed /api/waterings response; navigation silently stays on the previous page",
+  "where": "/waterings (GET /api/waterings)",
+  "steps": "Probe waterings-malformed, expectation malformed-list-shows-error-no-crash",
+  "expected": "Waterings page opens and shows an error message",
+  "actual": "Uncaught 'waterings.value?.reduce is not a function'; URL changes to /waterings but the Beds page stays rendered with no error shown",
+  "evidence": "{\"url\":\"/waterings\",\"headings\":[\"Beds\",\"Add a bed\",\"All beds\",\"North bed\",\"Shade corner\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"],\"alerts\":[]} | {\"url\":\"/waterings\",\"headings\":[\"Beds\",\"Add a bed\",\"All beds\",\"North bed\",\"Shade corner\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"],\"alerts\":[]}"
+ },
+ {
+  "title": "Waterings page crashes when the list response is not an array",
+  "where": "/waterings (GET /api/waterings)",
+  "steps": "Probe client-faults, expectation list-malformed-shows-error",
+  "expected": "A visible error that the waterings could not be loaded, and no uncaught error",
+  "actual": "Uncaught 'waterings.value?.reduce is not a function'. The page never renders: the browser stays on the Beds content with no alert.",
+  "evidence": "{\"hits\":1,\"alerts\":[],\"sec\":[\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"]} | {\"hits\":1,\"alerts\":[],\"sec\":[\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"]}"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-hf/verify-watering-log-waterings-page-crash-non-list-response/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

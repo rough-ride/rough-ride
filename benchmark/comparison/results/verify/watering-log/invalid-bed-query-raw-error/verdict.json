@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "invalid-bed-query-raw-error",
+  "sentence": "Opening /waterings?bed=abc (or an unknown bed id) shows the raw validation text 'Query.bed id: Input should be a valid integer...' or a blank filter selection.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /waterings?bed=abc. The page body shows the raw Pydantic/FastAPI text 'Query.bed id: Input should be a valid integer, unable to parse string as an integer' in the alert. The bed select value is '' (it displays 'All beds') while a 'Clear filter' button is shown, so the filter control does not match the filter in use. The SSR HTML fetched for /waterings?bed=abc contains role=\"alert\" with that same text. The cause is in waterings.vue: the raw ?bed= value is passed as bed_id without any check, and the backend's 422 detail is shown as-is. /waterings?bed=999 shows '0 waterings / No waterings for this bed'. The select is again '' and shows 'All beds', which contradicts the message. The page never says the bed does not exist.",
+  "severity": "low",
+  "wallMs": 51466
+}

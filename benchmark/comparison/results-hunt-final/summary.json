@@ -1,0 +1,1094 @@
+{
+  "generatedAt": "2026-11-12T19:05:43.715Z",
+  "judgeAgreementOnPlanted": {
+    "agree": 60,
+    "compared": 60
+  },
+  "per": {
+    "hunt": {
+      "runs": 27,
+      "shownOnly": null,
+      "recall": {
+        "found": 18,
+        "chances": 18,
+        "wilson95": [
+          0.8241154494176252,
+          1
+        ],
+        "mentionedOnly": 0,
+        "inside": [
+          15,
+          15
+        ],
+        "outside": [
+          3,
+          3
+        ]
+      },
+      "perBug": {
+        "error-shown-as-empty": "3/3",
+        "to-date-excluded": "3/3",
+        "search-quote-crash": "3/3",
+        "failed-save-clears-text": "3/3",
+        "water-now-twice": "3/3",
+        "negative-litres": "3/3"
+      },
+      "findings": 60,
+      "byClass": {
+        "extra-confirmed": 34,
+        "planted-observed": 23,
+        "false-not-a-defect": 3
+      },
+      "precision": 0.95,
+      "falseAlarmsPerRun": 0.1111111111111111,
+      "falseAlarmsPerCleanRun": 0.3333333333333333,
+      "falseAlarmList": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "distinctConfirmedExtras": [
+        "harvest-stats/stats-malformed-response-crash-stuck-loading",
+        "harvest-stats/stats-hang-loading-forever-stale-data",
+        "harvest-stats/stats-cleared-to-extends-to-year-end",
+        "plant-journal/journal-nav-link-keeps-stale-search",
+        "plant-journal/journal-page-malformed-shows-fake-entries",
+        "plant-journal/detail-malformed-journal-shows-fake-entries",
+        "plant-journal/add-entry-error-not-cleared",
+        "plant-journal/journal-page-non-list-shown-as-no-match",
+        "plant-journal/journal-search-hang-loading-forever",
+        "watering-log/waterings-page-crash-non-list-response",
+        "watering-log/dashboard-invalid-response-shown-as-empty",
+        "watering-log/dashboard-malformed-response-renders-garbage-rows",
+        "watering-log/tiny-litres-shown-as-zero",
+        "watering-log/year-one-date-accepted",
+        "watering-log/unknown-bed-filter-select-mismatch",
+        "watering-log/water-now-shared-busy-state-across-beds"
+      ],
+      "medianWallMin": 1.9677666666666667,
+      "totalTokens": 5902893,
+      "medianOutputTokens": 5526,
+      "medianCostUsd": 0.24266939999999998,
+      "totalCostUsd": 8.151192799999999,
+      "killedAtLimit": 0,
+      "sourceChanged": 0,
+      "noFindingsFile": 0,
+      "outcomes": [
+        {
+          "bug": "error-shown-as-empty",
+          "n": 1,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "error-shown-as-empty",
+          "n": 2,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "error-shown-as-empty",
+          "n": 3,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "to-date-excluded",
+          "n": 1,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "to-date-excluded",
+          "n": 2,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "to-date-excluded",
+          "n": 3,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "failed-save-clears-text",
+          "n": 1,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "failed-save-clears-text",
+          "n": 2,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "failed-save-clears-text",
+          "n": 3,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "search-quote-crash",
+          "n": 1,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "search-quote-crash",
+          "n": 2,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "search-quote-crash",
+          "n": 3,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "negative-litres",
+          "n": 1,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "negative-litres",
+          "n": 2,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "negative-litres",
+          "n": 3,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "water-now-twice",
+          "n": 1,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "water-now-twice",
+          "n": 2,
+          "found": true,
+          "mentioned": false
+        },
+        {
+          "bug": "water-now-twice",
+          "n": 3,
+          "found": true,
+          "mentioned": false
+        }
+      ]
+    }
+  },
+  "pairs": {},
+  "issues": {
+    "harvest-stats/error-shown-as-empty": "On /stats, when GET /api/stats/harvests fails (for example a 500, or a 422 for a From date after the To date), the page shows the empty state 'No harvests in this range' instead of an error.",
+    "harvest-stats/to-date-excluded": "On /stats and GET /api/stats/harvests, a harvest logged on the To date is left out of the table, totals and best plants, as seen with a single-day range where From equals To.",
+    "harvest-stats/stats-malformed-response-crash-stuck-loading": "On /stats, when GET /api/stats/harvests returns a malformed or empty-object body, an uncaught TypeError (reading 'length') is thrown, no error is shown, and 'Loading stats…' stays on screen over the previous range's table and best plants.",
+    "harvest-stats/stats-hang-loading-forever-stale-data": "On /stats, when the stats request never answers after changing the date range, 'Loading stats…' stays indefinitely above the previous range's results with no timeout, error or retry.",
+    "harvest-stats/stats-cleared-to-extends-to-year-end": "On /stats, clearing the To field while From is set silently queries up to 31 Dec of the current year while the To field stays blank.",
+    "plant-journal/failed-save-clears-text": "On the plant detail page, when saving a new journal entry fails (POST /api/journal error), the error is shown but the typed entry text is cleared from the textarea.",
+    "plant-journal/search-quote-crash": "Searching the journal for a term containing an apostrophe (e.g. O'Brien) makes GET /api/journal?q= return 500 because the term is pasted into the SQL, and the Journal page shows only 'Could not load the journal.'",
+    "plant-journal/journal-nav-hang-shows-old-page": "Navigating to /journal while its API request hangs changes the URL but keeps the previous Plants page displayed with no loading indicator or error.",
+    "plant-journal/detail-malformed-journal-shows-fake-entries": "On the plant detail page, a malformed (non-list) GET /api/journal?plant_id= response is rendered as blank entries dated '–' with active Edit/Delete buttons instead of an error.",
+    "plant-journal/journal-page-malformed-shows-fake-entries": "On the Journal page, a malformed (non-list, e.g. string) GET /api/journal response is rendered as an entry count and blank '–' cards instead of an error.",
+    "plant-journal/journal-page-non-list-shown-as-no-match": "On the Journal page, when the journal API returns an object instead of a list, the page shows '0 entries match' / 'No entries match' instead of an error.",
+    "plant-journal/journal-nav-link-keeps-stale-search": "On /journal with an active search, clicking the Journal nav link clears q from the URL but leaves the search box text and filtered results in place.",
+    "plant-journal/add-entry-error-not-cleared": "On the plant detail page, the error from a failed 'Add entry' save stays visible after the form is cleared and another journal action (such as editing an entry) succeeds.",
+    "plant-journal/journal-search-hang-loading-forever": "On the Journal page, when a search request hangs, the page shows 'Loading entries…' indefinitely above the previous search's results with no timeout, error or retry.",
+    "watering-log/negative-litres": "The Record past watering form on /beds and POST /api/waterings accept a negative amount such as -5 litres, save it, report success, and list it as a negative amount on /waterings.",
+    "watering-log/water-now-twice": "Double-clicking the Water now button on /beds sends two POST /api/waterings requests and records two identical waterings because the button stays enabled while its request runs.",
+    "watering-log/waterings-page-load-error-no-retry": "When GET /api/waterings fails on /waterings, only the error text is shown with no retry control, so the user must reload the page.",
+    "watering-log/dashboard-invalid-response-shown-as-empty": "When GET /api/waterings?limit=5 returns an empty object instead of a list, the dashboard Recent waterings card shows the 'No waterings yet' empty state instead of an error.",
+    "watering-log/waterings-page-crash-non-list-response": "When GET /api/waterings returns a non-array body (malformed or empty object), /waterings throws an uncaught 'waterings.value?.reduce is not a function' and never renders, leaving the previous page on screen with no error.",
+    "watering-log/dashboard-waterings-error-no-retry": "When the dashboard Recent waterings request fails, the card shows only the error text with no retry control.",
+    "watering-log/tiny-litres-shown-as-zero": "Recording a past watering of a tiny amount such as 0.004 L on /beds is accepted despite the field's 0.1 minimum and is reported and listed as '0 L'.",
+    "watering-log/year-one-date-accepted": "The Record past watering form on /beds and POST /api/waterings accept an absurd date such as 0001-01-01, save it with 201, and report 'Recorded 2 L on 1 Jan 1.'.",
+    "watering-log/dashboard-malformed-response-renders-garbage-rows": "When GET /api/waterings?limit=5 returns a malformed non-list body, the dashboard Recent waterings table renders rows reading 'Never', a blank bed, and '–' instead of an error.",
+    "watering-log/water-now-shared-busy-state-across-beds": "On /beds, clicking Water now on two beds in quick succession re-enables the second bed's button when the first request finishes because a single shared wateringBedId tracks the in-flight request, and the first bed's notice is lost.",
+    "watering-log/unknown-bed-filter-select-mismatch": "Opening /waterings?bed=99999 with an unknown bed id filters the list to 'No waterings for this bed' while the Bed select shows no selection, so the select and list disagree."
+  },
+  "verdicts": {
+    "harvest-stats/stats-cleared-to-extends-to-year-end": {
+      "feature": "harvest-stats",
+      "variant": "error-shown-as-empty",
+      "key": "stats-cleared-to-extends-to-year-end",
+      "sentence": "On /stats, clearing the To field while From is set silently queries up to 31 Dec of the current year while the To field stays blank.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as the demo user on /stats. Set From=2025-01-01, then cleared To. The To input stays blank, the URL becomes ?from=2025-01-01 (no 'to'), and the results line reads '6 harvests from 1 Jan 2025 to 31 Dec 2026'. Cause in the code: stats.vue drops an empty 'to' from the query, and backend/routers/stats.py replaces a missing 'to' with year_bounds(today.year)[1], i.e. 31 Dec of the current year. The empty field is never refused, and the page never shows the end date it actually used except in that summary line. Worse cases: (1) From=2027-02-01 with To cleared makes the backend's year-end fallback earlier than From, so the API returns 422. The page shows 'No harvests in this range' with no error and no range line. (2) Reloading ?from=2027-02-01 fills To back in with 2026-12-31 (queryDate fallback), so the form now shows an inverted From/To pair. Blank To is handled inconsistently and can break the page silently.",
+      "severity": "medium",
+      "wallMs": 49665
+    },
+    "harvest-stats/stats-hang-loading-forever-stale-data": {
+      "feature": "harvest-stats",
+      "variant": "clean",
+      "key": "stats-hang-loading-forever-stale-data",
+      "sentence": "On /stats, when the stats request never answers after changing the date range, 'Loading stats…' stays indefinitely above the previous range's results with no timeout, error or retry.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as demo user, opened /stats (default 1 Jan-31 Dec 2026 loaded: Courgette 1.2 kg, Tomato 1.05 kg, Lettuce 350 g, 2.6 kg total). Then routed **/api/stats/harvests** to never respond and set From to 2026-05-01 (URL became /stats?from=2026-05-01). After 1 s and again after 21 s the page still showed 'Loading stats…' above the full previous-range Best plants and table (caption 'Harvest weight per plant and month, 1 Jan 2026 to 31 Dec 2026', Total 2.6 kg). No timeout, error or retry appeared. Code: stats.vue uses useApiFetch (plain useFetch with no timeout or abort) and renders the old `stats` data while status === 'pending'. Only the old caption hints that the data is out of date. The page does say 'Loading', and the shared fetch helper has no timeout anywhere in the app, so this only matters when the server hangs.",
+      "severity": "low",
+      "wallMs": 102946
+    },
+    "harvest-stats/stats-malformed-response-crash-stuck-loading": {
+      "feature": "harvest-stats",
+      "variant": "clean",
+      "key": "stats-malformed-response-crash-stuck-loading",
+      "sentence": "On /stats, when GET /api/stats/harvests returns a malformed or empty-object body, an uncaught TypeError (reading 'length') is thrown, no error is shown, and 'Loading stats…' stays on screen over the previous range's table and best plants.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as the demo user and loaded /stats. It showed '5 harvests from 1 Jan 2026 to 31 Dec 2026', the best plants (Courgette 1.2 kg, Tomato 1.05 kg, Lettuce 350 g) and the month table. I then used page.route to make GET /api/stats/harvests** return 200 with body '{}', and set From to 2026-03-01. The URL changed to ?from=2026-03-01 and a pageerror fired: \"Cannot read properties of undefined (reading 'length')\". The console shows a Vue 'Unhandled error during execution of render function' at stats.vue _sfc_render. After waiting 5s the status line still said 'Loading stats…', no error alert was shown, and the old 1 Jan–31 Dec best plants and table were still on screen under From=1 Mar. Cause in code: frontend/app/pages/stats.vue has `v-else-if=\"stats && stats.plants.length\"` with no check on the response shape, so the render throws and the page stops updating. Worse variant: while the route was active, signing in and being redirected to /stats crashed the first render, and the login form stayed on screen with the URL at /stats.",
+      "severity": "medium",
+      "wallMs": 143159
+    },
+    "plant-journal/add-entry-error-not-cleared": {
+      "feature": "plant-journal",
+      "variant": "clean",
+      "key": "add-entry-error-not-cleared",
+      "sentence": "On the plant detail page, the error from a failed 'Add entry' save stays visible after the form is cleared and another journal action (such as editing an entry) succeeds.",
+      "verdict": "confirmed",
+      "evidence": "In the running app (signed in as the demo user, /plants/2 Courgette) I added a baseline entry. Then I routed POST /api/journal to a 500 {detail:'Injected 500'} and clicked 'Add entry'. The new-entry form showed 'Injected 500'. I removed the route and cleared the textarea, and the form still showed 'Injected 500' (500 characters left). I edited the first entry and saved it (PUT returned 200, the edit form closed). The new-entry form still showed 'Injected 500'. Code cause: in pages/plants/[id].vue, entryFormError is reset only at the start of addEntry(); onEntrySaved() and removeEntry() clear journalError but not entryFormError. JournalEntryForm.vue's shownError = localError ?? props.error, and neither typing nor clearing the body resets it. So a stale server failure message stays above an empty form after later journal actions succeed, which is misleading. It is cosmetic and nothing is lost, so severity is low.",
+      "severity": "low",
+      "wallMs": 99183
+    },
+    "plant-journal/detail-malformed-journal-shows-fake-entries": {
+      "feature": "plant-journal",
+      "variant": "clean",
+      "key": "detail-malformed-journal-shows-fake-entries",
+      "sentence": "On the plant detail page, a malformed (non-list) GET /api/journal?plant_id= response is rendered as blank entries dated '–' with active Edit/Delete buttons instead of an error.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as the demo user and opened /plants. Used Playwright page.route to make GET /api/journal?plant_id=... return 200 application/json with the body \"oops\" (a JSON string, not a list). Then followed the client-side link to /plants/1 (Tomato). The Journal section rendered 4 <li> entries, one per character, each dated '–' with empty text and enabled 'Edit / entry from –' and 'Delete / entry from –' buttons. No role=alert was shown, and the badge still said '2 entries'. Code cause: pages/plants/[id].vue uses useApiFetch<JournalEntry[]> with no shape check or transform, and renders `v-if=\"journal && journal.length\"` / `v-for=\"entry in journal\"`. Any non-list value that has a length is iterated, and the 'Could not load the journal.' alert only appears when the fetch errors.",
+      "severity": "low",
+      "wallMs": 87986
+    },
+    "plant-journal/journal-nav-hang-shows-old-page": {
+      "feature": "plant-journal",
+      "variant": "clean",
+      "key": "journal-nav-hang-shows-old-page",
+      "sentence": "Navigating to /journal while its API request hangs changes the URL but keeps the previous Plants page displayed with no loading indicator or error.",
+      "verdict": "not-a-defect",
+      "evidence": "Signed in as the demo user, opened /plants, set a Playwright route that never answers **/api/journal**, then clicked the Journal nav link. After 3 s and again after 13 s the URL was /journal but the headings were still Plants/Courgette/Lettuce/Tomato and 'Loading entries…' was not shown, so the reported behaviour does happen. The cause: pages/journal.vue does `await useApiFetch(...)` at the top level, and Nuxt holds client-side navigation until that promise resolves. That is the pattern every page in the app already uses (tasks.vue, beds.vue, plants/index.vue, harvests/new.vue, plants/new.vue, all present before this change), and the app has no NuxtLoadingIndicator. As a control I hung **/api/tasks** and went from Plants to the existing Tasks page: same result, URL /tasks with the Plants page still shown and no indicator. The Journal page behaves the way the existing pages are built to behave. The change did not introduce this, and the request says nothing about loading states during navigation. (Side note: the 'Loading entries…' text only shows while search refetches are pending, not during the first navigation.)",
+      "severity": null,
+      "wallMs": 114929
+    },
+    "plant-journal/journal-nav-link-keeps-stale-search": {
+      "feature": "plant-journal",
+      "variant": "clean",
+      "key": "journal-nav-link-keeps-stale-search",
+      "sentence": "On /journal with an active search, clicking the Journal nav link clears q from the URL but leaves the search box text and filtered results in place.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as the demo user and opened /journal (3 unfiltered entries: Tomato, Lettuce). Typed 'tomato' in the search box: URL became /journal?q=tomato and 2 Tomato entries showed. Then clicked the 'Journal' nav link: URL became /journal with no q, but the search box still said 'tomato', the page still showed only the 2 Tomato entries and '2 entries match'. With 'courgette' it was the same: URL /journal, box 'courgette', '0 entries match' instead of the 3 latest entries. Cause in the code: pages/journal.vue sets `search` from route.query.q only once, when the page is set up, and only watches search -> URL, never route.query -> search. The nav link navigates within the same page, so the page is reused and the URL and the shown state end up out of sync.",
+      "severity": "low",
+      "wallMs": 44742
+    },
+    "plant-journal/journal-page-malformed-shows-fake-entries": {
+      "feature": "plant-journal",
+      "variant": "clean",
+      "key": "journal-page-malformed-shows-fake-entries",
+      "sentence": "On the Journal page, a malformed (non-list, e.g. string) GET /api/journal response is rendered as an entry count and blank '–' cards instead of an error.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as the demo user and used Playwright to route **/api/journal?** to return 200 application/json with the body \"not a list\" (a JSON string), then opened /journal from the nav. The page showed '10 entries' and drew 10 .journal-feed__item cards whose only text was '–'. No role=alert error appeared. Cause: journal.vue uses useApiFetch<JournalEntry[]> and never checks Array.isArray. It counts with entries.value?.length, which is the string's length, and v-for walks over the characters, so plant_name, entry_on and body are all undefined. The 'Could not load the journal.' alert only shows when loadError is set.",
+      "severity": "low",
+      "wallMs": 37204
+    },
+    "plant-journal/journal-page-non-list-shown-as-no-match": {
+      "feature": "plant-journal",
+      "variant": "clean",
+      "key": "journal-page-non-list-shown-as-no-match",
+      "sentence": "On the Journal page, when the journal API returns an object instead of a list, the page shows '0 entries match' / 'No entries match' instead of an error.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as the demo user, loaded /plants, then used browser_route to make **/api/journal** return 200 with body {} (an object instead of a list). Went to /journal through the in-app link and typed 'tomato' in the search box (URL became /journal?q=tomato). The page showed '0 entries match' and the 'No entries match / Try a different word or plant name.' empty state, with no error alert. The code explains it: pages/journal.vue takes any truthy `entries` as valid data. `entries.value?.length ?? 0` gives 0 for an object, `entries && entries.length` is false, so the `v-else-if=\"entries && searching\"` empty state renders. The AlertMessage only appears when useFetch sets `error`, and nothing checks the response shape. A broken server response therefore looks like a real 'nothing found' result, which misleads the user.",
+      "severity": "low",
+      "wallMs": 44432
+    },
+    "plant-journal/journal-search-hang-loading-forever": {
+      "feature": "plant-journal",
+      "variant": "clean",
+      "key": "journal-search-hang-loading-forever",
+      "sentence": "On the Journal page, when a search request hangs, the page shows 'Loading entries…' indefinitely above the previous search's results with no timeout, error or retry.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as the demo user and opened /journal. Searched 'cour' and let it load (it showed '0 entries match' / 'No entries match'). Then used page.route('**/api/journal**') to hang every journal request without answering, and typed 'courgette'. After 15 s the page still showed 'Loading entries…' above the previous search's 'No entries match' empty state, with no error, no timeout and no retry control. The URL had already changed to ?q=courgette, so the stale result looks like it belongs to the new query. Code check: pages/journal.vue binds useApiFetch('/journal', { query }) and shows 'Loading entries…' only while status === 'pending'. useApiFetch/useApiClient (composables/useApi.ts) set no timeout and no AbortSignal, so a hung request stays pending for good, and the old data/v-else-if branches keep rendering under it. Mitigating factor: the plants list in main already has the same pattern with no timeout ('Loading plants…'), so the gap exists elsewhere in the app too. It only shows up when the server hangs, and typing a new query starts a fresh request.",
+      "severity": "low",
+      "wallMs": 108437
+    },
+    "watering-log/dashboard-invalid-response-shown-as-empty": {
+      "feature": "watering-log",
+      "variant": "clean",
+      "key": "dashboard-invalid-response-shown-as-empty",
+      "sentence": "When GET /api/waterings?limit=5 returns an empty object instead of a list, the dashboard Recent waterings card shows the 'No waterings yet' empty state instead of an error.",
+      "verdict": "confirmed",
+      "evidence": "The API really has 2 waterings (curl GET /api/waterings?limit=5 returns North bed 10 L and Shade corner 4 L). I signed in as demo, opened /beds, then made the browser return HTTP 200 with body {} for **/api/waterings?limit=5*. I clicked the Dashboard link, which navigates client-side so the request goes through the browser. The Recent waterings card showed 'No waterings yet / Use “Water now” on a bed to record one. / Go to beds' and no error. Code cause: pages/index.vue:120-147 shows the error only when wateringsError is set, shows the table when waterings.length is truthy, and otherwise falls to `v-else-if=\"waterings\"`, the empty state. {} is truthy and has no length, so a malformed response looks like an empty log. useApiFetch (composables/useApi.ts) does not check the response shape.",
+      "severity": "medium",
+      "wallMs": 96890
+    },
+    "watering-log/dashboard-malformed-response-renders-garbage-rows": {
+      "feature": "watering-log",
+      "variant": "clean",
+      "key": "dashboard-malformed-response-renders-garbage-rows",
+      "sentence": "When GET /api/waterings?limit=5 returns a malformed non-list body, the dashboard Recent waterings table renders rows reading 'Never', a blank bed, and '–' instead of an error.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as the demo user and went to /tasks. Used Playwright page.route to make GET /api/waterings?limit=5 return 200 application/json with the body \"malformed response body\" (a JSON string, not a list), then clicked the Dashboard nav link so the request ran in the browser (1 hit). The Recent waterings section showed a table with 23 rows, one per character of the string, each reading 'Never | (blank) | –', and no alert or error. Code cause: pages/index.vue renders the table when `waterings && waterings.length` and runs v-for over waterings without checking it is an array. A string has a length, so each character becomes a row: formatWatered(undefined, undefined) gives 'Never', bed_name is blank and formatLitres(undefined) gives '–'. useApiFetch (composables/useApi.ts) does not validate the response shape. A variation with an object body {\"items\":[]} showed 'No waterings yet' instead, which is misleading but not garbage rows. The reported behaviour reproduces as described: garbage rows instead of a visible error.",
+      "severity": "low",
+      "wallMs": 154898
+    },
+    "watering-log/dashboard-waterings-error-no-retry": {
+      "feature": "watering-log",
+      "variant": "clean",
+      "key": "dashboard-waterings-error-no-retry",
+      "sentence": "When the dashboard Recent waterings request fails, the card shows only the error text with no retry control.",
+      "verdict": "not-a-defect",
+      "evidence": "Signed in as the demo user and routed **/api/waterings** to return 500 {\"detail\":\"boom\"}, then went to the dashboard by client-side navigation. The 'Recent waterings' card showed only alert 'boom' with no retry control, so the behaviour is real. But this is the app's existing convention, not a regression: in pages/index.vue the existing Summary and Upcoming tasks error states use the same AlertMessage with no retry button. AlertMessage.vue is a plain slot with no action. A grep of every .vue file finds no retry or 'try again' control anywhere in the app. The request also does not ask for retry. The waterings card matches how the other dashboard cards handle errors. The unused 'refresh' only matters if a retry was intended, and nothing shows it was.",
+      "severity": null,
+      "wallMs": 52518
+    },
+    "watering-log/tiny-litres-shown-as-zero": {
+      "feature": "watering-log",
+      "variant": "clean",
+      "key": "tiny-litres-shown-as-zero",
+      "sentence": "Recording a past watering of a tiny amount such as 0.004 L on /beds is accepted despite the field's 0.1 minimum and is reported and listed as '0 L'.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as the demo user and opened /beds. Clicked 'Record past watering' for North bed, set the date to 2026-11-02 and Litres to 0.004, then clicked Save watering. POST /api/waterings returned 201 with litres 0.004 saved. The success notice said 'Recorded 0 L on 2 Nov 2026.' and /waterings listed '2 Nov 2026 | North bed | 0 L'. Cause: the form has novalidate, so the input's min=0.1 is never checked. The client check (beds.vue:128) only rejects values <= 0, and the backend WateringIn uses gt=0. formatLitres (format.ts:40) rounds to at most 2 decimal places, so 0.004 is shown as '0 L'. The user is told a positive amount was saved as 0 L, which contradicts the field's own 0.1 minimum. I deleted the test row afterwards.",
+      "severity": "low",
+      "wallMs": 67223
+    },
+    "watering-log/unknown-bed-filter-select-mismatch": {
+      "feature": "watering-log",
+      "variant": "clean",
+      "key": "unknown-bed-filter-select-mismatch",
+      "sentence": "Opening /waterings?bed=99999 with an unknown bed id filters the list to 'No waterings for this bed' while the Bed select shows no selection, so the select and list disagree.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as the demo user and loaded http://localhost:3797/waterings?bed=99999. The #watering-bed select has value '' and selectedIndex -1, so no option is selected; its options are '':All beds, 1:North bed, 2:Shade corner. Meanwhile the page shows 'Clear filter', '0 waterings', and the empty state 'No waterings for this bed'. In waterings.vue, bedFilter is set straight from route.query.bed ('99999') with no check against the loaded beds. The API is queried with bed_id=99999 and returns an empty list, and filtering=true. The v-model select has no option with value '99999', so it shows nothing selected (which looks like All beds) while the list is filtered to a bed that doesn't exist. The unknown id is never reset to All beds or flagged, so the filter control and the list disagree.",
+      "severity": "low",
+      "wallMs": 52099
+    },
+    "watering-log/water-now-shared-busy-state-across-beds": {
+      "feature": "watering-log",
+      "variant": "clean",
+      "key": "water-now-shared-busy-state-across-beds",
+      "sentence": "On /beds, clicking Water now on two beds in quick succession re-enables the second bed's button when the first request finishes because a single shared wateringBedId tracks the in-flight request, and the first bed's notice is lost.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as demo, on /beds used page.route to delay POST /api/waterings (1st 1.5s, 2nd 4s), with stable per-bed locators ('.bed__actions button.btn--primary' nth 0/1). Clicked Water now on North bed: it became disabled, 'Watering…'. Clicked Water now on Shade corner 200ms later: Shade corner disabled, but North bed went back to enabled 'Water now' with its request still running. After the first request finished (second still in flight): both buttons were enabled and showed 'Water now', and only 'Watered North bed.' was shown. When the second finished, that notice was replaced by 'Watered Shade corner.', so the first bed's notice is gone. Cause: beds.vue keeps one shared wateringBedId (line 27) and one waterNotice. recordWatering sets the id, then sets it to null in finally (line 101) without checking which bed it belongs to. So a button can be clicked again while its own request is running, and that records a duplicate watering. (A first probe with a role-name locator gave misleading results because the button's label changes; the probe was rerun with stable locators.)",
+      "severity": "medium",
+      "wallMs": 74441
+    },
+    "watering-log/waterings-page-crash-non-list-response": {
+      "feature": "watering-log",
+      "variant": "clean",
+      "key": "waterings-page-crash-non-list-response",
+      "sentence": "When GET /api/waterings returns a non-array body (malformed or empty object), /waterings throws an uncaught 'waterings.value?.reduce is not a function' and never renders, leaving the previous page on screen with no error.",
+      "verdict": "confirmed",
+      "evidence": "Signed in as the demo user and opened /beds. Then used Playwright page.route to make GET localhost:8796/api/waterings return 200 with the body {\"unexpected\":true}, and clicked the Waterings nav link. Result: the URL changed to /waterings but the document title stayed 'Beds · Garden Log' and the Beds headings ('Beds', 'Add a bed', 'All beds') stayed on screen. There was no role=alert. A pageerror 'waterings.value?.reduce is not a function' was raised. The only place that message showed up was the Nuxt dev error overlay, not the app's own error UI. Cause in the code: frontend/app/pages/waterings.vue:34 totalLitres calls waterings.value?.reduce(...) without checking that the value is an array. Optional chaining only guards against null/undefined, so a non-array object throws while rendering. The page's AlertMessage only runs on fetch errors, and a 200 with the wrong shape is not one. Note that beds.vue:34 and tasks.vue:28 use the same unguarded pattern, so the fragility existed before this change. It also only happens when the API returns the wrong shape, which the real backend does not do in normal use. Even so, the new page fails silently instead of showing an error.",
+      "severity": "low",
+      "wallMs": 97585
+    },
+    "watering-log/waterings-page-load-error-no-retry": {
+      "feature": "watering-log",
+      "variant": "clean",
+      "key": "waterings-page-load-error-no-retry",
+      "sentence": "When GET /api/waterings fails on /waterings, only the error text is shown with no retry control, so the user must reload the page.",
+      "verdict": "not-a-defect",
+      "evidence": "Reproduced the behaviour: signed in as the demo user, routed **/api/waterings* to a 500 {\"detail\":\"Injected 500\"}, then went from /beds to /waterings using the nav link (a client-side fetch; a direct load is rendered on the server and is not affected by the browser route). The page showed only the alert 'Injected 500' and no Retry button. After removing the route, changing the bed filter fetched again and loaded the list ('1 watering, 10 L in total'), so the user can recover without reloading. The missing retry control matches how the whole app already works: AlertMessage is a plain alert slot, and every page that existed before this change (plants/index.vue, plants/[id].vue, plants/new.vue, tasks.vue, harvests/new.vue, the existing dashboard summary and tasks sections, and the beds list) shows a load error as text with no retry. No page in the app has a retry control. The request did not ask for one. The new page follows the app's existing pattern for load errors, so this is not a defect in this change.",
+      "severity": null,
+      "wallMs": 64223
+    },
+    "watering-log/year-one-date-accepted": {
+      "feature": "watering-log",
+      "variant": "clean",
+      "key": "year-one-date-accepted",
+      "sentence": "The Record past watering form on /beds and POST /api/waterings accept an absurd date such as 0001-01-01, save it with 201, and report 'Recorded 2 L on 1 Jan 1.'.",
+      "verdict": "confirmed",
+      "evidence": "Signed in through POST /api/auth/login as the demo user, then sent POST /api/waterings {bed_id:1, watered_on:'0001-01-01', litres:2}. It returned 201 with {id:3, watered_on:'0001-01-01', litres:2.0}, and GET /api/waterings?bed_id=1 now lists that entry. In the code, the WateringCreate validator in backend/schemas.py only rejects future dates (value > date.today()) and has no lower bound. The /beds past-watering date input (frontend/app/pages/beds.vue:297) sets :max=todayIso() but no min, and the page does no client-side check, so the form submits the date and shows the notice 'Recorded ${litres} on ${formatDate(date)}', which matches the reported 'Recorded 2 L on 1 Jan 1.'. A year-1 watering is plainly a typo, and saving it without complaint pollutes the watering log and its date ordering. Other date fields in the app get explicit validation (harvest and watering dates refuse future dates), so leaving out a lower bound looks like an oversight, not a design choice.",
+      "severity": "low",
+      "wallMs": 35169
+    }
+  },
+  "rows": [
+    {
+      "trial": "harvest-stats__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-malformed-response-crash-stuck-loading"
+    },
+    {
+      "trial": "harvest-stats__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-hang-loading-forever-stale-data"
+    },
+    {
+      "trial": "harvest-stats__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-malformed-response-crash-stuck-loading"
+    },
+    {
+      "trial": "harvest-stats__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-hang-loading-forever-stale-data"
+    },
+    {
+      "trial": "harvest-stats__clean__hunt__t3",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "clean",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-malformed-response-crash-stuck-loading"
+    },
+    {
+      "trial": "harvest-stats__error-shown-as-empty__hunt__t1",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "error-shown-as-empty",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "harvest-stats/error-shown-as-empty"
+    },
+    {
+      "trial": "harvest-stats__error-shown-as-empty__hunt__t1",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "error-shown-as-empty",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "harvest-stats/error-shown-as-empty"
+    },
+    {
+      "trial": "harvest-stats__error-shown-as-empty__hunt__t1",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "error-shown-as-empty",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-malformed-response-crash-stuck-loading"
+    },
+    {
+      "trial": "harvest-stats__error-shown-as-empty__hunt__t2",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "error-shown-as-empty",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "harvest-stats/error-shown-as-empty"
+    },
+    {
+      "trial": "harvest-stats__error-shown-as-empty__hunt__t2",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "error-shown-as-empty",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "harvest-stats/error-shown-as-empty"
+    },
+    {
+      "trial": "harvest-stats__error-shown-as-empty__hunt__t2",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "error-shown-as-empty",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-malformed-response-crash-stuck-loading"
+    },
+    {
+      "trial": "harvest-stats__error-shown-as-empty__hunt__t2",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "error-shown-as-empty",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-cleared-to-extends-to-year-end"
+    },
+    {
+      "trial": "harvest-stats__error-shown-as-empty__hunt__t2",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "error-shown-as-empty",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-hang-loading-forever-stale-data"
+    },
+    {
+      "trial": "harvest-stats__error-shown-as-empty__hunt__t3",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "error-shown-as-empty",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "harvest-stats/error-shown-as-empty"
+    },
+    {
+      "trial": "harvest-stats__error-shown-as-empty__hunt__t3",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "error-shown-as-empty",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "harvest-stats/error-shown-as-empty"
+    },
+    {
+      "trial": "harvest-stats__error-shown-as-empty__hunt__t3",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "error-shown-as-empty",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-malformed-response-crash-stuck-loading"
+    },
+    {
+      "trial": "harvest-stats__to-date-excluded__hunt__t1",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "to-date-excluded",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "harvest-stats/to-date-excluded"
+    },
+    {
+      "trial": "harvest-stats__to-date-excluded__hunt__t1",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "to-date-excluded",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-malformed-response-crash-stuck-loading"
+    },
+    {
+      "trial": "harvest-stats__to-date-excluded__hunt__t2",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "to-date-excluded",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "harvest-stats/to-date-excluded"
+    },
+    {
+      "trial": "harvest-stats__to-date-excluded__hunt__t2",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "to-date-excluded",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-malformed-response-crash-stuck-loading"
+    },
+    {
+      "trial": "harvest-stats__to-date-excluded__hunt__t3",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "to-date-excluded",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "harvest-stats/to-date-excluded"
+    },
+    {
+      "trial": "harvest-stats__to-date-excluded__hunt__t3",
+      "arm": "hunt",
+      "feature": "harvest-stats",
+      "bug": "to-date-excluded",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "harvest-stats/stats-malformed-response-crash-stuck-loading"
+    },
+    {
+      "trial": "plant-journal__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "plant-journal/journal-nav-link-keeps-stale-search"
+    },
+    {
+      "trial": "plant-journal__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "plant-journal/journal-page-malformed-shows-fake-entries"
+    },
+    {
+      "trial": "plant-journal__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "plant-journal/detail-malformed-journal-shows-fake-entries"
+    },
+    {
+      "trial": "plant-journal__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "false-not-a-defect",
+      "issue": "plant-journal/journal-nav-hang-shows-old-page"
+    },
+    {
+      "trial": "plant-journal__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "plant-journal/add-entry-error-not-cleared"
+    },
+    {
+      "trial": "plant-journal__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "plant-journal/journal-page-malformed-shows-fake-entries"
+    },
+    {
+      "trial": "plant-journal__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "plant-journal/detail-malformed-journal-shows-fake-entries"
+    },
+    {
+      "trial": "plant-journal__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "plant-journal/journal-page-non-list-shown-as-no-match"
+    },
+    {
+      "trial": "plant-journal__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "plant-journal/journal-search-hang-loading-forever"
+    },
+    {
+      "trial": "plant-journal__clean__hunt__t3",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "clean",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "plant-journal/journal-page-malformed-shows-fake-entries"
+    },
+    {
+      "trial": "plant-journal__failed-save-clears-text__hunt__t1",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "failed-save-clears-text",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "plant-journal/failed-save-clears-text"
+    },
+    {
+      "trial": "plant-journal__failed-save-clears-text__hunt__t2",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "failed-save-clears-text",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "plant-journal/failed-save-clears-text"
+    },
+    {
+      "trial": "plant-journal__failed-save-clears-text__hunt__t3",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "failed-save-clears-text",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "plant-journal/failed-save-clears-text"
+    },
+    {
+      "trial": "plant-journal__search-quote-crash__hunt__t1",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "search-quote-crash",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "plant-journal/search-quote-crash"
+    },
+    {
+      "trial": "plant-journal__search-quote-crash__hunt__t2",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "search-quote-crash",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "plant-journal/search-quote-crash"
+    },
+    {
+      "trial": "plant-journal__search-quote-crash__hunt__t3",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "search-quote-crash",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "plant-journal/search-quote-crash"
+    },
+    {
+      "trial": "plant-journal__search-quote-crash__hunt__t3",
+      "arm": "hunt",
+      "feature": "plant-journal",
+      "bug": "search-quote-crash",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "plant-journal/search-quote-crash"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/waterings-page-crash-non-list-response"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/waterings-page-crash-non-list-response"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/dashboard-invalid-response-shown-as-empty"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/dashboard-malformed-response-renders-garbage-rows"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t1",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/tiny-litres-shown-as-zero"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/dashboard-malformed-response-renders-garbage-rows"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/waterings-page-crash-non-list-response"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/year-one-date-accepted"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "false-not-a-defect",
+      "issue": "watering-log/waterings-page-load-error-no-retry"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "false-not-a-defect",
+      "issue": "watering-log/dashboard-waterings-error-no-retry"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t2",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/unknown-bed-filter-select-mismatch"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t3",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/waterings-page-crash-non-list-response"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t3",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/dashboard-invalid-response-shown-as-empty"
+    },
+    {
+      "trial": "watering-log__clean__hunt__t3",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "clean",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "extra-confirmed",
+      "issue": "watering-log/water-now-shared-busy-state-across-beds"
+    },
+    {
+      "trial": "watering-log__negative-litres__hunt__t1",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "negative-litres",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "watering-log/negative-litres"
+    },
+    {
+      "trial": "watering-log__negative-litres__hunt__t1",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "negative-litres",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "watering-log/negative-litres"
+    },
+    {
+      "trial": "watering-log__negative-litres__hunt__t2",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "negative-litres",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "watering-log/negative-litres"
+    },
+    {
+      "trial": "watering-log__negative-litres__hunt__t3",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "negative-litres",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "watering-log/negative-litres"
+    },
+    {
+      "trial": "watering-log__water-now-twice__hunt__t1",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "water-now-twice",
+      "n": 1,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "watering-log/water-now-twice"
+    },
+    {
+      "trial": "watering-log__water-now-twice__hunt__t2",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "water-now-twice",
+      "n": 2,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "watering-log/water-now-twice"
+    },
+    {
+      "trial": "watering-log__water-now-twice__hunt__t3",
+      "arm": "hunt",
+      "feature": "watering-log",
+      "bug": "water-now-twice",
+      "n": 3,
+      "status": "observed",
+      "state": "confirmed",
+      "cls": "planted-observed",
+      "issue": "watering-log/water-now-twice"
+    }
+  ]
+}

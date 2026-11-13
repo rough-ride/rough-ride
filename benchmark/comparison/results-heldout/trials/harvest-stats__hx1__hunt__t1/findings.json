@@ -1,0 +1,79 @@
+{
+  "findings": [
+    {
+      "title": "Out-of-order stats responses: an older, slower response overwrites the newer range",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe race, expectation newest-range-wins",
+      "expected": "After changing From to 2025-01-01 and then quickly to 2026-07-01, the page shows stats for 1 Jul 2026 - 31 Dec 2026",
+      "actual": "The From field says 2026-07-01 but the page shows '6 harvests from 1 Jan 2025 to 31 Dec 2026' and that range's table, because the delayed first response arrived last and won",
+      "evidence": "{\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"6 harvests from 1 Jan 2025 to 31 Dec 2026\",\"Best plants\",\"NO. 1\",\"Tomato\",\"1.35 kg · Sungold\",\"View\",\"Tomato\",\"NO. 2\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 3\",\"Lettuce\",\"350 g · Little Gem\",\"View\",\"Lettuce\",\"Weight by plant and month\",\"2.9 kg total\",\"Harvest weight per plant and month, 1 Jan 2025 to 31 Dec 2026\",\"PLANT\\tAUG 2025\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Courgette\\t–\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t–\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Sungold\\t300 g\\t… | {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"6 harvests from 1 Jan 2025 to 31 Dec 2026\",\"Best plants\",\"NO. 1\",\"Tomato\",\"1.35 kg · Sungold\",\"View\",\"Tomato\",\"NO. 2\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 3\",\"Lettuce\",\"350 g · Little Gem\",\"View\",\"Lettuce\",\"Weight by plant and month\",\"2.9 kg total\",\"Harvest weight per plant and month, 1 Jan 2025 to 31 Dec 2026\",\"PLANT\\tAUG 2025\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Courgette\\t–\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t–\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Sungold\\t300 g\\t…",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-184454-hunt-ccbf",
+        "probe": "race",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Malformed or unexpected stats response crashes the page and leaves it stuck on 'Loading stats...'",
+      "where": "/stats",
+      "steps": "Probe client-faults, expectation change-malformed-shows-error",
+      "expected": "A visible error when the stats response is malformed or empty, and no uncaught error",
+      "actual": "Uncaught TypeError 'Cannot read properties of undefined (reading 'length')'; the page stays on 'Loading stats...' with the old table and shows no error",
+      "evidence": "{\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"]} | {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-184454-hunt-ccbf",
+        "probe": "client-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Clearing To with a From date after this year gives a misleading 'From must be on or before To' error",
+      "where": "/stats",
+      "steps": "Probe inputs, expectation from-only-range-not-rejected",
+      "expected": "An empty To date is either accepted as an open end or refused with a reason about the empty field",
+      "actual": "With From=2027-03-01 and To empty, the server quietly uses 2026-12-31 as To and the page says 'The From date must be on or before the To date.', while still showing the old '5 harvests from 1 Jan 2026 to 31 Dec 2026' line",
+      "evidence": "{\"fields\":[{\"label\":\"From\",\"value\":\"2027-03-01\"},{\"label\":\"To\",\"value\":\"\"}],\"alerts\":[\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"The From date must be on or before the To date.\"]} | {\"fields\":[{\"label\":\"From\",\"value\":\"2027-03-01\"},{\"label\":\"To\",\"value\":\"\"}],\"alerts\":[\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"The From date must be on or before the To date.\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-184454-hunt-ccbf",
+        "probe": "inputs",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Months with no harvests are left out of the per-month table",
+      "where": "/stats?from=2025-01-01",
+      "steps": "Probe inputs, expectation months-without-harvest-shown",
+      "expected": "The table has a column for every month in the chosen range (or at least between the first and last harvest), so gaps show up as empty months",
+      "actual": "The columns go straight from AUG 2025 to JUN 2026; Sep 2025 to May 2026 are missing, so the table looks like those months are next to each other",
+      "evidence": "[\"PLANT\\tAUG 2025\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Total\\t300 g\\t200 g\\t1.65 kg\\t600 g\\t150 g\\t2.9 kg\"] | [\"PLANT\\tAUG 2025\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Total\\t300 g\\t200 g\\t1.65 kg\\t600 g\\t150 g\\t2.9 kg\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-184454-hunt-ccbf",
+        "probe": "inputs",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "After a failed load, the old range summary stays next to the error",
+      "where": "/stats",
+      "steps": "Probe faults, expectation range-text-not-stale-on-error",
+      "expected": "When loading a new range fails, only the error shows, or the summary matches the selected range",
+      "actual": "From is 2025-01-01 but the page shows '5 harvests from 1 Jan 2026 to 31 Dec 2026' just above the error",
+      "evidence": "[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\",\"Garden Log · a journal for one garden\"] | [\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\",\"Garden Log · a journal for one garden\"]",
+      "status": "observed",
+      "severity": "low",
+      "tool": {
+        "run": "20261112-184454-hunt-ccbf",
+        "probe": "faults",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

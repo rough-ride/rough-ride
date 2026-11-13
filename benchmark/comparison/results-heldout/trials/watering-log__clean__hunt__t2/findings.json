@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Waterings filter shows other beds' rows and 'Loading' forever when the filtered request hangs",
+      "where": "/waterings (GET /api/waterings?bed_id=1)",
+      "steps": "Probe waterings-hang, expectation hang-filter-not-showing-other-bed-rows",
+      "expected": "With 'North bed' selected and the request hanging, the old list is hidden or marked stale, and after a while a timeout error appears",
+      "actual": "After 13 s the page still shows 'Loading waterings…' under the North bed filter, along with the earlier unfiltered list that includes Shade corner rows. It never times out.",
+      "evidence": "{\"field\":[{\"label\":\"Bed\",\"value\":\"1\"}],\"rows\":[\"12 Nov 2026, 18:31\\tShade corner\\t–\\tDelete\",\"12 Nov 2026, 18:30\\tNorth bed\\t–\\tDelete\",\"9 Nov 2026\\tShade corner\\t2.5 L\\tDelete\",\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\"]} | {\"field\":[{\"label\":\"Bed\",\"value\":\"1\"}],\"rows\":[\"12 Nov 2026, 18:31\\tShade corner\\t–\\tDelete\",\"12 Nov 2026, 18:30\\tNorth bed\\t–\\tDelete\",\"9 Nov 2026\\tShade corner\\t2.5 L\\tDelete\",\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-182945-hunt-1b38",
+        "probe": "waterings-hang",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard 'Recent waterings' renders a malformed response as rows of 'Never'",
+      "where": "/ (GET /api/waterings?limit=5)",
+      "steps": "Probe dashboard-nav, expectation dash-malformed-shows-error",
+      "expected": "A malformed response shows an error in the Recent waterings section",
+      "actual": "The table shows rows reading 'Never' with an empty bed and '–' amount, and no error. An empty-object response is shown as 'No waterings yet'.",
+      "evidence": "{\"alerts\":[],\"sec\":[\"Recent waterings\",\"All waterings\",\"The five most recent waterings\",\"WHEN\\tBED\\tAMOUNT\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\"],\"pe\":[]} | {\"alerts\":[],\"sec\":[\"Recent waterings\",\"All waterings\",\"The five most recent waterings\",\"WHEN\\tBED\\tAMOUNT\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\"],\"pe\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-182945-hunt-1b38",
+        "probe": "dashboard-nav",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Past watering form accepts year 0001 and shows 'Recorded 3 L on 1 Jan 1.'",
+      "where": "/beds Record past watering (POST /api/waterings)",
+      "steps": "Probe ancient-date, expectation far-past-date-refused",
+      "expected": "An impossible far-past date such as 0001-01-01 is refused with a reason",
+      "actual": "Saved with watered_on 0001-01-01 and the notice 'Recorded 3 L on 1 Jan 1.' The date input has no min and the API has no lower bound.",
+      "evidence": "{\"alerts\":[\"Recorded 3 L on 1 Jan 1.\"],\"stored\":[{\"id\":6,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"0001-01-01\",\"watered_at\":null,\"litres\":3}]} | {\"alerts\":[\"Recorded 3 L on 1 Jan 1.\"],\"stored\":[{\"id\":6,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"0001-01-01\",\"watered_at\":null,\"litres\":3}]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-182945-hunt-1b38",
+        "probe": "ancient-date",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Unknown bed in the URL says 'No waterings for this bed' while the select shows 'All beds'",
+      "where": "/waterings?bed=999",
+      "steps": "Probe ancient-date, expectation unknown-bed-param-consistent",
+      "expected": "The filter control and the results agree (or the unknown bed is reported)",
+      "actual": "The Bed select shows 'All beds' but the page reads '0 waterings / No waterings for this bed'. For ?bed=abc it shows the raw validation text 'Query.bed id: Input should be a valid integer...'",
+      "evidence": "{\"fields\":[{\"label\":\"Bed\",\"value\":\"\"}],\"text\":[\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\"]} | {\"fields\":[{\"label\":\"Bed\",\"value\":\"\"}],\"text\":[\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\"]}",
+      "status": "observed",
+      "severity": "low",
+      "tool": {
+        "run": "20261112-182945-hunt-1b38",
+        "probe": "ancient-date",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

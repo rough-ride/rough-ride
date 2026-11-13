@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-null-fields-rendered",
+  "sentence": "When GET /api/stats/harvests returns null fields in a 200 response, /stats renders text such as 'null harvests from – to –' and a nameless table row.",
+  "verdict": "not-a-defect",
+  "evidence": "Signed in as the demo user, used Playwright to route GET /api/stats/harvests to a 200 response with harvest_count, date_from, date_to, months, top_plants and total_grams set to null, and plants:[{plant_id:1, plant_name:null, variety:null, total_grams:null, monthly_grams:null}], then opened /stats. The page showed 'null harvests from – to –', an empty Best plants list, and a table row with no plant name. So the reported behaviour does happen. But this response breaks the API's own contract. The endpoint declares response_model=HarvestStatsOut, and in backend/schemas.py every one of these fields is non-optional (int, date, list[...], str), so FastAPI/pydantic will not send a 200 response with these nulls. The frontend type HarvestStats declares them as non-null too. The rest of the app, which existed before this change, trusts its typed API responses the same way: the dashboard, plant detail and beds pages all pass server counts straight to plural() without checking for null. The output only appears when an impossible server response is faked. The request does not ask for client-side validation of responses, and a real user cannot reach this state, so it is not a defect in the change.",
+  "severity": null,
+  "wallMs": 45191
+}

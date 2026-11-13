@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3791, API http://localhost:8791/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-harvest-stats-stats-no-retry-after-error/scratch.
+
+The reported problem: When the stats request fails, /stats offers no Retry control, so the user must change a date or reload the page to refetch the same range after the server recovers.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Stats error state has no way to retry",
+  "where": "/stats page",
+  "steps": "Make GET /api/stats/harvests return 500 (non-JSON body), then change a date. Restore the server.",
+  "expected": "An error message with a Retry button that refetches once the server is back.",
+  "actual": "Only 'Could not load harvest stats.' appears, with no retry control. The only way to recover is to change a date or reload.",
+  "evidence": "The page text after the 500 was '... This year  Could not load harvest stats.' and had no button other than 'This year'."
+ },
+ {
+  "title": "No error state means no retry after the server recovers without changing dates",
+  "where": "/stats",
+  "steps": "Make the stats API fail, open /stats, then remove the failure.",
+  "expected": "A Retry control reloads the data.",
+  "actual": "The only way to recover is to change a date or reload the page. The page keeps saying there are no harvests.",
+  "evidence": "Follows from the missing error and refresh handling in stats.vue. The page only destructures data and status."
+ },
+ {
+  "title": "Stats error state has no retry",
+  "where": "/stats page",
+  "steps": "Open /stats while the API is down or returns 5xx.",
+  "expected": "An error message with a Retry button that refetches without reloading the page.",
+  "actual": "Only an AlertMessage is shown. There is no retry control, and the only way to retry is to change a date or reload the page.",
+  "evidence": "stats.vue renders <AlertMessage v-if=\"statsError\"> with no button and does not use the refresh() returned by useApiFetch."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-harvest-stats-stats-no-retry-after-error/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

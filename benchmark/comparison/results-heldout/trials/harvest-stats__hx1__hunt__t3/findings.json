@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Stats page shows results for an older date range when responses arrive out of order",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe faults, expectation newest-response-wins",
+      "expected": "After changing From to 2026-06-01 and then to 2026-08-01, the page shows stats from 1 Aug 2026",
+      "actual": "The slower first response arrives last and replaces the newer one. The From field reads 2026-08-01, but the page shows '5 harvests from 1 Jun 2026 to 31 Dec 2026' and the June column",
+      "evidence": "{\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"5 harvests from 1 Jun 2026 to 31 Dec 2026\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\",\"350 g · Little Gem\",\"View\",\"Lettuce\",\"Weight by plant and month\",\"2.6 kg total\",\"Harvest weight per plant and month, 1 Jun 2026 to 31 Dec 2026\",\"PLANT\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Sungold\\t–\\t450 g\\t600 g\\t–\\t1.0… | {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"5 harvests from 1 Jun 2026 to 31 Dec 2026\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\",\"350 g · Little Gem\",\"View\",\"Lettuce\",\"Weight by plant and month\",\"2.6 kg total\",\"Harvest weight per plant and month, 1 Jun 2026 to 31 Dec 2026\",\"PLANT\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Sungold\\t–\\t450 g\\t600 g\\t–\\t1.0…",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-190030-hunt-bfab",
+        "probe": "faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Stats page crashes with an uncaught TypeError when the stats response is missing fields",
+      "where": "/stats",
+      "steps": "Probe faults, expectation empty-object-no-crash",
+      "expected": "An error message, with no uncaught exception",
+      "actual": "Uncaught 'Cannot read properties of undefined (reading 'length')'. The page stays on 'Loading stats…' and keeps showing the old table",
+      "evidence": "{\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]} | {\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-190030-hunt-bfab",
+        "probe": "faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "When loading fails, the stats page still shows the old range summary next to the error",
+      "where": "/stats",
+      "steps": "Probe faults, expectation error-does-not-show-stale-range",
+      "expected": "When the request for the new range fails, only the error shows, with no claim about the data",
+      "actual": "With From set to 2026-07-01 and a 500 response, the page shows 'Injected 500' and also '5 harvests from 1 Jan 2026 to 31 Dec 2026', a range the user is no longer looking at",
+      "evidence": "{\"alerts\":[\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\",\"Garden Log · a journal for one garden\"]} | {\"alerts\":[\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-190030-hunt-bfab",
+        "probe": "faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A stats request that never answers leaves 'Loading stats…' on screen forever over the old range's data",
+      "where": "/stats",
+      "steps": "Probe urls, expectation hang-not-loading-forever",
+      "expected": "The request times out with an error, or the page offers a retry",
+      "actual": "13 s after changing From, the page still shows 'Loading stats…' with the previous range's table below it. No error appears and there is no way to retry",
+      "evidence": "{\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]} | {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-190030-hunt-bfab",
+        "probe": "urls",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

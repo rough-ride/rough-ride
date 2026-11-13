@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-search-hang-loading-forever",
+  "sentence": "On the Journal page, when a search request hangs, the page shows 'Loading entries…' indefinitely above the previous search's results with no timeout, error or retry.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /journal. Searched 'cour' and let it load (it showed '0 entries match' / 'No entries match'). Then used page.route('**/api/journal**') to hang every journal request without answering, and typed 'courgette'. After 15 s the page still showed 'Loading entries…' above the previous search's 'No entries match' empty state, with no error, no timeout and no retry control. The URL had already changed to ?q=courgette, so the stale result looks like it belongs to the new query. Code check: pages/journal.vue binds useApiFetch('/journal', { query }) and shows 'Loading entries…' only while status === 'pending'. useApiFetch/useApiClient (composables/useApi.ts) set no timeout and no AbortSignal, so a hung request stays pending for good, and the old data/v-else-if branches keep rendering under it. Mitigating factor: the plants list in main already has the same pattern with no timeout ('Loading plants…'), so the gap exists elsewhere in the app too. It only shows up when the server hangs, and typing a new query starts a fresh request.",
+  "severity": "low",
+  "wallMs": 108437
+}

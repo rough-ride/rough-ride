@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "filter-not-synced-from-url",
+  "sentence": "On /waterings the bed filter is read from the URL only once, so going from /waterings?bed=N to /waterings via the nav link or Back keeps the old bed selected and the list filtered.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user. /waterings with no filter showed 2 rows (5 Nov Shade corner 4 L, 1 Nov North bed 10 L) and the select was empty ('All beds'). Then I loaded /waterings?bed=2, which showed select=2 and only the Shade corner row. Next I clicked the 'Waterings' link in the nav. The URL became http://localhost:3793/waterings, but the select stayed at value 2 and only the Shade corner row was listed, so the URL and the page state disagree. The code agrees: in frontend/app/pages/waterings.vue, bedFilter = ref(route.query.bed) is read once at setup. Only bedFilter->router.replace is watched; nothing watches route.query to update bedFilter, so query changes on the same route (nav link, Back/Forward) are ignored.",
+  "severity": "medium",
+  "wallMs": 36652
+}

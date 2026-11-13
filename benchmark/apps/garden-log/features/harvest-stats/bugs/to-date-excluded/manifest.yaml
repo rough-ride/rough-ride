@@ -1,0 +1,14 @@
+id: to-date-excluded
+category: logic
+provenance: hand-written
+layer: backend
+reach: direct
+needsAppKnowledge: false
+flow: stats
+exposedBy:
+  - { input: a To date equal to the date of a logged harvest }
+checks: [expected-value]
+symptom: "A harvest logged on the To date is left out of the table, the totals and the best plants"
+addedIn: 0.1.1
+review: single
+allowWords: []

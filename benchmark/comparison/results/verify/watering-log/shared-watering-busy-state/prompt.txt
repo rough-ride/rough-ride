@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3790, API http://localhost:8790/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-watering-log-shared-watering-busy-state/scratch.
+
+The reported problem: On /beds, clicking 'Water now' on a second bed while the first request is pending uses one shared busy flag and message, re-enabling a pending bed's button (allowing duplicates) and overwriting the other bed's notice.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Watering another bed while one request is pending re-enables the first bed's button and replaces its messages",
+  "where": "/beds",
+  "steps": "Hold the POST for Shade corner pending, click 'Water now' on Shade corner, then click 'Water now' on North bed.",
+  "expected": "Shade corner's button stays disabled until its request finishes, so a double click can't happen, and each bed keeps its own messages.",
+  "actual": "There is one shared wateringBedId. When North's request finished it set it to null, so Shade corner's button showed 'Water now' and was enabled while its POST was still pending, and clicking again would record a duplicate. When Shade's request finished it cleared North's 'Watered North bed.' notice, because waterNotice and waterError are single shared values.",
+  "evidence": "shadeText 'Water now', shadeDisabled=false while its request was held. Afterwards only 'Watered Shade corner.' was left on the page."
+ },
+ {
+  "title": "No request timeout or idempotency on watering POST; a hung or retried request can duplicate waterings",
+  "where": "Beds page Water now / Save watering",
+  "steps": "Slow API: click Water now on bed A, then on bed B; A finishes and clears wateringBedId while B is still pending, so B's button is enabled again and can be clicked a second time. Requests also have no 10s timeout",
+  "expected": "One watering per intent; the button stays disabled until its own request finishes; requests time out after 10s with an error",
+  "actual": "A single shared wateringBedId is cleared by whichever request finishes first, which allows a duplicate submit; $fetch has no timeout, so 'Watering…' can spin forever",
+  "evidence": "beds.vue recordWatering: finally { wateringBedId.value = null }; useApiClient has no timeout option"
+ },
+ {
+  "title": "Watering two beds in quick succession breaks the busy state",
+  "where": "/beds",
+  "steps": "Click Water now on bed A, then on bed B before A finishes.",
+  "expected": "Each bed shows its own progress and result.",
+  "actual": "A single wateringBedId, waterError and waterNotice are shared by all beds. B's request overwrites A's busy state, the first request to finish clears the busy state for both, and A's error or notice can be lost.",
+  "evidence": "Code in beds.vue: there is one wateringBedId ref, and its finally block sets it to null."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-watering-log-shared-watering-busy-state/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

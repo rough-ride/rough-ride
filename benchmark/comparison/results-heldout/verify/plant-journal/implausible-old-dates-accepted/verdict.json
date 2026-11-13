@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "implausible-old-dates-accepted",
+  "sentence": "POST/PUT /api/journal accepts implausible dates such as 0001-01-01, which are then shown as '1 Jan 1'.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced via API as demo user: POST /api/journal {plant_id:2, entry_on:'0001-01-01'} -> 201 (id 4); PUT /api/journal/4 entry_on '0001-01-02' -> 200. Test data deleted afterwards (204). However the request only asks for 'a date and a text of up to 500 characters' and specifies no minimum date. JournalEntryIn (backend/schemas.py:107-116) copies the existing, unchanged HarvestIn convention from main: only future dates are refused ('cannot be in the future'), with no lower bound. The pre-existing harvests endpoint behaves the same way: POST /api/harvests harvested_on '0001-01-01' -> 201 (deleted afterwards). So accepting very old dates follows the app's established date-validation design and is not something the change introduced or that the request rules out. A sensible lower bound would be a nice improvement, but it is not a defect in this change.",
+  "severity": null,
+  "wallMs": 42838
+}

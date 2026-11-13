@@ -1,0 +1,84 @@
+{
+  "findings": [
+    {
+      "title": "Stats table merges harvests of different plants that share a name",
+      "where": "GET /api/stats/harvests (backend/routers/stats.py, GROUP BY p.name, month) and /stats table",
+      "steps": "Have plant 'Tomato · Sungold' (450 g in Jul 2026, 600 g in Aug 2026). Create a second plant 'Tomato' variety 'Gardeners Delight' and log 2000 g on 2026-07-10. Open /stats.",
+      "expected": "Sungold row: Jul 450 g, Aug 600 g, total 1.05 kg; Gardeners Delight row: Jul 2 kg, total 2 kg (matches the Best plants list).",
+      "actual": "Gardeners Delight row shows Jul 2.45 kg / total 2.45 kg, and Sungold row shows only Aug 600 g / total 600 g. Sungold's July harvest is credited to the other Tomato, so the table disagrees with Best plants (2 kg and 1.05 kg).",
+      "evidence": "API plants: [{plant_id 4, Gardeners Delight, total 2450, monthly [0,2450,0,0]}, {plant_id 1, Sungold, total 600}] while top_plants says 4→2000, 1→1050. The query groups by p.name instead of p.id.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Stats page crashes on a response it can't read (non-JSON or missing fields)",
+      "where": "/stats (client-side navigation)",
+      "steps": "Mock GET /api/stats/harvests to return 200 with body '<html>oops</html>' (text/html) or '{}'. On the dashboard, click 'Stats' in the nav.",
+      "expected": "An error state saying the stats could not be loaded, with a retry option.",
+      "actual": "The page never renders. The URL changes to /stats but the dashboard stays on screen, and nothing tells the user it failed.",
+      "evidence": "Console: TypeError: Cannot read properties of undefined (reading 'length') at stats.vue render (stats.plants.length). #main innerText still showed the Dashboard.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Null fields in the response show as 'null harvests'",
+      "where": "/stats",
+      "steps": "Mock /api/stats/harvests with harvest_count:null, total_grams:null, date_from:null, top_plants:null and so on, then open Stats from the nav.",
+      "expected": "Fall back cleanly or show an error.",
+      "actual": "The page shows 'null harvests from – to –' and an empty 'Best plants' heading.",
+      "evidence": "#main text: 'null harvests from – to –\\n\\nBest plants\\nWeight by plant and month\\n– total'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Stats request has no timeout, so the page shows 'Loading stats…' forever",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests hang (never respond), then change the From date.",
+      "expected": "The request fails after 10 s and an error with a retry option appears.",
+      "actual": "After 13 s the page still showed 'Loading stats…' and kept the old table. No timeout is set on useApiFetch.",
+      "evidence": "#main text after 13 s: '...This year\\n\\nLoading stats…'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Error state has no retry button",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests return 500, open Stats from the nav, then bring the API back.",
+      "expected": "The error message comes with a Retry button that reloads the stats.",
+      "actual": "The page shows only 'Could not load harvest stats.' and there are no buttons in main. The only way to recover is to edit a date field or reload the page.",
+      "evidence": "Buttons in #main: []. Template has an AlertMessage with no refresh() action.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing a date field silently uses this year's date and can give a confusing error",
+      "where": "/stats date range form",
+      "steps": "Open /stats?from=2025-01-01&to=2025-12-31 and clear the From field.",
+      "expected": "A blank field is either refused with a clear reason or treated as 'no lower bound'.",
+      "actual": "The client drops the parameter, so the server uses 2026-01-01. The page then says 'The From date must be on or before the To date.' even though From is empty. If To is in this year, blank From quietly means 1 Jan this year.",
+      "evidence": "Observed error text 'The From date must be on or before the To date.' with an empty From input.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid date in the URL shows a raw validation message and a blank field",
+      "where": "/stats?from=2026-02-30",
+      "steps": "Open /stats?from=2026-02-30.",
+      "expected": "A readable message, or falling back to the default range.",
+      "actual": "The From input is blank and the error reads 'Query.from: Input should be a valid date or datetime, day value is outside expected range'.",
+      "evidence": "Observed in #main text.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Dashboard top plant shows only the name, which is ambiguous for plants with the same name",
+      "where": "Dashboard 'Top plant this year' card",
+      "steps": "With two 'Tomato' plants (Sungold and Gardeners Delight), look at the dashboard card.",
+      "expected": "Enough detail to tell which plant it is (the variety), or a link to that plant.",
+      "actual": "The card shows just 'Tomato · 2 kg harvested' and links to /stats, not to the plant. top_plant_id is returned but not used.",
+      "evidence": "Summary: top_plant 'Tomato', top_plant_id 4.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

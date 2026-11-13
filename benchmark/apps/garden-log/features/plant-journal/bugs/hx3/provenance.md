@@ -1,0 +1,1 @@
+Written by hand for the comparison benchmark (benchmark/comparison/), held-out set. The clean feature removes an entry from the list only by reloading the journal after a successful delete. This variant drops it from the local list before the request and never puts it back when the request fails.

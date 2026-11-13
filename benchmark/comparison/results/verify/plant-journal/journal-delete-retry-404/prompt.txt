@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3792, API http://localhost:8792/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-plant-journal-journal-delete-retry-404/scratch.
+
+The reported problem: Retrying a journal entry delete after the first DELETE succeeded server-side (lost response or another tab) returns 404 and the plant page shows 'Journal entry not found.' while the stale entry stays listed.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Retrying a delete after a timeout or lost response shows an error",
+  "where": "/plants/:id delete entry",
+  "steps": "Delete an entry while the response is lost (the server deleted it), then click Delete again.",
+  "expected": "The second delete is treated as done (the entry is already gone).",
+  "actual": "The server returns 404 and the page shows 'Journal entry not found' instead of refreshing the list.",
+  "evidence": "delete_entry calls _get_entry first and raises 404; removeEntry shows the error without refreshing."
+ },
+ {
+  "title": "Deleting an entry already deleted (retry after timeout / other tab) shows an error and leaves the stale entry",
+  "where": "Plant detail journal Delete",
+  "steps": "Delete an entry in one tab, then delete the same entry in another tab (or retry after a timed-out delete).",
+  "expected": "Treated as done; the entry disappears from the list.",
+  "actual": "DELETE returns 404 and the page shows 'Journal entry not found.' while the stale entry stays listed (list is not refreshed on error).",
+  "evidence": "Second DELETE /api/journal/4 → 404 {\"detail\":\"Journal entry not found.\"}; removeEntry only refreshes on success."
+ },
+ {
+  "title": "Delete retried after a timeout reports an error although the entry was deleted",
+  "where": "Plant detail, Delete journal entry",
+  "steps": "Delete an entry; first request succeeds server-side but the response is lost; click Delete again.",
+  "expected": "Treated as already deleted (success).",
+  "actual": "Second DELETE returns 404 'Journal entry not found.' which is shown as an error.",
+  "evidence": "delete_entry calls _get_entry first and raises 404; removeEntry shows the error in journalError."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-plant-journal-journal-delete-retry-404/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

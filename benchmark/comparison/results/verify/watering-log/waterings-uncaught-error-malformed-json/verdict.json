@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "waterings-uncaught-error-malformed-json",
+  "sentence": "On /waterings, when GET /api/waterings returns malformed JSON, an unhandled render error or dev error overlay appears.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user, then used Playwright to route GET **/api/waterings* to a 200 application/json response with a truncated body ('{\"broken\": [1,2'), and clicked the 'Waterings' nav link (client-side navigation). Console showed '[Vue warn]: Unhandled error during execution of render function at <Waterings ...>' and an uncaught pageerror 'waterings.value?.reduce is not a function'. The URL changed to /waterings but the page never rendered: the body still showed the Dashboard content (title 'Dashboard · Garden Log'), with no error message. Cause: ofetch/destr gives back the unparseable body as a raw string, so `waterings` is a string and nothing reports an error. The totalLitres computed in pages/waterings.vue calls waterings.value?.reduce, which assumes an array and throws during render. The app does not check the response shape, so the page crashes instead of showing its 'Could not load waterings.' alert.",
+  "severity": "medium",
+  "wallMs": 91958
+}

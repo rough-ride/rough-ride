@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-best-plants-long-text-overflow",
+  "sentence": "A plant with a long unbroken name or variety overflows the Best plants cards on /stats at 375 px, causing sideways page scrolling.",
+  "verdict": "confirmed",
+  "evidence": "Via the API I created a plant named 'Supercalifragilisticexpialidociousheirloomtomato' with an 80-character variety that has no spaces ('Extremelylongvarietynamewithoutanyspaces' x2, the schema maximum), then logged a 999,999 g harvest on 2026-11-01 so it ranked No. 1. I signed in through Playwright and opened /stats at 375x800. document.documentElement.scrollWidth was 618 against a 375 viewport, and window.scrollTo(200,0) moved the page to scrollX=200, so the page really scrolls sideways. The first Best plants card (li.stat, width 343) has p.stat__hint with scrollWidth 574 against clientWidth 290. In the full-page screenshot the variety text runs well past the right edge of the card and the viewport. p.stat__value (the plant name) does not cause it: it has overflow:hidden, nowrap and an ellipsis, and showed 'Supercalifragilis…'. The cause is in main.css: .stat__hint has only margin, font-size and color, with no overflow-wrap, word-break or min-width rule. The table is fine because it scrolls inside its own .table-scroll wrapper. The variety field accepts 80 characters (schemas.py PlantIn), so ordinary input can trigger this. I deleted the test plant afterwards.",
+  "severity": "medium",
+  "wallMs": 77074
+}

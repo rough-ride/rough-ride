@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Plants that share a name are merged into one row in the stats table, credited to one variety",
+      "where": "GET /api/stats/harvests and /stats table",
+      "steps": "Probe same-name-plants, expectation api-two-rows-for-two-plants",
+      "expected": "Two plants with the same name (varieties Red 111 g and Yellow 222 g) each get their own row with their own weight, consistent with the Best plants list",
+      "actual": "One row 'Twin · Red 333 g' combines both plants' harvests; the Yellow plant has no row, while Best plants on the same page lists Yellow 222 g and Red 111 g separately (query groups by p.name instead of p.id)",
+      "evidence": "[{\"plant_id\":6,\"plant_name\":\"Twin23585\",\"variety\":\"Red\",\"total_grams\":333,\"monthly_grams\":[333]}] | [{\"plant_id\":8,\"plant_name\":\"Twin25359\",\"variety\":\"Red\",\"total_grams\":333,\"monthly_grams\":[333]}]",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-182810-hunt-7717",
+        "probe": "same-name-plants",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A malformed or incomplete stats response crashes the page and leaves it stuck on 'Loading stats…' with the previous range's data",
+      "where": "/stats after changing the From date",
+      "steps": "Probe faults2, expectation malformed-no-crash-shows-error",
+      "expected": "A visible error message and no uncaught exception",
+      "actual": "Uncaught TypeError 'Cannot read properties of undefined (reading 'length')'; the status line stays 'Loading stats…' while the old range's table and best plants remain on screen; same for empty-object and empty-list responses",
+      "evidence": "{\"alerts\":[\"Loading stats…\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"]} | {\"alerts\":[\"Loading stats…\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-182810-hunt-7717",
+        "probe": "faults2",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

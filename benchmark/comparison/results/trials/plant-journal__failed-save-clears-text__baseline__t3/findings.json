@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Failed 'Add entry' wipes the text the user typed",
+      "where": "Plant detail page /plants/:id, Journal > New entry (pages/plants/[id].vue addEntry)",
+      "steps": "Open a plant, type a journal entry, make the POST /api/journal fail (server down, network error, 422/500) and click Add entry.",
+      "expected": "The error is shown and the typed text stays in the textarea so the user can retry.",
+      "actual": "addEntry calls entryForm.reset() inside `finally`, so the body is cleared on failure as well as on success. The error message shows but the user's text is gone.",
+      "evidence": "Code: `finally { addingEntry.value = false; entryForm.value?.reset(); entryForm.value?.focus() }`. reset() sets form.body = ''. The component comment even says reset is for 'after a successful save'.",
+      "status": "suspected",
+      "severity": "high"
+    },
+    {
+      "title": "Journal body containing a NUL character causes a 500",
+      "where": "POST /api/journal, PUT /api/journal/{id}",
+      "steps": "POST {\"plant_id\":1,\"entry_on\":\"2026-11-01\",\"body\":\"\\u0000abc\"}, or PUT the same body to /api/journal/1.",
+      "expected": "A 4xx with a validation message.",
+      "actual": "500 Internal Server Error. SQLite's length() stops at NUL, so the CHECK constraint fails and the IntegrityError is not handled.",
+      "evidence": "curl returned 'Internal Server Error 500' for both the POST and the PUT.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Out-of-range IDs cause 500s on the journal endpoints",
+      "where": "GET /api/journal?plant_id=, POST /api/journal (plant_id), DELETE/PUT /api/journal/{id}",
+      "steps": "GET /api/journal?plant_id=99999999999999999999; DELETE /api/journal/99999999999999999999; POST with plant_id 99999999999999999999.",
+      "expected": "A 4xx (422 or 404).",
+      "actual": "500 Internal Server Error (SQLite integer overflow). No upper bound is validated.",
+      "evidence": "All three requests returned 500 via curl.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Character limit counts UTF-16 units, so emoji entries are limited to half and existing entries can't be edited",
+      "where": "JournalEntryForm (plant detail add/edit)",
+      "steps": "Type emoji in the entry textarea, or edit an entry the server accepted with 300 emoji (created through the API, which counts code points).",
+      "expected": "The client and server agree on the 500-character limit.",
+      "actual": "The textarea maxlength and the .length checks count UTF-16 code units, so only 250 emoji fit. Editing a 300-emoji entry (which the server accepts) shows '-100 characters left' and blocks Save with 'Keep the entry to 500 characters.'",
+      "evidence": "The API accepted a 300-emoji body (201). The frontend uses form.body.length and maxlength=500.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Searching for more than 80 characters shows a raw validation error and no results",
+      "where": "/journal search box",
+      "steps": "Type or paste a search term longer than 80 characters.",
+      "expected": "The input limits its length, or the search handles long text gracefully.",
+      "actual": "The API returns 422 and the page shows 'Q: String should have at most 80 characters' in place of the list. The input has no maxlength.",
+      "evidence": "GET /api/journal?q=<81 chars> returned 422 with string_too_long on query.q.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal load errors have no retry",
+      "where": "/journal page and the Journal section on /plants/:id",
+      "steps": "Load the page while the API is failing, then bring the API back.",
+      "expected": "The error state offers a Retry button that reloads the data.",
+      "actual": "Only an AlertMessage is shown, with no retry control. The user has to reload the page or change the search.",
+      "evidence": "journal.vue and [id].vue render AlertMessage for loadError/journalLoadError without any button calling refresh.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "No request timeouts; a hung API leaves 'Saving…' and 'Loading entries…' indefinitely",
+      "where": "All journal requests (useApiClient/useApiFetch)",
+      "steps": "Make the API hang without responding, then add, edit or delete an entry, or search.",
+      "expected": "Requests fail after 10 seconds with a visible error and the buttons are re-enabled.",
+      "actual": "No timeout is configured on $fetch, so the buttons stay disabled and the page shows 'Saving…' or 'Loading entries…' until the browser gives up.",
+      "evidence": "No `timeout` option in useApiClient or in the journal calls.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying an add after a timeout or network error creates duplicate entries",
+      "where": "POST /api/journal",
+      "steps": "Submit an entry, lose the response (timeout or network drop after the server commits), then click Add entry again.",
+      "expected": "One entry is created.",
+      "actual": "The POST has no idempotency key or duplicate guard, so a retry creates a second identical entry. A retried delete shows 'Journal entry not found.' as an error even though the delete succeeded.",
+      "evidence": "create_entry inserts unconditionally. A second DELETE of the same id returned 404.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long plant names in the Journal feed can overflow at 375px",
+      "where": "/journal feed (.journal-feed__plant)",
+      "steps": "Give a plant a long name with no spaces (e.g. 60 characters) and open /journal at 375px wide.",
+      "expected": "The name wraps.",
+      "actual": "The link has no overflow-wrap (only the body has overflow-wrap:anywhere), so the head row can scroll sideways.",
+      "evidence": "CSS: .journal-feed__plant has no overflow-wrap or word-break.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "findings": [
+    {
+      "title": "Failed stats request is shown as 'No harvests in this range' (no error state, no retry)",
+      "where": "/stats page (frontend/app/pages/stats.vue)",
+      "steps": "Sign in, open http://localhost:3791/stats?from=2026-05-01&to=2026-01-01 (or any range where the API fails: server down, 5xx, network error).",
+      "expected": "A visible error message (e.g. the server's 'The From date must be on or before the To date.') with a Retry button.",
+      "actual": "The page shows the empty state 'No harvests in this range – Pick a different date range, or log a harvest'. The page only reads `data` and `status` from useApiFetch and never reads `error`, so any failure looks the same as an empty result. There is also no retry/refresh control.",
+      "evidence": "SSR HTML of that URL has main text 'Stats ... From To This year No harvests in this range ...'. The Nuxt payload holds the 422 error 'The From date must be on or before the To date.', which is never rendered.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Clearing a date field silently falls back to the default year and can produce an error that is shown as empty",
+      "where": "/stats From/To fields + GET /api/stats/harvests",
+      "steps": "On /stats set To = 2025-12-31 and From = 2025-01-01, then clear the From field (blank).",
+      "expected": "Either a visible message that From is required, or a sensible range.",
+      "actual": "A blank From is dropped from the query, so the server uses 2026-01-01 as From, which is after the To date, and returns 422. The page shows 'No harvests in this range' even though 2025 has harvests (300 g in Aug 2025).",
+      "evidence": "curl /api/stats/harvests?to=2025-01-01 -> 422 'The From date must be on or before the To date.'; with the first finding, the UI shows the empty state.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no 10 s timeout",
+      "where": "/stats (useApiFetch in composables/useApi.ts, used without a timeout)",
+      "steps": "Make the API hang (slow or stalled response), then open or change the range on /stats.",
+      "expected": "The request fails after 10 s and shows an error with a retry.",
+      "actual": "No timeout is set, so 'Loading stats…' can stay up forever. When it finally fails it is shown as empty (see the first finding).",
+      "evidence": "Code: useApiFetch/useApiClient pass no `timeout` option; stats.vue doesn't set one either.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Invalid typed dates (e.g. 5-digit years) are not explained to the user",
+      "where": "/stats From/To date inputs",
+      "steps": "In the date input type a year like 20261 (the browser allows 5-6 digit years), or open /stats?from=99999-01-01.",
+      "expected": "A visible reason why the date is refused.",
+      "actual": "The server correctly answers 422 with a validation message, but the page shows the 'No harvests in this range' empty state. Bad dates in the URL query are silently replaced with the defaults.",
+      "evidence": "curl /api/stats/harvests?from=99999-01-01 -> 422 date_from_datetime_parsing. The page never renders the error.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

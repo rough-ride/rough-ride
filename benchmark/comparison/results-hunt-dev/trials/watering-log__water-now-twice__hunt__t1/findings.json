@@ -1,0 +1,19 @@
+{
+  "findings": [
+    {
+      "title": "Double-clicking \"Water now\" records two waterings",
+      "where": "/beds, Water now button (POST /api/waterings)",
+      "steps": "Probe water-now-double, expectation water-now-double-click-creates-one",
+      "expected": "The button is disabled while the request runs, and one click or a double click records exactly one watering",
+      "actual": "The button stays enabled while the POST is pending; a second click sends a second POST and the bed's watering count goes from 1 to 3",
+      "evidence": "{\"before\":3,\"after\":5} | {\"before\":5,\"after\":7}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-172036-hunt-84f4",
+        "probe": "water-now-double",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

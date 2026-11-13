@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__hx2__hunt__t3",
+  "feature": "harvest-stats",
+  "bug": "hx2",
+  "arm": "hunt",
+  "trial": 3,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:34:33.863Z",
+  "materializeMs": 8865,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__hx2__hunt__t3/variant/az240ztj/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "78f58594-7eaa-4a84-afb8-1389b4fd59de",
+  "loadBefore": [
+    6.91259765625,
+    5.52880859375,
+    5.15087890625
+  ],
+  "loadAfter": [
+    8.5673828125,
+    6.99267578125,
+    5.82373046875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 188592,
+  "reportedCostUsd": 0.3253398,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 20,
+      "outputTokens": 7013,
+      "cacheReadInputTokens": 186249,
+      "cacheCreationInputTokens": 29550,
+      "webSearchRequests": 0,
+      "costUSD": 0.3253398,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1121,
+      "cacheCreationEphemeral5mInputTokens": 29550,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 2m51s | run 20261112-183453-hunt-0b4d | 3 confirmed, 0 dropped on re-run\ntarget: http://localhost:3791\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Plants with the same name are merged into one row in the stats table\n   where: GET /api/stats/harvests and /stats table\n   expected: Two plants with the same name but different varieties (Red 100 g, Yellow 200 g) each get their own row with their own weight, matching the 'Best plants' list, which shows them separately\n   saw: {\"rows\":[{\"plant_id\":6,\"plant_name\":\"Twin19009\",\"variety\":\"Red\",\"total_grams\":300,\"monthly_grams\":[300,0,0,0,0]}]}\n   repro: .rough-ride/runs/20261112-183453-hunt-0b4d/probes/same-name-plants.mjs (expectation \"api-each-plant-own-row\")\n2. MEDIUM Malformed or empty stats response crashes the page and leaves it stuck on 'Loading stats…' over stale results\n   where: /stats\n   expected: An error message, with no uncaught exception, and no older results shown for the new range\n   saw: {\"pe\":[\"Cannot read properties of undefined (reading 'length')\"]}\n   repro: .rough-ride/runs/20261112-183453-hunt-0b4d/probes/bad-data-and-ranges.mjs (expectation \"empty-object-no-page-error\")\n3. MEDIUM Clearing the From date shows an error saying From is after To\n   where: /stats (From field)\n   expected: An empty From either means no lower bound or is refused with a clear reason\n   saw: {\"alerts\":[\"The From date must be on or before the To date.\"],\"fields\":[{\"label\":\"From\",\"value\":\"\"},{\"label\":\"To\",\"value\":\"2025-12-31\"}]}\n   repro: .rough-ride/runs/20261112-183453-hunt-0b4d/probes/cleared-from-and-race.mjs (expectation \"cleared-from-no-contradictory-error\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a64589c3dfe3ead00.jsonl",
+    "agent-a64589c3dfe3ead00.meta.json"
+  ],
+  "usage": {
+    "input": 20,
+    "output": 7013,
+    "cacheRead": 186249,
+    "cacheWrite": 29550,
+    "requests": 10,
+    "toolCalls": {
+      "Bash": 9,
+      "Read": 1
+    }
+  },
+  "findingCount": 3,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:38:00.142Z"
+}

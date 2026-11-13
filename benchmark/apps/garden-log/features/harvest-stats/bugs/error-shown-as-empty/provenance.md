@@ -1,0 +1,1 @@
+Written by hand for the comparison benchmark (benchmark/comparison/). The clean feature shows an AlertMessage when the stats request fails. This variant drops that branch, so a failed request falls through to the empty state.

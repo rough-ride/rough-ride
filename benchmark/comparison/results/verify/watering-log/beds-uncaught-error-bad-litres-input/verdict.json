@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "beds-uncaught-error-bad-litres-input",
+  "sentence": "On /beds, entering a negative value into the 'Litres' field triggers the dev error overlay.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in as the demo user and opened /beds. I opened 'Record past watering' for North bed and for Shade corner. In the Litres field I tried -5, -0.1, -1e3 (shown as -1000), '-', -3 and -99999, typing them in and submitting with both the 'Save watering' button and the Enter key. I also turned off native form validation (form.noValidate = true) and submitted -5. Every time the app showed its own inline alert, 'Enter an amount in litres greater than zero.', and sent nothing. No pageerror events, no console errors, no vite/nuxt error overlay element, and the page title stayed 'Beds · Garden Log'. In the code, savePastWatering (frontend/app/pages/beds.vue:122-131) rejects empty, non-finite and <= 0 values before any request. The backend schema (litres gt=0) also rejects them: POST /api/waterings with litres -5 returned a 422 validation error, not a crash.",
+  "severity": null,
+  "wallMs": 90999
+}

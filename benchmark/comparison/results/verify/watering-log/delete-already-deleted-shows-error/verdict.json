@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "delete-already-deleted-shows-error",
+  "sentence": "Deleting a watering that was already deleted (second tab or retry) on /waterings shows a 404 'Watering not found.' error and leaves the stale row.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced: created watering id 3 (North bed, 20 Oct 2026, 3 L) via the API, opened /waterings in the browser (3 rows), deleted id 3 directly via DELETE /api/waterings/3 (204), then clicked its Delete in the stale page and confirmed. The second DELETE returned 404 {\"detail\":\"Watering not found.\"}; the page showed 'Watering not found.' and the row stayed until reload, because removeWatering only calls refresh() on success. However, this is the app's existing, uniform convention, not something this change introduced: delete_task, delete_harvest, delete_plant and delete_bed all look up the row first and raise not_found (404), and tasks.vue/beds.vue use the same try { DELETE; refresh() } catch { show error } pattern. The request never mentions deleting waterings, let alone idempotent deletes. The message is accurate and a reload fixes the list. Making delete idempotent would be a reasonable improvement, but it's an app-wide design choice rather than a defect in this change.",
+  "severity": null,
+  "wallMs": 74900
+}

@@ -1,0 +1,19 @@
+{
+  "findings": [
+    {
+      "title": "A past watering with a negative amount of litres is accepted and saved",
+      "where": "/beds, Record past watering form (POST /api/waterings)",
+      "steps": "Probe negative-litres, expectation negative-litres-refused",
+      "expected": "An amount of -5 litres is refused with a visible reason. The form already refuses 0 with 'Enter an amount in litres greater than zero.', and the API answers with a 4xx.",
+      "actual": "The watering was saved with litres -5, and the page showed 'Recorded -5 L on 12 Nov 2026.' The API also returns 201 for litres -3. WateringIn.litres only has le=10000 with no gt=0, and the client only rejects 0. Negative amounts then go into the litres totals on the waterings page.",
+      "evidence": "{\"before\":2,\"after\":3,\"neg\":[{\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5}],\"alerts\":[\"Recorded -5 L on 12 Nov 2026.\"]} | {\"before\":2,\"after\":3,\"neg\":[{\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5}],\"alerts\":[\"Recorded -5 L on 12 Nov 2026.\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-193511-hunt-7a94",
+        "probe": "negative-litres",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

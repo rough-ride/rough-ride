@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Failed journal entry delete hides the entry, which still exists, and shows 'No journal entries yet'",
+      "where": "/plants/:id Journal section (DELETE /api/journal/:id)",
+      "steps": "Probe delete-fail, expectation failed-delete-keeps-entry-visible",
+      "expected": "When the delete fails, the entry stays in the list next to the error, because it was not deleted",
+      "actual": "The entry is removed from the list before the request returns and is not put back when the request fails. The page shows 'Injected 500' and 'No journal entries yet', while the badge says '1 entry' and the API still returns the entry",
+      "evidence": "{\"exists\":true,\"visible\":0,\"alerts\":[\"Injected 500\"]} | {\"exists\":true,\"visible\":0,\"alerts\":[\"Injected 500\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-181947-hunt-5997",
+        "probe": "delete-fail",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Non-list journal response on the plant page is shown as 'No journal entries yet'",
+      "where": "/plants/:id Journal section (GET /api/journal?plant_id=)",
+      "steps": "Probe detail-journal-fault, expectation detail-journal-empty-object-not-shown-as-empty",
+      "expected": "A visible error when the journal response is not a list",
+      "actual": "No alert appears. The page shows 'No journal entries yet' while the badge says '2 entries'",
+      "evidence": "{\"j\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"No journal entries yet\",\"Note what you see: first shoots, pests, the weather.\",\"Garden Log · a journal for one garden\"],\"alerts\":[]} | {\"j\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"No journal entries yet\",\"Note what you see: first shoots, pests, the weather.\",\"Garden Log · a journal for one garden\"],\"alerts\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-181947-hunt-5997",
+        "probe": "detail-journal-fault",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

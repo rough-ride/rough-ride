@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "double-click-water-now-duplicate",
+  "sentence": "Clicking 'Water now' twice quickly on /beds sends two POSTs before the button disables and records two waterings.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in as the demo user on /beds and tried real input on the North bed 'Water now' button through Playwright, counting POST /api/waterings each time. Each try sent exactly 1 POST: locator.dblclick() (before it, GET /api/waterings returned 2 rows; after it, 3), two parallel page.mouse.click() calls, mouse click followed by a clickCount:2 click, and two Enter presses in parallel on the focused button. In each case the button is disabled (wateringBedId set, Vue re-renders before the next input event) before a second click is handled. The only way I got two POSTs and duplicate rows (ids 4 and 5, both North bed at 2026-11-12 18:55:03) was calling HTMLElement.click() twice synchronously in one page.evaluate. That puts two click events in one JS task, which no mouse or keyboard input can do. The code has no synchronous in-flight guard (recordWatering only sets a ref that drives :disabled) and no idempotency key. But the app never retries automatically, and the reported user action (a quick double click) records one watering. The duplicate needs synthetic same-tick events, so following the reports with real input did not reproduce it.",
+  "severity": null,
+  "wallMs": 69835
+}

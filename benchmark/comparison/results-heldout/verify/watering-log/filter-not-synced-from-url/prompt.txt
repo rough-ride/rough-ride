@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-filter-not-synced-from-url/scratch.
+
+The reported problem: On /waterings the bed filter is read from the URL only once, so going from /waterings?bed=N to /waterings via the nav link or Back keeps the old bed selected and the list filtered.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Bed filter gets out of sync with the URL",
+  "where": "/waterings",
+  "steps": "On /waterings?bed=2 (Shade corner), click the 'Waterings' nav link (or press browser Back to an unfiltered URL).",
+  "expected": "The URL /waterings shows all beds.",
+  "actual": "The URL becomes /waterings, but the dropdown stays on Shade corner and the list stays filtered. bedFilter is only read from route.query once and never watches the route.",
+  "evidence": "After the click, url=http://localhost:3791/waterings, select value=2, and only Shade corner rows were listed."
+ },
+ {
+  "title": "Clicking the Waterings nav link while a bed filter is active keeps the old filter",
+  "where": "/waterings?bed=2 -> nav 'Waterings' (/waterings)",
+  "steps": "Probe waterings-filter, expectation nav-link-shows-all-waterings",
+  "expected": "URL /waterings shows all beds' waterings with the Bed select on 'All beds'",
+  "actual": "URL changes to /waterings but the Bed select stays on 'Shade corner' and only that bed's waterings are listed, so URL and page state disagree",
+  "evidence": "{\"url\":\"/waterings\",\"fields\":[{\"label\":\"Bed\",\"value\":\"2\"}],\"rows\":[\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\"]} | {\"url\":\"/waterings\",\"fields\":[{\"label\":\"Bed\",\"value\":\"2\"}],\"rows\":[\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\"]}"
+ },
+ {
+  "title": "Bed filter doesn't follow URL changes on the same page",
+  "where": "/waterings",
+  "steps": "Open /waterings?bed=1, then click 'Waterings' in the nav (to /waterings)",
+  "expected": "All waterings shown, filter reset",
+  "actual": "bedFilter is read from route.query only once at setup, so the URL says all beds while the list stays filtered to bed 1",
+  "evidence": "waterings.vue: const bedFilter = ref(route.query.bed …) with no watch on route.query"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-filter-not-synced-from-url/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

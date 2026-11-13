@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "unknown-bed-filter-select-mismatch",
+  "sentence": "Opening /waterings?bed=99999 with an unknown bed id filters the list to 'No waterings for this bed' while the Bed select shows no selection, so the select and list disagree.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and loaded http://localhost:3797/waterings?bed=99999. The #watering-bed select has value '' and selectedIndex -1, so no option is selected; its options are '':All beds, 1:North bed, 2:Shade corner. Meanwhile the page shows 'Clear filter', '0 waterings', and the empty state 'No waterings for this bed'. In waterings.vue, bedFilter is set straight from route.query.bed ('99999') with no check against the loaded beds. The API is queried with bed_id=99999 and returns an empty list, and filtering=true. The v-model select has no option with value '99999', so it shows nothing selected (which looks like All beds) while the list is filtered to a bed that doesn't exist. The unknown id is never reset to All beds or flagged, so the filter control and the list disagree.",
+  "severity": "low",
+  "wallMs": 52099
+}

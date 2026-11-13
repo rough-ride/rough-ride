@@ -1,0 +1,34 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3792, API http://localhost:8792/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-watering-log-boolean-litres-accepted/scratch.
+
+The reported problem: POST /api/waterings with litres set to boolean true is accepted with 201 and stored as 1.0 litres.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Boolean true is accepted as litres",
+  "where": "POST /api/waterings",
+  "steps": "POST {\"bed_id\":1,\"litres\":true}",
+  "expected": "422",
+  "actual": "201, stored as litres 1.0",
+  "evidence": "The response had id 5 and litres 1.0."
+ },
+ {
+  "title": "Boolean litres accepted as 1 L",
+  "where": "POST /api/waterings",
+  "steps": "POST {\"bed_id\":1,\"litres\":true}",
+  "expected": "A 422.",
+  "actual": "201 with litres 1.0.",
+  "evidence": "The API response showed litres: 1.0."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-watering-log-boolean-litres-accepted/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Journal search crashes (HTTP 500) on an apostrophe or quote; search term is interpolated into SQL",
+      "where": "GET /api/journal?q=... (backend/routers/journal.py list_entries); Journal page search box, plant detail journal load",
+      "steps": "Sign in. Open the Journal page and type a word containing an apostrophe, e.g. O'Neil (or any ' or \"). Equivalent API: curl -G 'http://localhost:8790/api/journal' --data-urlencode \"q=O'Neil\".",
+      "expected": "The search runs and returns matching entries (or an empty list), with the quote treated as a literal character. Bad input should never cause a 5xx.",
+      "actual": "Server returns 500 Internal Server Error. The front end then shows the generic 'Could not load the journal.' alert and no results. Any plant whose name or a user who types a quote in search hits this.",
+      "evidence": "Code builds the WHERE clause with an f-string: clauses.append(f\"(j.body LIKE '%{term}%' OR p.name LIKE '%{term}%')\") and passes it to conn.execute with no parameterization. curl with q=O'Neil returned HTTP 500 'Internal Server Error'; q containing a quote consistently 500s while safe terms 200. This is also a SQL injection vector.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal search treats % and _ as SQL LIKE wildcards instead of literal characters",
+      "where": "GET /api/journal?q=... (backend/routers/journal.py list_entries); Journal page search box",
+      "steps": "Sign in, open Journal page, search for a single '%' (or '_'). API: curl -G 'http://localhost:8790/api/journal' --data-urlencode 'q=%'.",
+      "expected": "Searching for '%' should match only entries that literally contain a percent sign (likely none), not every entry.",
+      "actual": "Searching '%' returns ALL entries (it is used as a LIKE wildcard), and '_' matches any single character. Results are misleading; a user searching for a literal % or _ can never find it.",
+      "evidence": "LIKE pattern is built by raw interpolation with no ESCAPE clause; curl with q=%25 returned the full entry list identical to no filter.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal page load-error state offers no retry",
+      "where": "frontend/app/pages/journal.vue (loadError branch)",
+      "steps": "Load the Journal page while the API is failing (e.g. server down, or a 500 from the search bug above).",
+      "expected": "Per the resilience requirement, a data page's error state should offer a retry that works once the server recovers, without a full reload.",
+      "actual": "On loadError the page renders only an AlertMessage with the error text and no retry control; the user must reload the page. (The plant detail journal section has the same gap for journalLoadError.)",
+      "evidence": "journal.vue template: <AlertMessage v-if=\"loadError\">...</AlertMessage> with no retry button; refresh from useApiFetch is destructured but not exposed to the user. Contrast with other pages that provide retry.",
+      "status": "suspected",
+      "severity": "medium"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-load-error-no-retry",
+  "sentence": "When GET /api/journal fails, the /journal page and the plant detail Journal section show only 'Could not load the journal.' with no Retry control, so recovery requires a reload or changing the search.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced: signed in as the demo user, routed **/api/journal* to a 500 in Playwright, then went to /journal and to /plants/2 by clicking links in the app. Both showed only an alert ('boom', the API's detail; it falls back to 'Could not load the journal.') with no Retry button. The plant badge read '0 entries' because the plant data is from before the mock, not a count of the failed list. Code agrees: journal.vue:69 and plants/[id].vue:306 render a bare <AlertMessage>. But this is the app's existing convention. On main, every load-error state is a bare AlertMessage with no retry: plants list ('Could not load plants.'), beds ('Could not load beds.'), dashboard summary and tasks, plant detail ('Could not load this plant.') and the harvest form's plant list. No page in the original app has a retry control (git grep for retry/'try again' finds only the login error text). The request does not ask for retry on load errors. The new journal views match the established design, so a missing Retry is a feature request, not a regression or a gap against the request. (The report that a search with an apostrophe makes the API fail would be a separate issue and was not judged here.)",
+  "severity": null,
+  "wallMs": 108370
+}

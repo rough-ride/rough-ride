@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "search-non-ascii-case-sensitive",
+  "sentence": "Journal search is case-sensitive for non-ASCII letters (e.g. 'épinards' does not match 'ÉPINARDS') because SQLite LIKE folds only ASCII case.",
+  "verdict": "confirmed",
+  "evidence": "Through the API (signed in as the demo user), I created a journal entry on plant 2 (Courgette) with the text 'Été chaud, ÉPINARDS rrcheck' (id 4). GET /api/journal?q=épinards returned nothing, and so did q=été. q=ÉPINARDS and q=Épinards both returned the entry. The ASCII part of the text matched in either case: q=rrcheck and q=RRCHECK both returned it. In the code, backend/routers/journal.py list_entries filters with plain `j.body LIKE ? OR p.name LIKE ?`. There is no lower()/casefold and no custom collation, and SQLite's LIKE only ignores case for ASCII letters. The /journal page (frontend/app/pages/journal.vue) sends the search box text straight to the server as ?q= and filters nothing on the client, so the search box behaves the same way. Searching therefore ignores case for ASCII letters but not for accented ones, which is inconsistent. I deleted the test entry afterwards.",
+  "severity": "low",
+  "wallMs": 56199
+}

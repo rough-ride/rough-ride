@@ -1,0 +1,14 @@
+id: water-now-twice
+category: double-submit
+provenance: hand-written
+layer: frontend
+reach: direct
+needsAppKnowledge: false
+flow: beds
+exposedBy:
+  - { action: double-click Water now }
+checks: [one-write]
+symptom: "Double-clicking 'Water now' records two waterings"
+addedIn: 0.1.1
+review: single
+allowWords: []

@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "detail-malformed-journal-shows-fake-entries",
+  "sentence": "On the plant detail page, a malformed (non-list) GET /api/journal?plant_id= response is rendered as blank entries dated '–' with active Edit/Delete buttons instead of an error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /plants. Used Playwright page.route to make GET /api/journal?plant_id=... return 200 application/json with the body \"oops\" (a JSON string, not a list). Then followed the client-side link to /plants/1 (Tomato). The Journal section rendered 4 <li> entries, one per character, each dated '–' with empty text and enabled 'Edit / entry from –' and 'Delete / entry from –' buttons. No role=alert was shown, and the badge still said '2 entries'. Code cause: pages/plants/[id].vue uses useApiFetch<JournalEntry[]> with no shape check or transform, and renders `v-if=\"journal && journal.length\"` / `v-for=\"entry in journal\"`. Any non-list value that has a length is iterated, and the 'Could not load the journal.' alert only appears when the fetch errors.",
+  "severity": "low",
+  "wallMs": 87986
+}

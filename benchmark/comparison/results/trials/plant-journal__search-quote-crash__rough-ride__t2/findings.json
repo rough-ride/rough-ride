@@ -1,0 +1,199 @@
+{
+  "findings": [
+    {
+      "title": "button \"Save plant\" stays busy after POST /api/plants fails with 500",
+      "where": "/plants/new",
+      "steps": "In the browser: /plants/new | 500!, reset!, 400! on POST /api/plants #1; double-submit on POST /api/plants ... | fails: settles | page showed a record from journal-add/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 5336rde5) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 5336rde5) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 5336rde5) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 5336rde5) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "shown",
+        "repro": "r01"
+      }
+    },
+    {
+      "title": "button \"Add entry\" stays busy after POST /api/journal fails with 500",
+      "where": "/plants/{}",
+      "steps": "In the browser: /plants/{} | 500!, reset!, 400! on POST /api/journal #1; double-submit on POST /api/journa... | fails: settles | page showed a record from journal-add/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 5336rde5) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 5336rde5) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 5336rde5) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 5336rde5) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "shown",
+        "repro": "r02"
+      }
+    },
+    {
+      "title": "button \"Save plant\" stays busy after GET /api/journal fails with 500",
+      "where": "/plants/{}",
+      "steps": "In the browser: /plants/{} | 500!, 400!, reset!, 401! on GET /api/journal #1 | fails: settles, retry-recovers | page showed a record from journal-add/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | retry-recovers: step 7 (fill label \"Entry\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | retry-recovers: step 7 (fill label \"Entry\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | retry-recovers: step 7 (fill label \"Entry\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0uqh6mrb) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | retry-recovers: step 7 (fill label \"Entry\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | retry-recovers: step 7 (fill label \"Entry\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | retry-recovers: step 7 (fill label \"Entry\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0uqh6mrb) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "shown",
+        "repro": "r07"
+      }
+    },
+    {
+      "title": "button \"Save plant\" stays busy after GET /api/plants/{plant_id} fails with 500",
+      "where": "/plants/{}",
+      "steps": "In the browser: /plants/{} | 500!, 400!, reset! on GET /api/plants/{plant_id} #1 | fails: settles, retry-recovers | page showed a record from journal-add/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 0uqh6mrb) after 10 s | retry-recovers: no retry path without a reload",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 0uqh6mrb) after 10 s | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "shown",
+        "repro": "r08"
+      }
+    },
+    {
+      "title": "button \"Save entry\" stays busy after PUT /api/journal/{entry_id} fails with 500",
+      "where": "/plants/{}",
+      "steps": "In the browser: /plants/{} | 500!, reset! on PUT /api/journal/{entry_id} #1 | fails: settles | page showed a record from journal-add/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "unchecked",
+        "repro": "r18"
+      }
+    },
+    {
+      "title": "link \"Journal\" stays busy after GET /api/journal fails with 500",
+      "where": "/journal",
+      "steps": "In the browser: /journal | 500!, empty-200! on GET /api/journal #3 | fails: settles, retry-recovers | page showed a record from journal-add/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "unchecked",
+        "repro": "r20"
+      }
+    },
+    {
+      "title": "label \"Search\" stays busy after GET /api/journal fails with 500",
+      "where": "/journal",
+      "steps": "In the browser: /journal | 500!, empty-200! on GET /api/journal #4 | fails: settles, retry-recovers | page showed a record from journal-add/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | retry-recovers: step 12 (expect text \"1 entry match\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | retry-recovers: step 12 (expect text \"1 entry match\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "unchecked",
+        "repro": "r21"
+      }
+    },
+    {
+      "title": "link \"All plants\" stays busy after GET /api/plants fails with 500",
+      "where": "/plants",
+      "steps": "In the browser: /plants | 500!, empty-200! on GET /api/plants #1 | fails: settles, retry-recovers | page showed a record from journal-add/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "unchecked",
+        "repro": "r25"
+      }
+    },
+    {
+      "title": "button \"Save plant\" stays busy after GET /api/plants/{plant_id} answers 401 (signed out)",
+      "where": "/login",
+      "steps": "In the browser: /login | 401! on GET /api/plants/{plant_id} #1 | fails: settles | page showed a record from journal-add/GET /api/plants/{plant_id} #1/400!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0uqh6mrb) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0uqh6mrb) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "unchecked",
+        "repro": "r42"
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after POST /api/beds fails with 500",
+      "where": "/beds",
+      "steps": "In the browser: /beds | 500!, reset! on POST /api/beds #1; double-submit on POST /api/beds #1 | fails: settles | page showed a record from journal-add/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "unchecked",
+        "repro": "r12"
+      }
+    },
+    {
+      "title": "viewport 375 stays busy after the 375px viewport",
+      "where": "/beds",
+      "steps": "In the browser: /beds | viewport 375 | fails: settles | page showed a record from journal-add/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "unchecked",
+        "repro": "r17"
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after GET /api/beds fails with 500",
+      "where": "/beds",
+      "steps": "In the browser: /beds | 500!, empty-200! on GET /api/beds #1 | fails: settles, values-survive, retry-recovers | page showed a record from journal-add/POST /api/plants #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | values-survive: label \"Name\" held \"Bed 5b4mbyf9\", then \"\" after the failed request | retry-recovers: step 4 (click link \"Add plant to Bed ${unique}\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10 s | values-survive: label \"Name\" held \"Bed 5b4mbyf9\", then \"\" after the failed request | retry-recovers: step 4 (click link \"Add plant to Bed ${unique}\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 11ula0dw) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "unchecked",
+        "repro": "r14"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/plants fails with 500",
+      "where": "/plants",
+      "steps": "In the browser: /plants | 500! on GET /api/plants #2 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: step 12 (expect link \"Plant ${unique}\"): not visible after 10 s",
+      "evidence": "retry-recovers: step 12 (expect link \"Plant ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-124700-plan-gexo",
+        "state": "unchecked",
+        "repro": "r28"
+      }
+    }
+  ]
+}

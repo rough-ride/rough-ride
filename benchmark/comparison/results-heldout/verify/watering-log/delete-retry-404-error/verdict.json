@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "delete-retry-404-error",
+  "sentence": "On /waterings, retrying a Delete whose first request already succeeded returns 404 'Watering not found.' and shows an error instead of being treated as done.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced through the API: signed in, created watering 3 with POST /api/waterings, then DELETE /api/waterings/3 returned 204 and a second DELETE returned 404 {\"detail\":\"Watering not found.\"}. The /waterings page catches the error and shows it in listError, so a retry would show that message. This is the app's existing convention, not something the change introduced: delete_task, delete_harvest, delete_plant and delete_bed on main all look the row up first (raising not_found) before deleting, and the existing pages handle delete errors with the same try/refresh, catch/show-error pattern. The request does not ask for deleting waterings at all, let alone for idempotent deletes. A 404 for a resource that no longer exists is a deliberate, consistent design choice, and reloading the page shows the correct list.",
+  "severity": null,
+  "wallMs": 44167
+}

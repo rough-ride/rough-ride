@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "plant-journal-capped-at-500",
+  "sentence": "The plant detail page fetches journal entries with limit=500 and no paging, so a plant with more than 500 entries shows only the newest 500 while the badge shows the full count.",
+  "verdict": "confirmed",
+  "evidence": "Code: frontend/app/pages/plants/[id].vue:15 calls useApiFetch('/journal', {query:{plant_id, limit: 500}}); backend/routers/journal.py caps limit at le=500 (limit=600 returns 422) and has no offset/cursor, and the page has no paging or 'more' control. Reproduced: signed in as the demo user through the API, added 520 dated entries ('Bulk entry 1..520') to plant 2 (Courgette). GET /api/plants/2 gave journal_count=520; GET /api/journal?plant_id=2&limit=500 returned 500 rows. In the browser, /plants/2 showed the badge '520 entries' but exactly 500 <li> items in .journal-list. The last one was 'Bulk entry 500' (30 Jun 2025), there was no more/older/next button, and the 20 oldest entries could not be seen, edited or deleted from the plant page, with nothing telling the user the list was cut short. It takes a lot of entries per plant to hit this, but the badge and the list visibly disagree and data is silently hidden. Partial workaround: searching on the Journal page (GET /api/journal?q=Bulk entry 510) still finds an older entry, but the plant page itself never shows it. Test data (520 entries on plant 2) was left in the running app's database.",
+  "severity": "low",
+  "wallMs": 80281
+}

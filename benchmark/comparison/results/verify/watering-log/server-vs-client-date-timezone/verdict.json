@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "server-vs-client-date-timezone",
+  "sentence": "When the browser's time zone is ahead of the server's, a past watering dated with the form's default 'today' is refused as in the future, and 'Water now' stores a server-local date with a UTC time.",
+  "verdict": "confirmed",
+  "evidence": "Server clock: Thu 12 Nov 2026 14:42 CET (13:42 UTC). Opened a Playwright browser context with timezoneId Pacific/Kiritimati (UTC+14, local time Fri 13 Nov 03:42), signed in as the demo user, and went to /beds. Under 'Record past watering' for North bed, the date input defaulted to 2026-11-13 (max=2026-11-13, from todayIso()). I entered 2 litres and clicked 'Save watering'. POST /api/waterings {bed_id:1, watered_on:'2026-11-13', litres:2} returned 422 'Value error, Watering date cannot be in the future.' (schemas.py not_in_future compares against the server's date.today()). So the gardener cannot save today's date, which the form itself offers as the default and the maximum. Then I clicked 'Water now' for Shade corner. The response had watered_on '2026-11-12' (server-local date, from now.astimezone().date()) and watered_at '2026-11-12 13:44:10' (UTC). The beds page showed 'Last watered 13 Nov 2026, 03:44', so the stored day (12 Nov, which sorting uses) disagrees with the day shown to the gardener (13 Nov). Both parts of the report happened as described. Side effect: this test created watering id 3 for Shade corner.",
+  "severity": "medium",
+  "wallMs": 145091
+}

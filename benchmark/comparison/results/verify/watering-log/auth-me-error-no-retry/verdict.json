@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "auth-me-error-no-retry",
+  "sentence": "On /login, when GET /api/auth/me fails (500, 400, reset, 429), there is no way to retry without a page reload.",
+  "verdict": "not-reproduced",
+  "evidence": "On /login the global middleware calls loadCurrentUser() (composables/useAuth.ts), which catches any GET /api/auth/me error and returns null. The page then shows the normal sign-in form. This code is unchanged by the watering diff. In Playwright, for each of 500, 400, connection reset and 429 I made the first /api/auth/me request fail, cleared cookies, and loaded /login. Each time the sign-in form appeared and nothing was stuck. Without reloading, I entered the demo credentials and submitted, and each time I reached the Dashboard (URL /, title 'Dashboard · Garden Log', 'Recent waterings' table shown). The middleware also calls /auth/me again on the next navigation, so the call is retried anyway. On the login page a failed session check just means 'not signed in', and submitting the form is the way forward. No dedicated retry button is needed, and none is in scope for the watering request.",
+  "severity": null,
+  "wallMs": 75760
+}

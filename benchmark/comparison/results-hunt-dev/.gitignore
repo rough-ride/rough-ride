@@ -1,0 +1,10 @@
+# Raw run output stays local: large, and holds machine paths.
+trials/*/transcripts/
+trials/*/rough-ride/
+trials/*/scratch/
+trials/*/app.log
+trials/*/claude.json
+trials/*/claude.stderr
+trials/*/findings.raw.json
+verify/*/*/app.log
+verify/*/*/claude.json

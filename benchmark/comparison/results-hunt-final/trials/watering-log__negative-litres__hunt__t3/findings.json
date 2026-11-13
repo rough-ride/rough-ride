@@ -1,0 +1,19 @@
+{
+  "findings": [
+    {
+      "title": "Past-watering form and API accept a negative amount of litres",
+      "where": "/beds (Record past watering form), POST /api/waterings",
+      "steps": "Probe negative-litres, expectation negative-litres-refused",
+      "expected": "An amount of -5 L is refused with a visible reason (the form's own message says 'greater than zero'), and the API answers 422 for negative litres",
+      "actual": "The form saves it and shows the success message 'Recorded -5 L on 12 Nov 2026.'. The API also returns 201 for litres -20. The /waterings list then shows '-5 L' and '-20 L', and the total-litres summary disappears because the sum goes negative",
+      "evidence": "{\"n0\":5,\"n1\":6,\"neg\":[{\"id\":6,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5},{\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5},{\"id\":4,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-01\",\"watered_at\":null,\"litres\":-20}],\"alerts\":[\"Recorded -5 L on 12 Nov 2026.\"]} | {\"n0\":7,\"n1\":8,\"neg\":[{\"id\":8,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5},{\"id\":6,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5},{\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5},{\"id\":7,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-01\",\"watered_at\":null,\"litres\":-20},{\"id\":4,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-01\",\"watered_at\":null,\"litres\":-20}],\"alerts\":[\"Recorded -5 L on 12 Nov 2026.\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-192345-hunt-f441",
+        "probe": "negative-litres",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

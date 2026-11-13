@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "long-bed-name-overflow-375",
+  "sentence": "A bed with a long unbroken name makes the waterings tables on /waterings and the dashboard overflow horizontally at 375 px width.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user with a 375x800 viewport. Through the API I created a bed with a 60-character name containing no spaces (60 is the maximum the schema allows), got 201, then recorded a watering for it (201). On /waterings, document.documentElement.scrollWidth was 846 and the table was 813 px wide. Hiding that one row brought scrollWidth back to 375. On the dashboard, the Recent waterings table was 728 px wide and scrollWidth was 761; hiding the row brought it back to 375. The code agrees: the new tables in waterings.vue and index.vue print bed_name in a plain <td>, the .table td rules in main.css have no overflow-wrap or word-break, and there is no scroll wrapper. A name the app accepts makes both new pages scroll sideways on a phone. I deleted the test bed afterwards.",
+  "severity": "low",
+  "wallMs": 61222
+}

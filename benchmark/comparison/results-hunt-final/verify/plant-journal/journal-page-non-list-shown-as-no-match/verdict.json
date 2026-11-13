@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-page-non-list-shown-as-no-match",
+  "sentence": "On the Journal page, when the journal API returns an object instead of a list, the page shows '0 entries match' / 'No entries match' instead of an error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user, loaded /plants, then used browser_route to make **/api/journal** return 200 with body {} (an object instead of a list). Went to /journal through the in-app link and typed 'tomato' in the search box (URL became /journal?q=tomato). The page showed '0 entries match' and the 'No entries match / Try a different word or plant name.' empty state, with no error alert. The code explains it: pages/journal.vue takes any truthy `entries` as valid data. `entries.value?.length ?? 0` gives 0 for an object, `entries && entries.length` is false, so the `v-else-if=\"entries && searching\"` empty state renders. The AlertMessage only appears when useFetch sets `error`, and nothing checks the response shape. A broken server response therefore looks like a real 'nothing found' result, which misleads the user.",
+  "severity": "low",
+  "wallMs": 44432
+}

@@ -1,0 +1,79 @@
+{
+  "id": "harvest-stats__hx2__playwright__t1",
+  "feature": "harvest-stats",
+  "bug": "hx2",
+  "arm": "playwright",
+  "trial": 1,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:41:41.511Z",
+  "materializeMs": 5913,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__hx2__playwright__t1/variant/dsdqqdnf/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "d2df6afb-bc21-4d7b-9c16-822a478c6980",
+  "loadBefore": [
+    6.880859375,
+    6.775390625,
+    7.0185546875
+  ],
+  "loadAfter": [
+    4.5146484375,
+    5.779296875,
+    6.529296875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 203958,
+  "reportedCostUsd": 0.7420468,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 48,
+      "outputTokens": 10641,
+      "cacheReadInputTokens": 837054,
+      "cacheCreationInputTokens": 45203,
+      "webSearchRequests": 0,
+      "costUSD": 0.7420468,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1706,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 45203,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 24,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 8 bugs in the Stats change and saw all of them happen in the running app. The findings are in `out/findings.json`.\n\n**High**\n1. **Plants with the same name get their harvests mixed together.** The query in `backend/routers/stats.py` groups by plant name, not plant ID. I added a second \"Tomato\" (variety Gardeners Delight) with a 2 kg harvest. The table then credited Sungold's 450 g July harvest to Gardeners Delight: it showed 2.45 kg vs 600 g. The \"Best plants\" list on the same page correctly said 2 kg vs 1.05 kg, so the two disagree.\n\n**Medium**\n2. **The page crashes on a response it can't read.** If the stats request returns HTML or `{}`, the page throws a TypeError while drawing (`stats.plants.length`). The address bar says /stats but the dashboard stays on screen, with no message to the user.\n3. **No timeout.** When the request hangs, \"Loading stats…\" was still showing after 13 seconds, with the old table underneath.\n4. **No retry button.** The error state only says \"Could not load harvest stats.\" To recover, the user has to change a date or reload the page.\n\n**Low**\n5. If the response has empty (null) fields, the page shows \"null harvests from – to –\".\n6. Clearing a date field quietly falls back to this year's date. With last year's range set, clearing From gives \"The From date must be on or before the To date\" while the From field is empty.\n7. A bad date in the address, like `?from=2026-02-30`, leaves the field blank and shows the server's raw message (\"Query.from: Input should be a valid date…\").\n8. The dashboard's \"Top plant this year\" card shows only the name (\"Tomato\"), so you can't tell which one it is when names repeat. It links to /stats rather than to that plant.\n\nSeveral things held up: an answer that arrives late doesn't overwrite newer results, the page recovers once the server is back if you change a date, it fits 375 px without sideways scrolling, and the server answers bad dates with a 422 (the From-after-To check included) rather than a 5xx.\n\nI didn't get a clean session-expiry test. My mocked 401 sent me to the dashboard instead of the sign-in page, probably because the real session cookie was still valid, so I didn't report it.\n\nTo test bug 1, I added data to the app: a plant \"Tomato / Gardeners Delight\" (id 4) and a 2000 g harvest on 2026-07-10. Both are still there.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 48,
+    "output": 10641,
+    "cacheRead": 837054,
+    "cacheWrite": 45203,
+    "requests": 22,
+    "toolCalls": {
+      "Bash": 9,
+      "ToolSearch": 2,
+      "mcp__playwright__browser_navigate": 1,
+      "mcp__playwright__browser_evaluate": 2,
+      "mcp__playwright__browser_fill_form": 1,
+      "mcp__playwright__browser_click": 1,
+      "mcp__playwright__browser_route": 1,
+      "mcp__playwright__browser_run_code_unsafe": 6
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 8,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T16:45:21.403Z"
+}

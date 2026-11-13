@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3790, API http://localhost:8790/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-watering-log-tiny-litres-shown-as-zero/scratch.
+
+The reported problem: Recording a past watering with a tiny positive amount (e.g. 0.001 L) is accepted despite the 0.1 field minimum and is displayed as '0 L' in the notice, dashboard and waterings list.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Small litre amounts are saved but shown as '0 L'",
+  "where": "/beds past-watering form, /waterings, dashboard",
+  "steps": "Record a past watering with litres 0.004 (or POST litres 0.001).",
+  "expected": "Either refuse it with a minimum amount (the input says min 0.1), or show the real amount.",
+  "actual": "The form accepts it and says 'Recorded 0 L on 10 Nov 2026.' The lists show '0 L'. Server and client only check > 0, while the display rounds to 2 decimals.",
+  "evidence": "tiny=['Recorded 0 L on 10 Nov 2026.']; dashboard row '12 Nov 2026, 12:58 North bed 0 L'"
+ },
+ {
+  "title": "Tiny litre amounts are accepted and shown as '0 L'",
+  "where": "POST /api/waterings, /waterings, dashboard",
+  "steps": "POST {\"bed_id\":1,\"litres\":1e-300} (or type 0.001 in the Litres field; the client only checks > 0).",
+  "expected": "Reject amounts below a sensible minimum (the input says min 0.1), or show the value accurately.",
+  "actual": "Saved with 201. formatLitres rounds to 2 decimals, so the watering shows as '0 L', and the total shows ', 0 L in total'.",
+  "evidence": "API returned litres 1e-300 with 201. formatLitres uses maximumFractionDigits: 2."
+ },
+ {
+  "title": "Tiny litre amounts are accepted but displayed as '0 L'; absurd dates such as year 0001 are accepted",
+  "where": "Beds past-watering form, POST /api/waterings, watering lists",
+  "steps": "Record a past watering with litres 0.0000001, or with watered_on 0001-01-01.",
+  "expected": "Either refuse the value with a reason, or show it as entered.",
+  "actual": "Server returns 201. formatLitres rounds to 2 decimals, so the amount shows as '0 L'. Year 0001 is stored and becomes the oldest entry.",
+  "evidence": "POST litres 1e-7 -> 201 and stored litres 1e-07; POST watered_on 0001-01-01 -> 201 (test rows deleted afterwards)."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-watering-log-tiny-litres-shown-as-zero/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

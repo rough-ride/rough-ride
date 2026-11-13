@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "boolean-litres-accepted",
+  "sentence": "POST /api/waterings with litres set to boolean true is accepted with 201 and stored as 1.0 litres.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user via POST /api/auth/login, then sent POST /api/waterings {\"bed_id\":1,\"litres\":true}. The API returned 201 with {\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",...,\"litres\":1.0}, and GET /api/waterings then listed that row as a stored 1.0 L watering. With litres:false the same request got 422 (greater_than 0), which shows the boolean is being turned into a number rather than rejected as the wrong type. Cause: WateringIn.litres is declared as `float | None` in Pydantic lax mode (backend/schemas.py:131) with no strict typing, so true is coerced to 1.0. A boolean is not a valid amount in litres, so the API should reject it with 422; instead it stores made-up data. The UI form does not send booleans, so only direct API clients can trigger this.",
+  "severity": "low",
+  "wallMs": 39786
+}

@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Journal page error state has no retry and shows raw validation text; long search makes the page fail",
+      "where": "/journal (search box) -> GET /api/journal?q=",
+      "steps": "Open /journal and type or paste a search longer than 80 characters (the input has no maxlength), or open /journal?q=<81 chars>.",
+      "expected": "The input limits or explains the length. Any load error offers a Retry button.",
+      "actual": "The API returns 422 and the page swaps the list for an alert reading 'Query.q: String should have at most 80 characters'. There is no retry button. When a load fails for any other reason (server down, timeout), the only way back is to edit the search or reload.",
+      "evidence": "SSR of /journal?q=aaaa…(81) rendered <div class=\"alert alert--error\">Query.q: String should have at most 80 characters. journal.vue has no retry control in its error branch.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Plant detail journal load error has no retry",
+      "where": "/plants/:id Journal section",
+      "steps": "Open a plant while GET /api/journal fails (server error or timeout).",
+      "expected": "An error message with a Retry button that refetches the journal.",
+      "actual": "Only an AlertMessage 'Could not load the journal.' is shown. No retry is offered, so the user has to reload or add an entry.",
+      "evidence": "pages/plants/[id].vue: <AlertMessage v-if=\"journalLoadError\"> has no retry action, although refreshJournal exists.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "No 10-second timeout on journal requests",
+      "where": "All journal fetches and mutations (useApiClient / useApiFetch)",
+      "steps": "Make the API hang (slow network) and then add, edit, delete or search entries.",
+      "expected": "Requests fail after 10 s with a visible error, and the buttons become usable again.",
+      "actual": "$fetch.create sets no timeout. 'Saving…' stays disabled and 'Loading entries…' stays on screen for as long as the request hangs.",
+      "evidence": "composables/useApi.ts: $fetch.create({ baseURL, credentials, headers, onResponseError }) has no timeout. The journal code adds none.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying an add after a timeout or lost response creates duplicate entries",
+      "where": "POST /api/journal (plant detail 'Add entry')",
+      "steps": "Submit an entry. The server saves it but the response is lost or slow. The user clicks Add entry again.",
+      "expected": "One entry is created.",
+      "actual": "Every POST inserts a new row. There is no idempotency key or duplicate check, so the retry adds a second identical entry.",
+      "evidence": "journal.py create_entry runs a plain INSERT. The client sends no request id.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Entries with emoji or other non-BMP text: limit mismatch, and edit refuses to save",
+      "where": "JournalEntryForm (add and edit) vs POST/PUT /api/journal",
+      "steps": "1) In the form, type emoji: typing stops at 250 emoji while the counter says 0 characters left, even though the server accepts 500. 2) Create an entry of 500 emoji (accepted by the API, 201), then click Edit and Save without changing anything.",
+      "expected": "Client and server count characters the same way, and an existing valid entry can be edited.",
+      "actual": "The client counts UTF-16 code units (maxlength and .length), while the server counts code points. Editing the 500-emoji entry shows '-500 characters left' and is refused with 'Keep the entry to 500 characters.'",
+      "evidence": "POST with body = '🌱'*500 returned 201. JournalEntryForm validate() uses form.body.trim().length > 500, and the textarea uses maxlength=500.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Out-of-range ids crash journal endpoints with 500",
+      "where": "POST /api/journal (plant_id), GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+      "steps": "curl POST /api/journal with plant_id 999999999999999999999, or GET /api/journal?plant_id=99999999999999999999, or PUT/DELETE /api/journal/99999999999999999999.",
+      "expected": "A 4xx (422 or 404).",
+      "actual": "500 Internal Server Error (the SQLite integer overflows).",
+      "evidence": "All four requests returned 'Internal Server Error [500]'. The id fields have no upper bound.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Control characters such as NUL are accepted in journal text",
+      "where": "POST /api/journal",
+      "steps": "POST body 'a\\u0000b'.",
+      "expected": "Refused with a 4xx and a reason, or sanitised.",
+      "actual": "Stored as-is (201) and later rendered in the feed.",
+      "evidence": "Response 201 with body \"a\\u0000b\" (id 6).",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Today's date can be refused when browser and server time zones differ",
+      "where": "JournalEntryForm date vs server not_in_future",
+      "steps": "Use the app from a time zone ahead of the server (e.g. UTC+13 in the morning) and add an entry with the default date (browser 'today').",
+      "expected": "Today's entry is accepted.",
+      "actual": "The server compares against its own date.today() and answers 'Journal date cannot be in the future.'",
+      "evidence": "Client uses todayIso() (browser local time). Server uses date.today() (server local time). The request 2026-11-13 was refused while the server date was 2026-11-12.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long plant names overflow the Journal feed at 375 px",
+      "where": "/journal feed item heading",
+      "steps": "Create a plant named with 80 characters and no spaces, add a journal entry, then view /journal at 375 px wide.",
+      "expected": "The name wraps inside the card.",
+      "actual": ".journal-feed__plant has no overflow-wrap (only .journal-entry__body has it), so the link pushes the card wider and the page scrolls sideways.",
+      "evidence": "main.css: overflow-wrap: anywhere is applied only to .journal-entry__body. Plant names allow up to 80 characters.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "'edited' label missing for edits made within the same second",
+      "where": "JournalEntryItem",
+      "steps": "Add an entry and edit it immediately.",
+      "expected": "The entry shows 'edited'.",
+      "actual": "edited compares updated_at !== created_at, and both have one-second resolution, so a quick edit shows no label.",
+      "evidence": "Both timestamps use datetime('now'), which has second precision.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

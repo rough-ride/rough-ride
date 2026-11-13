@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-stale-count-on-error",
+  "sentence": "On /journal, when a later search request fails, the previous results count still shows above the load error because the count does not check loadError.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in as the demo user and loaded /journal. The results count showed '3 entries'. I then routed **/api/journal** to fail and typed in the search box, once with an HTTP 500 response (detail 'boom') and once with a network abort (search 'to', then cleared back to empty). Each time the error alert appeared ('boom' / 'Could not load the journal.') and the .results-count paragraph was empty (innerHTML '<!--v-if-->'). No stale count showed. The template does not check loadError, but Nuxt 4's useFetch resets data to its default (undefined) when a request fails, so the v-else-if=\"entries\" branch does not render. The claimed symptom does not occur.",
+  "severity": null,
+  "wallMs": 67763
+}

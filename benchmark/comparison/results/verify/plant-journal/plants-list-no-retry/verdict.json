@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "plants-list-no-retry",
+  "sentence": "On /plants, after GET /api/plants fails with 500, there is no way to retry loading without reloading the page.",
+  "verdict": "not-a-defect",
+  "evidence": "Signed in as the demo user, used browser_route to make GET /api/plants (with and without query) return 500, then went to /plants with the nav link. The page showed the header, the filters and an error alert reading 'boom', with no Retry button. So the missing button is real. But the change doesn't cause it. `git diff main -- frontend/app/pages/plants/index.vue` adds only the journal-count badge on each card. The error branch (`AlertMessage v-if=plantsError`, no refresh) is the same as in the initial commit, and no page in the app has a retry button (grep finds no 'retry' or 'Try again'). The request doesn't ask for one either. There is also a way to retry without reloading: after removing the route I clicked Dashboard and then Plants in the nav, and the list loaded ('3 plants', with journal badges). Changing the search or bed filter refetches too, because the query is reactive. This is the app's existing error-handling pattern, not a defect in this change. The third sample report ('Basil ${unique}' not visible) looks like a broken placeholder in the test script, not app behaviour.",
+  "severity": null,
+  "wallMs": 80704
+}

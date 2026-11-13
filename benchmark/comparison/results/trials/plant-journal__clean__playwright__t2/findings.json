@@ -1,0 +1,84 @@
+{
+  "findings": [
+    {
+      "title": "Journal requests have no timeout: a hung add or save leaves the button stuck on 'Saving…' forever",
+      "where": "Plant detail page journal form (POST /api/journal); edit-in-place (PUT /api/journal/{id})",
+      "steps": "Open /plants/1, make POST /api/journal hang (browser_route that never responds), type an entry, click 'Add entry', wait over 10 s.",
+      "expected": "The request fails after 10 seconds with a visible error, and the button becomes usable again, with the text kept.",
+      "actual": "After 12 s the button still reads 'Saving…' and stays disabled. There is no error and no way to cancel or retry without reloading.",
+      "evidence": "After 12 s, the submit button's innerText was 'Saving…'. useApiClient ($fetch.create) sets no timeout.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal error states have no retry",
+      "where": "/journal page and the Journal section of /plants/{id}",
+      "steps": "Make GET /api/journal* return 500, then open /journal through the nav link, or open a plant from the plants list. Then let the server recover.",
+      "expected": "The error message has a Retry button that reloads the entries in place.",
+      "actual": "Only 'Could not load the journal.' is shown, with no retry control. On the plant page, the only buttons in the section are 'Add entry' and the edit/delete buttons. To recover you must reload or change the search.",
+      "evidence": "/journal main text: '...Search\\n\\nCould not load the journal.' with no button. In the plant detail journal section: 'Entries, newest first\\nCould not load the journal.' with no retry button.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Very large ids cause 500 Internal Server Error on the journal endpoints",
+      "where": "POST /api/journal (plant_id), GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+      "steps": "curl POST /api/journal with {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-11-12\",\"body\":\"x\"}; or GET /api/journal?plant_id=99999999999999999999999; or PUT/DELETE /api/journal/99999999999999999999999",
+      "expected": "A 4xx response (422 or 404).",
+      "actual": "HTTP 500 'Internal Server Error'. SQLite overflows on an integer larger than 64 bits. No upper bound is validated.",
+      "evidence": "All four calls returned 'Internal Server Error 500'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "A long plant name overflows the Journal page at 375 px",
+      "where": "/journal",
+      "steps": "Create a plant named with 80 'W' characters (no spaces), add a journal entry to it, open /journal at a 375 px width.",
+      "expected": "No sideways scrolling; the plant name wraps.",
+      "actual": "document scrollWidth is 1568 px. The .journal-feed__plant link has no overflow-wrap and pushes the card wider than the screen. Entry bodies wrap correctly.",
+      "evidence": "scrollWidth 1568 at viewport 375. The widest element is a.journal-feed__plant (right edge 1551 px).",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Search longer than 80 characters shows a raw validation error instead of results",
+      "where": "/journal search box (GET /api/journal?q=)",
+      "steps": "On /journal, type or paste 81 or more characters into Search.",
+      "expected": "The input limits the length, or the page shows a friendly reason.",
+      "actual": "The entries disappear and the page shows 'Query.q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "Main text after typing 81 'a' characters: 'Query.q: String should have at most 80 characters'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Retrying an add after a timeout or network failure can create a duplicate entry",
+      "where": "POST /api/journal",
+      "steps": "Add an entry while the connection is slow, so the request reaches the server but the response is lost or the client gives up. Click 'Add entry' again.",
+      "expected": "One entry is created (for example, with an idempotency key or by de-duplicating).",
+      "actual": "Each POST inserts a new row with no idempotency key. A request I had held pending in the browser was still committed later (entry 'hang', id 7) even though the UI never confirmed it, so a retry would have made a second copy.",
+      "evidence": "After the hung-POST test, GET /api/journal listed the 'hang' entry, which the UI never showed as saved.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "The 'today' limit uses the server's local date while the form uses the browser's",
+      "where": "JournalEntryIn.not_in_future (date.today()) vs JournalEntryForm todayIso()",
+      "steps": "As a user ahead of the server's time zone (e.g. UTC+10 against a UTC server), in the early morning add an entry dated the browser's today.",
+      "expected": "Today's entry is accepted.",
+      "actual": "The server rejects it: 'Entry on: Journal date cannot be in the future.'",
+      "evidence": "Code: the backend compares against date.today() in the server's time zone, while the form's max is the client's local date.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "An entry edited within a second of being created is not marked 'edited'",
+      "where": "JournalEntryItem (edited = updated_at !== created_at)",
+      "steps": "Add an entry and edit it straight away (within the same second).",
+      "expected": "The entry shows 'edited'.",
+      "actual": "datetime('now') has 1-second resolution, so the timestamps match and the marker is hidden.",
+      "evidence": "Code reading.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

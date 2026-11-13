@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-no-request-timeout/scratch.
+
+The reported problem: Watering API calls have no timeout, so when the server hangs, 'Water now'/'Save watering' stay disabled on 'Watering…'/'Saving…' and lists stay loading indefinitely instead of failing after 10 s.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Watering requests have no timeout: a hung 'Water now' leaves the button disabled forever with no message",
+  "where": "Beds page – Water now / Save watering (POST /api/waterings); also GET /api/waterings on dashboard and Waterings page",
+  "steps": "Open /beds, make POST /api/waterings hang (never respond), click 'Water now'.",
+  "expected": "The request fails after 10 s, an error shows on the bed, and the button is enabled again.",
+  "actual": "After 15+ s the button is still disabled. No error or timeout appears. useApiClient/useApiFetch set no timeout.",
+  "evidence": "Playwright: after 15 s, isDisabled() returned true for the first 'Water now' button."
+ },
+ {
+  "title": "No request timeout: 'Water now', 'Save watering' and the lists can spin forever",
+  "where": "/beds, /waterings, dashboard",
+  "steps": "Make the API hang (accept the connection but never answer), then click 'Water now' or open /waterings.",
+  "expected": "The request fails after 10 seconds, the page shows an error and the button is enabled again.",
+  "actual": "useApiClient/useApiFetch set no timeout, so the button stays at 'Watering…'/'Saving…' (disabled) and the loading text stays up for as long as the connection hangs.",
+  "evidence": "composables/useApi.ts: $fetch.create and useFetch are called without a timeout option, and the new watering calls add none."
+ },
+ {
+  "title": "Watering requests have no timeout, so buttons can stay in 'Watering…'/'Saving…' forever",
+  "where": "Beds page Water now / Save watering, Waterings page delete, dashboard and waterings list fetches",
+  "steps": "Make the API hang (accept the connection but never answer), then click 'Water now'",
+  "expected": "Fail after 10 s with a visible error and the button enabled again",
+  "actual": "useApiClient/useApiFetch set no timeout, so the button stays disabled with 'Watering…' indefinitely",
+  "evidence": "composables/useApi.ts $fetch.create has no timeout option; recordWatering awaits the fetch with no limit"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-no-request-timeout/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

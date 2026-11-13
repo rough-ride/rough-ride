@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "dashboard-malformed-response-renders-garbage-rows",
+  "sentence": "When GET /api/waterings?limit=5 returns a malformed non-list body, the dashboard Recent waterings table renders rows reading 'Never', a blank bed, and '–' instead of an error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and went to /tasks. Used Playwright page.route to make GET /api/waterings?limit=5 return 200 application/json with the body \"malformed response body\" (a JSON string, not a list), then clicked the Dashboard nav link so the request ran in the browser (1 hit). The Recent waterings section showed a table with 23 rows, one per character of the string, each reading 'Never | (blank) | –', and no alert or error. Code cause: pages/index.vue renders the table when `waterings && waterings.length` and runs v-for over waterings without checking it is an array. A string has a length, so each character becomes a row: formatWatered(undefined, undefined) gives 'Never', bed_name is blank and formatLitres(undefined) gives '–'. useApiFetch (composables/useApi.ts) does not validate the response shape. A variation with an object body {\"items\":[]} showed 'No waterings yet' instead, which is misleading but not garbage rows. The reported behaviour reproduces as described: garbage rows instead of a visible error.",
+  "severity": "low",
+  "wallMs": 154898
+}

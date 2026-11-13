@@ -1,0 +1,19 @@
+{
+  "findings": [
+    {
+      "title": "Journal search containing an apostrophe fails with a server error (search term pasted into SQL)",
+      "where": "/journal search box -> GET /api/journal?q=",
+      "steps": "Probe ui-search-quote, expectation ui-quote-search-finds-entry",
+      "expected": "Searching O'Brien lists the existing entry \"Mrs O'Brien said water daily\"",
+      "actual": "GET /api/journal?q=O'Brien returns 500 (no CORS headers, so the browser reports a network failure) and the page shows only 'Could not load the journal.'. backend/routers/journal.py builds the LIKE clause with an f-string, so the search term goes straight into the SQL; a term like x' OR '1'='1 is not treated as plain text either (that request reset the connection).",
+      "evidence": "{\"alerts\":[\"Could not load the journal.\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Could not load the journal.\",\"Garden Log · a journal for one garden\"],\"reqs\":[{\"method\":\"GET\",\"url\":\"http://localhost:8791/api/journal?limit=50&q=O%27Brien\",\"status\":null,\"fault\":\"net::ERR_FAILED\"},{\"method\":\"GET\",\"url\":\"http://localhost:8791/api/journal?limit=50&q=O%27Brien\",\"status\":null,\"fault\":\"net::ERR_FAILED\"}]} | {\"alerts\":[\"Could not load the journal.\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Could not load the journal.\",\"Garden Log · a journal for one garden\"],\"reqs\":[{\"method\":\"GET\",\"url\":\"http://localhost:8791/api/journal?limit=50&q=O%27Brien\",\"status\":null,\"fault\":\"net::ERR_FAILED\"},{\"method\":\"GET\",\"url\":\"http://localhost:8791/api/journal?limit=50&q=O%27Brien\",\"status\":null,\"fault\":\"net::ERR_FAILED\"}]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-194705-hunt-9890",
+        "probe": "ui-search-quote",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

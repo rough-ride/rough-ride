@@ -1,0 +1,72 @@
+{
+  "id": "plant-journal__failed-save-clears-text__baseline__t2",
+  "feature": "plant-journal",
+  "bug": "failed-save-clears-text",
+  "arm": "baseline",
+  "trial": 2,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T09:45:48.104Z",
+  "materializeMs": 10536,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__failed-save-clears-text__baseline__t2/variant/i56u060h/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "085056c5-73ac-48c8-8772-be1a8f3a9b9c",
+  "loadBefore": [
+    13.6240234375,
+    11.52099609375,
+    10.744140625
+  ],
+  "loadAfter": [
+    16.64208984375,
+    12.7021484375,
+    11.23779296875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 65145,
+  "reportedCostUsd": 0.3606582,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 14,
+      "outputTokens": 5286,
+      "cacheReadInputTokens": 189811,
+      "cacheCreationInputTokens": 27115,
+      "webSearchRequests": 0,
+      "costUSD": 0.3606582,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1148,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 27115,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 8,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found eight bugs and wrote them to `out/findings.json`. I could only see the front-end problems by reading the code, since no browser was available. The back-end ones I reproduced with curl against the running API.\n\n**High**\n- **A failed \"Add entry\" wipes the user's text (suspected).** In `addEntry` in `pages/plants/[id].vue`, `entryForm.reset()` runs in the `finally` block, so the textarea is cleared on failure too. Any failed save shows the error next to an empty form: server down, session expired, plant deleted in another tab, or any other error.\n\n**Medium**\n- **Duplicates on retry, error on repeat delete, no timeout (observed).** Adding an entry again after a timeout or lost response creates a second copy. Deleting an entry that is already gone returns 404 \"Journal entry not found.\" and the page shows it as an error. No request has a 10-second timeout, so a hung save stays on \"Saving…\" indefinitely.\n- **No retry on the Journal page (suspected).** When loading fails it shows only an error message; the user has to edit the search or reload.\n- **No retry in the plant page's Journal section (suspected).** Same problem when its entry list fails to load.\n\n**Low**\n- **Raw error for long searches (observed).** A search over 80 characters shows \"Q: String should have at most 80 characters\" in place of results, because the search box has no length limit.\n- **500 errors on huge ids (observed).** Very large numbers in the new journal endpoints' ids (`/journal/{id}`, `plant_id`) return a server error instead of a 4xx.\n- **Year 0001 is accepted as a date (observed).** The entry is saved and sorts last in the list.\n- **Long plant names may overflow at 375 px (suspected).** On the Journal page only the entry text is set to wrap, so a long plant name with no spaces can cause sideways scrolling.\n\nI created two test entries through the API and deleted them afterwards, so the app's data is back as it was.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 14,
+    "output": 5286,
+    "cacheRead": 189811,
+    "cacheWrite": 27115,
+    "requests": 7,
+    "toolCalls": {
+      "Bash": 7
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 8,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T09:47:17.980Z"
+}

@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Failed 'Add entry' clears the text the user typed",
+      "where": "/plants/:id journal form (pages/plants/[id].vue addEntry)",
+      "steps": "Open a plant, type an entry, make POST /api/journal fail (500 or offline), click Add entry.",
+      "expected": "The error is shown and the typed text stays so the user can retry.",
+      "actual": "The error 'Could not add the entry.' shows but the textarea is emptied. addEntry calls entryForm.reset() in `finally`, so it runs on failure too.",
+      "evidence": "With POST mocked to 500, textarea value after submit was '' (it was 'My carefully typed note 🌱'). Alert: 'Could not add the entry.'",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal requests have no timeout; a hung save shows 'Saving…' forever",
+      "where": "/plants/:id add/edit/delete entry, /journal list (useApiClient / useApiFetch)",
+      "steps": "Make POST /api/journal hang (never respond) and click Add entry; wait more than 10 s.",
+      "expected": "The request fails after 10 s with a visible error and the button is enabled again.",
+      "actual": "The button still said 'Saving…' and stayed disabled after 13 s. No timeout is set on the $fetch client, so edit (PUT), delete and the GET lists hang the same way.",
+      "evidence": "Submit button text 'Saving…' 13 s after clicking with a hanging route.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal page error state has no retry",
+      "where": "/journal",
+      "steps": "Make GET /api/journal fail (503), go to the Journal page through the nav link.",
+      "expected": "An error message with a Retry button that reloads the list once the server is back.",
+      "actual": "Only 'Could not load the journal.' is shown. There is no retry button; the only ways to recover are a reload or changing the search text.",
+      "evidence": "Page text 'Could not load the journal.'; 0 buttons matching retry/try again.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Plant detail journal load error has no retry",
+      "where": "/plants/:id journal section",
+      "steps": "Make GET /api/journal?plant_id=... fail (500), open a plant from the Plants list.",
+      "expected": "The journal error offers a Retry that calls refreshJournal.",
+      "actual": "Only 'Could not load the journal.' is shown, with no retry control. The header badge still shows the count (e.g. '3 entries') next to an empty, failed list.",
+      "evidence": "Section text: 'Journal 3 entries ... Could not load the journal.'; no retry button.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Huge plant_id / entry id gives 500 instead of 4xx",
+      "where": "GET /api/journal?plant_id=, POST /api/journal, PUT /api/journal/{id}",
+      "steps": "POST /api/journal with plant_id 99999999999999999999, or GET /api/journal?plant_id=99999999999999999999, or PUT /api/journal/99999999999999999999.",
+      "expected": "422 (or 404) for out-of-range ids.",
+      "actual": "500 Internal Server Error (SQLite integer overflow). The id fields have no upper bound.",
+      "evidence": "POST -> 500 'Internal Server Error'; GET -> 500; PUT -> 500.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal page overflows sideways at 375 px with a long plant name",
+      "where": "/journal",
+      "steps": "Create a plant named with 80 characters and no spaces (allowed by the API), add an entry, open /journal at 375 px wide.",
+      "expected": "No horizontal scrolling; the long name wraps.",
+      "actual": "document scrollWidth is 679 px against a 375 px viewport. The .journal-feed__plant link has no overflow-wrap, so the whole feed card widens.",
+      "evidence": "scrollWidth/clientWidth = 679/375; the overflowing elements are A.journal-feed__plant and its row (right edge 662 px).",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Search longer than 80 characters shows a raw validation message",
+      "where": "/journal search box",
+      "steps": "Type 100 characters into Search.",
+      "expected": "The input limits the length, or a friendly message is shown.",
+      "actual": "The list is replaced by 'Query.q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "Page text after typing 100 'x': 'Query.q: String should have at most 80 characters'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Client limit counts UTF-16 units while the server counts characters",
+      "where": "JournalEntryForm textarea",
+      "steps": "Type or paste 300 emoji into the entry.",
+      "expected": "500 characters accepted, matching the server limit.",
+      "actual": "textarea maxlength=500 and form.body.length count UTF-16 code units, so emoji count double: only about 250 emoji fit and the counter is wrong.",
+      "evidence": "Code: :maxlength=\"BODY_LIMIT\" and remaining = 500 - form.body.length; the server uses Python len (code points).",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Retrying a delete after a timeout or lost response shows an error",
+      "where": "/plants/:id delete entry",
+      "steps": "Delete an entry while the response is lost (the server deleted it), then click Delete again.",
+      "expected": "The second delete is treated as done (the entry is already gone).",
+      "actual": "The server returns 404 and the page shows 'Journal entry not found' instead of refreshing the list.",
+      "evidence": "delete_entry calls _get_entry first and raises 404; removeEntry shows the error without refreshing.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

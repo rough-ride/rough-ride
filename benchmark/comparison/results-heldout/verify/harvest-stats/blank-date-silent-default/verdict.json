@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "blank-date-silent-default",
+  "sentence": "On /stats, clearing the From or To field drops the parameter so the server silently uses this year's 1 Jan or 31 Dec, leaving the field blank while results use another range or showing 'The From date must be on or before the To date.'; triggered by clearing a date field, especially with the other date outside this year.",
+  "verdict": "confirmed",
+  "evidence": "Code: stats.vue omits empty from/to from the API query, and stats.py replaces a missing value with this year's 1 Jan / 31 Dec (date_from or year_start). In the running app, signed in as demo: (1) /stats?from=2025-01-01&to=2025-12-31 showed '1 harvest from 1 Jan 2025 to 31 Dec 2025'. After clearing From, the URL became ?to=2025-12-31, the From input was empty, and the page showed the alert 'The From date must be on or before the To date.' even though no From date was entered. (2) /stats?from=2024-01-01&to=2026-06-30, then clearing From: the From input stayed blank while the results line said '1 harvest from 1 Jan 2026 to 30 Jun 2026'. The range was quietly narrowed to this year with no message. (3) From=2026-03-01 with To cleared: results ran to 31 Dec 2026 while the To field was blank. A blank field is neither refused with a clear reason nor treated as open-ended, so what the user sees in the form does not match the range the results use.",
+  "severity": "medium",
+  "wallMs": 53385
+}

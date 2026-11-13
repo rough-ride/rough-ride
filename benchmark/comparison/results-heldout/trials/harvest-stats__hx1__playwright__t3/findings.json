@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Late response from an older date range replaces newer results",
+      "where": "/stats (frontend/app/pages/stats.vue loadStats / watch(query))",
+      "steps": "On /stats, set From to 2026-07-01 (response delayed 3 s via route), then within 200 ms set From to 2026-01-01. Wait.",
+      "expected": "The table matches the current fields (From 1 Jan 2026), and the older request is ignored or aborted.",
+      "actual": "From shows 2026-01-01, but the page shows '4 harvests from 1 Jul 2026 to 31 Dec 2026' and July-onward data. loadStats has no sequence check or AbortController.",
+      "evidence": "raceFrom=2026-01-01; page text '4 harvests from 1 Jul 2026 to 31 Dec 2026'. Typing a year key by key into the date input also fires a request per keystroke (from=0002-, 0020-, 0202-, 2024-01-01), so this race comes up in normal use.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Hung stats request spins forever (no timeout)",
+      "where": "/stats",
+      "steps": "Route /api/stats/harvests to never respond, then change the From date. Wait more than 12 s.",
+      "expected": "The request times out after 10 s and shows an error with a retry.",
+      "actual": "'Loading stats…' is still shown after 12 s and never ends. useApiClient sets no timeout.",
+      "evidence": "Page text after 12 s: 'Loading stats… / Could not load harvest stats.' (the loading text never stops)",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Error state has no retry button; the same range cannot be retried without changing the dates or reloading",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests return 500 (or abort), then change the From date. Restore the server.",
+      "expected": "The error has a Retry action that reloads the same range once the server is back.",
+      "actual": "Only 'Could not load harvest stats.' / 'The garden server could not be reached.' is shown, with no retry control. The only way to recover is to edit a date to a different value or reload the page.",
+      "evidence": "Retry/Try again button count = 0 on the error state",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stale summary line contradicts the error and the new range",
+      "where": "/stats",
+      "steps": "Load /stats (default range), make the API fail, then change From to 2026-02-01.",
+      "expected": "Only the error (or a neutral line) is shown for the failed range.",
+      "actual": "'5 harvests from 1 Jan 2026 to 31 Dec 2026' stays above 'Could not load harvest stats.', because stats.value is not cleared on error and rangeText still renders. While loading, the old error also stays visible next to 'Loading stats…'.",
+      "evidence": "Page text: '5 harvests from 1 Jan 2026 to 31 Dec 2026\\n\\nCould not load harvest stats.'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Malformed or null fields in the stats response crash the page with an uncaught TypeError",
+      "where": "/stats (client-side navigation from dashboard)",
+      "steps": "Route /api/stats/harvests to return 200 {\"plants\":null}, then click 'Stats' in the nav from the dashboard.",
+      "expected": "An error state saying the stats could not be read, with a retry.",
+      "actual": "Uncaught 'TypeError: Cannot read properties of null (reading 'length')'. The URL changes to /stats, but the dashboard content stays rendered under an error overlay, and the Stats page never appears.",
+      "evidence": "URL http://localhost:3792/stats, #main still shows Dashboard content, error dialog 'TypeError ... Cannot read properties of null (reading 'length')'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Clicking 'Stats' in the nav while on a custom range changes the URL but not the fields or data",
+      "where": "/stats",
+      "steps": "On /stats, set From to 2026-08-01 (URL becomes ?from=2026-08-01). Click the 'Stats' nav link.",
+      "expected": "Default this-year range, or the URL keeps the query that matches what is shown.",
+      "actual": "URL becomes /stats (default), but From stays 2026-08-01 and the data stays Aug–Dec. The page never watches route.query, so back/forward navigation between ranges does not update the fields either.",
+      "evidence": "navUrl=http://localhost:3792/stats, navFrom=2026-08-01, text '4 harvests from 1 Aug 2026 to 31 Dec 2026'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Clearing a date field silently applies a hidden default, which can cause a confusing range error",
+      "where": "/stats",
+      "steps": "Open /stats?to=2025-12-31 (or set To to a past year), or clear the From field.",
+      "expected": "A blank field is refused with a visible reason, or the page shows the range actually in use (e.g. all time).",
+      "actual": "A blank From is sent as no parameter, so the server uses 1 Jan of the current year while the field stays empty. With To in an earlier year, the page shows 'The From date must be on or before the To date.' even though the user never set a From date. Opening ?to=2025-12-31 directly shows the same error.",
+      "evidence": "Page text after clearing From: 'The From date must be on or before the To date.' with From blank",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

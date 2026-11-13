@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "title": "Harvests on the 'To' date are left out of the stats",
+      "where": "GET /api/stats/harvests and the /stats page",
+      "steps": "Sign in. Open /stats and set From=2026-07-20 and To=2026-07-20 (a Courgette 1200 g harvest exists on 2026-07-20), or call GET /api/stats/harvests?from=2026-07-20&to=2026-07-20. Also try from=2026-07-01&to=2026-07-20.",
+      "expected": "The range includes both ends, so the 1200 g Courgette harvest is counted.",
+      "actual": "Same-day range returns months=[], plants=[], harvest_count=0, so the page says 'No harvests in this range'. For 07-01 to 07-20 only Tomato 450 g comes back and Courgette is missing. The query uses harvested_on < date_to, not <=. The response still echoes date_to=2026-07-20 and the page says 'from ... to 20 Jul 2026', so the wrong total looks correct.",
+      "evidence": "API response {\"date_from\":\"2026-07-20\",\"date_to\":\"2026-07-20\",\"months\":[],\"plants\":[],\"total_grams\":0,\"harvest_count\":0,\"top_plants\":[]}. Same result for 2026-09-30 (Lettuce 150 g).",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Dashboard top plant leaves out Dec 31 harvests, but the year's harvest total includes them",
+      "where": "GET /api/dashboard/summary, dashboard 'Top plant this year' card",
+      "steps": "On 31 Dec, log a harvest dated that day (or have a past year's data in view), then open the dashboard.",
+      "expected": "Top plant covers the whole year, the same as harvest_grams_year (which still uses BETWEEN year_start AND year_end).",
+      "actual": "top_plants() uses harvested_on < 'YYYY-12-31', so Dec 31 harvests are left out of the top plant and its grams. The weight shown can disagree with the year total. The old code used BETWEEN, so this is a regression.",
+      "evidence": "Code: routers/stats.py top_plants WHERE h.harvested_on >= ? AND h.harvested_on < ?, called from dashboard.summary with year_bounds (Dec 31 end). I could not log a Dec 31 harvest today (future dates are refused).",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats error state has no way to retry",
+      "where": "/stats page",
+      "steps": "Make GET /api/stats/harvests return 500 (non-JSON body), then change a date. Restore the server.",
+      "expected": "An error message with a Retry button that refetches once the server is back.",
+      "actual": "Only 'Could not load harvest stats.' appears, with no retry control. The only way to recover is to change a date or reload.",
+      "evidence": "The page text after the 500 was '... This year  Could not load harvest stats.' and had no button other than 'This year'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout, so 'Loading stats…' can stay forever",
+      "where": "/stats page (useApiFetch without timeout)",
+      "steps": "Make GET /api/stats/harvests hang (never respond), then change the To date. Wait more than 10 s.",
+      "expected": "After 10 s the request fails and an error with a retry is shown.",
+      "actual": "After 12 s the page still shows 'Loading stats…' with no error. The table had already been removed.",
+      "evidence": "Page text after 12 s: 'Stats ... From To This year  Loading stats…'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing the From field shows a date range the inputs don't match",
+      "where": "/stats page",
+      "steps": "On /stats, clear the From input.",
+      "expected": "The page refuses the blank value with a reason, or the input shows the date being used.",
+      "actual": "The From input stays empty, but the results say 'from 1 Jan 2026' because the server falls back to its default. The 'This year' button also appears even though the data shown is this year.",
+      "evidence": "After clearing From, the page text read '5 harvests from 1 Jan 2026 to 31 Dec 2026' and the From field was blank.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

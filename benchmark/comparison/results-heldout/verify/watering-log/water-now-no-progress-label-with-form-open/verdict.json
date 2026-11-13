@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "hx5",
+  "key": "water-now-no-progress-label-with-form-open",
+  "sentence": "On /beds, clicking 'Water now' while that bed's past-watering form is open disables the button but keeps the label 'Water now' with no 'Watering…' feedback.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo user, opened /beds, clicked 'Record past watering' on North bed, then routed POST /api/waterings to hang and clicked 'Water now'. While the request was pending the 'Water now' button was disabled=true but its text stayed 'Water now' (no 'Watering…'). The form's 'Save watering' button instead read 'Saving…' (disabled), even though the user did not submit the form, so the progress feedback goes to the wrong control. After release the button re-enabled as 'Water now'. Cause in beds.vue: the label is `wateringBedId === bed.id && pastFormBedId !== bed.id ? 'Watering…' : 'Water now'`, and the shared wateringBedId drives the form's Saving… label. No reason is shown for the disabled state. The second sample claim (shared wateringBedId/waterError across beds) can be seen in the code but was not tested here.",
+  "severity": "low",
+  "wallMs": 40704
+}

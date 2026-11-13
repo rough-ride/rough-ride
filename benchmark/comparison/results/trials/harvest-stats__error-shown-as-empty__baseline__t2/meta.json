@@ -1,0 +1,72 @@
+{
+  "id": "harvest-stats__error-shown-as-empty__baseline__t2",
+  "feature": "harvest-stats",
+  "bug": "error-shown-as-empty",
+  "arm": "baseline",
+  "trial": 2,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T09:25:33.044Z",
+  "materializeMs": 6246,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__error-shown-as-empty__baseline__t2/variant/sxl4jegh/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "d5c0cac8-4f6a-4a4e-bb41-bc548aca02ad",
+  "loadBefore": [
+    4.1796875,
+    5.3330078125,
+    7.85888671875
+  ],
+  "loadAfter": [
+    5.5556640625,
+    5.49560546875,
+    7.7578125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 58333,
+  "reportedCostUsd": 0.30445220000000006,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 14,
+      "outputTokens": 3682,
+      "cacheReadInputTokens": 185821,
+      "cacheCreationInputTokens": 24199,
+      "webSearchRequests": 0,
+      "costUSD": 0.30445220000000006,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 535,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 24199,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 8,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found four bugs in the new Stats page and wrote them to `out/findings.json`. Two I saw happen in the running app; the other two I only suspect from reading the code.\n\n1. **A failed request looks like an empty result (high, observed).** `stats.vue` never reads the `error` that `useApiFetch` returns. So any failure shows \"No harvests in this range\" (a 422, a 5xx, the server being down). There is no error message and no retry button. To reproduce, open `/stats?from=2026-05-01&to=2026-01-01`: the page shows the empty state, while the page data holds the server's 422 message \"The From date must be on or before the To date.\"\n2. **Clearing a date field gives a false empty result (medium, observed).** A blank From or To is left out of the request, so the server fills in this year's date. With From cleared and To set in 2025, From becomes 2026-01-01 and the server returns a 422. Because of bug 1, the page says there are no harvests, even though 2025 has 300 g in August.\n3. **No 10-second timeout (medium, suspected).** Neither the shared API helper nor the stats page sets a timeout, so \"Loading stats…\" can stay up indefinitely if the server hangs.\n4. **Invalid typed dates get no explanation (low, suspected).** If someone types a 5-digit year, the server correctly answers with a 422. The page still shows the empty state instead of the reason. Invalid dates in the address bar are also silently replaced with this year's defaults.\n\nThe server side held up: it validates the dates correctly, returns 4xx (not 5xx) for bad input, and refuses requests without a session (401). The table, total row and top-three plants were correct for the sample data.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 14,
+    "output": 3682,
+    "cacheRead": 185821,
+    "cacheWrite": 24199,
+    "requests": 7,
+    "toolCalls": {
+      "Bash": 7
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 4,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T09:26:44.989Z"
+}

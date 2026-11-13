@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "today-timezone-mismatch",
+  "sentence": "The form defaults and limits the date to the browser's local today but the server validates against its own date.today(), so a user in a timezone ahead of the server gets 'Journal date cannot be in the future.' for today.",
+  "verdict": "confirmed",
+  "evidence": "Server time was Thu 2026-11-12 19:39 CET. In Playwright I opened a new browser context with timezoneId 'Pacific/Kiritimati' (UTC+14), where the browser's time was Fri 2026-11-13 08:39. I signed in as demo@example.com and opened /plants/2. The journal form's date input defaulted to value=2026-11-13 with max=2026-11-13, so the client's own check passes. I typed 'TZ test entry today' and clicked Add entry. The request POST /api/journal {entry_on:'2026-11-13', body:'TZ test entry today', plant_id:2} returned 422 {msg:'Value error, Journal date cannot be in the future.'} and the form showed 'Entry on: Journal date cannot be in the future.' Cause: schemas.JournalEntryIn.not_in_future compares with the server's date.today() (backend/schemas.py:113-115), while JournalEntryForm.vue takes its default and max from todayIso() in browser local time (utils/format.ts:26). The form offers a date as the default and the maximum, then the server refuses it. A gardener ahead of the server's timezone cannot log an entry for their own today for part of each day. Workaround: pick yesterday's date. Note: the existing harvest validator (schemas.py:88) uses the same pattern, so the convention predates this change, but it still breaks the new journal feature's default path.",
+  "severity": "medium",
+  "wallMs": 120761
+}

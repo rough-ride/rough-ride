@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Double-clicking \"Water now\" records two waterings",
+      "where": "/beds, Water now button; POST /api/waterings",
+      "steps": "On the Beds page, double-click \"Water now\" on a bed (or retry after a slow response). The button has no :disabled binding, and the API has no protection against duplicates or idempotency key.",
+      "expected": "One watering is recorded.",
+      "actual": "Two waterings with the same timestamp are recorded, and the dashboard and history show both.",
+      "evidence": "beds.vue: the Water now <button> has only @click=\"waterNow(bed)\" and no :disabled, while the Save button does have one. Two POSTs of {\"bed_id\":1} in a row returned 201 twice, creating ids 3 and 4 with the same watered_at of 2026-11-12 11:41:30 (I deleted them afterwards).",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "A huge bed_id or watering id gives a 500 instead of a 4xx",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":99999999999999999999}, or GET /api/waterings?bed_id=99999999999999999999, or DELETE /api/waterings/99999999999999999999",
+      "expected": "A 422 or 404 with a readable reason.",
+      "actual": "500 Internal Server Error, because SQLite overflows on integers above 64 bits.",
+      "evidence": "All three requests returned 'Internal Server Error 500'. Opening /waterings?bed=99999999999999999999 in the app triggers the same 500 from the page.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page and dashboard error states have no retry",
+      "where": "/waterings, / (Recent waterings section)",
+      "steps": "Make GET /api/waterings fail (for example, the server is down), then open the dashboard or the Waterings page.",
+      "expected": "An error message with a Retry button that refetches without a reload.",
+      "actual": "Only an AlertMessage appears with no retry control. The dashboard does not even destructure refresh for waterings. On /waterings, a failed refetch after a filter change can show the error above a stale list of earlier results.",
+      "evidence": "index.vue: `const { data: waterings, error: wateringsError } = wateringsResult` has no refresh, and the template has no retry button. waterings.vue: the error alert has no button, and the table renders whenever waterings has data, even if wateringsError is set.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "If loading beds fails, the waterings bed filter is silently empty",
+      "where": "/waterings bed filter",
+      "steps": "Make GET /api/beds fail while GET /api/waterings succeeds, then open /waterings.",
+      "expected": "An error saying the bed list could not be loaded, with a retry.",
+      "actual": "The Bed select shows only \"All beds\" and no error appears, so the user cannot filter.",
+      "evidence": "waterings.vue: `const { data: beds } = bedsResult`. The error is ignored and the template uses `beds ?? []`.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "An invalid ?bed= query shows a raw validation message and a filter that doesn't match",
+      "where": "/waterings?bed=abc",
+      "steps": "Open /waterings?bed=abc.",
+      "expected": "The bad filter is ignored or explained in plain words.",
+      "actual": "The page shows the alert \"Query.bed id: Input should be a valid integer, unable to parse string as an integer\". The select matches no option, and the Clear filter button is the only way out.",
+      "evidence": "The SSR HTML of /waterings?bed=abc contains role=alert with that text.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Absurd past dates are accepted (for example 0001-01-01)",
+      "where": "/beds Record past watering form; POST /api/waterings",
+      "steps": "Enter the date 0001-01-01 and 1 litre, or POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\",\"litres\":1}.",
+      "expected": "The date is refused with a reason, or a reasonable lower bound is enforced.",
+      "actual": "It is saved with 201 and appears in the history as year 1.",
+      "evidence": "The POST returned 201 with id 5 and watered_on 0001-01-01 (deleted afterwards). Only future dates are validated.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Requests to the watering endpoints have no 10 s timeout",
+      "where": "/beds Water now / Save watering, /waterings, dashboard",
+      "steps": "Make the API hang on POST /api/waterings, then click Save watering.",
+      "expected": "The request fails after 10 s with a visible error, and the button becomes usable again.",
+      "actual": "The button stays on 'Saving…' or 'Watering…' for as long as the request hangs.",
+      "evidence": "useApiClient / useApiFetch set no timeout option. The new pages use them without one.",
+      "status": "suspected",
+      "severity": "medium"
+    }
+  ]
+}

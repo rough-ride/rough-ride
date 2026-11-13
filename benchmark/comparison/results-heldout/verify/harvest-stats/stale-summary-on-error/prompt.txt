@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-stale-summary-on-error/scratch.
+
+The reported problem: On /stats, after a successful load, a failed request for a new range leaves the old range's '<n> harvests from ... to ...' summary line visible next to the error; triggered by making the next stats request fail after changing dates.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Error state shows an outdated summary line for the previous range",
+  "where": "/stats",
+  "steps": "Load a valid range, then change the dates so the next request fails (server down, or To before From by typing).",
+  "expected": "Only the error is shown, or the summary is clearly marked as stale.",
+  "actual": "The results-count line still reads e.g. '5 harvests from 1 Jan 2026 to 31 Dec 2026' (from the old stats.value) above the error alert, because rangeText only checks stats, not the error.",
+  "evidence": "Template: <span v-else-if=\"stats\">{{ rangeText }}</span> runs regardless of statsError. loadStats never clears stats on error."
+ },
+ {
+  "title": "When loading fails, the summary line still shows the previous range's harvest count next to the error",
+  "where": "/stats",
+  "steps": "Probe faults, expectation no-stale-range-with-error",
+  "expected": "When the stats request fails for a new range, the page shows only an error and no harvest count from an earlier range",
+  "actual": "'5 harvests from 1 Jan 2026 to 31 Dec 2026' stays visible above the 'Injected 500' error, even though From is now 2026-07-01",
+  "evidence": "[\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\",\"Garden Log · a journal for one garden\"] | [\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\",\"Garden Log · a journal for one garden\"]"
+ },
+ {
+  "title": "When a reload fails after a success, the old range summary stays next to the error",
+  "where": "/stats",
+  "steps": "Load /stats successfully, then set From after To (by typing) or let the next request fail.",
+  "expected": "The summary line matches the error state, or is hidden.",
+  "actual": "statsError is set but stats keeps the old data, so '5 harvests from 1 Jan 2026 to 31 Dec 2026' stays visible above the error for a range the user no longer has selected.",
+  "evidence": "In stats.vue the results-count shows rangeText whenever stats is set, independent of statsError. loadStats does not clear stats on error."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-stale-summary-on-error/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

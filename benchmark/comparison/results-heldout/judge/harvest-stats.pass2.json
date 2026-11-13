@@ -1,0 +1,854 @@
+{
+  "feature": "harvest-stats",
+  "pass": 2,
+  "count": 138,
+  "missing": [],
+  "costUsd": 0.5906218,
+  "reports": [
+    {
+      "id": "F0d0a2912",
+      "planted": "hx1",
+      "issue": "hx1",
+      "key": "harvest-stats__hx1__playwright__t1#0"
+    },
+    {
+      "id": "F992982e4",
+      "planted": null,
+      "issue": "stats-stale-summary-on-error",
+      "key": "harvest-stats__hx1__playwright__t3#3"
+    },
+    {
+      "id": "F5bdd7a0a",
+      "planted": "hx2",
+      "issue": "hx2",
+      "key": "harvest-stats__hx2__baseline__t3#0"
+    },
+    {
+      "id": "F5d009e1a",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx2__playwright__t1#5"
+    },
+    {
+      "id": "F00cc7e16",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__hx2__hunt__t2#1"
+    },
+    {
+      "id": "F93b7f107",
+      "planted": null,
+      "issue": "stats-null-fields-rendered-as-placeholders",
+      "key": "harvest-stats__clean__playwright__t1#3"
+    },
+    {
+      "id": "F998de0ff",
+      "planted": null,
+      "issue": "stats-raw-validation-message",
+      "key": "harvest-stats__clean__baseline__t3#2"
+    },
+    {
+      "id": "Fe7fe0915",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx1__baseline__t1#5"
+    },
+    {
+      "id": "F2b008a2c",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx1__baseline__t1#2"
+    },
+    {
+      "id": "F75ef8571",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__clean__playwright__t3#3"
+    },
+    {
+      "id": "F5b9ccc3c",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__hx1__playwright__t1#3"
+    },
+    {
+      "id": "F9afa5af8",
+      "planted": "hx2",
+      "issue": "hx2",
+      "key": "harvest-stats__hx2__hunt__t3#0"
+    },
+    {
+      "id": "F35af018e",
+      "planted": "hx1",
+      "issue": "hx1",
+      "key": "harvest-stats__hx1__baseline__t1#1"
+    },
+    {
+      "id": "F8b46e2a9",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__clean__playwright__t3#4"
+    },
+    {
+      "id": "Faeba70b5",
+      "planted": null,
+      "issue": "stats-raw-validation-message",
+      "key": "harvest-stats__hx2__baseline__t2#3"
+    },
+    {
+      "id": "F84317d14",
+      "planted": "hx1",
+      "issue": "hx1",
+      "key": "harvest-stats__hx1__baseline__t3#1"
+    },
+    {
+      "id": "Fa1a6ed4a",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__clean__playwright__t1#4"
+    },
+    {
+      "id": "F96830423",
+      "planted": null,
+      "issue": "stats-long-name-table-column-hides-values",
+      "key": "harvest-stats__clean__playwright__t3#6"
+    },
+    {
+      "id": "Fb9fe6ca8",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx1__playwright__t1#2"
+    },
+    {
+      "id": "F5fb291c0",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__hx1__hunt__t1#3"
+    },
+    {
+      "id": "Fe6b4d2ea",
+      "planted": null,
+      "issue": "stats-raw-validation-message",
+      "key": "harvest-stats__hx1__baseline__t3#3"
+    },
+    {
+      "id": "F8bed29cd",
+      "planted": null,
+      "issue": "stats-date-fields-ignore-url-changes",
+      "key": "harvest-stats__clean__baseline__t1#5"
+    },
+    {
+      "id": "Fe72f8c1b",
+      "planted": "hx1",
+      "issue": "hx1",
+      "key": "harvest-stats__hx1__baseline__t2#1"
+    },
+    {
+      "id": "Fa01fa134",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__clean__hunt__t1#0"
+    },
+    {
+      "id": "F7fa0e3dd",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx2__baseline__t2#1"
+    },
+    {
+      "id": "F7f472766",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__hx2__playwright__t3#4"
+    },
+    {
+      "id": "Fd3d772a3",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx1__baseline__t3#0"
+    },
+    {
+      "id": "F60c812a8",
+      "planted": null,
+      "issue": "stats-date-fields-ignore-url-changes",
+      "key": "harvest-stats__hx1__baseline__t1#6"
+    },
+    {
+      "id": "Fb3b748b7",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx1__hunt__t3#3"
+    },
+    {
+      "id": "F57a088f6",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx2__playwright__t3#2"
+    },
+    {
+      "id": "Fb5058cb6",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__clean__baseline__t3#3"
+    },
+    {
+      "id": "F09b19722",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx2__playwright__t3#5"
+    },
+    {
+      "id": "Fafa35b92",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__clean__playwright__t2#3"
+    },
+    {
+      "id": "Fa528a31b",
+      "planted": "hx2",
+      "issue": "hx2",
+      "key": "harvest-stats__hx2__playwright__t2#0"
+    },
+    {
+      "id": "F0afe09a1",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx1__playwright__t3#6"
+    },
+    {
+      "id": "F8ca8c4a6",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__clean__baseline__t1#3"
+    },
+    {
+      "id": "F7027f227",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__clean__baseline__t2#3"
+    },
+    {
+      "id": "F61b1b4df",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx1__playwright__t1#5"
+    },
+    {
+      "id": "Fc468d411",
+      "planted": null,
+      "issue": "stats-stale-summary-on-error",
+      "key": "harvest-stats__hx1__hunt__t1#4"
+    },
+    {
+      "id": "Fb2ec2925",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx2__baseline__t1#2"
+    },
+    {
+      "id": "F982d0793",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__playwright__t1#1"
+    },
+    {
+      "id": "F84aafc1a",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__clean__baseline__t2#1"
+    },
+    {
+      "id": "Fe620680b",
+      "planted": "hx1",
+      "issue": "hx1",
+      "key": "harvest-stats__hx1__playwright__t3#0"
+    },
+    {
+      "id": "Fd9cf5d9c",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__baseline__t2#2"
+    },
+    {
+      "id": "Fbb1a4992",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__clean__playwright__t2#6"
+    },
+    {
+      "id": "Fa647314c",
+      "planted": null,
+      "issue": "stats-date-fields-ignore-url-changes",
+      "key": "harvest-stats__hx1__playwright__t3#5"
+    },
+    {
+      "id": "Febc76046",
+      "planted": "hx1",
+      "issue": "hx1",
+      "key": "harvest-stats__hx1__hunt__t3#0"
+    },
+    {
+      "id": "Fa27dd802",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__hx2__playwright__t2#3"
+    },
+    {
+      "id": "F911be161",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__hunt__t2#1"
+    },
+    {
+      "id": "Fab0dde3e",
+      "planted": null,
+      "issue": "stats-null-fields-rendered-as-placeholders",
+      "key": "harvest-stats__hx2__playwright__t1#2"
+    },
+    {
+      "id": "F5acb689e",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__baseline__t3#0"
+    },
+    {
+      "id": "Ff66467dd",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx1__baseline__t2#5"
+    },
+    {
+      "id": "Fc1987dbb",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx2__playwright__t3#1"
+    },
+    {
+      "id": "Fa3dc0709",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx2__baseline__t3#2"
+    },
+    {
+      "id": "F2668e738",
+      "planted": "hx2",
+      "issue": "hx2",
+      "key": "harvest-stats__hx2__baseline__t1#0"
+    },
+    {
+      "id": "Fc346ff80",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__clean__hunt__t3#0"
+    },
+    {
+      "id": "Fa7f83ecc",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx2__baseline__t2#4"
+    },
+    {
+      "id": "Ff3503728",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx1__playwright__t1#1"
+    },
+    {
+      "id": "F585a3476",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__clean__playwright__t3#2"
+    },
+    {
+      "id": "F73159dc3",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__baseline__t2#0"
+    },
+    {
+      "id": "Fb275c58b",
+      "planted": null,
+      "issue": "stats-long-name-table-column-hides-values",
+      "key": "harvest-stats__hx2__playwright__t2#4"
+    },
+    {
+      "id": "F250a72c2",
+      "planted": null,
+      "issue": "stats-stale-summary-on-error",
+      "key": "harvest-stats__hx1__baseline__t1#4"
+    },
+    {
+      "id": "F951dfe2a",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx2__playwright__t2#2"
+    },
+    {
+      "id": "Feb429133",
+      "planted": null,
+      "issue": "stats-stale-summary-on-error",
+      "key": "harvest-stats__hx1__baseline__t3#4"
+    },
+    {
+      "id": "F597edbc6",
+      "planted": null,
+      "issue": "stats-long-name-table-column-hides-values",
+      "key": "harvest-stats__clean__playwright__t2#5"
+    },
+    {
+      "id": "Fb4bd1132",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__hx1__hunt__t3#1"
+    },
+    {
+      "id": "F646953ff",
+      "planted": "hx2",
+      "issue": "hx2",
+      "key": "harvest-stats__hx2__hunt__t2#0"
+    },
+    {
+      "id": "F064bcb48",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__playwright__t3#0"
+    },
+    {
+      "id": "Fc9e16735",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__playwright__t3#1"
+    },
+    {
+      "id": "Fc37ab361",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx2__playwright__t2#1"
+    },
+    {
+      "id": "Fe8171522",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx2__baseline__t3#1"
+    },
+    {
+      "id": "F4b5e1ffb",
+      "planted": null,
+      "issue": "stats-date-fields-ignore-url-changes",
+      "key": "harvest-stats__hx2__baseline__t2#5"
+    },
+    {
+      "id": "F563d5be4",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__hx2__playwright__t1#1"
+    },
+    {
+      "id": "Fb86c8527",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx2__baseline__t1#4"
+    },
+    {
+      "id": "F2ddd80d3",
+      "planted": null,
+      "issue": "stats-null-fields-rendered-as-placeholders",
+      "key": "harvest-stats__hx1__playwright__t2#5"
+    },
+    {
+      "id": "Fd86e6296",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx1__playwright__t3#1"
+    },
+    {
+      "id": "F959a86c0",
+      "planted": "hx1",
+      "issue": "hx1",
+      "key": "harvest-stats__hx1__hunt__t1#0"
+    },
+    {
+      "id": "F419bd411",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__clean__baseline__t3#4"
+    },
+    {
+      "id": "Fe6e71b39",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx1__hunt__t1#2"
+    },
+    {
+      "id": "Fed412de7",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__clean__playwright__t1#5"
+    },
+    {
+      "id": "F5a10db38",
+      "planted": null,
+      "issue": "stats-stale-summary-on-error",
+      "key": "harvest-stats__hx1__playwright__t2#3"
+    },
+    {
+      "id": "Fc138cd0c",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx1__playwright__t2#1"
+    },
+    {
+      "id": "Fd69ea845",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx2__baseline__t1#1"
+    },
+    {
+      "id": "F99780d2d",
+      "planted": null,
+      "issue": "stats-raw-validation-message",
+      "key": "harvest-stats__hx1__baseline__t2#4"
+    },
+    {
+      "id": "Fb34bd83a",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__clean__playwright__t2#2"
+    },
+    {
+      "id": "F240bb340",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__clean__playwright__t1#2"
+    },
+    {
+      "id": "F4f658f74",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx2__playwright__t1#4"
+    },
+    {
+      "id": "F12313a7d",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx2__hunt__t3#2"
+    },
+    {
+      "id": "Fef68e155",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx2__playwright__t2#5"
+    },
+    {
+      "id": "F67ce4245",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__hx1__playwright__t3#4"
+    },
+    {
+      "id": "F9b7fd6bc",
+      "planted": "hx1",
+      "issue": "hx1",
+      "key": "harvest-stats__hx1__playwright__t2#0"
+    },
+    {
+      "id": "F3ac2dc0a",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__hx1__hunt__t1#1"
+    },
+    {
+      "id": "Fce6bcbef",
+      "planted": null,
+      "issue": "stats-stale-summary-on-error",
+      "key": "harvest-stats__hx1__hunt__t3#2"
+    },
+    {
+      "id": "F011a87c9",
+      "planted": null,
+      "issue": "stats-date-fields-ignore-url-changes",
+      "key": "harvest-stats__hx1__baseline__t3#6"
+    },
+    {
+      "id": "Fdf48f51a",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx1__baseline__t2#2"
+    },
+    {
+      "id": "Fa3b2574d",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx1__hunt__t2#2"
+    },
+    {
+      "id": "F6df618fd",
+      "planted": "hx2",
+      "issue": "hx2",
+      "key": "harvest-stats__hx2__hunt__t1#0"
+    },
+    {
+      "id": "F9a2f2f54",
+      "planted": "hx2",
+      "issue": "hx2",
+      "key": "harvest-stats__hx2__playwright__t1#0"
+    },
+    {
+      "id": "F2d50e856",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx1__playwright__t3#2"
+    },
+    {
+      "id": "F9c5e4eed",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__baseline__t1#0"
+    },
+    {
+      "id": "F907794ea",
+      "planted": null,
+      "issue": "dashboard-top-plant-ambiguous",
+      "key": "harvest-stats__hx2__baseline__t1#5"
+    },
+    {
+      "id": "F326ec73f",
+      "planted": null,
+      "issue": "stats-raw-validation-message",
+      "key": "harvest-stats__hx2__playwright__t3#6"
+    },
+    {
+      "id": "Fc18debee",
+      "planted": "hx1",
+      "issue": "hx1",
+      "key": "harvest-stats__hx1__hunt__t2#0"
+    },
+    {
+      "id": "Fa99ebc5f",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__playwright__t2#0"
+    },
+    {
+      "id": "F17f7d5e4",
+      "planted": "hx2",
+      "issue": "hx2",
+      "key": "harvest-stats__hx2__playwright__t3#0"
+    },
+    {
+      "id": "F28107a3f",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__baseline__t1#1"
+    },
+    {
+      "id": "F1382ce1e",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__playwright__t2#1"
+    },
+    {
+      "id": "Fae7215e5",
+      "planted": null,
+      "issue": "stats-raw-validation-message",
+      "key": "harvest-stats__clean__playwright__t2#4"
+    },
+    {
+      "id": "Ff6f98cdc",
+      "planted": null,
+      "issue": "stats-raw-validation-message",
+      "key": "harvest-stats__hx2__baseline__t3#4"
+    },
+    {
+      "id": "F98ff3ec1",
+      "planted": null,
+      "issue": "stats-long-name-truncated-in-cards",
+      "key": "harvest-stats__clean__playwright__t1#6"
+    },
+    {
+      "id": "F44b03b33",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__hx1__baseline__t1#3"
+    },
+    {
+      "id": "Fec4f3aac",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__baseline__t3#1"
+    },
+    {
+      "id": "F19e3d5ed",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__clean__baseline__t1#2"
+    },
+    {
+      "id": "F324e55ea",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__hx2__hunt__t3#1"
+    },
+    {
+      "id": "F976a3bb4",
+      "planted": null,
+      "issue": "stats-raw-validation-message",
+      "key": "harvest-stats__clean__playwright__t3#5"
+    },
+    {
+      "id": "Fbf41ec8a",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__hunt__t3#1"
+    },
+    {
+      "id": "Fdc0c0485",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx2__playwright__t1#3"
+    },
+    {
+      "id": "F4f1505b8",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__hx1__baseline__t2#3"
+    },
+    {
+      "id": "Fad2c994f",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx1__baseline__t2#0"
+    },
+    {
+      "id": "F11745127",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__hx2__hunt__t1#1"
+    },
+    {
+      "id": "Fc65b8014",
+      "planted": null,
+      "issue": "stats-stale-summary-on-error",
+      "key": "harvest-stats__hx1__hunt__t2#1"
+    },
+    {
+      "id": "F92d69189",
+      "planted": "hx2",
+      "issue": "hx2",
+      "key": "harvest-stats__hx2__baseline__t2#0"
+    },
+    {
+      "id": "Fb192929e",
+      "planted": null,
+      "issue": "stats-page-horizontal-overflow-long-name",
+      "key": "harvest-stats__hx2__playwright__t3#3"
+    },
+    {
+      "id": "F5f6713db",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx1__baseline__t1#0"
+    },
+    {
+      "id": "Fb9d191c3",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__hx1__playwright__t1#4"
+    },
+    {
+      "id": "Fa5b72349",
+      "planted": null,
+      "issue": "dashboard-top-plant-ambiguous",
+      "key": "harvest-stats__hx2__playwright__t1#7"
+    },
+    {
+      "id": "F807ac4a1",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__playwright__t1#0"
+    },
+    {
+      "id": "Fa36544d1",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx1__baseline__t3#2"
+    },
+    {
+      "id": "Fc1b9621e",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__hx1__playwright__t2#2"
+    },
+    {
+      "id": "F8b77a62c",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__hx1__baseline__t3#5"
+    },
+    {
+      "id": "F62353ffc",
+      "planted": null,
+      "issue": "stats-raw-validation-message",
+      "key": "harvest-stats__hx2__playwright__t1#6"
+    },
+    {
+      "id": "F10755848",
+      "planted": null,
+      "issue": "stats-raw-validation-message",
+      "key": "harvest-stats__hx2__baseline__t1#3"
+    },
+    {
+      "id": "Fe5e05e9c",
+      "planted": null,
+      "issue": "stats-raw-validation-message",
+      "key": "harvest-stats__clean__baseline__t1#4"
+    },
+    {
+      "id": "F80a0abb9",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx1__playwright__t2#4"
+    },
+    {
+      "id": "F52f83091",
+      "planted": null,
+      "issue": "stats-blank-date-silent-default",
+      "key": "harvest-stats__hx1__hunt__t2#3"
+    },
+    {
+      "id": "Fe3ae2455",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__hx2__baseline__t3#3"
+    },
+    {
+      "id": "Fc3d3c3fb",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__clean__hunt__t2#0"
+    },
+    {
+      "id": "F8f35065d",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__hx2__baseline__t2#2"
+    }
+  ],
+  "issues": {
+    "hx1": "On /stats, when an earlier date range's stats response arrives after a later one, the page shows the earlier range's results while the From/To fields show the newer range; triggered by changing a date twice quickly with the first request slow.",
+    "hx2": "In the /stats weight-by-month table (GET /api/stats/harvests), two plants sharing a name are merged into one row with summed months, while Best plants lists them separately; triggered by creating two plants with the same name and logging harvests for both.",
+    "stats-stale-summary-on-error": "On /stats, after a successful load, a failed request for a new range leaves the previous range's harvest-count summary line visible next to the error; triggered by making the API fail and changing a date.",
+    "stats-blank-date-silent-default": "On /stats, clearing the From or To field drops the parameter so the server silently uses this year's start or end, leaving the field blank while results use another range or showing a 'From must be on or before To' error; triggered by clearing one field with the other set outside this year.",
+    "stats-malformed-response-crash": "On /stats, a 200 stats response that is malformed, non-JSON, or missing/null fields throws an uncaught TypeError during render, leaving 'Loading stats…' stuck over the previous range's data (or the page never rendering); triggered by mocking such a response and changing a date or navigating to Stats.",
+    "stats-null-fields-rendered-as-placeholders": "On /stats, a stats response with null or missing fields renders as 'null/undefined harvests from – to –', an empty Best plants section and blank table rows instead of an error; triggered by mocking a response with null fields.",
+    "stats-no-request-timeout": "On /stats, the stats request has no timeout, so a hung API leaves 'Loading stats…' on screen indefinitely (often over the old range's data) with no error; triggered by making /api/stats/harvests never respond and opening the page or changing a date.",
+    "stats-no-retry-after-error": "On /stats, the error state shows only a message with no Retry button, so recovering the same range requires changing a date or reloading; triggered by making /api/stats/harvests fail.",
+    "stats-raw-validation-message": "On /stats, an invalid date (e.g. ?from=2026-02-30 or a 5-digit year) shows the raw Pydantic message such as 'Query.from: Input should be a valid date or datetime…' and the date input appears blank; triggered by opening such a URL or typing such a date.",
+    "stats-empty-months-omitted": "On the /stats table (GET /api/stats/harvests), only months that have harvests become columns, so empty months in the chosen range are hidden and non-adjacent months appear side by side; triggered by choosing a range containing months with no harvests.",
+    "stats-long-name-table-column-hides-values": "On /stats at 375 px, the white-space: nowrap plant row header makes a long plant name fill the table's visible width, pushing all month and total columns off-screen; triggered by a plant with a long unbroken name.",
+    "stats-long-name-truncated-in-cards": "On the /stats Best plants cards and the dashboard top-plant card at 375 px, long plant names are cut off with an ellipsis and no way to read the full name; triggered by a plant with a long unbroken name.",
+    "stats-page-horizontal-overflow-long-name": "On /stats at 375 px, a long unbroken plant name in the Best plants list does not wrap, so the whole page scrolls sideways; triggered by a plant with an 80-character name.",
+    "stats-date-fields-ignore-url-changes": "On /stats, the From/To fields are read from the URL only at setup, so in-app navigation to /stats (e.g. the Stats nav link or back/forward) changes the URL but leaves the old range in the fields and data; triggered by navigating while already on a filtered /stats.",
+    "dashboard-top-plant-ambiguous": "The dashboard 'Top plant this year' card shows only the plant name and links to /stats rather than the plant, so it is ambiguous when plants share a name; triggered by having two plants with the same name."
+  }
+}

@@ -1,0 +1,26 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3794, API http://localhost:8794/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-watering-ids-reused/scratch.
+
+The reported problem: Watering ids use INTEGER PRIMARY KEY without AUTOINCREMENT, so after deleting the newest watering a new one reuses its id and a stale DELETE could remove it.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Deleted watering ids are reused, so a stale delete can remove a different watering",
+  "where": "DELETE /api/waterings/{id}",
+  "steps": "Delete the newest watering (id 4), record a new one, then retry the old delete (another tab, or a retry after timeout)",
+  "expected": "The retry is a no-op/404",
+  "actual": "The new watering got id 4 again and would be deleted",
+  "evidence": "DELETE /waterings/4 -> 204, then POST returned {\"id\":4,...}; the table uses INTEGER PRIMARY KEY without AUTOINCREMENT"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-watering-ids-reused/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "dashboard-malformed-never-rows",
+  "sentence": "When the dashboard's recent-waterings response is a malformed non-list (e.g. a string), the table renders rows reading 'Never' with blank bed and '–' amount and no error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /beds. Used Playwright page.route to make GET /api/waterings?limit=5 return 200 application/json with the JSON string \"oops bad\", then went to the Dashboard with the client-side link. The Recent waterings section showed a table with header WHEN/BED/AMOUNT and 8 rows of 'Never' / (blank) / '–', one row per character of the 8-character string. No AlertMessage or error was shown. Cause in frontend/app/pages/index.vue: the table is rendered under v-else-if=\"waterings && waterings.length\" with v-for over waterings, and nothing checks Array.isArray, so a string passes the check and is iterated by character. formatWatered(undefined, undefined) returns 'Never' and formatLitres(undefined) returns '–'. The user sees made-up watering rows that look like real data instead of the expected 'Could not load recent waterings.' error.",
+  "severity": "low",
+  "wallMs": 88558
+}

@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "title": "Stats error state has no retry; the same range can't be reloaded without a page reload",
+      "where": "/stats (frontend/app/pages/stats.vue)",
+      "steps": "Open /stats while the API is failing (e.g. down or returning 500), then bring the API back. Or open /stats?from=2026-05-01&to=2026-01-01.",
+      "expected": "The error message comes with a Retry button that calls refresh() and loads the data once the server is back.",
+      "actual": "Only an AlertMessage is shown. useApiFetch's refresh is never exposed. The only ways to refetch are changing a date or reloading the page.",
+      "evidence": "SSR HTML for /stats?from=2026-05-01&to=2026-01-01 contains just <div class=\"alert alert--error\" role=\"alert\">The From date must be on or before the To date.</div> with no button. stats.vue pulls only data/error/status out of useApiFetch, not refresh.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout, so 'Loading stats…' can spin forever",
+      "where": "/stats -> GET /api/stats/harvests",
+      "steps": "Make the API hang (accept the connection, never answer), then open /stats or change a date.",
+      "expected": "The request is cut off after 10 s and the page shows an error with a retry.",
+      "actual": "Neither useApiFetch nor useApiClient sets a timeout, so the page shows 'Loading stats…' (or the old table) indefinitely.",
+      "evidence": "composables/useApi.ts: useFetch/$fetch.create are called without a timeout option, and stats.vue passes none either.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing a date field leaves it blank while the results silently use a different date",
+      "where": "/stats From/To inputs",
+      "steps": "On /stats, clear the From field (or set a range, then clear To).",
+      "expected": "The field is refused with a visible reason, or goes back to its default value.",
+      "actual": "The param is dropped from the query and the server quietly uses Jan 1 / Dec 31 of the current year. The input stays empty, and the 'This year' reset button can appear even though the data shown is for this year. Also, a cleared To removes the min/max constraint.",
+      "evidence": "stats.vue: the query computed omits empty values, and stats.py falls back to year_bounds() when the param is missing.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Typing a year in the date input fires a request on every keystroke and flashes a validation error",
+      "where": "/stats To/From inputs",
+      "steps": "In Chrome, put the cursor in the To field's year segment and type 2026.",
+      "expected": "No request for half-typed dates, or at least no error flash.",
+      "actual": "v-model updates to 0002-12-31, 0020-12-31, 0202-12-31 in turn. Each one starts a fetch and comes back 422 ('The From date must be on or before the To date.'), so the error alert flashes over the table before the full year is typed.",
+      "evidence": "The query is a computed directly on the v-model refs with no debounce or check. The API returns 422 for to < from (verified with curl).",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long unbroken plant variety can overflow the Best-plants cards at 375 px",
+      "where": "/stats Best plants list, dashboard",
+      "steps": "Create a plant whose variety is 80 characters with no spaces, give it a harvest, then view /stats at 375 px wide.",
+      "expected": "The text wraps or truncates inside the card.",
+      "actual": ".stat__hint has no overflow-wrap/word-break, so the long token pushes past the card and can cause sideways scrolling.",
+      "evidence": "main.css .stat__hint sets only margin, font-size and color. stats.vue renders the variety in .stat__hint.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

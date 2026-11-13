@@ -1,0 +1,148 @@
+{
+  "feature": "harvest-stats",
+  "pass": 1,
+  "count": 22,
+  "missing": [],
+  "costUsd": 0.1723648,
+  "reports": [
+    {
+      "id": "F429d6475",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__hunt__t2#0"
+    },
+    {
+      "id": "F3b4b2872",
+      "planted": null,
+      "issue": "stats-malformed-response-crash-stuck-loading",
+      "key": "harvest-stats__error-shown-as-empty__hunt__t3#2"
+    },
+    {
+      "id": "Fd9ed0928",
+      "planted": null,
+      "issue": "stats-hang-loading-forever-stale-data",
+      "key": "harvest-stats__error-shown-as-empty__hunt__t2#4"
+    },
+    {
+      "id": "F976d9cf1",
+      "planted": null,
+      "issue": "stats-malformed-response-crash-stuck-loading",
+      "key": "harvest-stats__to-date-excluded__hunt__t3#1"
+    },
+    {
+      "id": "F8b411861",
+      "planted": null,
+      "issue": "stats-malformed-response-crash-stuck-loading",
+      "key": "harvest-stats__clean__hunt__t2#0"
+    },
+    {
+      "id": "Ff52a06c9",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__hunt__t1#0"
+    },
+    {
+      "id": "F05577420",
+      "planted": null,
+      "issue": "stats-cleared-to-extends-to-year-end",
+      "key": "harvest-stats__error-shown-as-empty__hunt__t2#3"
+    },
+    {
+      "id": "F1f508ca4",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__hunt__t1#1"
+    },
+    {
+      "id": "Ff0e9f88a",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__hunt__t3#0"
+    },
+    {
+      "id": "F079f7b15",
+      "planted": null,
+      "issue": "stats-malformed-response-crash-stuck-loading",
+      "key": "harvest-stats__error-shown-as-empty__hunt__t1#2"
+    },
+    {
+      "id": "F1b1ea1a5",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__hunt__t2#1"
+    },
+    {
+      "id": "Fd7fb0918",
+      "planted": null,
+      "issue": "stats-malformed-response-crash-stuck-loading",
+      "key": "harvest-stats__to-date-excluded__hunt__t2#1"
+    },
+    {
+      "id": "F0c524ff4",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__hunt__t2#0"
+    },
+    {
+      "id": "F149ab41f",
+      "planted": null,
+      "issue": "stats-malformed-response-crash-stuck-loading",
+      "key": "harvest-stats__error-shown-as-empty__hunt__t2#2"
+    },
+    {
+      "id": "F9077d227",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__hunt__t3#0"
+    },
+    {
+      "id": "F3e22468c",
+      "planted": null,
+      "issue": "stats-hang-loading-forever-stale-data",
+      "key": "harvest-stats__clean__hunt__t2#1"
+    },
+    {
+      "id": "Fde86f0c3",
+      "planted": null,
+      "issue": "stats-malformed-response-crash-stuck-loading",
+      "key": "harvest-stats__clean__hunt__t3#0"
+    },
+    {
+      "id": "Fbb7de139",
+      "planted": null,
+      "issue": "stats-malformed-response-crash-stuck-loading",
+      "key": "harvest-stats__to-date-excluded__hunt__t1#1"
+    },
+    {
+      "id": "F3a2922d6",
+      "planted": null,
+      "issue": "stats-hang-loading-forever-stale-data",
+      "key": "harvest-stats__clean__hunt__t1#1"
+    },
+    {
+      "id": "F620d1ffe",
+      "planted": null,
+      "issue": "stats-malformed-response-crash-stuck-loading",
+      "key": "harvest-stats__clean__hunt__t1#0"
+    },
+    {
+      "id": "F58421c37",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__hunt__t1#0"
+    },
+    {
+      "id": "F3826c5ae",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__hunt__t3#1"
+    }
+  ],
+  "issues": {
+    "error-shown-as-empty": "On /stats, when GET /api/stats/harvests fails (for example a 500, or a 422 for a From date after the To date), the page shows the empty state 'No harvests in this range' instead of an error.",
+    "to-date-excluded": "On /stats and GET /api/stats/harvests, a harvest logged on the To date is left out of the table, totals and best plants, as seen with a single-day range where From equals To.",
+    "stats-malformed-response-crash-stuck-loading": "On /stats, when GET /api/stats/harvests returns a malformed or empty-object body, an uncaught TypeError (reading 'length') is thrown, no error is shown, and 'Loading stats…' stays on screen over the previous range's table and best plants.",
+    "stats-hang-loading-forever-stale-data": "On /stats, when the stats request never answers after changing the date range, 'Loading stats…' stays indefinitely above the previous range's results with no timeout, error or retry.",
+    "stats-cleared-to-extends-to-year-end": "On /stats, clearing the To field while From is set silently queries up to 31 Dec of the current year while the To field stays blank."
+  }
+}

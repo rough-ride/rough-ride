@@ -1,0 +1,49 @@
+{
+  "findings": [
+    {
+      "title": "Past watering of 0.001 L is accepted but shown as \"0 L\"",
+      "where": "/beds Record past watering form (POST /api/waterings), also /waterings list",
+      "steps": "Probe beds-ui, expectation tiny-litres-not-shown-as-0-L",
+      "expected": "An amount that rounds to zero is refused (the field says min 0.1, step 0.1), or it is shown as the amount that was saved",
+      "actual": "The client and server accept 0.001 litres. The confirmation reads \"Recorded 0 L on 12 Nov 2026.\" and the waterings list shows the row as \"0 L\"",
+      "evidence": "{\"alerts\":[\"Recorded 0 L on 12 Nov 2026.\"]} | {\"alerts\":[\"Recorded 0 L on 12 Nov 2026.\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-172230-hunt-1ad5",
+        "probe": "beds-ui",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Waterings page crashes on a malformed waterings response",
+      "where": "/waterings bed filter (GET /api/waterings?bed_id=)",
+      "steps": "Probe waterings-faults, expectation malformed-shows-error",
+      "expected": "A visible error and no uncaught exception",
+      "actual": "Uncaught \"waterings.value?.reduce is not a function\". The page stays on \"Loading waterings…\" and keeps showing the old rows for all beds under the new bed filter",
+      "evidence": "{\"alerts\":[\"Loading waterings…\"],\"pe\":[\"waterings.value?.reduce is not a function\"],\"t\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"Loading waterings…\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\",\"ACTIONS\",\"12 Nov 2026, 17:26\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"12 Nov 2026, 17:26\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"12 Nov 2026\\tNorth bed\\t0 L\\tDelete\",\"watering of North bed\",\"12 Nov 2026\\tNorth bed\\t0 L\\tDelete\"]} | {\"alerts\":[\"Loading waterings…\"],\"pe\":[\"waterings.value?.reduce is not a function\"],\"t\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"Loading waterings…\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\",\"ACTIONS\",\"12 Nov 2026, 17:26\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"12 Nov 2026, 17:26\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"12 Nov 2026\\tNorth bed\\t0 L\\tDelete\",\"watering of North bed\",\"12 Nov 2026\\tNorth bed\\t0 L\\tDelete\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-172230-hunt-1ad5",
+        "probe": "waterings-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Unknown bed id in the URL filters the list while the select shows \"All beds\"",
+      "where": "/waterings?bed=999",
+      "steps": "Probe waterings-delete, expectation unknown-bed-filter-consistent",
+      "expected": "The filter control matches the filter that is applied, or the unknown bed is reported",
+      "actual": "The select shows \"All beds\" while the page shows \"0 waterings\" and \"No waterings for this bed\"",
+      "evidence": "{\"sel\":{\"label\":\"Bed\",\"value\":\"\"},\"t\":[\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\",\"Garden Log · a journal for one garden\"]} | {\"sel\":{\"label\":\"Bed\",\"value\":\"\"},\"t\":[\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "low",
+      "tool": {
+        "run": "20261112-172230-hunt-1ad5",
+        "probe": "waterings-delete",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

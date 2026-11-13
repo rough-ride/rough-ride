@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-malformed-response-crash/scratch.
+
+The reported problem: On /stats, a 200 response with a malformed, non-JSON, empty or null-field body throws an uncaught TypeError, leaving the page stuck on 'Loading stats…' over old data (or not rendering at all on client navigation); triggered by mocking /api/stats/harvests with such a body and changing a date or navigating to Stats.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "A malformed or null field in the stats response crashes the page with a TypeError overlay",
+  "where": "/stats (formatMonth(value.slice) and other fields read without checks)",
+  "steps": "Mock /api/stats/harvests to return 200 with months:[{month:null}], plants:[{monthly_grams:null,...}], top_plants:null, then change a date.",
+  "expected": "A handled error state, or safe placeholders.",
+  "actual": "An error dialog shows 'TypeError: Cannot read properties of null (reading 'slice')'. The page stays on 'Loading stats…' with the previous range's results still showing under the new URL.",
+  "evidence": "Error details dialog text: \"TypeError ... Cannot read properties of null (reading 'slice')\"."
+ },
+ {
+  "title": "Malformed or null fields in the stats response crash the page with an uncaught TypeError",
+  "where": "/stats (client-side navigation from dashboard)",
+  "steps": "Route /api/stats/harvests to return 200 {\"plants\":null}, then click 'Stats' in the nav from the dashboard.",
+  "expected": "An error state saying the stats could not be read, with a retry.",
+  "actual": "Uncaught 'TypeError: Cannot read properties of null (reading 'length')'. The URL changes to /stats, but the dashboard content stays rendered under an error overlay, and the Stats page never appears.",
+  "evidence": "URL http://localhost:3792/stats, #main still shows Dashboard content, error dialog 'TypeError ... Cannot read properties of null (reading 'length')'"
+ },
+ {
+  "title": "Stats page crashes and stays on 'Loading stats…' with the previous range's table when the stats response is not in the expected shape",
+  "where": "/stats (GET /api/stats/harvests)",
+  "steps": "Probe malformed, expectation bad-response-shows-error-without-crash",
+  "expected": "An error message such as 'Could not load harvest stats.', no uncaught error, and the old table not shown as the result for the new range",
+  "actual": "Uncaught TypeError 'Cannot read properties of undefined (reading 'length')'. The page keeps showing 'Loading stats…' with the old 1 Jan to 31 Dec table under From = 2026-07-01, and no error is shown",
+  "evidence": "{\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]} | {\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]}"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-malformed-response-crash/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

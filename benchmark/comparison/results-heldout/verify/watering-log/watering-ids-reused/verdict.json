@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "watering-ids-reused",
+  "sentence": "Watering ids use INTEGER PRIMARY KEY without AUTOINCREMENT, so after deleting the newest watering a new one reuses its id and a stale DELETE could remove it.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the mechanics through the API: POST /api/waterings twice gave ids 3 and 4; DELETE /waterings/4 -> 204; the next POST returned id 4 again; a repeated (stale) DELETE /waterings/4 -> 204 and removed the new watering. The cause is SQLite's normal rowid behaviour: INTEGER PRIMARY KEY without AUTOINCREMENT reuses the highest id once that row is deleted. But every table in backend/db.py (users, beds, plants, harvests, tasks) is declared the same way, so the waterings table follows the app's existing schema convention; it is not a mistake made in this change. The request does not ask for deleting waterings at all. Only the newest id can come back, and only if a delete for it is replayed after a new watering was recorded (a second stale tab or a retried request) in a single-user app. That is a general design trait of the whole app, not something the user or the request would reject in this change. I removed the test rows afterwards.",
+  "severity": null,
+  "wallMs": 36629
+}

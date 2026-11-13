@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3790, API http://localhost:8790/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-watering-log-watering-saved-but-refresh-failure-reported/scratch.
+
+The reported problem: On /beds, when POST /api/waterings succeeds but the follow-up GET /api/beds refresh fails, the save is reported as failed or the bed list is replaced by 'Could not load beds.', inviting a duplicate retry.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Watering saved but reported as failed when the follow-up beds refresh fails, so the user retries and creates a duplicate",
+  "where": "Beds page recordWatering()",
+  "steps": "Click Water now (or Save watering) while the POST succeeds but the GET /beds refresh fails or times out.",
+  "expected": "The page says the watering was recorded and offers a way to reload the list.",
+  "actual": "The POST and refresh() share one try block, so a refresh failure shows 'Could not record the watering.' and keeps the past form open. Saving again records a second watering.",
+  "evidence": "beds.vue: try { await api('/waterings', POST); await refresh(); return true } catch { waterError = 'Could not record the watering.' }"
+ },
+ {
+  "title": "Bed list vanishes after a successful Water now if the refresh fails",
+  "where": "/beds",
+  "steps": "Make GET /api/beds return 500 while the POST succeeds, then click Water now.",
+  "expected": "Confirmation that the watering was recorded, and the existing list kept (or an error with a retry).",
+  "actual": "The watering is recorded, but the whole bed list is replaced by 'Could not load beds.' with no retry and no confirmation (the success notice belonged to the vanished bed card). The user may water again and create a duplicate.",
+  "evidence": "main text: 'All beds | Could not load beds.'; buttons only ['Add bed']; GET /api/waterings showed the new row id 5"
+ },
+ {
+  "title": "Water now: retry after a lost response creates duplicate waterings; a recorded watering is reported as failed when the follow-up beds refresh fails",
+  "where": "/beds (recordWatering) + POST /api/waterings",
+  "steps": "On /beds, make GET /api/beds fail (503) and click 'Water now' on North bed.",
+  "expected": "Watering recorded once, page says it was saved (or keeps the beds list and says only the refresh failed); a retry does not add a second entry.",
+  "actual": "The POST succeeded (a new watering exists in the API) but the refresh error replaced the whole bed list with 'Could not load beds.'. The watering's success or error message sits inside the bed card, so it disappears too. The user can't tell whether it was saved and will click again. The POST has no idempotency key or dedupe, so each retry adds another watering.",
+  "evidence": "After the click the page showed only 'Could not load beds.'. GET /api/waterings then listed a new entry (id 5, North bed, watered_at 09:33:43)."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-watering-log-watering-saved-but-refresh-failure-reported/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

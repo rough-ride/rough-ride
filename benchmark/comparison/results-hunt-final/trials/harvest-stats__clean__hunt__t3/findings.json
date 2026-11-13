@@ -1,0 +1,19 @@
+{
+  "findings": [
+    {
+      "title": "Stats page crashes on an unexpected or malformed stats response and keeps showing the previous range's table under a permanent 'Loading stats…'",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe faults, expectation malformed-shows-error",
+      "expected": "When the stats response is malformed or missing fields, the page shows an error such as 'Could not load harvest stats.' with no uncaught errors, and does not present old figures as the current range",
+      "actual": "Uncaught TypeError 'Cannot read properties of undefined (reading 'length')' (from stats.plants.length) is thrown repeatedly. The status line stays on 'Loading stats…' and the Best plants list and table for the previous range (1 Jan to 31 Dec 2026) stay on screen while From shows 2026-07-03. No error message is shown. The same happens with an empty-object response.",
+      "evidence": "{\"pe\":[\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"]} | {\"pe\":[\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-194317-hunt-3fce",
+        "probe": "faults",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

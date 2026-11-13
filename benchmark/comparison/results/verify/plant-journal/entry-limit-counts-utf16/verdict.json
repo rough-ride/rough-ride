@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "entry-limit-counts-utf16",
+  "sentence": "The JournalEntryForm textarea maxlength and character counter count UTF-16 code units, so emoji count double, only about 250 emoji fit, and existing server-accepted emoji entries cannot be re-saved when edited.",
+  "verdict": "confirmed",
+  "evidence": "Server (JournalEntryIn.body max_length=500) counts code points: POST /api/journal with 500x🌱 -> 201, 501x🌱 -> 422. JournalEntryForm.vue uses :maxlength=500, remaining = 500 - form.body.length and validate() checks form.body.trim().length (all UTF-16 units). In the running app on /plants/2, filling the New entry textarea with 300 🌱 left only 250 emoji in it (value.length 500, 250 code points) and the hint said '0 characters left'. Clicking Edit on the API-created 500x🌱 entry showed the hint '-500 characters left'; clicking Save entry without changing anything showed 'Keep the entry to 500 characters.' and the save was blocked. So a valid, server-accepted entry cannot be re-saved, and emoji input is capped at half the limit the request specifies. Test entry deleted afterwards.",
+  "severity": "medium",
+  "wallMs": 97769
+}

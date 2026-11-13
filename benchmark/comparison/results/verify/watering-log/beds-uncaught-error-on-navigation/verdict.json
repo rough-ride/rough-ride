@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "beds-uncaught-error-on-navigation",
+  "sentence": "Reloading /beds or navigating back and forward to /beds triggers the dev error overlay.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in as the demo user and went through the reported steps in the running app, watching for pageerror events, console errors and Vue warnings. (1) Reloaded /beds with a bed whose last watering was a past date-only entry: no errors, no overlay. (2) Clicked 'Water now', which stores a timestamp, then reloaded /beds (SSR plus hydration in the Europe/Madrid time zone): it shows 'Last watered 12 Nov 2026, 14:42' with no errors. (3) Saved a past watering (2026-11-05, 3.5 L) at a 375px viewport, then reloaded and went /beds -> / -> back -> forward -> back: no errors. (4) Made browser requests to /api/beds return 400 and reached /beds by client-side navigation, then went back and forward from /waterings: the page shows the inline error alert ('bad'); the only console output was the expected 'Failed to load resource 400'. There was no uncaught error and no overlay. On full reloads the SSR fetch is not routed, so the page renders normally. The only way I got an uncaught error ('value.replace is not a function' in formatDateTime) was by injecting a numeric last_watered_at, which the API schema (str | None) never sends. That is not a realistic scenario and does not match the reports.",
+  "severity": null,
+  "wallMs": 149623
+}

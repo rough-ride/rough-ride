@@ -1,0 +1,95 @@
+{
+  "findings": [
+    {
+      "title": "button \"Add bed\" stays busy after GET /api/beds returns malformed JSON",
+      "where": "/beds GET /api/beds",
+      "steps": "In the browser: filter-waterings/GET /api/beds #1/malformed-json!; checks that failed: settles, no-uncaught-error",
+      "expected": "",
+      "actual": "no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function | settles: click button \"Add bed\": control stays disabled (Adding\\u2026) after 10.1 s",
+      "evidence": "no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function | settles: click button \"Add bed\": control stays disabled (Adding\\u2026) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "shown": "shown",
+        "members": [
+          "filter-waterings/GET /api/beds #1/malformed-json!"
+        ]
+      }
+    },
+    {
+      "title": "Typed values lost after GET /api/beds fails with 500 (button \"Add bed\")",
+      "where": "/beds GET /api/beds",
+      "steps": "In the browser: filter-waterings/GET /api/beds #1/500!; checks that failed: values-survive, retry-recovers",
+      "expected": "",
+      "actual": "values-survive: label \"Name\" held \"Plot 2icyr3nx\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot x3lbu0lw\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot 7z9ci6p7\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot 1l9nrtr2\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s",
+      "evidence": "values-survive: label \"Name\" held \"Plot 2icyr3nx\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot x3lbu0lw\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot 7z9ci6p7\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot 1l9nrtr2\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "shown": "shown",
+        "members": [
+          "filter-waterings/GET /api/beds #1/500!",
+          "filter-waterings/GET /api/beds #1/400!",
+          "filter-waterings/GET /api/beds #1/reset!",
+          "filter-waterings/GET /api/beds #1/429!"
+        ]
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/waterings fails with 500",
+      "where": "/waterings GET /api/waterings",
+      "steps": "In the browser: filter-waterings/GET /api/waterings #2/500!; checks that failed: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s",
+      "evidence": "retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "shown": "shown",
+        "members": [
+          "filter-waterings/GET /api/waterings #2/500!",
+          "filter-waterings/GET /api/waterings #2/400!",
+          "filter-waterings/GET /api/waterings #2/reset!",
+          "filter-waterings/GET /api/waterings #2/429!"
+        ]
+      }
+    },
+    {
+      "title": "Uncaught error on /waterings after GET /api/waterings returns malformed JSON",
+      "where": "/waterings GET /api/waterings (entry)",
+      "steps": "In the browser: filter-waterings/GET /api/waterings #1/malformed-json!; checks that failed: no-uncaught-error",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "shown": "capped",
+        "members": [
+          "filter-waterings/GET /api/waterings #1/malformed-json!"
+        ]
+      }
+    },
+    {
+      "title": "Uncaught error on /waterings after GET /api/waterings returns malformed JSON",
+      "where": "/waterings GET /api/waterings",
+      "steps": "In the browser: filter-waterings/GET /api/waterings #2/malformed-json!; checks that failed: no-uncaught-error",
+      "expected": "",
+      "actual": "no-uncaught-error: overlay: dev error overlay | no-uncaught-error: overlay: dev error overlay",
+      "evidence": "no-uncaught-error: overlay: dev error overlay | no-uncaught-error: overlay: dev error overlay",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "shown": null,
+        "members": [
+          "filter-waterings/GET /api/waterings #2/malformed-json!"
+        ]
+      }
+    }
+  ]
+}

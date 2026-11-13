@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Journal endpoints return 500 for out-of-range integer IDs",
+      "where": "GET/POST /api/journal, PUT/DELETE /api/journal/{id}",
+      "steps": "Signed in, call GET /api/journal?plant_id=99999999999999999999, POST /api/journal with plant_id 99999999999999999999, PUT or DELETE /api/journal/99999999999999999999",
+      "expected": "4xx (422 or 404)",
+      "actual": "500 Internal Server Error (SQLite integer overflow; plant_id and entry_id have no upper bound)",
+      "evidence": "curl got 'Internal Server Error 500' for all four requests",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal search over 80 characters shows a raw validation error instead of results",
+      "where": "/journal search box -> GET /api/journal?q=",
+      "steps": "On /journal, type or paste a search longer than 80 characters (or open /journal?q=<81 chars>)",
+      "expected": "Input is limited to 80 characters, or the search is cut short and still works",
+      "actual": "API returns 422 and the page shows 'Query.q: String should have at most 80 characters' with no results. The input has no maxlength.",
+      "evidence": "SSR of /journal?q=bbbb...(81) rendered alert 'Query.q: String should have at most 80 characters'; API returned 422",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal load errors have no retry",
+      "where": "/journal page and Journal section of /plants/{id}",
+      "steps": "Make GET /api/journal fail (server down or 5xx), then open /journal or a plant page",
+      "expected": "An error message with a Retry button that loads again without a page reload",
+      "actual": "Only an AlertMessage is shown, with no retry. The plant page shows neither a list nor an empty state, and the user has to reload.",
+      "evidence": "journal.vue renders only <AlertMessage v-if=loadError>; [id].vue renders the journalLoadError alert without calling refreshJournal; the SSR error alert on /journal had no button",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "No 10 s timeout on journal requests; Saving… can hang indefinitely",
+      "where": "Add/Save/Delete entry on /plants/{id}, /journal loading",
+      "steps": "Make the API stall (accept the connection but never answer), then click Add entry or Save entry",
+      "expected": "Request fails after 10 s with a visible error and the button is enabled again",
+      "actual": "useApiClient/$fetch.create sets no timeout, so the button stays on 'Saving…' (disabled) and the list stays on 'Loading entries…' for as long as the connection stays open",
+      "evidence": "composables/useApi.ts: $fetch.create has no timeout option; journal code uses it directly",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying a timed-out or failed add can create duplicate journal entries",
+      "where": "POST /api/journal from the New entry form",
+      "steps": "Submit an entry. The server saves it, but the response is lost or times out. The form keeps the text and shows an error, so the user clicks Add entry again.",
+      "expected": "One entry is created",
+      "actual": "A second identical entry is created; POST has no idempotency key or duplicate check",
+      "evidence": "journal.py create_entry always INSERTs; the front end sends no idempotency token",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Deleting an entry that is already gone leaves it on the page with an error",
+      "where": "/plants/{id} Journal, Delete",
+      "steps": "Open a plant's journal in two tabs, delete an entry in one tab, then delete the same entry in the other tab (or retry a delete whose response was lost)",
+      "expected": "The entry disappears (the delete is treated as done), or the list refreshes",
+      "actual": "The second DELETE returns 404, the page shows 'Journal entry not found.' and the stale entry stays listed because no refresh happens on error",
+      "evidence": "Second DELETE /api/journal/4 returned 404 {\"detail\":\"Journal entry not found.\"}; removeEntry only refreshes on success",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Default 'today' date can be refused as future when the browser's time zone is ahead of the server's",
+      "where": "New entry form on /plants/{id}",
+      "steps": "Use a browser in a time zone ahead of the server (e.g. UTC+14 when the server is on CET) and submit an entry with the default date (browser's today)",
+      "expected": "Today's entry is accepted",
+      "actual": "The server checks against its own date.today(), so it answers 422 'Journal date cannot be in the future.'",
+      "evidence": "TZ=Pacific/Kiritimati date gives 2026-11-13 while the server date is 2026-11-12; schemas.JournalEntryIn.not_in_future uses the server's date.today(); the client uses todayIso() in local time",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long unbroken plant names overflow the Journal feed at 375 px",
+      "where": "/journal feed item header",
+      "steps": "Create a plant named with 80 characters and no spaces, add a journal entry, then view /journal at 375 px",
+      "expected": "The name wraps inside the card",
+      "actual": ".journal-feed__plant is a flex item with no overflow-wrap/min-width:0, so the long name pushes the card wider and the page scrolls sideways",
+      "evidence": "main.css: .journal-entry__body has overflow-wrap:anywhere but .journal-feed__plant and .journal-entry__head do not",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Character limit counts UTF-16 units, so emoji entries are capped at about 250",
+      "where": "Journal entry textarea",
+      "steps": "Type or paste 300 emoji into the entry field",
+      "expected": "Up to 500 characters accepted (the server counts code points)",
+      "actual": "textarea maxlength and the 'characters left' counter use .length (UTF-16 units), so each emoji uses 2 and the text is cut off at 250 emoji",
+      "evidence": "JournalEntryForm.vue: :maxlength=500 and remaining = 500 - form.body.length; the server's max_length counts code points",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Plant page lists at most 500 entries while the badge counts all of them",
+      "where": "/plants/{id} Journal",
+      "steps": "Give a plant more than 500 journal entries",
+      "expected": "All entries can be reached",
+      "actual": "Only the newest 500 are fetched (limit=500) with no paging, so older entries can't be seen, edited or deleted",
+      "evidence": "[id].vue fetches /journal with limit 500; there is no pagination",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

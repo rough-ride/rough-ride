@@ -1,0 +1,79 @@
+{
+  "findings": [
+    {
+      "title": "Waterings page crashes on a malformed list response; navigation silently stays on the previous page",
+      "where": "/waterings (GET /api/waterings)",
+      "steps": "Probe waterings-malformed, expectation malformed-list-shows-error-not-crash",
+      "expected": "Waterings page opens and shows an error that the waterings could not be loaded",
+      "actual": "Uncaught 'waterings.value?.reduce is not a function'; URL changes to /waterings but the Beds page stays rendered with no error shown",
+      "evidence": "{\"url\":\"/waterings\",\"headings\":[\"Beds\",\"Add a bed\",\"All beds\",\"North bed\",\"Shade corner\"],\"alerts\":[],\"pageErrors\":[\"waterings.value?.reduce is not a function\"]} | {\"url\":\"/waterings\",\"headings\":[\"Beds\",\"Add a bed\",\"All beds\",\"North bed\",\"Shade corner\"],\"alerts\":[],\"pageErrors\":[\"waterings.value?.reduce is not a function\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-180438-hunt-2bb9",
+        "probe": "waterings-malformed",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard renders a malformed waterings response as rows of 'Never' with blank bed and amount",
+      "where": "/ (Recent waterings, GET /api/waterings?limit=5)",
+      "steps": "Probe dashboard-malformed, expectation malformed-recent-waterings-shows-error",
+      "expected": "An error saying recent waterings could not be loaded",
+      "actual": "Table of rows reading 'Never', empty bed, '–', and no alert",
+      "evidence": "{\"section\":[\"Recent waterings\",\"All waterings\",\"The five most recent waterings\",\"WHEN\\tBED\\tAMOUNT\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\"],\"alerts\":[]} | {\"section\":[\"Recent waterings\",\"All waterings\",\"The five most recent waterings\",\"WHEN\\tBED\\tAMOUNT\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\"],\"alerts\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-180438-hunt-2bb9",
+        "probe": "dashboard-malformed",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard shows 'No waterings yet' when the waterings response is not a list",
+      "where": "/ (Recent waterings)",
+      "steps": "Probe dashboard-empty-object, expectation bad-response-not-shown-as-no-waterings",
+      "expected": "A visible load error, because waterings exist",
+      "actual": "Empty state 'No waterings yet' with no error, so a failed load looks like an empty log",
+      "evidence": "{\"section\":[\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\",\"Go to beds\",\"Garden Log · a journal for one garden\"],\"alerts\":[]} | {\"section\":[\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\",\"Go to beds\",\"Garden Log · a journal for one garden\"],\"alerts\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-180438-hunt-2bb9",
+        "probe": "dashboard-empty-object",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Past-watering form accepts amounts under 0.005 L, then shows and lists them as '0 L'",
+      "where": "/beds Record past watering form, POST /api/waterings",
+      "steps": "Probe past-form-inputs, expectation tiny-litres-refused-or-shown-nonzero",
+      "expected": "Amount below the field's 0.1 L minimum is refused, or at least shown as a non-zero amount",
+      "actual": "0.004 L is saved, and the confirmation reads 'Recorded 0 L on 8 Nov 2026.'; the list shows '0 L'",
+      "evidence": "{\"created\":1,\"alerts\":[\"Recorded 0 L on 8 Nov 2026.\"],\"newest\":{\"id\":6,\"bed_id\":2,\"bed_name\":\"Shade corner\",\"watered_on\":\"2026-11-08\",\"watered_at\":null,\"litres\":0.004}} | {\"created\":1,\"alerts\":[\"Recorded 0 L on 8 Nov 2026.\"],\"newest\":{\"id\":6,\"bed_id\":2,\"bed_name\":\"Shade corner\",\"watered_on\":\"2026-11-08\",\"watered_at\":null,\"litres\":0.004}}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-180438-hunt-2bb9",
+        "probe": "past-form-inputs",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "No way to retry after the waterings list fails to load, short of reloading",
+      "where": "/waterings",
+      "steps": "Probe waterings-page, expectation retry-available-after-error",
+      "expected": "A Try again control (or similar) next to the load error",
+      "actual": "Only the error text is shown; no retry button, and picking the same filter again sends no request",
+      "evidence": "{\"btns\":0} | {\"btns\":0}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-180438-hunt-2bb9",
+        "probe": "waterings-page",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

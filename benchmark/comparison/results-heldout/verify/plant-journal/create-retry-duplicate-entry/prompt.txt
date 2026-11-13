@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-create-retry-duplicate-entry/scratch.
+
+The reported problem: POST /api/journal has no idempotency key or dedupe, so retrying Add entry on the plant page after a lost or timed-out response creates a duplicate entry.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Retry after a timed-out add creates a duplicate entry",
+  "where": "POST /api/journal from /plants/{id}",
+  "steps": "Submit a new entry while the response is lost or slow, then submit again (or reload and resubmit).",
+  "expected": "One entry.",
+  "actual": "There is no idempotency key or dedupe. The first request still lands on the server, so the retry makes a second entry. In testing, the hung 'hang test' POST was later applied server-side.",
+  "evidence": "The 'hang test' entry appeared after the hung request was released. The code has no idempotency handling."
+ },
+ {
+  "title": "Retrying an add after a timeout or lost response creates a duplicate entry",
+  "where": "Plant detail > New entry (POST /api/journal)",
+  "steps": "Submit an entry whose response is lost or slow (network drop after the server commits), see the error, click Add entry again",
+  "expected": "One entry is created",
+  "actual": "There is no idempotency key or duplicate check, so each retry inserts another entry. A retried delete instead shows 'Journal entry not found.' as an error even though it was deleted",
+  "evidence": "journal.py create_entry inserts unconditionally; delete returns 404 on a second call and the UI shows it as a failure"
+ },
+ {
+  "title": "Retrying a timed-out or failed add creates a duplicate entry (no idempotency)",
+  "where": "POST /api/journal from the plant detail page",
+  "steps": "Add an entry while the response gets lost (the server commits but the client sees a network error or timeout), then click Add entry again.",
+  "expected": "Only one entry is created.",
+  "actual": "The form keeps the text and shows an error. A second click sends a new POST with no idempotency key, so the server inserts a second, identical entry.",
+  "evidence": "addEntry() posts with no request key, and create_entry inserts with no dedupe check."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-create-retry-duplicate-entry/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

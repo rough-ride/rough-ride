@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "future-date-timezone-mismatch",
+  "sentence": "The no-future-date check compares against the server's date.today() while the form uses the browser's local date, so a user in a time zone ahead of the server can have today's entry rejected as a future date.",
+  "verdict": "confirmed",
+  "evidence": "The server's local clock reads Thu 2026-11-12 14:24 CET. Code: schemas.JournalEntryIn.not_in_future compares against date.today(), the server's local date. JournalEntryForm takes its default and max from todayIso(), the browser's local date. I opened a Playwright browser context with timezoneId 'Pacific/Auckland', where the browser's time was Fri 2026-11-13 02:26 GMT+13. I signed in as the demo user and went to /plants/2 (Courgette). The journal date input defaulted to 2026-11-13 with max=2026-11-13, so the client accepts it as today. I typed text and clicked 'Add entry' without changing the date. POST /api/journal {entry_on:'2026-11-13', body:'TZ test entry today', plant_id:2} came back 422 'Value error, Journal date cannot be in the future.' and the entry was not saved. So with the default date (the user's own today), the add-entry form is refused for users whose local date is ahead of the server's. The edit path (PUT) uses the same validator.",
+  "severity": "medium",
+  "wallMs": 140957
+}

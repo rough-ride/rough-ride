@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Waterings bed filter is lost on reload/shared link: page reads ?bed= but writes ?bed_id=",
+      "where": "/waterings (frontend/app/pages/waterings.vue)",
+      "steps": "Open /waterings (or follow 'Watering history' from a bed, which uses ?bed=2). Pick 'North bed' in the Bed select. URL becomes /waterings?bed_id=1. Reload the page or open that URL in a new tab.",
+      "expected": "The page still shows only North bed waterings with North bed selected.",
+      "actual": "The filter is ignored on load: the select shows 'All beds' and every watering is listed.",
+      "evidence": "After selecting bed 1 the URL was http://localhost:3790/waterings?bed_id=1. After reload the select value was '' and it showed '7 waterings, 16 L in total' for all beds. The initial state reads route.query.bed but the watch writes { bed_id }.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page crashes with a TypeError when the list response is not an array",
+      "where": "/waterings",
+      "steps": "Make GET /api/waterings return 200 with {\"detail\":\"x\"} (for example a proxy or odd response), then navigate to Waterings from the nav.",
+      "expected": "An error state saying the waterings could not be loaded, with a retry.",
+      "actual": "Unhandled 'TypeError: waterings.value?.reduce is not a function'. The error overlay appears and navigation does not finish.",
+      "evidence": "Error dialog text: 'TypeError ... waterings.value?.reduce is not a function'. The totalLitres computed assumes an array.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Dashboard shows 'No waterings yet' when the waterings response is unreadable",
+      "where": "/ (dashboard, Recent waterings)",
+      "steps": "Make GET /api/waterings?limit=5 return 200 with a non-array JSON body ({\"detail\":\"x\"}) and navigate to the Dashboard from another page.",
+      "expected": "An error message for the Recent waterings section.",
+      "actual": "The empty state 'No waterings yet – Use “Water now” on a bed to record one.' even though waterings exist.",
+      "evidence": "The Recent waterings section rendered the EmptyState, because v-else-if=\"waterings\" is true for any non-null object.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Watering load errors have no retry (dashboard and waterings page)",
+      "where": "/ Recent waterings section; /waterings",
+      "steps": "Make GET /api/waterings return 500, then navigate to Waterings or the Dashboard in the app.",
+      "expected": "The error message comes with a Retry button that reloads the data without reloading the page.",
+      "actual": "Only 'Could not load waterings.' / 'Could not load recent waterings.' appears, with no retry button. The dashboard does not even destructure refresh for waterings.",
+      "evidence": "On /waterings with the API failing, the main area had no buttons (button list was []). index.vue takes only data/error from wateringsResult.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Bed filter silently shows only 'All beds' when the beds request fails",
+      "where": "/waterings",
+      "steps": "Make GET /api/beds fail (500) and navigate to Waterings.",
+      "expected": "A message that beds could not be loaded, with a retry.",
+      "actual": "The Bed select has only 'All beds' and nothing says why. The beds error is never read.",
+      "evidence": "Main text with the beds request failing: 'Bed\\nAll beds' and no bed options or error. The code destructures only { data: beds }.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "'Water now' / 'Save watering' spin forever when the request hangs (no 10 s timeout)",
+      "where": "/beds Water now and Record past watering; /waterings Delete",
+      "steps": "Make POST /api/waterings hang (never respond) and click 'Water now' on a bed. Wait more than 10 seconds.",
+      "expected": "The request times out after 10 s, an error shows, and the button is enabled again.",
+      "actual": "The button stays 'Watering…' and disabled indefinitely. No timeout is set on the api client calls.",
+      "evidence": "After 12 s the button text was still 'Watering… North bed' and isDisabled() was true. Delete on /waterings uses the same pattern (suspected to hang the same way).",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Retrying a watering after a timeout or lost response records a duplicate",
+      "where": "POST /api/waterings",
+      "steps": "Click 'Water now'. The request reaches the server but the response is lost or times out. Click 'Water now' again.",
+      "expected": "One watering is recorded.",
+      "actual": "Two waterings are recorded. There is no idempotency key or de-duplication, and nothing can be sent to dedupe. Similarly, retrying a Delete whose first attempt succeeded shows 'Watering not found.' as an error.",
+      "evidence": "Reading the code: create_watering inserts unconditionally and the client sends no request id. Double-click itself is guarded (one POST observed).",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Huge bed_id makes POST /api/waterings return 500",
+      "where": "POST /api/waterings",
+      "steps": "POST /api/waterings with body {\"bed_id\": \"99999999999999999999\"} (a JSON number this large reset the connection).",
+      "expected": "A 422 validation error.",
+      "actual": "500 Internal Server Error (SQLite integer overflow in ensure_bed_exists). bed_id has no upper bound. The GET ?bed_id= filter has the same unbounded int.",
+      "evidence": "Response: '500 Internal Server Error'. Sending the number unquoted gave ECONNRESET.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Tiny litre amounts are saved but shown as '0 L'; year-1 dates are accepted",
+      "where": "/beds Record past watering; /waterings; dashboard",
+      "steps": "Record a watering with 0.0001 litres (or 0.004). Separately, record one dated 0001-01-01 (the server accepts it, and the form uses novalidate).",
+      "expected": "Amounts are either refused below the stated 0.1 minimum or shown accurately. Absurd dates are refused with a reason.",
+      "actual": "Rows show '0 L'. Year-1 entries are saved and show as '1 Jan 1' at the bottom of the history.",
+      "evidence": "The waterings list showed '12 Nov 2026, 19:08  North bed  0 L' and '1 Jan 1  North bed  1 L'. The API returned 201 for litres 0.0001 and watered_on 0001-01-01.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "'Water now' date uses the server's time zone, not the gardener's",
+      "where": "POST /api/waterings (no date)",
+      "steps": "Use the app from a browser in a time zone different from the server. Click 'Water now' late in the evening or early in the morning.",
+      "expected": "The watering is filed under the gardener's local date, consistent with the past-watering date picker (browser local) and the displayed time.",
+      "actual": "watered_on is the server's local date (now.astimezone()), while the time shows in the browser's zone. The entry can sort under the wrong day relative to past waterings, and the server's future-date check can reject today's date entered in the form.",
+      "evidence": "Reading the code: create_watering computes watered_on with server-local astimezone(), and not_in_future uses the server's date.today().",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

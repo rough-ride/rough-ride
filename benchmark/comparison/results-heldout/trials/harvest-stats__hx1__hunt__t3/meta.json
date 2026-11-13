@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__hx1__hunt__t3",
+  "feature": "harvest-stats",
+  "bug": "hx1",
+  "arm": "hunt",
+  "trial": 3,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T18:00:15.311Z",
+  "materializeMs": 5314,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__hx1__hunt__t3/variant/qkmewtjx/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "6d044acd-3efa-4317-aab3-09ed9678521c",
+  "loadBefore": [
+    6.765625,
+    7.5068359375,
+    9.30029296875
+  ],
+  "loadAfter": [
+    8.59375,
+    7.46142578125,
+    8.75634765625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 265503,
+  "reportedCostUsd": 0.3184164,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 18,
+      "outputTokens": 7544,
+      "cacheReadInputTokens": 144397,
+      "cacheCreationInputTokens": 27717,
+      "webSearchRequests": 0,
+      "costUSD": 0.3184164,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1548,
+      "cacheCreationEphemeral5mInputTokens": 27717,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 4m05s | run 20261112-190030-hunt-bfab | 4 confirmed, 0 dropped on re-run\ntarget: http://localhost:3790\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Stats page shows results for an older date range when responses arrive out of order\n   where: /stats (GET /api/stats/harvests)\n   expected: After changing From to 2026-06-01 and then to 2026-08-01, the page shows stats from 1 Aug 2026\n   saw: {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"5 harvests from 1 Jun 2026 to 31 Dec 2026\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\",\"350 g · Little Gem\",\"View\",\"Lettuce\",\"Weight by plant and month\",\"2.6 kg total\",\"Harvest weight per plant and month, 1 Jun 2026 to 31 Dec 2026\",\"PLANT\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Sungold\\t–\\t450 g\\t600 g\\t–\\t1.0…\n   repro: .rough-ride/runs/20261112-190030-hunt-bfab/probes/faults.mjs (expectation \"newest-response-wins\")\n2. MEDIUM Stats page crashes with an uncaught TypeError when the stats response is missing fields\n   where: /stats\n   expected: An error message, with no uncaught exception\n   saw: {\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]}\n   repro: .rough-ride/runs/20261112-190030-hunt-bfab/probes/faults.mjs (expectation \"empty-object-no-crash\")\n3. MEDIUM When loading fails, the stats page still shows the old range summary next to the error\n   where: /stats\n   expected: When the request for the new range fails, only the error shows, with no claim about the data\n   saw: {\"alerts\":[\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\",\"Garden Log · a journal for one garden\"]}\n   repro: .rough-ride/runs/20261112-190030-hunt-bfab/probes/faults.mjs (expectation \"error-does-not-show-stale-range\")\n4. MEDIUM A stats request that never answers leaves 'Loading stats…' on screen forever over the old range's data\n   where: /stats\n   expected: The request times out with an error, or the page offers a retry\n   saw: {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]}\n   repro: .rough-ride/runs/20261112-190030-hunt-bfab/probes/urls.mjs (expectation \"hang-not-loading-forever\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a30007c1b84de371a.jsonl",
+    "agent-a30007c1b84de371a.meta.json"
+  ],
+  "usage": {
+    "input": 18,
+    "output": 7544,
+    "cacheRead": 144397,
+    "cacheWrite": 27717,
+    "requests": 9,
+    "toolCalls": {
+      "Bash": 8,
+      "Read": 1
+    }
+  },
+  "findingCount": 4,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T18:04:56.412Z"
+}

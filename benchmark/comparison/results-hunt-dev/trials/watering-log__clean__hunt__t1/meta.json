@@ -1,0 +1,74 @@
+{
+  "id": "watering-log__clean__hunt__t1",
+  "feature": "watering-log",
+  "bug": "clean",
+  "arm": "hunt",
+  "trial": 1,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:22:09.758Z",
+  "materializeMs": 7198,
+  "repo": "$TMPDIR/rr-bench/work/watering-log__clean__hunt__t1/variant/etg674iq/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/beds.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/beds.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/waterings.py\n?? frontend/app/pages/waterings.vue\n",
+  "sessionId": "5be974ff-ed01-4c48-bace-f0a2f937b909",
+  "loadBefore": [
+    11.189453125,
+    8.3994140625,
+    6.3330078125
+  ],
+  "loadAfter": [
+    10.58984375,
+    7.49462890625,
+    6.46923828125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 346193,
+  "reportedCostUsd": 0.5038724,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 26,
+      "outputTokens": 12078,
+      "cacheReadInputTokens": 309192,
+      "cacheCreationInputTokens": 40074,
+      "webSearchRequests": 0,
+      "costUSD": 0.5038724,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2782,
+      "cacheCreationEphemeral5mInputTokens": 40074,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 5m28s | run 20261112-172230-hunt-1ad5 | 3 confirmed, 0 dropped on re-run\ntarget: http://localhost:3790\n\nFindings (each reproduced twice from scratch)\n1. MEDIUM Past watering of 0.001 L is accepted but shown as \"0 L\"\n   where: /beds Record past watering form (POST /api/waterings), also /waterings list\n   expected: An amount that rounds to zero is refused (the field says min 0.1, step 0.1), or it is shown as the amount that was saved\n   saw: {\"alerts\":[\"Recorded 0 L on 12 Nov 2026.\"]}\n   repro: .rough-ride/runs/20261112-172230-hunt-1ad5/probes/beds-ui.mjs (expectation \"tiny-litres-not-shown-as-0-L\")\n2. MEDIUM Waterings page crashes on a malformed waterings response\n   where: /waterings bed filter (GET /api/waterings?bed_id=)\n   expected: A visible error and no uncaught exception\n   saw: {\"alerts\":[\"Loading waterings…\"],\"pe\":[\"waterings.value?.reduce is not a function\"],\"t\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"Loading waterings…\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\",\"ACTIONS\",\"12 Nov 2026, 17:26\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"12 Nov 2026, 17:26\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"12 Nov 2026\\tNorth bed\\t0 L\\tDelete\",\"watering of North bed\",\"12 Nov 2026\\tNorth bed\\t0 L\\tDelete\"]}\n   repro: .rough-ride/runs/20261112-172230-hunt-1ad5/probes/waterings-faults.mjs (expectation \"malformed-shows-error\")\n3. LOW    Unknown bed id in the URL filters the list while the select shows \"All beds\"\n   where: /waterings?bed=999\n   expected: The filter control matches the filter that is applied, or the unknown bed is reported\n   saw: {\"sel\":{\"label\":\"Bed\",\"value\":\"\"},\"t\":[\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\",\"Garden Log · a journal for one garden\"]}\n   repro: .rough-ride/runs/20261112-172230-hunt-1ad5/probes/waterings-delete.mjs (expectation \"unknown-bed-filter-consistent\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-ad49e232851ce8bac.jsonl",
+    "agent-ad49e232851ce8bac.meta.json"
+  ],
+  "usage": {
+    "input": 26,
+    "output": 12078,
+    "cacheRead": 309192,
+    "cacheWrite": 40074,
+    "requests": 13,
+    "toolCalls": {
+      "Bash": 12,
+      "Read": 1
+    }
+  },
+  "findingCount": 3,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |   4 +-\n backend/db.py                    |  14 +++-\n backend/routers/beds.py          |   8 ++-\n backend/schemas.py               |  29 +++++++++\n frontend/app/assets/css/main.css |  24 ++++++-\n frontend/app/layouts/default.vue |   1 +\n frontend/app/pages/beds.vue      | 134 ++++++++++++++++++++++++++++++++++++++-\n frontend/app/pages/index.vue     |  44 ++++++++++++-\n frontend/app/types/api.ts        |  17 +++++\n frontend/app/utils/format.ts     |  26 ++++++++\n 10 files changed, 293 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T16:28:14.371Z"
+}

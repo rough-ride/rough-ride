@@ -1,0 +1,72 @@
+{
+  "id": "harvest-stats__to-date-excluded__baseline__t3",
+  "feature": "harvest-stats",
+  "bug": "to-date-excluded",
+  "arm": "baseline",
+  "trial": 3,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T09:47:18.160Z",
+  "materializeMs": 13583,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__to-date-excluded__baseline__t3/variant/tsbdb4r8/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "efc13b84-5d30-40e7-984b-921b083647a8",
+  "loadBefore": [
+    20.3671875,
+    14.0615234375,
+    11.791015625
+  ],
+  "loadAfter": [
+    11.740234375,
+    13.1025390625,
+    11.6484375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 77249,
+  "reportedCostUsd": 0.31613460000000004,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 18,
+      "outputTokens": 4137,
+      "cacheReadInputTokens": 234653,
+      "cacheCreationInputTokens": 23299,
+      "webSearchRequests": 0,
+      "costUSD": 0.31613460000000004,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 686,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 23299,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 9,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "The main bug is that the stats page leaves out harvests made on the \"To\" date. I confirmed that against the running app. I found four more problems, but those come only from reading the code. All five are in `out/findings.json`.\n\n1. **Harvests on the \"To\" date are dropped (high, observed).** Both stats queries keep harvests dated strictly before the To date, when they should include it.\n   - `/stats?from=2026-07-15&to=2026-07-15` says \"0 harvests\" and \"No harvests in this range\", even though Tomato has a 450 g harvest that day.\n   - From 1 to 20 July, the API leaves out the 1200 g Courgette harvest on 20 July and reports only 450 g.\n\n2. **31 December falls outside \"this year\" (medium, suspected).** The same off-by-one cuts 31 December out of the default stats range and out of the dashboard's \"Top plant this year\". The dashboard included that day before this change, so this is a regression. The best plant can also disagree with the dashboard's yearly total, which still counts 31 December. I couldn't test this because the server refuses harvests dated in the future.\n\n3. **The stats error message has no retry (medium, suspected).** If the request fails, the page shows the message and nothing else. To try again, the user has to change a date or reload the page.\n\n4. **No 10-second timeout (medium, suspected).** Requests are sent without a timeout, so if the server hangs, \"Loading stats…\" can stay on screen forever.\n\n5. **Impossible dates show a raw technical message (low, suspected).** The page only checks that a date in the URL has the right shape, so `?from=2026-02-30` gets through. It then shows the server's message as is, roughly \"Query.from: Input should be a valid date or datetime, day value is outside expected range\".\n\nThings that worked:\n- The API answers bad dates and a From date after the To date with 422 errors, not crashes.\n- The empty state appears when a range has no harvests.\n- At 375 px the date fields stack into one column, and the wide table scrolls inside its own box rather than the whole page.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 18,
+    "output": 4137,
+    "cacheRead": 234653,
+    "cacheWrite": 23299,
+    "requests": 9,
+    "toolCalls": {
+      "Bash": 8
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 5,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T09:49:08.338Z"
+}

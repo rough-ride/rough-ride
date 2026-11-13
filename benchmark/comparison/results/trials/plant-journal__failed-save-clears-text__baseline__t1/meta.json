@@ -1,0 +1,72 @@
+{
+  "id": "plant-journal__failed-save-clears-text__baseline__t1",
+  "feature": "plant-journal",
+  "bug": "failed-save-clears-text",
+  "arm": "baseline",
+  "trial": 1,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T09:23:45.514Z",
+  "materializeMs": 6346,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__failed-save-clears-text__baseline__t1/variant/kxll01n0/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "4f8d3b35-c8d8-4505-b11b-29f87b3cc213",
+  "loadBefore": [
+    5.33154296875,
+    5.68603515625,
+    8.30517578125
+  ],
+  "loadAfter": [
+    4.24072265625,
+    5.40283203125,
+    7.92822265625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 92474,
+  "reportedCostUsd": 0.390545,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 18,
+      "outputTokens": 6168,
+      "cacheReadInputTokens": 253285,
+      "cacheCreationInputTokens": 27057,
+      "webSearchRequests": 0,
+      "costUSD": 0.390545,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 988,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 27057,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 10,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 7 problems and wrote them to `out/findings.json`. There was no browser available, so I tested the API with curl and checked the pages by reading the code. \"Observed\" means I reproduced it against the running API; \"suspected\" means I only saw it in the code.\n\n**High**\n1. **A failed \"Add entry\" deletes what the user typed** (suspected). In `pages/plants/[id].vue`, `addEntry()` clears the form in its `finally` block, which runs whether the save worked or failed. So when the save fails, the error appears above an empty text box.\n\n**Medium**\n2. **No retry when the journal fails to load** (suspected). The Journal page and the Journal section on a plant's page only show an error message. On the Journal page the only way to try again is to change the search text; on the plant page it takes a reload.\n3. **No 10-second timeout, and retried adds can create duplicates** (suspected). Requests have no timeout, so \"Saving…\" can stay on and the button stay disabled forever if the server hangs. Nothing stops a second POST from adding a second identical entry when the user retries.\n\n**Low**\n4. **A search over 80 characters shows a raw validation error** (observed). The API answers 422, and the list is replaced with \"Q: String should have at most 80 characters\". The search box has no length limit to prevent this.\n5. **Very large ids cause a 500 error** (observed). An id of 99999999999999999999999 gives a 500 instead of a 4xx on all four journal endpoints (list, add, edit, delete). The existing plant and harvest endpoints already do the same, so this change copies an older problem.\n6. **Emoji entries stop at 250 in the browser** (suspected). The server accepts 500 emoji (observed: 201). The text box's limit and the \"characters left\" counter count each emoji as two, so the browser stops at 250 and shows the wrong number left.\n7. **Retrying a delete shows an error even though it worked** (suspected). If the first delete went through but its response was lost, the second attempt gets a 404, which appears as \"Journal entry not found.\"\n\nThe server correctly rejected future dates, blank text and text over 500 characters. Markup, quotes and other scripts were saved without problems. I deleted the two test entries I added to Courgette, so the sample data is back as it was.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 18,
+    "output": 6168,
+    "cacheRead": 253285,
+    "cacheWrite": 27057,
+    "requests": 9,
+    "toolCalls": {
+      "Bash": 9
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 7,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T09:25:32.977Z"
+}

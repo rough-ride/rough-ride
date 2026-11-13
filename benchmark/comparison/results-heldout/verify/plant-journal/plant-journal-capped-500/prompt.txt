@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-plant-journal-capped-500/scratch.
+
+The reported problem: The plant detail journal fetches at most 500 entries with no paging or notice, so older entries are unreachable while the badge shows the full count.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Plant page lists at most 500 entries while the badge counts all of them",
+  "where": "/plants/{id} Journal",
+  "steps": "Give a plant more than 500 journal entries",
+  "expected": "All entries can be reached",
+  "actual": "Only the newest 500 are fetched (limit=500) with no paging, so older entries can't be seen, edited or deleted",
+  "evidence": "[id].vue fetches /journal with limit 500; there is no pagination"
+ },
+ {
+  "title": "Plant detail silently shows at most 500 entries",
+  "where": "/plants/:id Journal section",
+  "steps": "Create more than 500 entries for one plant.",
+  "expected": "All entries, or a 'showing latest N of M' notice.",
+  "actual": "The list is fetched with limit=500 and cut off silently, while the badge shows the full count.",
+  "evidence": "[id].vue: useApiFetch('/journal', {query:{plant_id, limit: 500}})."
+ },
+ {
+  "title": "Plant detail shows at most 500 journal entries while the badge counts all of them",
+  "where": "/plants/:id",
+  "steps": "Give a plant more than 500 entries.",
+  "expected": "All entries are reachable (pagination or 'show more').",
+  "actual": "The list is capped by limit=500 with no indication, and the badge shows the full count.",
+  "evidence": "From the code: useApiFetch('/journal', {query:{plant_id, limit: 500}})."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-plant-journal-capped-500/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

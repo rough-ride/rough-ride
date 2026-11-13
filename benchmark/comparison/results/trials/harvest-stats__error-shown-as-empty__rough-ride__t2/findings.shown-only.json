@@ -1,0 +1,103 @@
+{
+  "findings": [
+    {
+      "title": "link \"Stats\" stays busy after GET /api/stats/harvests fails with 500",
+      "where": "/stats GET /api/stats/harvests (entry)",
+      "steps": "In the browser: harvest-stats/GET /api/stats/harvests #1/500!; checks that failed: settles, retry-recovers",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed z70ijo78) after 10 s | retry-recovers: step 15 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed z70ijo78) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 2dl7d1x7) after 10 s | retry-recovers: step 15 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 2dl7d1x7) after 10 s | retry-recovers: step 15 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1gp3k6wf) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1gp3k6wf) after 10 s | retry-recovers: step 15 (expect rowheader \"Plant ${unique}\"): not visible after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed z70ijo78) after 10 s | retry-recovers: step 15 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed z70ijo78) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 2dl7d1x7) after 10 s | retry-recovers: step 15 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 2dl7d1x7) after 10 s | retry-recovers: step 15 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1gp3k6wf) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1gp3k6wf) after 10 s | retry-recovers: step 15 (expect rowheader \"Plant ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-093027-plan-7ikc",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/GET /api/stats/harvests #1/500!",
+          "harvest-stats/GET /api/stats/harvests #1/empty-200!",
+          "harvest-stats/GET /api/stats/harvests #1/400!",
+          "harvest-stats/GET /api/stats/harvests #1/reset!",
+          "harvest-stats/GET /api/stats/harvests #1/401!",
+          "harvest-stats/GET /api/stats/harvests #1/429!"
+        ]
+      }
+    },
+    {
+      "title": "label \"From\" stays busy after GET /api/stats/harvests fails with 500",
+      "where": "/stats GET /api/stats/harvests",
+      "steps": "In the browser: harvest-stats/GET /api/stats/harvests #2/500!; checks that failed: settles, retry-recovers",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed z70ijo78) after 10 s | retry-recovers: step 17 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed z70ijo78) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 2dl7d1x7) after 10.1 s | retry-recovers: step 17 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 2dl7d1x7) after 10.1 s | retry-recovers: step 17 (expect rowheader \"Plant ${unique}\"): not visible after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed z70ijo78) after 10 s | retry-recovers: step 17 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed z70ijo78) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 2dl7d1x7) after 10.1 s | retry-recovers: step 17 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 2dl7d1x7) after 10.1 s | retry-recovers: step 17 (expect rowheader \"Plant ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-093027-plan-7ikc",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/GET /api/stats/harvests #2/500!",
+          "harvest-stats/GET /api/stats/harvests #2/empty-200!",
+          "harvest-stats/GET /api/stats/harvests #2/400!",
+          "harvest-stats/GET /api/stats/harvests #2/reset!"
+        ]
+      }
+    },
+    {
+      "title": "label \"From\" stays busy after GET /api/stats/harvests answers 401 (signed out)",
+      "where": "/stats GET /api/stats/harvests (entry)",
+      "steps": "In the browser: harvest-stats/GET /api/stats/harvests #2/401!; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 1gp3k6wf) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 1gp3k6wf) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-093027-plan-7ikc",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/GET /api/stats/harvests #2/401!"
+        ]
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after POST /api/beds fails with 500",
+      "where": "/beds POST /api/beds",
+      "steps": "In the browser: harvest-stats/POST /api/beds #1/500!; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 2vcsfo1s) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 2vcsfo1s) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-093027-plan-7ikc",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/POST /api/beds #1/500!",
+          "harvest-stats/label \"Name\"/empty",
+          "harvest-stats/POST /api/beds #1/double-submit",
+          "harvest-stats/POST /api/beds #1/reset!"
+        ]
+      }
+    },
+    {
+      "title": "button \"Log harvest\" stays busy after POST /api/harvests fails with 500",
+      "where": "/harvests/new POST /api/harvests",
+      "steps": "In the browser: harvest-stats/POST /api/harvests #1/500!; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 2dl7d1x7) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 3seaeah6) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 2dl7d1x7) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-093027-plan-7ikc",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/POST /api/harvests #1/500!",
+          "harvest-stats/label \"Weight (grams)\"/huge",
+          "harvest-stats/POST /api/harvests #1/double-submit",
+          "harvest-stats/POST /api/harvests #1/reset!"
+        ]
+      }
+    }
+  ]
+}

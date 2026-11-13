@@ -1,0 +1,199 @@
+{
+  "findings": [
+    {
+      "title": "button \"Add bed\" stays busy after GET /api/beds returns malformed JSON",
+      "where": "/beds",
+      "steps": "In the browser: /beds | malformed-json! on GET /api/beds #1 | fails: settles, no-uncaught-error",
+      "expected": "",
+      "actual": "no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function | settles: click button \"Add bed\": control stays disabled (Adding\\u2026) after 10.1 s",
+      "evidence": "no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function | settles: click button \"Add bed\": control stays disabled (Adding\\u2026) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "shown",
+        "repro": "r46"
+      }
+    },
+    {
+      "title": "Typed values lost after GET /api/beds fails with 500 (button \"Add bed\")",
+      "where": "/beds",
+      "steps": "In the browser: /beds | 500!, 400!, reset!, 429! on GET /api/beds #1 | fails: values-survive, retry-recovers",
+      "expected": "",
+      "actual": "values-survive: label \"Name\" held \"Plot 2icyr3nx\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot x3lbu0lw\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot 7z9ci6p7\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot 1l9nrtr2\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s",
+      "evidence": "values-survive: label \"Name\" held \"Plot 2icyr3nx\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot x3lbu0lw\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot 7z9ci6p7\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s | values-survive: label \"Name\" held \"Plot 1l9nrtr2\", then \"\" after the failed request | retry-recovers: step 5 (click button \"Water now Plot ${unique}\"): not found after 10 s",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "shown",
+        "repro": "r06"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/waterings fails with 500",
+      "where": "/waterings",
+      "steps": "In the browser: /waterings | 500!, 400!, reset!, 429! on GET /api/waterings #2 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s",
+      "evidence": "retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "shown",
+        "repro": "r08"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/waterings fails with 500",
+      "where": "/",
+      "steps": "In the browser: / | 500!, 400!, reset!, 429! on GET /api/waterings #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "capped",
+        "repro": "r64"
+      }
+    },
+    {
+      "title": "Uncaught error on /beds after bad input negative in label \"Litres\"",
+      "where": "/beds",
+      "steps": "In the browser: /beds | 2 bad inputs on label \"Litres\" | fails: no-uncaught-error",
+      "expected": "",
+      "actual": "no-uncaught-error: overlay: dev error overlay | no-uncaught-error: overlay: dev error overlay",
+      "evidence": "no-uncaught-error: overlay: dev error overlay | no-uncaught-error: overlay: dev error overlay",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "not-confirmed",
+        "repro": "r44"
+      }
+    },
+    {
+      "title": "Uncaught error on /waterings after GET /api/waterings returns malformed JSON",
+      "where": "/waterings",
+      "steps": "In the browser: /waterings | malformed-json! on GET /api/waterings #1 | fails: no-uncaught-error",
+      "expected": "",
+      "actual": "no-uncaught-error: overlay: dev error overlay",
+      "evidence": "no-uncaught-error: overlay: dev error overlay",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "shown",
+        "repro": "r47"
+      }
+    },
+    {
+      "title": "Uncaught error on /waterings after GET /api/waterings returns malformed JSON",
+      "where": "/waterings",
+      "steps": "In the browser: /waterings | malformed-json! on GET /api/waterings #2 | fails: no-uncaught-error",
+      "expected": "",
+      "actual": "no-uncaught-error: overlay: dev error overlay",
+      "evidence": "no-uncaught-error: overlay: dev error overlay",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "shown",
+        "repro": "r48"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/auth/me fails with 500",
+      "where": "/login",
+      "steps": "In the browser: /login | 500!, 400!, reset!, 429! on GET /api/auth/me #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "capped",
+        "repro": "r67"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after POST /api/auth/login fails with 500",
+      "where": "/login",
+      "steps": "In the browser: /login | 500!, reset!, 400!, 429! on POST /api/auth/login #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s",
+      "evidence": "retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "capped",
+        "repro": "r66"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/dashboard/summary fails with 500",
+      "where": "/",
+      "steps": "In the browser: / | 500!, 400!, reset!, 429! on GET /api/dashboard/summary #1 | fails: retry-recovers | page showed a record from filter-waterings/GET /api/waterings #2/hang!",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "capped",
+        "repro": "r68"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/tasks/upcoming fails with 500",
+      "where": "/",
+      "steps": "In the browser: / | 500!, 400!, reset!, 429! on GET /api/tasks/upcoming #1 | fails: retry-recovers | page showed a record from filter-waterings/GET /api/waterings #2/hang!",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "capped",
+        "repro": "r69"
+      }
+    },
+    {
+      "title": "\"undefined\" shown on / after GET /api/dashboard/summary returns malformed JSON",
+      "where": "/",
+      "steps": "In the browser: / | malformed-json! on GET /api/dashboard/summary #1 | fails: no-broken-text | page showed a record from filter-waterings/GET /api/waterings #2/hang!",
+      "expected": "",
+      "actual": "no-broken-text: \"undefined\" in a new line",
+      "evidence": "no-broken-text: \"undefined\" in a new line",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "capped",
+        "repro": "r91"
+      }
+    },
+    {
+      "title": "\"NaN\" shown on / after GET /api/tasks/upcoming returns malformed JSON",
+      "where": "/",
+      "steps": "In the browser: / | malformed-json! on GET /api/tasks/upcoming #1 | fails: no-broken-text | page showed a record from filter-waterings/GET /api/waterings #2/hang!",
+      "expected": "",
+      "actual": "no-broken-text: \"NaN\" in a new line",
+      "evidence": "no-broken-text: \"NaN\" in a new line",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-110758-plan-epyq",
+        "state": "capped",
+        "repro": "r92"
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "negative-litres",
+  "key": "waterings-uncaught-error-signed-out-reload",
+  "sentence": "Reloading /waterings while signed out triggers the dev error overlay.",
+  "verdict": "not-reproduced",
+  "evidence": "In Playwright: (1) cleared cookies and loaded/reloaded /waterings -> SSR global auth middleware redirected to /login?redirect=/waterings, login form shown, no error overlay, no pageerror. (2) Signed in, opened /waterings, cleared cookies, reloaded -> same clean redirect. (3) Signed in, opened /waterings, logged out via API but kept the stale garden_session cookie, reloaded -> clean redirect to login. (4) Reproduced the report's preamble: on /beds routed POST /api/waterings to 500 for a past watering (inline 'boom' error shown, handled), then went to /waterings, clicked Sign out, navigated to and reloaded /waterings -> clean redirect to /login?redirect=/waterings. No nuxt/vite error overlay element and no uncaught page errors in any run; the only console error was the 500 I injected myself. Code check: auth.global.ts runs before the page's top-level awaited useApiFetch calls, and loadCurrentUser catches failures and returns null.",
+  "severity": null,
+  "wallMs": 100430
+}

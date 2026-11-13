@@ -1,0 +1,75 @@
+{
+  "id": "harvest-stats__clean__playwright__t1",
+  "feature": "harvest-stats",
+  "bug": "clean",
+  "arm": "playwright",
+  "trial": 1,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:25:20.628Z",
+  "materializeMs": 5917,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__clean__playwright__t1/variant/p14gl0hj/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "129e621b-930d-4f21-b3d0-fdb2ea134440",
+  "loadBefore": [
+    5.2587890625,
+    4.74462890625,
+    4.89111328125
+  ],
+  "loadAfter": [
+    4.80712890625,
+    4.72509765625,
+    4.8349609375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 229571,
+  "reportedCostUsd": 0.739731,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 44,
+      "outputTokens": 10429,
+      "cacheReadInputTokens": 839315,
+      "cacheCreationInputTokens": 45389,
+      "webSearchRequests": 0,
+      "costUSD": 0.739731,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2268,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 45389,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 23,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 7 bugs and saved them to `out/findings.json`. I saw every one in the running app. Most are in how the Stats page handles a failing or broken server.\n\nThe basic feature works: the Stats link in the navigation, the From/To dates defaulting to this year, the plant-by-month table with a total row, the three best plants, and this year's top plant on the dashboard. Rejecting a From date after the To date works, and the server answers bad dates with a 4xx, never a 5xx. A slow older answer did not overwrite newer results, and the page fit 375 px with no sideways scrolling.\n\n**Medium**\n1. **Never times out:** if the stats request hangs, the page still shows \"Loading stats…\" after 14 seconds. The page's data request has no timeout.\n2. **No retry:** a failed load shows \"Could not load harvest stats.\" with no Try again button. Re-entering the same date doesn't retry either. The only ways out are picking a different date or reloading the page.\n3. **Unreadable reply crashes the page:** if the server answers \"OK\" but sends HTML instead of data, the page throws an error while drawing. It then keeps the previous range's best plants and table under a \"Loading stats…\" that never clears, so old figures look like the new range's results.\n\n**Low**\n4. **Missing fields:** when the reply has empty (null) fields, the page shows \"– total\", \"– to –\" and a plant row with no name, and stays stuck on \"Loading stats…\".\n5. **Clearing From is misleading:** with To set to 31 Dec 2025, clearing From makes the server quietly use 1 Jan 2026. The page then says \"The From date must be on or before the To date\" while the From field looks empty. Opening that link directly shows the same error.\n6. **Empty months are left out:** only months that have harvests get a column. Over a long range the table jumps from Aug 2025 to Jun 2026 with no sign of the gap.\n7. **Long plant names are unreadable:**\n   - The Best plants cards and the dashboard's top-plant card cut long names off (\"Supercalifragilis…\") with no tooltip.\n   - In the table, the plant column grows as wide as the phone screen, so every month column is off-screen until you scroll.\n\nI didn't properly test session expiry. I faked a \"not signed in\" reply while the real session was still valid, and the app just went to the dashboard, so that test proves nothing. Double-submit doesn't apply because the page has no forms that save anything.\n\nTo test long names I added a plant with one 1,000 kg harvest, then deleted the plant, so the sample data is back as it was. My screenshot is at `scratch/stats375.png`.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 44,
+    "output": 10429,
+    "cacheRead": 839315,
+    "cacheWrite": 45389,
+    "requests": 21,
+    "toolCalls": {
+      "Bash": 10,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 10,
+      "Read": 1
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 7,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:29:24.236Z"
+}

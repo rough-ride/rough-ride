@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Journal search with an apostrophe crashes the API (SQL built by string interpolation, injectable)",
+      "where": "GET /api/journal?q=… ; /journal page search box",
+      "steps": "On /journal type it's into Search (or open /journal?q=it's directly). Or curl GET /api/journal?q=it%27s",
+      "expected": "Search treats the text literally and returns matching entries (or 'No entries match')",
+      "actual": "API returns 500 Internal Server Error; page shows 'Could not load the journal.' Search term is f-string-interpolated into the LIKE clause (backend/routers/journal.py list_entries), so q=zzz%' OR 1=1 OR '%'=' returns every entry (SQL injection). % and _ also act as wildcards.",
+      "evidence": "curl q=it's -> 500; q=' OR 1=1 -- -> 500; injected OR 1=1 returned all 3 entries. In browser, typing it's showed 'Could not load the journal.'",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Retrying an Add entry after a lost/timed-out response creates a duplicate entry",
+      "where": "Plant detail page, Journal 'Add entry' / POST /api/journal",
+      "steps": "On /plants/1, type an entry; make the POST reach the server but the response fail (network timeout). Page shows 'The garden server could not be reached.'; click Add entry again.",
+      "expected": "One entry is created",
+      "actual": "Two identical entries are created; count jumps from 2 to 4 entries' worth (two DUPTEST rows). No idempotency key or dedupe.",
+      "evidence": "After retry the list showed 'DUPTEST 1794483387265' twice on 12 Nov 2026",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors offer no retry",
+      "where": "/journal page and plant detail Journal section",
+      "steps": "Make GET /api/journal fail (e.g. 503) and open /journal, or navigate from /plants to a plant",
+      "expected": "Error message with a Retry button that refetches without reloading",
+      "actual": "Only 'Could not load the journal.' text is shown, with no retry control; on plant detail the only way to recover is a full reload",
+      "evidence": "Retry/Try again button count = 0 on both pages under a 503 response",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal requests have no timeout: a hanging search spins forever and keeps showing stale results",
+      "where": "/journal search (and all journal fetches/mutations)",
+      "steps": "On /journal, make GET /api/journal hang, type 'Lettuce' in Search, wait 12+ seconds",
+      "expected": "Request fails after 10 s with an error and retry",
+      "actual": "'Loading entries…' stays indefinitely while the previous search's results (for 'Thinned') remain displayed under the new query. No timeout is configured in useApiFetch/useApiClient, so Add/Save buttons would also stay on 'Saving…' forever if the server hangs.",
+      "evidence": "After 12 s: 'Loading entries…' with the old 'Lettuce / Thinned the seedlings.' card still shown",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Out-of-range ids crash journal endpoints with 500",
+      "where": "POST /api/journal (plant_id), PUT/DELETE /api/journal/{id}, GET /api/journal?plant_id=",
+      "steps": "curl POST /api/journal with plant_id 99999999999999999999, or PUT /api/journal/99999999999999999999",
+      "expected": "4xx (422/404)",
+      "actual": "500 Internal Server Error (SQLite integer overflow); no upper bound on ids",
+      "evidence": "All three requests returned 'Internal Server Error 500'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal accepts absurd past dates such as year 0001",
+      "where": "POST/PUT /api/journal, plant detail date field",
+      "steps": "POST {plant_id:1, entry_on:'0001-01-01', body:'x'}",
+      "expected": "Reject implausible dates with a visible reason (only future dates are rejected)",
+      "actual": "201 Created; entry dated 1 Jan 1 is stored and sorts to the bottom",
+      "evidence": "Response 201 with entry_on 0001-01-01",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Client 'today' and server date.today() can disagree, refusing today's entry",
+      "where": "Plant detail Journal form / JournalEntryIn.not_in_future",
+      "steps": "Use the app in a time zone ahead of the server (e.g. UTC+10 in the morning) and add an entry for today",
+      "expected": "Entry for the user's today is accepted",
+      "actual": "Client allows the date (todayIso uses local time) but the server compares against its own date.today() and returns 'Journal date cannot be in the future.'",
+      "evidence": "Code: frontend utils/format.ts todayIso vs backend schemas.py not_in_future",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

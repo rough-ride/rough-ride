@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-table-long-plant-name-hides-columns",
+  "sentence": "A long unbroken plant name in the /stats table's nowrap row header pushes all weight columns out of view at 375 px.",
+  "verdict": "confirmed",
+  "evidence": "Via API (demo user) created plant 'Supercalifragilistic'x4 (80 chars, no spaces, the max allowed by PlantIn) in bed 1 and logged a 99,999 g harvest on 2026-10-01. Opened /stats at 375x800. The CSS added in the change sets `.stats-table th[scope=row] { white-space: nowrap }`. Measured: the row header is 542 px wide, but the .table-scroll container shows only 309 px (right edge at x=342). The first month column (Jun 2026) starts at x=575 and Total at x=997. The table's scrollWidth is 1043 px, while the document scrollWidth stays at 375, so the page does not scroll sideways but the table does. An element screenshot of the table shows only the PLANT column (Courgette, Lettuce, the long name clipped, Tomato, Total) and not one weight value. This applies to every row, so none of the weights can be read without scrolling the table sideways. In Best plants, .stat__value has text-overflow: ellipsis and overflow: hidden (scrollWidth 1144 vs clientWidth 290) with no title attribute, so the full name is cut off there too (the link has a visually hidden full name for screen readers only).",
+  "severity": "medium",
+  "wallMs": 65867
+}

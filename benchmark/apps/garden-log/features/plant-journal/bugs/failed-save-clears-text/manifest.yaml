@@ -1,0 +1,14 @@
+id: failed-save-clears-text
+category: state-lost
+provenance: hand-written
+layer: frontend
+reach: direct
+needsAppKnowledge: false
+flow: plant-detail
+exposedBy:
+  - { fault: 500, endpoint: POST /api/journal }
+checks: [input-kept]
+symptom: "When saving a journal entry fails, the error is shown but the text the gardener typed is cleared"
+addedIn: 0.1.1
+review: single
+allowWords: []

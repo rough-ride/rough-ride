@@ -1,0 +1,84 @@
+{
+  "findings": [
+    {
+      "title": "Journal search with an apostrophe/quote crashes the API (500); search term is interpolated into SQL (SQL injection)",
+      "where": "GET /api/journal?q=… (Journal page search box)",
+      "steps": "Sign in, open /journal, type \"it's\" in the search box (or GET /api/journal?q=it's). Also try q=x' OR 1=1 OR '.",
+      "expected": "Matching entries (or an empty 'No entries match' state) with a 200; the term treated as data.",
+      "actual": "500 Internal Server Error; the page shows 'Could not load the journal.' for any search containing a single quote. q=x' OR 1=1 OR ' returns every entry, so the input is executed as SQL. backend/routers/journal.py builds the clause with f\"... LIKE '%{term}%'\" instead of a bound parameter.",
+      "evidence": "curl /api/journal?q=it's -> 'Internal Server Error 500'; q=x'%20OR%201=1%20OR%20' -> 200 with all entries; SSR of /journal?q=it%27s renders the alert 'Could not load the journal.'",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Search treats % and _ as wildcards",
+      "where": "GET /api/journal?q=%",
+      "steps": "Search the Journal page for '%' or '_'.",
+      "expected": "Only entries that contain a literal % or _.",
+      "actual": "Every entry is returned, because LIKE wildcards are not escaped.",
+      "evidence": "curl /api/journal?q=%25 returned all entries",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal load error states have no retry",
+      "where": "/journal page and the Journal section of /plants/:id",
+      "steps": "Make GET /api/journal fail (e.g. search with a quote, or the API is down) and look at the page.",
+      "expected": "An error message with a Retry button that refetches without a reload.",
+      "actual": "Only an AlertMessage ('Could not load the journal.') is shown, with no retry control. On the Journal page the only way to recover is to change the search text. On the plant page the journal section has no way to retry.",
+      "evidence": "journal.vue and plants/[id].vue render <AlertMessage> for loadError/journalLoadError with no button; the SSR HTML for /journal?q=it's has no retry/try-again control",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "No 10 s timeout on journal requests; a retried add after a timeout creates a duplicate entry",
+      "where": "Plant detail: Add entry / Save entry / Delete; Journal page fetch",
+      "steps": "Slow the API down (hung request), then click 'Add entry'. Once it fails, click again.",
+      "expected": "The request times out after 10 s with a visible error, and the button is enabled again. Retrying makes only one change.",
+      "actual": "useApiClient/useApiFetch set no timeout, so 'Saving…' can spin indefinitely. POST /api/journal has no idempotency key, so if the first request did reach the server, the retry inserts a second identical entry.",
+      "evidence": "composables/useApi.ts: $fetch.create has no timeout; journal.py create_entry inserts unconditionally",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Huge numeric ids/plant_id give 500 instead of 4xx",
+      "where": "POST /api/journal, PUT/DELETE /api/journal/{id}, GET /api/journal?plant_id=",
+      "steps": "POST {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-01-01\",\"body\":\"x\"}; DELETE /api/journal/9223372036854775808; GET /api/journal?plant_id=99999999999999999999999",
+      "expected": "422/404",
+      "actual": "500 Internal Server Error (SQLite integer overflow). The existing plants endpoint has the same problem, but the new journal endpoints add more cases.",
+      "evidence": "All three requests returned 'Internal Server Error 500'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal accepts absurd dates such as 0001-01-01",
+      "where": "POST /api/journal and the date field on the plant page",
+      "steps": "Create an entry dated 0001-01-01.",
+      "expected": "Reject implausible dates with a visible reason, or at least a sensible lower bound.",
+      "actual": "201 Created. Only future dates are refused.",
+      "evidence": "POST returned 201 with entry_on 0001-01-01 (test entry deleted afterwards)",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Character counter/maxlength count UTF-16 units, so emoji entries are limited to about 250 while the server allows 500",
+      "where": "JournalEntryForm on /plants/:id",
+      "steps": "Type or paste emoji into the entry textarea.",
+      "expected": "Same 500-character limit as the server (which counts code points).",
+      "actual": "Each emoji counts as 2 for the textarea maxlength and the 'characters left' counter. The server accepted 500 emoji.",
+      "evidence": "POST with 500 '😀' -> 201; form uses form.body.length and :maxlength",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long unbroken plant names in the Journal feed may overflow at 375 px",
+      "where": "/journal feed item header (.journal-feed__plant)",
+      "steps": "Create a plant with a long unbroken name, add an entry, and view /journal at 375 px.",
+      "expected": "The name wraps.",
+      "actual": "Only .journal-entry__body has overflow-wrap:anywhere. The plant-name link has no wrapping rule and can cause horizontal scroll.",
+      "evidence": "main.css journal styles",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

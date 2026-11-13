@@ -1,0 +1,19 @@
+{
+  "findings": [
+    {
+      "title": "Adding journal entries multiplies a plant's harvest count and harvest weight",
+      "where": "GET /api/plants and /api/plants/{id}; the plants list and the plant detail page",
+      "steps": "Probe inflate, expectation harvest-count-not-inflated-by-journal",
+      "expected": "Courgette has 1 harvest of 1.2 kg, so harvest_count stays 1 and harvest_grams stays 1200 after journal entries are added",
+      "actual": "With 2 journal entries the API returns harvest_count 2 and harvest_grams 2400. The detail page shows '2.4 kg total, 2 harvests, averaging 1.2 kg each' above a table with only one harvest row. The new LEFT JOIN on journal_entries multiplies the harvest rows that COUNT(h.id) and SUM(h.weight_grams) add up.",
+      "evidence": "{\"realCount\":1,\"realGrams\":1200,\"shownCount\":4,\"shownGrams\":4800,\"journal\":4} | {\"realCount\":1,\"realGrams\":1200,\"shownCount\":6,\"shownGrams\":7200,\"journal\":6}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-181212-hunt-edfa",
+        "probe": "inflate",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

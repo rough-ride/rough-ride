@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "watering-post-no-idempotency",
+  "sentence": "Retrying 'Water now' or 'Save watering' after a lost or timed-out response creates a duplicate watering because POST /api/waterings has no idempotency key or dedupe.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the behaviour, but it isn't a defect. In Playwright I signed in and opened /beds. I routed POST /api/waterings so the request reached the server (route.fetch) but the browser got a network failure (route.abort). Clicking 'Water now' on North bed showed 'The garden server could not be reached.', but a row was still created (id 3). After removing the route I clicked again: the app said 'Watered North bed.' and created id 4 two seconds later, so North bed had two waterings. The code agrees: create_watering always INSERTs and the client sends no idempotency key. I don't count this as a defect for these reasons. (1) The request asked for none of this. It asks for 'Water now', a past-watering form, last-watered, a dashboard list and a filter page. (2) It matches the rest of the app. create_task, create_plant and create_harvest also INSERT unconditionally with no key, and the shared client has no timeout or idempotency anywhere. (3) Watering the same bed twice, even on the same day, is valid data, so the server cannot dedupe by content. (4) It is limited and easy to fix by hand: the button is disabled while a request is in flight, so normal double-clicks are blocked. A duplicate needs a lost response after the server succeeded, and then a manual retry. The waterings page has a Delete button for the extra row. I deleted my test rows 3 and 4 afterwards through the API.",
+  "severity": null,
+  "wallMs": 117001
+}

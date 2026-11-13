@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "tasks-upcoming-error-no-retry",
+  "sentence": "On /, when GET /api/tasks/upcoming fails (500, 400, reset, 429), there is no way to retry without a page reload.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the symptom: signed in as the demo user, opened /beds, routed GET /api/tasks/upcoming to a 500, then went to the dashboard using the in-app link. The 'Upcoming tasks' section showed the error text ('boom') and there was no retry control (no buttons in the section or in main). After removing the route, the section kept showing the error until I left the page. Going to /beds and back through the nav links (no reload) refetched the data and the section recovered ('No upcoming tasks'). So the claim 'no way to retry without a reload' is overstated. More importantly, the change did not touch this behaviour. `git diff main -- frontend/app/pages/index.vue` shows the tasks fetch, the tasksError AlertMessage and the missing retry are all unchanged from main. The diff only adds the waterings fetch and the 'Recent waterings' section. No page in the app has a retry control (AlertMessage has no action slot, and grep finds no retry handlers), so this is the app's existing error-display pattern, not something the watering change introduced or something the request asked for.",
+  "severity": null,
+  "wallMs": 125903
+}

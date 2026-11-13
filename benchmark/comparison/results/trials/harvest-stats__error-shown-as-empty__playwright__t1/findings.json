@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "title": "Stats page shows a failed request as \"No harvests in this range\" with no error or retry",
+      "where": "/stats (frontend/app/pages/stats.vue)",
+      "steps": "Sign in. Make GET /api/stats/harvests return 500 with an HTML body (browser_route). Open Stats from the nav, or change the From date.",
+      "expected": "An error message saying the stats could not be loaded, with a Retry button. The same state whether the page is opened directly or through a link.",
+      "actual": "The page shows the empty state \"No harvests in this range – Pick a different date range, or log a harvest\". The error only shows up in the console. The page never reads `error` from useApiFetch and has no retry.",
+      "evidence": "With the 500 mocked, main text was 'From / To / No harvests in this range / Pick a different date range...'. Same result after changing From to 2026-02-01.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Invalid date range (From after To) shows as an empty result instead of the server's message",
+      "where": "/stats, GET /api/stats/harvests",
+      "steps": "Open /stats?from=2026-12-01&to=2026-01-01, or pick a From date later than To.",
+      "expected": "The validation message \"The From date must be on or before the To date.\" appears next to the fields.",
+      "actual": "The API returns 422 and the page shows \"No harvests in this range\".",
+      "evidence": "The inverted-range URL rendered the empty state. The 422 detail never appears.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing a date field silently falls back to the current-year bound, which can produce a 422 shown as empty",
+      "where": "/stats",
+      "steps": "Open /stats?to=2025-06-01 (there is data in Aug 2025). Clear the From field.",
+      "expected": "Either refuse the blank value with a reason, or treat blank From as 'no lower bound' and show 2025 data.",
+      "actual": "The page drops the from param. The backend then defaults from to 2026-01-01, which is after the To date, answers 422, and the page shows \"No harvests in this range\". The From field stays blank and nothing explains why.",
+      "evidence": "With /stats?to=2025-06-01 and From cleared, main text showed only the empty state.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout: navigating to Stats while the API hangs freezes on the previous page",
+      "where": "/stats (useApiFetch with no timeout)",
+      "steps": "Make /api/stats/harvests hang (route that never responds). On the dashboard, click Stats in the nav and wait 13 s.",
+      "expected": "The request fails after 10 s and the page shows an error with Retry.",
+      "actual": "Nothing happens. The app stays on the Dashboard with no loading indicator or error, because the top-level awaited useFetch blocks navigation and has no timeout. The same applies when a date change hangs: 'Loading stats…' stays forever.",
+      "evidence": "13 s after clicking Stats with the hang route, the page text was still the Dashboard.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "No error state means no retry after the server recovers without changing dates",
+      "where": "/stats",
+      "steps": "Make the stats API fail, open /stats, then remove the failure.",
+      "expected": "A Retry control reloads the data.",
+      "actual": "The only way to recover is to change a date or reload the page. The page keeps saying there are no harvests.",
+      "evidence": "Follows from the missing error and refresh handling in stats.vue. The page only destructures data and status.",
+      "status": "suspected",
+      "severity": "medium"
+    }
+  ]
+}

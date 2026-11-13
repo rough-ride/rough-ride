@@ -1,0 +1,164 @@
+{
+  "findings": [
+    {
+      "title": "\"Water now\" spins forever when the request stalls (no timeout)",
+      "where": "/beds – Water now / Save watering (POST /api/waterings)",
+      "steps": "On /beds, make POST /api/waterings hang (browser_route that never responds), then click \"Water now\" for North bed and wait over 45 s.",
+      "expected": "The request times out after 10 s and an error is shown on the bed, after which the button works again.",
+      "actual": "The button still says \"Watering…\" and stays disabled indefinitely. The API client sets no timeout, and the past-watering \"Saving…\" button behaves the same way.",
+      "evidence": "About 45 s after clicking, the button text was 'Watering… North bed' with disabled=true, and no error was shown.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Watering a second bed re-enables the first bed's button while its request is still pending, which allows duplicate waterings",
+      "where": "/beds",
+      "steps": "Make POST for bed 1 hang. Click Water now on North bed, then click Water now on Shade corner (which succeeds).",
+      "expected": "North bed's button stays disabled until its own request finishes.",
+      "actual": "wateringBedId is a single shared ref. Shade corner's request resets it to null, so North bed's button is enabled again while its POST is still pending. Clicking it again records a second watering, and when the first request finishes it overwrites the other bed's notice.",
+      "evidence": "After the Shade request completed: 'Water now North bed disabled=false' while North's POST was still pending.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying a submit after a timeout or lost response creates a duplicate watering",
+      "where": "POST /api/waterings",
+      "steps": "Record a watering. The server commits it, but the response is lost or times out, so the user clicks again.",
+      "expected": "One watering.",
+      "actual": "The request has no idempotency key and the server does no dedupe, so every retry inserts another row.",
+      "evidence": "Code: create_watering always INSERTs, and the client sends no request id.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "No retry button on the waterings page or the dashboard's Recent waterings when loading fails",
+      "where": "/waterings, / (Recent waterings section)",
+      "steps": "Make /api/waterings* return 503, then use client-side navigation to Dashboard and to Waterings. Restore the API.",
+      "expected": "An error message with a Retry button that reloads the data without reloading the page.",
+      "actual": "Only 'Could not load recent waterings.' / 'Could not load waterings.' is shown, with no retry control. The dashboard doesn't even destructure refresh for waterings. The only way to recover is to reload the page, or on /waterings to change the filter.",
+      "evidence": "Page text in the error state contained only the alert, with no button.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Bed filter fails silently when /api/beds fails",
+      "where": "/waterings",
+      "steps": "Make /api/beds return 503 and open Waterings.",
+      "expected": "An error saying the beds could not be loaded, with a retry.",
+      "actual": "The Bed dropdown just contains 'All beds' and no error is shown, so the user can't filter and isn't told why. The beds error is never read.",
+      "evidence": "Options were ['All beds'] and no alert about beds appeared.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Non-array (unexpected) waterings response crashes the page",
+      "where": "/waterings",
+      "steps": "Mock GET /api/waterings to return 200 {\"items\":[]}, then navigate to Waterings from Beds.",
+      "expected": "A handled error state.",
+      "actual": "TypeError 'waterings.value?.reduce is not a function'. Navigation stalls: the URL is /waterings but Beds content is still shown, along with the Nuxt error overlay.",
+      "evidence": "The error overlay dialog showed 'TypeError waterings.value?.reduce is not a function'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Malformed watering fields are rendered as-is (e.g. 'x L', raw 'garbage' date, blank bed)",
+      "where": "/waterings, dashboard",
+      "steps": "Mock /api/waterings to return [{id:1,bed_id:1,bed_name:null,watered_on:null,watered_at:'garbage',litres:'x'}].",
+      "expected": "Placeholders such as '–'.",
+      "actual": "The row shows 'garbage', an empty bed cell, 'x L', and a delete label reading 'watering of ' with no bed name.",
+      "evidence": "Row text was 'garbage\\t\\tx L\\tDelete watering of'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Server returns 500 for oversized integer ids",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":99999999999999999999}; GET /api/waterings?bed_id=99999999999999999999; DELETE /api/waterings/99999999999999999999",
+      "expected": "A 4xx response (422 or 404).",
+      "actual": "500 Internal Server Error. SQLite overflows on an integer larger than 64 bits.",
+      "evidence": "curl returned 'Internal Server Error 500' for all three requests.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Server returns 500 for litres NaN",
+      "where": "POST /api/waterings",
+      "steps": "POST {\"bed_id\":1,\"litres\":NaN}",
+      "expected": "422",
+      "actual": "500 Internal Server Error",
+      "evidence": "curl returned 'Internal Server Error 500'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Tiny litre amounts are accepted but displayed as '0 L'",
+      "where": "/beds past watering form, /waterings, dashboard",
+      "steps": "Record a past watering with litres 0.001 (the form allows any value above 0; the API accepts it).",
+      "expected": "Either refuse amounts below the precision shown, or display them correctly.",
+      "actual": "The amount is saved and every list shows it as '0 L'.",
+      "evidence": "The dashboard and /waterings rows showed '1 Jan 2026 North bed 0 L'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Absurd past dates such as year 0001 are accepted",
+      "where": "POST /api/waterings / past watering form",
+      "steps": "Record a watering dated 0001-01-01.",
+      "expected": "Refused with a visible reason, or limited to a sensible range.",
+      "actual": "It is saved and shown as '1 Jan 1' in the lists.",
+      "evidence": "API returned 201, and the UI rendered '1 Jan 1 North bed 1 L'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Bed filter gets out of sync with the URL",
+      "where": "/waterings",
+      "steps": "On /waterings?bed=2 (Shade corner), click the 'Waterings' nav link (or press browser Back to an unfiltered URL).",
+      "expected": "The URL /waterings shows all beds.",
+      "actual": "The URL becomes /waterings, but the dropdown stays on Shade corner and the list stays filtered. bedFilter is only read from route.query once and never watches the route.",
+      "evidence": "After the click, url=http://localhost:3791/waterings, select value=2, and only Shade corner rows were listed.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid ?bed= query shows a raw validation message",
+      "where": "/waterings?bed=abc",
+      "steps": "Open /waterings?bed=abc directly.",
+      "expected": "Ignore the bad filter, or show a friendly message with a way out.",
+      "actual": "The page shows 'Query.bed id: Input should be a valid integer, unable to parse string as an integer', the dropdown shows 'All beds' while 'Clear filter' is visible, and there is no retry.",
+      "evidence": "Page text as quoted.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Waterings table scrolls sideways at 375 px with a long bed name",
+      "where": "/waterings",
+      "steps": "Create a bed with a long name of 58 characters with no spaces (allowed by the API), record a watering for it, and open /waterings at 375 px wide.",
+      "expected": "No horizontal scrolling; long names wrap.",
+      "actual": "document scrollWidth is 511 px. The table overflows and the Delete column goes off-screen.",
+      "evidence": "With that bed, scrollWidth was 511; without it, 375.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying a delete after a timeout reports an error even though the delete happened",
+      "where": "/waterings Delete",
+      "steps": "Delete a watering. The response is lost, so the user retries.",
+      "expected": "The retry is treated as success (the row is already gone).",
+      "actual": "The second DELETE gets a 404 and the page shows 'Watering not found.' as an error.",
+      "evidence": "Code: delete_watering raises not_found when the row is missing, and the client shows it in listError.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Water now's date and time come from different clocks, and the future-date check uses the server's date",
+      "where": "POST /api/waterings, /beds past form",
+      "steps": "Use the app from a time zone ahead of the server's, near midnight.",
+      "expected": "Today's date is accepted, and 'now' entries are dated consistently with their time.",
+      "actual": "watered_on uses the server's local date while watered_at is UTC, and the client's max date is the browser's local date. A user ahead of the server is refused for 'today' with 'cannot be in the future', and 'now' entries can show a date that disagrees with their time and sort wrongly.",
+      "evidence": "Code: waterings.py now.astimezone().date() vs strftime of the UTC time; schemas.not_in_future uses date.today().",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

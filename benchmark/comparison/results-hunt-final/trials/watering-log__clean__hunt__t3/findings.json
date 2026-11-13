@@ -1,0 +1,49 @@
+{
+  "findings": [
+    {
+      "title": "Waterings page crashes on a malformed /api/waterings response; navigation silently stays on the previous page",
+      "where": "/waterings (GET /api/waterings)",
+      "steps": "Probe waterings-malformed, expectation malformed-list-shows-error-no-crash",
+      "expected": "Waterings page opens and shows an error message",
+      "actual": "Uncaught 'waterings.value?.reduce is not a function'; URL changes to /waterings but the Beds page stays rendered with no error shown",
+      "evidence": "{\"url\":\"/waterings\",\"headings\":[\"Beds\",\"Add a bed\",\"All beds\",\"North bed\",\"Shade corner\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"],\"alerts\":[]} | {\"url\":\"/waterings\",\"headings\":[\"Beds\",\"Add a bed\",\"All beds\",\"North bed\",\"Shade corner\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"],\"alerts\":[]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-193353-hunt-aee7",
+        "probe": "waterings-malformed",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard 'Recent waterings' shows 'No waterings yet' when the response is not a list",
+      "where": "/ (GET /api/waterings?limit=5)",
+      "steps": "Probe error-retry2, expectation dashboard-waterings-error-has-retry",
+      "expected": "An invalid response is shown as an error, not as an empty log",
+      "actual": "With an empty-object response the card says 'No waterings yet' although waterings exist",
+      "evidence": "{\"alerts\":[\"Injected 500\"]} | {\"alerts\":[\"Injected 500\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-193353-hunt-aee7",
+        "probe": "error-retry2",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "'Water now' on a second bed is not disabled while its request runs",
+      "where": "/beds Water now (POST /api/waterings)",
+      "steps": "Probe two-beds-water, expectation second-bed-button-stays-disabled-while-its-request-runs",
+      "expected": "Each bed's Water now button stays disabled until its own request finishes",
+      "actual": "A single shared wateringBedId is cleared when the first bed's request finishes, so the second bed's button is enabled again while its request is still running (and the first bed's 'Watered' notice is lost)",
+      "evidence": "{\"disabledWhileFirst\":false,\"disabledAfterFirstDone\":false} | {\"disabledWhileFirst\":false,\"disabledAfterFirstDone\":false}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-193353-hunt-aee7",
+        "probe": "two-beds-water",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

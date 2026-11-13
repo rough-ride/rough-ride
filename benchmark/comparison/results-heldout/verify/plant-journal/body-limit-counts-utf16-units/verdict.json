@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "body-limit-counts-utf16-units",
+  "sentence": "The journal entry form's maxlength and character counter count UTF-16 units, so emoji count double (about 250 fit) and server-accepted 500-emoji entries cannot be edited and saved.",
+  "verdict": "confirmed",
+  "evidence": "Code: JournalEntryForm.vue uses :maxlength=500, remaining = 500 - form.body.length, and validate() checks form.body.trim().length > 500, all in UTF-16 units. The server (Pydantic max_length=500) and the SQLite CHECK length(body) both count code points. In the running app (signed in as the demo user): (1) a POST /api/journal with 500 x '🌱' returned 201, so the server accepts it. (2) On /plants/2 I inserted 300 '🌱' into the new-entry textarea. Only 250 emoji (500 UTF-16 units) were kept and the counter read '0 characters left'. (3) I clicked Edit on the 500-emoji entry. The edit textarea held 500 code points (1000 units) and the counter read '-500 characters left'. Clicking Save showed the client error 'Keep the entry to 500 characters.' and sent no PUT/PATCH request, so an entry the server accepted cannot be saved after editing. I deleted the test entry afterwards.",
+  "severity": "medium",
+  "wallMs": 90351
+}

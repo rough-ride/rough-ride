@@ -1,0 +1,34 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3791, API http://localhost:8791/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-harvest-stats-stats-null-fields-rendered/scratch.
+
+The reported problem: When GET /api/stats/harvests returns null fields in a 200 response, /stats renders text such as 'null harvests from – to –' and a nameless table row.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Null fields in stats response render as 'null harvests' and an empty, broken table",
+  "where": "/stats",
+  "steps": "Route /api/stats/harvests to return 200 JSON with harvest_count:null, date_from:null, months:null, top_plants:null, and plants:[{plant_id:1, plant_name:null, total_grams:null, monthly_grams:null}].",
+  "expected": "The response is rejected as invalid (error state), or the missing values are handled cleanly.",
+  "actual": "The page shows 'null harvests from – to –', an empty Best plants list, and a table row with no plant name.",
+  "evidence": "Page text: 'null harvests from – to – Best plants Weight by plant and month – total ... PLANT TOTAL –'."
+ },
+ {
+  "title": "Null fields in a response render as the text 'null'",
+  "where": "/stats",
+  "steps": "Mock /api/stats/harvests with harvest_count: null (and date fields null).",
+  "expected": "A defensive fallback.",
+  "actual": "The results line reads 'null harvests from – to –'.",
+  "evidence": "The text was 'null harvests from – to –'. This only happens with a mocked response; the real backend always sends numbers."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-harvest-stats-stats-null-fields-rendered/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

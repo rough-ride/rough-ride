@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Stats request that hangs spins 'Loading stats…' forever (no 10 s timeout)",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Open /stats, make /api/stats/harvests never respond (browser_route with no fulfil), change the From date, wait 12+ s.",
+      "expected": "The request times out after 10 s and the page shows an error with a retry.",
+      "actual": "The page still says 'Loading stats…' after 12 s and never fails. useApiFetch/useApiClient set no timeout.",
+      "evidence": "After waiting 12 s the page text was 'Stats … From To Loading stats…', with no error.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Stats error state has no Retry; the only way to recover is to change the dates or reload",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests return 500 (or abort), change a date and see 'Could not load harvest stats.'. Then bring the API back.",
+      "expected": "The error state has a Retry button that refetches the same range once the server is back.",
+      "actual": "Only an AlertMessage is shown. The only buttons on the page are 'Sign out' and 'This year'. The page does not use useFetch's refresh, so there is no way to retry the same range.",
+      "evidence": "Buttons on the page in the error state: ['Sign out','This year'].",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Malformed or unexpected 200 response crashes the render and leaves stale data from the old range under 'Loading stats…'",
+      "where": "/stats",
+      "steps": "Load /stats, then mock /api/stats/harvests to return 200 with '{}', an HTML body, or JSON with null fields (top_plants:null, month:null). Change the From date.",
+      "expected": "An error state saying the stats could not be read.",
+      "actual": "An uncaught TypeError ('Cannot read properties of undefined (reading 'length')' / '... of null (reading 'slice')'). The page freezes with 'Loading stats…' and still shows the previous range's table and best plants (1 Jan–31 Dec, 2.6 kg) while the From field shows the new date, so the data no longer matches the range.",
+      "evidence": "The Nuxt error overlay showed the TypeError. #main text showed 'Loading stats…' above the old Courgette/Tomato/Lettuce table.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing a date field silently falls back to the current year, which gives confusing errors and results",
+      "where": "/stats",
+      "steps": "Clear the From field and set To = 2025-06-30.",
+      "expected": "A blank date is refused with a clear reason, or it is treated as unbounded.",
+      "actual": "The empty param is dropped and the server defaults From to 2026-01-01, so the page says 'The From date must be on or before the To date.' even though From is blank. With only To cleared, the results quietly stop at 31 Dec this year.",
+      "evidence": "Page text: 'The From date must be on or before the To date.' at URL /stats?to=2025-06-30.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Out-of-range typed year shows a raw Pydantic validation message",
+      "where": "/stats",
+      "steps": "Type a year beyond 9999 into To (the date input allows up to 275760), or open /stats?from=2026-13-45.",
+      "expected": "A friendly, visible reason such as 'Enter a valid date'.",
+      "actual": "'Query.to: Input should be a valid date or datetime, invalid date separator, expected `-`'.",
+      "evidence": "Seen on the page after setting To = 275760-01-01.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "On a narrow screen the nowrap plant column pushes every month and total column out of view",
+      "where": "/stats at 375 px",
+      "steps": "Create a plant with a long name (80 chars), log a harvest, and open /stats at 375 px wide.",
+      "expected": "Long names wrap so the numbers stay readable without scrolling.",
+      "actual": "The table scrolls on its own (the page does not overflow), but because of white-space: nowrap on the row header only the plant names are visible. All month and total values are off-screen.",
+      "evidence": "Screenshot at 375 px: the table shows only the PLANT column.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Months with no harvests are left out of the table",
+      "where": "GET /api/stats/harvests, /stats",
+      "steps": "Choose a range where a middle month has no harvests (e.g. harvests in Jun and Aug only).",
+      "expected": "Per-month columns for every month in the range, with empty months shown as '–', so the timeline is continuous.",
+      "actual": "Months come only from harvest rows, so empty months vanish (Jun, Aug with no Jul) and the totals by month can be misread.",
+      "evidence": "stats.py: months = sorted({row['month'] for row in rows}).",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

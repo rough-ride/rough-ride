@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__hx1__hunt__t1",
+  "feature": "harvest-stats",
+  "bug": "hx1",
+  "arm": "hunt",
+  "trial": 1,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:44:39.600Z",
+  "materializeMs": 6049,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__hx1__hunt__t1/variant/j9h8scyl/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "104212e7-9dba-4222-9c1b-2c450821fe50",
+  "loadBefore": [
+    24.98193359375,
+    20.0458984375,
+    12.44580078125
+  ],
+  "loadAfter": [
+    6.45751953125,
+    12.26318359375,
+    11.04248046875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 277569,
+  "reportedCostUsd": 0.4320058,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 22,
+      "outputTokens": 8658,
+      "cacheReadInputTokens": 226964,
+      "cacheCreationInputTokens": 42673,
+      "webSearchRequests": 0,
+      "costUSD": 0.4320058,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1400,
+      "cacheCreationEphemeral5mInputTokens": 42673,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 4m16s | run 20261112-184454-hunt-ccbf | 5 confirmed, 0 dropped on re-run\ntarget: http://localhost:3790\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Out-of-order stats responses: an older, slower response overwrites the newer range\n   where: /stats (GET /api/stats/harvests)\n   expected: After changing From to 2025-01-01 and then quickly to 2026-07-01, the page shows stats for 1 Jul 2026 - 31 Dec 2026\n   saw: {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"6 harvests from 1 Jan 2025 to 31 Dec 2026\",\"Best plants\",\"NO. 1\",\"Tomato\",\"1.35 kg · Sungold\",\"View\",\"Tomato\",\"NO. 2\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 3\",\"Lettuce\",\"350 g · Little Gem\",\"View\",\"Lettuce\",\"Weight by plant and month\",\"2.9 kg total\",\"Harvest weight per plant and month, 1 Jan 2025 to 31 Dec 2026\",\"PLANT\\tAUG 2025\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Courgette\\t–\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t–\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Sungold\\t300 g\\t…\n   repro: .rough-ride/runs/20261112-184454-hunt-ccbf/probes/race.mjs (expectation \"newest-range-wins\")\n2. MEDIUM Malformed or unexpected stats response crashes the page and leaves it stuck on 'Loading stats...'\n   where: /stats\n   expected: A visible error when the stats response is malformed or empty, and no uncaught error\n   saw: {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"]}\n   repro: .rough-ride/runs/20261112-184454-hunt-ccbf/probes/client-faults.mjs (expectation \"change-malformed-shows-error\")\n3. MEDIUM Clearing To with a From date after this year gives a misleading 'From must be on or before To' error\n   where: /stats\n   expected: An empty To date is either accepted as an open end or refused with a reason about the empty field\n   saw: {\"fields\":[{\"label\":\"From\",\"value\":\"2027-03-01\"},{\"label\":\"To\",\"value\":\"\"}],\"alerts\":[\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"The From date must be on or before the To date.\"]}\n   repro: .rough-ride/runs/20261112-184454-hunt-ccbf/probes/inputs.mjs (expectation \"from-only-range-not-rejected\")\n4. MEDIUM Months with no harvests are left out of the per-month table\n   where: /stats?from=2025-01-01\n   expected: The table has a column for every month in the chosen range (or at least between the first and last harvest), so gaps show up as empty months\n   saw: [\"PLANT\\tAUG 2025\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Total\\t300 g\\t200 g\\t1.65 kg\\t600 g\\t150 g\\t2.9 kg\"]\n   repro: .rough-ride/runs/20261112-184454-hunt-ccbf/probes/inputs.mjs (expectation \"months-without-harvest-shown\")\n5. LOW    After a failed load, the old range summary stays next to the error\n   where: /stats\n   expected: When loading a new range fails, only the error shows, or the summary matches the selected range\n   saw: [\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\",\"Garden Log · a journal for one garden\"]\n   repro: .rough-ride/runs/20261112-184454-hunt-ccbf/probes/faults.mjs (expectation \"range-text-not-stale-on-error\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a5a43d4cadb3624bc.jsonl",
+    "agent-a5a43d4cadb3624bc.meta.json"
+  ],
+  "usage": {
+    "input": 22,
+    "output": 8658,
+    "cacheRead": 226964,
+    "cacheWrite": 42673,
+    "requests": 11,
+    "toolCalls": {
+      "Bash": 10,
+      "Read": 1
+    }
+  },
+  "findingCount": 5,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:49:30.687Z"
+}

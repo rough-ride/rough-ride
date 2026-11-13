@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "title": "Harvests on the \"To\" date are left out of the stats",
+      "where": "GET /api/stats/harvests, /stats page",
+      "steps": "Sample data has a 150 g Lettuce harvest on 2026-09-30. On /stats, set To = 2026-09-30 (or call /api/stats/harvests?from=2026-09-30&to=2026-09-30).",
+      "expected": "The range includes its last day: 5 harvests, Lettuce 350 g, a Sept 2026 column; the single-day query returns that harvest.",
+      "actual": "The page says '4 harvests from 1 Jan 2026 to 30 Sept 2026', Lettuce shows 200 g and there is no Sept column. The single-day query returns no plants and harvest_count 0, and the page shows 'No harvests in this range'.",
+      "evidence": "stats.py uses `h.harvested_on >= ? AND h.harvested_on < ?` (excludes the To date) in both the main query and top_plants. Seen in the UI text and the API JSON.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Dashboard top plant skips 31 December harvests, but the dashboard total counts them",
+      "where": "GET /api/dashboard/summary, dashboard 'Top plant this year' card",
+      "steps": "On 31 Dec, log a harvest dated today that would make a different plant the heaviest. Open the dashboard.",
+      "expected": "The top plant and its grams use the same full-year range as harvest_grams_year (1 Jan to 31 Dec inclusive).",
+      "actual": "top_plants(conn, year_from, year_to) uses `< '…-12-31'`, so 31 Dec harvests are left out of the top plant, while harvest_grams_year still uses BETWEEN and includes them. The card can name the wrong plant and weight.",
+      "evidence": "Code: dashboard.py now calls top_plants, which has the exclusive upper bound. Couldn't reproduce today because harvests dated in the future are refused.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats error state has no retry",
+      "where": "/stats page",
+      "steps": "Make GET /api/stats/harvests return 500 (mocked), then open Stats from the nav or directly.",
+      "expected": "An error message with a Retry button that fetches again.",
+      "actual": "Only the text 'Could not load harvest stats.' appears. There is no retry control, so the only way to recover is to change a date or reload.",
+      "evidence": "Page text after the mocked 500: 'Could not load harvest stats.' Buttons on the page: only 'Sign out'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout; 'Loading stats…' stays forever",
+      "where": "/stats page",
+      "steps": "Make /api/stats/harvests hang (mocked route that never responds), then change the To date.",
+      "expected": "After 10 s the request fails and an error with retry is shown.",
+      "actual": "After more than 13 s the page still showed 'Loading stats…'. No error and no way to retry.",
+      "evidence": "useApiFetch/useFetch is called without a timeout; seen in the browser.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing a date field silently uses the default date",
+      "where": "/stats page From/To fields",
+      "steps": "With To set to 2026-09-30, clear the From field.",
+      "expected": "The field explains that a date is required, or the empty value is handled visibly.",
+      "actual": "The From input stays blank, but the results silently use 1 Jan of the current year (the server default). The range text says 'from 1 Jan 2026' even though the field is empty.",
+      "evidence": "After clearing, From value '' while the results text reads '4 harvests from 1 Jan 2026 to 30 Sept 2026'.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

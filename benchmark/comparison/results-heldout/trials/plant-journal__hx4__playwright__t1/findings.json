@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Harvest count and harvested weight are multiplied by the number of journal entries",
+      "where": "GET /api/plants, GET /api/plants/{id}; Plants list and plant detail pages",
+      "steps": "Add journal entries to a plant that has harvests (Tomato has 3 harvests totalling 1350 g). Open /plants or GET /api/plants/1.",
+      "expected": "harvest_count 3, harvest_grams 1350 (1.35 kg), whatever the number of journal entries.",
+      "actual": "Tomato with 2 journal entries showed harvest_count 6 and harvest_grams 2700. With 3 entries the plants list showed 'Harvested 4.05 kg'. The new LEFT JOIN on journal_entries makes a row for every harvest and journal pair, and COUNT(h.id) and SUM(h.weight_grams) are not de-duplicated.",
+      "evidence": "curl /api/plants/1 returned harvest_count=6, harvest_grams=2700, but the harvests array has 3 items summing to 1350. The plants list UI showed '4.05 kg' for Tomato.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal requests have no timeout: a hung request spins forever and the button stays disabled",
+      "where": "/plants/{id} (Add entry, Save entry, Delete) and the /journal search",
+      "steps": "Make POST /api/journal hang (never respond), then click 'Add entry'. Separately, on /journal make GET /api/journal hang and type in the search box.",
+      "expected": "After 10 s the request fails with a visible error and the user can try again.",
+      "actual": "After 12 s the button still reads 'Saving…' and is disabled. On /journal, 'Loading entries…' stays up with no end, and the old unfiltered results stay on screen under the new query.",
+      "evidence": "Playwright: submit button text 'Saving…', disabled=true after 12 s. The journal page showed 'Loading entries…' plus stale results 13 s after typing.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal page error state has no retry",
+      "where": "/journal",
+      "steps": "Make GET /api/journal fail (502, HTML body) and type a search term.",
+      "expected": "An error message with a Retry button that reloads once the server is back.",
+      "actual": "Only 'Could not load the journal.' is shown. The only way to recover is to edit the search text or reload the page.",
+      "evidence": "The only button in main was 'Clear search'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Plant detail journal load error has no retry",
+      "where": "/plants/{id} Journal section",
+      "steps": "Make GET /api/journal?plant_id=… return 500 and open a plant from the plants list (or directly).",
+      "expected": "An error with a Retry button in the journal section.",
+      "actual": "'Could not load the journal.' with no retry. The only button in the section is 'Add entry'. The badge still shows the count (for example '3 entries') next to an empty error state.",
+      "evidence": "Buttons in the section: ['Add entry'].",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Very large plant_id or entry id gives 500 Internal Server Error",
+      "where": "POST /api/journal, GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+      "steps": "POST {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-01-01\",\"body\":\"x\"}, GET /api/journal?plant_id=99999999999999999999, or PUT /api/journal/99999999999999999999.",
+      "expected": "A 4xx (422 or 404).",
+      "actual": "HTTP 500 'Internal Server Error' (SQLite integer overflow).",
+      "evidence": "curl status codes: POST 500, GET 500, PUT 500.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Search longer than 80 characters gives a raw validation error instead of a usable message",
+      "where": "/journal search box",
+      "steps": "Type 81 or more characters into Search.",
+      "expected": "The input limits length (maxlength) or shows a friendly message. Results do not just vanish.",
+      "actual": "The list is replaced by 'Query.q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "Page text after typing 81 'a's.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Ancient dates are accepted and shown oddly",
+      "where": "POST/PUT /api/journal, journal lists",
+      "steps": "POST an entry with entry_on 0001-01-01.",
+      "expected": "Reject implausible dates (for example before the plant's planting date or before 1900) with a reason.",
+      "actual": "Accepted (201) and shown as '1 Jan 1'.",
+      "evidence": "The journal feed showed 'Tomato 1 Jan 1 x'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Retry after a timed-out add creates a duplicate entry",
+      "where": "POST /api/journal from /plants/{id}",
+      "steps": "Submit a new entry while the response is lost or slow, then submit again (or reload and resubmit).",
+      "expected": "One entry.",
+      "actual": "There is no idempotency key or dedupe. The first request still lands on the server, so the retry makes a second entry. In testing, the hung 'hang test' POST was later applied server-side.",
+      "evidence": "The 'hang test' entry appeared after the hung request was released. The code has no idempotency handling.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Character counter counts UTF-16 units, not characters",
+      "where": "JournalEntryForm",
+      "steps": "Type emoji into the entry text.",
+      "expected": "The counter and the 500 limit match the server's limit, which counts characters.",
+      "actual": "Each emoji counts as 2, so the textarea maxlength stops at about 250 emoji even though the server would accept 500.",
+      "evidence": "Typing 'Retry test 🌱 <b>x</b> \"q\"' (25 characters) showed '474 characters left'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Plant detail journal shows only the first 500 entries with no indication",
+      "where": "/plants/{id}",
+      "steps": "Have more than 500 entries for one plant.",
+      "expected": "All entries reachable (pagination), or a note that the list is truncated.",
+      "actual": "The page fetches limit=500 and silently hides older entries, while the badge shows the full count.",
+      "evidence": "The code requests useApiFetch('/journal', {query:{plant_id, limit:500}}) with no paging.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

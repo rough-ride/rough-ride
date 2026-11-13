@@ -1,0 +1,79 @@
+{
+  "findings": [
+    {
+      "title": "Waterings list crashes on a malformed response and keeps showing the old, unfiltered rows under 'Loading waterings…'",
+      "where": "/waterings (GET /api/waterings?bed_id=…)",
+      "steps": "Probe waterings-malformed, expectation malformed-list-no-crash",
+      "expected": "A visible load error and no rows from another bed",
+      "actual": "Uncaught 'waterings.value?.reduce is not a function'. The page stays on 'Loading waterings…' with all beds' rows still listed under the 'Shade corner' filter",
+      "evidence": "[\"waterings.value?.reduce is not a function\"] | [\"waterings.value?.reduce is not a function\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-183121-hunt-fd1b",
+        "probe": "waterings-malformed",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Opening Waterings when the list answer is not an array crashes the navigation and leaves the user on the previous page",
+      "where": "/waterings (GET /api/waterings)",
+      "steps": "Probe dashboard-faults, expectation list-empty-object-not-shown-as-empty",
+      "expected": "The Waterings page opens and shows a load error",
+      "actual": "Uncaught 'waterings.value?.reduce is not a function'. The Beds page stays on screen while the URL says /waterings",
+      "evidence": "{\"s\":[\"Partial shade\",\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\",\"2\",\"HARVESTED\",\"2.55 kg\",\"LAST WATERED\"],\"pe\":[\"waterings.value?.reduce is not a function\"]} | {\"s\":[\"Partial shade\",\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\",\"2\",\"HARVESTED\",\"2.55 kg\",\"LAST WATERED\"],\"pe\":[\"waterings.value?.reduce is not a function\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-183121-hunt-fd1b",
+        "probe": "dashboard-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard shows a bad watering response as 'No waterings yet'",
+      "where": "/ (GET /api/waterings?limit=5)",
+      "steps": "Probe dashboard-faults, expectation dash-empty-object-not-shown-as-empty",
+      "expected": "An error in Recent waterings",
+      "actual": "The 'No waterings yet' empty state, which looks like there is no data",
+      "evidence": "{\"s\":[\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\",\"Go to beds\",\"Garden Log · a journal for one garden\"],\"pe\":[]} | {\"s\":[\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\",\"Go to beds\",\"Garden Log · a journal for one garden\"],\"pe\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-183121-hunt-fd1b",
+        "probe": "dashboard-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard renders a malformed watering response as rows of 'Never' with blank beds",
+      "where": "/ (GET /api/waterings?limit=5)",
+      "steps": "Probe dashboard-faults, expectation dash-malformed-no-crash",
+      "expected": "An error message in Recent waterings",
+      "actual": "Table rows reading 'Never | (blank) | –'",
+      "evidence": "{\"s\":[\"Recent waterings\",\"All waterings\",\"The five most recent waterings\",\"WHEN\\tBED\\tAMOUNT\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\"],\"pe\":[]} | {\"s\":[\"Recent waterings\",\"All waterings\",\"The five most recent waterings\",\"WHEN\\tBED\\tAMOUNT\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\"],\"pe\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-183121-hunt-fd1b",
+        "probe": "dashboard-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Changing the bed filter while the request hangs leaves 'Loading waterings…' forever, with the previous unfiltered rows still shown",
+      "where": "/waterings (bed filter)",
+      "steps": "Probe waterings-hang, expectation hang-no-stale-other-bed-rows",
+      "expected": "The old rows are cleared or marked stale, and the request times out with an error",
+      "actual": "After 13 s it still shows 'Loading waterings…' and lists North bed rows (with working Delete buttons) under the 'Shade corner' filter",
+      "evidence": "[\"Shade corner\",\"Clear filter\",\"Loading waterings…\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\",\"ACTIONS\",\"12 Nov 2026, 18:33\\tShade corner\\t–\\tDelete\",\"watering of Shade corner\",\"12 Nov 2026, 18:32\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\",\"watering of Shade corner\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\"] | [\"Shade corner\",\"Clear filter\",\"Loading waterings…\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\",\"ACTIONS\",\"12 Nov 2026, 18:33\\tShade corner\\t–\\tDelete\",\"watering of Shade corner\",\"12 Nov 2026, 18:32\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\",\"watering of Shade corner\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-183121-hunt-fd1b",
+        "probe": "waterings-hang",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

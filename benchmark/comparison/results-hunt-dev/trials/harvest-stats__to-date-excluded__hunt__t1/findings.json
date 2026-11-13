@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Harvests on the To date are left out of the stats (range end is exclusive)",
+      "where": "GET /api/stats/harvests and /stats",
+      "steps": "Probe to-date-inclusive, expectation api-single-day-counts-harvest",
+      "expected": "A 777 g harvest logged on 2026-03-17 is counted when From = To = 2026-03-17 (the To date is included)",
+      "actual": "API returns harvest_count 0 and total_grams 0, and the page says '0 harvests from 17 Mar 2026 to 17 Mar 2026' and 'No harvests in this range'. The query uses harvested_on < to, so the To date is dropped. The dashboard's best plant this year uses the same helper and also leaves out 31 Dec.",
+      "evidence": "{\"count\":0,\"total\":0} | {\"count\":0,\"total\":0}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-171751-hunt-d5d8",
+        "probe": "to-date-inclusive",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A hung stats request leaves the page on 'Loading stats…' forever, still showing the old range's table",
+      "where": "/stats",
+      "steps": "Probe range-and-hang, expectation hang-not-stuck-loading",
+      "expected": "After 13 s with no answer, a timeout or error message and a way to try again; old results not shown as if they belonged to the new range",
+      "actual": "'Loading stats…' stays on screen with no timeout, while the table and Best plants still show the 1 Jan to 31 Dec 2026 data even though From now says 2026-03-01",
+      "evidence": "{\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\"]} | {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-171751-hunt-d5d8",
+        "probe": "range-and-hang",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

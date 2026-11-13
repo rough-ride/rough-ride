@@ -1,0 +1,19 @@
+{
+  "findings": [
+    {
+      "title": "Journal page shows a malformed API response as a list of blank entries with a success count",
+      "where": "/journal (GET /api/journal?limit=50)",
+      "steps": "Probe malformed-feed, expectation malformed-feed-shows-error-not-entries",
+      "expected": "When the journal response is not a JSON list, the page shows an error such as 'Could not load the journal.' and no entry count",
+      "actual": "The page reports '14 entries' and draws 14 cards that show only '–' (no plant name, date or text), with no error",
+      "evidence": "{\"alerts\":[\"14 entries\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"]} | {\"alerts\":[\"14 entries\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-192706-hunt-7646",
+        "probe": "malformed-feed",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

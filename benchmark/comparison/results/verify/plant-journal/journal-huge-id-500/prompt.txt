@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-plant-journal-journal-huge-id-500/scratch.
+
+The reported problem: Sending an integer id larger than 64 bits as plant_id or entry id to POST/PUT/DELETE/GET /api/journal returns 500 Internal Server Error from SQLite overflow instead of a 4xx.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Huge numeric ids/plant_id give 500 instead of 4xx",
+  "where": "POST /api/journal, PUT/DELETE /api/journal/{id}, GET /api/journal?plant_id=",
+  "steps": "POST {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-01-01\",\"body\":\"x\"}; DELETE /api/journal/9223372036854775808; GET /api/journal?plant_id=99999999999999999999999",
+  "expected": "422/404",
+  "actual": "500 Internal Server Error (SQLite integer overflow). The existing plants endpoint has the same problem, but the new journal endpoints add more cases.",
+  "evidence": "All three requests returned 'Internal Server Error 500'"
+ },
+ {
+  "title": "Very large ids cause 500 Internal Server Error on the journal endpoints",
+  "where": "POST /api/journal (plant_id), GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+  "steps": "curl POST /api/journal with {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-11-12\",\"body\":\"x\"}; or GET /api/journal?plant_id=99999999999999999999999; or PUT/DELETE /api/journal/99999999999999999999999",
+  "expected": "A 4xx response (422 or 404).",
+  "actual": "HTTP 500 'Internal Server Error'. SQLite overflows on an integer larger than 64 bits. No upper bound is validated.",
+  "evidence": "All four calls returned 'Internal Server Error 500'."
+ },
+ {
+  "title": "Out-of-range plant_id / entry id returns 500 instead of 4xx",
+  "where": "POST /api/journal, PUT/DELETE /api/journal/{id}",
+  "steps": "Signed in, POST /api/journal with {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-01-01\",\"body\":\"x\"} (or 9223372036854775808); PUT /api/journal/9223372036854775808; DELETE /api/journal/99999999999999999999",
+  "expected": "422/404 with a readable reason",
+  "actual": "HTTP 500 Internal Server Error (SQLite integer overflow; plant_id has only gt=0 and path ids have no upper bound)",
+  "evidence": "curl returned 'Internal Server Error 500' for all four requests"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-plant-journal-journal-huge-id-500/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

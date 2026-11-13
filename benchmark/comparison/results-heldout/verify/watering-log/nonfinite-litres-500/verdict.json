@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "nonfinite-litres-500",
+  "sentence": "POST /api/waterings with litres NaN, Infinity or an overflowing number like 1e309 returns 500 instead of a 422 validation error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in through POST /api/auth/login as the demo user, then sent POST /api/waterings with {\"bed_id\":1,\"litres\":X,\"watered_on\":\"2026-11-01\"}. For X = NaN, Infinity, -Infinity and 1e309, the API returned 'HTTP/1.1 500 Internal Server Error' with a plain-text 'Internal Server Error' body. As controls, litres 1e308 returned a 422 less_than_equal validation error and litres 5 returned 201. The failing requests inserted no rows. I deleted the control row I created (id 3). Cause: WateringIn.litres is declared as float with gt=0 and le=10000. The 'before' validator does not reject non-finite values, and the app has no custom validation-error handler. So pydantic rejects the value, but the 422 response that echoes the input (nan/inf) can't be serialised and the server crashes. The API should return 422 for bad input, not 500.",
+  "severity": "low",
+  "wallMs": 30723
+}

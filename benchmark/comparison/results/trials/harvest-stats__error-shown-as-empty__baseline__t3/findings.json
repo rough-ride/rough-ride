@@ -1,0 +1,44 @@
+{
+  "findings": [
+    {
+      "title": "Stats page shows a failed request as 'No harvests in this range' (no error state, no retry)",
+      "where": "/stats (frontend/app/pages/stats.vue)",
+      "steps": "Sign in, open http://localhost:3790/stats?from=2026-12-01&to=2026-01-01 (or any range while the API returns an error or is unreachable).",
+      "expected": "A visible error message (e.g. 'The From date must be on or before the To date.' or 'could not be reached') with a Retry button.",
+      "actual": "The page ignores the useFetch error and renders the empty state 'No harvests in this range – Pick a different date range, or log a harvest'. The API's 422 detail only appears in the serialized __NUXT_DATA__ payload. There is no retry control. The same happens for 500s, timeouts and network failures, so a server outage looks like 'no harvests'.",
+      "evidence": "SSR HTML <main> text: 'Stats ... From To This year No harvests in this range Pick a different date range...'. The payload contains '422 Unprocessable Entity' / 'The From date must be on or before the To date.' The page reads only { data, status } from useApiFetch and never uses error or refresh.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Stats request has no timeout",
+      "where": "/stats -> GET /api/stats/harvests",
+      "steps": "Open /stats while the API is hung or very slow.",
+      "expected": "The request fails after 10 s and shows an error with a retry.",
+      "actual": "useApiFetch sets no timeout, so the page can show 'Loading stats…' indefinitely. Combined with the missing error state, a timeout would also end up as the 'No harvests' empty state.",
+      "evidence": "frontend/app/composables/useApi.ts: $fetch.create has no timeout option, and stats.vue passes none.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing a date field shows a blank input while results use a different range",
+      "where": "/stats From/To inputs",
+      "steps": "On /stats, clear the From field (or the To field).",
+      "expected": "The field is refused with a reason, or the input shows the date actually being used.",
+      "actual": "The param is dropped from the query and the server silently falls back to 1 Jan or 31 Dec of the current year. The input stays blank while the table reflects the fallback date. A blank From combined with a To in an earlier year gives a 422, which is then shown as 'No harvests'.",
+      "evidence": "stats.vue: the query computed omits empty values; stats.py: date_from = date_from or year_start.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "After a failed range change, stale or empty data is presented as the current range",
+      "where": "/stats",
+      "steps": "Load /stats successfully, then change the range so that the request fails (server down or invalid range).",
+      "expected": "An error is shown for the new range.",
+      "actual": "With no error branch, the page shows either the empty state or the previous range's numbers under the newly chosen inputs. Which one depends on how Nuxt treats data on error. Either way, the user is misled.",
+      "evidence": "Template branches only on stats/status. The error ref is never read.",
+      "status": "suspected",
+      "severity": "medium"
+    }
+  ]
+}

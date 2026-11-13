@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "error-shown-as-empty",
+  "key": "auth-me-no-retry-after-failure",
+  "sentence": "After GET /api/auth/me fails on /login, there is no way to retry without a page reload.",
+  "verdict": "not-reproduced",
+  "evidence": "With the browser cookies cleared, I routed GET **/api/auth/me to return a 500 and opened http://localhost:3790/login. The console showed /api/auth/me returning 500 and the normal Sign in form appeared. It worked: the email and password fields and the Sign in button were all there, because loadCurrentUser() (composables/useAuth.ts) catches the error and returns null, so the middleware just treats the visitor as not signed in. I removed the route, filled in the DEMO credentials and clicked Sign in on the same page, with no reload. POST /auth/login succeeded and the app went to the Dashboard (/). Any later navigation also runs the global middleware again and calls /auth/me again while the user is null. So the user can recover without reloading: the sign-in form is the way forward. The other failure modes in the report (400, connection reset, 429) go through the same catch-all, so they behave the same way. login.vue, useAuth.ts and auth.global.ts are not touched by the diff, so this is not a regression from the stats change.",
+  "severity": null,
+  "wallMs": 52458
+}

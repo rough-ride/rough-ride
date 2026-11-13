@@ -1,0 +1,24 @@
+diff --git a/backend/routers/journal.py b/backend/routers/journal.py
+index d3ba965..b03c39e 100644
+--- a/backend/routers/journal.py
++++ b/backend/routers/journal.py
+@@ -5,7 +5,7 @@ import sqlite3
+ from fastapi import APIRouter, Depends, Query, Response, status
+ 
+ from db import get_db
+-from routers.common import ensure_plant_exists, escape_like, not_found
++from routers.common import ensure_plant_exists, not_found
+ from schemas import JournalEntryCreate, JournalEntryIn, JournalEntryOut
+ from security import require_user
+ 
+@@ -41,9 +41,7 @@ def list_entries(
+     params: list[object] = []
+     term = q.strip()
+     if term:
+-        pattern = f"%{escape_like(term)}%"
+-        clauses.append("(j.body LIKE ? ESCAPE '\\' OR p.name LIKE ? ESCAPE '\\')")
+-        params.extend([pattern, pattern])
++        clauses.append(f"(j.body LIKE '%{term}%' OR p.name LIKE '%{term}%')")
+     if plant_id is not None:
+         clauses.append("j.plant_id = ?")
+         params.append(plant_id)

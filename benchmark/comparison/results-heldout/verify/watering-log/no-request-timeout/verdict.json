@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "no-request-timeout",
+  "sentence": "Watering API calls have no timeout, so when the server hangs, 'Water now'/'Save watering' stay disabled on 'Watering…'/'Saving…' and lists stay loading indefinitely instead of failing after 10 s.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the behaviour: signed in as the demo user, opened /beds, used Playwright page.route to make **/api/waterings** hang (never answer), then clicked 'Water now' on 'North bed'. After 15 s the button still read 'Watering…', was disabled, and no error was shown. But this is how the whole app has always worked, not something this change got wrong. (1) The request says nothing about timeouts, and the '10 s' expectation in the reports doesn't appear in the request, the specs (.rough-ride/specs/request.txt) or anywhere in the code. (2) frontend/app/composables/useApi.ts is unchanged by the diff (git diff main --stat doesn't list it); useApiClient/useApiFetch never set a timeout, and a grep for timeout/AbortSignal across the app finds nothing. Every existing API call (beds, plants, etc.) behaves the same way when the server hangs. (3) The new watering code uses the existing shared client in the usual way, and its try/catch does show an error (apiErrorMessage -> 'The garden server could not be reached.') when a request actually fails. Adding a client-wide timeout would be a reasonable improvement, but this feature didn't ask for one and the change didn't remove one.",
+  "severity": null,
+  "wallMs": 103694
+}

@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Negative (and zero-ish/-infinite) litres are accepted and saved",
+      "where": "POST /api/waterings; Beds page 'Record past watering' form",
+      "steps": "On Beds, open 'Record past watering', enter -5 litres and save. Or POST {\"bed_id\":1,\"watered_on\":\"2026-11-01\",\"litres\":-5}.",
+      "expected": "Refused with a visible reason (amount must be greater than zero); API answers 422.",
+      "actual": "API returns 201 and stores litres -5. The client check only rejects exactly 0 (litres === 0), so negatives pass, even though its message says 'greater than zero'. -1e308 is also saved, and '-Infinity' is saved and comes back as null. The schema has le=10000 but no lower bound.",
+      "evidence": "POST litres:-5 -> 201 {\"litres\":-5.0}; litres:-1e308 -> 201; litres:\"-Infinity\" -> 201 litres:null. The Waterings list then shows '-5 L' and the totals are wrong (negative totals hide the total text).",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Watering date has no lower bound (year 0001 accepted)",
+      "where": "POST /api/waterings, Beds past-watering form",
+      "steps": "POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\",\"litres\":2}",
+      "expected": "An implausibly old date is refused with a reason.",
+      "actual": "201 Created. The watering is stored dated 1 Jan 0001.",
+      "evidence": "Response {\"id\":5,\"watered_on\":\"0001-01-01\",...} 201",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Oversized integer ids give a 500",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":99999999999999999999}; GET /api/waterings?bed_id=99999999999999999999; DELETE /api/waterings/99999999999999999999",
+      "expected": "4xx validation error",
+      "actual": "500 Internal Server Error (plain text). Reachable from the UI through /waterings?bed=99999999999999999999.",
+      "evidence": "All three requests returned 'Internal Server Error 500'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Error states for waterings have no retry",
+      "where": "Dashboard 'Recent waterings' section; /waterings page",
+      "steps": "Make /api/waterings fail (for example, stop the API) and open the dashboard or /waterings.",
+      "expected": "An error message with a Retry button that refetches without a reload.",
+      "actual": "Only an AlertMessage is shown. The dashboard does not even destructure refresh for waterings, and /waterings offers no retry control. The user has to reload the page.",
+      "evidence": "index.vue: `const { data: waterings, error: wateringsError } = wateringsResult` with no retry button in the template; waterings.vue shows the AlertMessage with no button.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Beds fetch failure on Waterings page is silent",
+      "where": "/waterings bed filter",
+      "steps": "Make /api/beds fail while /api/waterings works, then open /waterings.",
+      "expected": "An error saying the beds could not be loaded, with a retry.",
+      "actual": "bedsResult.error is ignored. The filter dropdown shows only 'All beds' with no explanation, and a bed preselected from ?bed= shows as a blank selection.",
+      "evidence": "waterings.vue: `const { data: beds } = bedsResult`; the error is never rendered",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "'Water now' retry after a timeout or network failure records duplicate waterings",
+      "where": "Beds page 'Water now' / POST /api/waterings",
+      "steps": "Click 'Water now'. If the response is lost or slow and the user clicks again, or presses Save watering again after an error, each click inserts a new row.",
+      "expected": "A retry of the same action makes one change (idempotency key or dedupe).",
+      "actual": "There is no idempotency key, and the server inserts unconditionally. Requests also have no 10 s timeout, so the button can stay on 'Watering…' indefinitely while the server hangs.",
+      "evidence": "recordWatering calls api('/waterings', {method:'POST', body}) with no timeout or key; create_watering always INSERTs",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Deleting an already-deleted watering shows an error",
+      "where": "/waterings Delete",
+      "steps": "Delete a watering in two tabs, or retry after a timeout.",
+      "expected": "Treated as done; the list refreshes.",
+      "actual": "404 'Watering not found.' is shown as an error, and the list is not refreshed.",
+      "evidence": "A second DELETE /api/waterings/3 returned 404 {\"detail\":\"Watering not found.\"}",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

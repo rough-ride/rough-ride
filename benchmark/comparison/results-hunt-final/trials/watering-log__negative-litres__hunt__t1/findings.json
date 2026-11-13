@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Past watering form accepts a negative amount of litres and reports it as success",
+      "where": "/beds (Record past watering form)",
+      "steps": "Probe negative-litres, expectation negative-litres-refused",
+      "expected": "-5 litres refused with 'Enter an amount in litres greater than zero.' and no watering created",
+      "actual": "Watering saved with litres -5, success notice 'Recorded -5 L on 12 Nov 2026.', and /waterings shows '-5 L' and a total reduced by it",
+      "evidence": "{\"created\":[{\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5}],\"alerts\":[\"Recorded -5 L on 12 Nov 2026.\"]} | {\"created\":[{\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5}],\"alerts\":[\"Recorded -5 L on 12 Nov 2026.\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-192524-hunt-c770",
+        "probe": "negative-litres",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "POST /api/waterings accepts negative litres",
+      "where": "POST /api/waterings",
+      "steps": "Probe negative-litres, expectation api-refuses-negative-litres",
+      "expected": "422 for litres -3",
+      "actual": "201 Created with litres -3 stored",
+      "evidence": "{\"status\":201,\"json\":{\"id\":4,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-01\",\"watered_at\":null,\"litres\":-3}} | {\"status\":201,\"json\":{\"id\":4,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-01\",\"watered_at\":null,\"litres\":-3}}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-192524-hunt-c770",
+        "probe": "negative-litres",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "watering-load-error-no-retry",
+  "sentence": "When GET /api/waterings fails, the /waterings page and the dashboard 'Recent waterings' section show only an error message with no retry control, so recovery requires a reload or filter change.",
+  "verdict": "not-a-defect",
+  "evidence": "Signed in as the demo user and made **/api/waterings* return a plain-text 500. Going to /waterings through the nav showed 'Could not load waterings.' and the main area had no buttons. The dashboard showed 'Recent waterings / All waterings / Could not load recent waterings.' with no retry, and index.vue does not destructure refresh for waterings. So the behaviour is real. But it follows the app's existing convention. In the same run I also failed /api/tasks/upcoming, and the dashboard's existing 'Upcoming tasks' section shows only 'Could not load upcoming tasks.' with no retry either. The main branch has no retry or 'try again' control anywhere in the frontend: tasks.vue, beds.vue and plants/[id].vue all show a plain AlertMessage on load errors, and AlertMessage has no action slot. The request did not ask for retry. The new watering error states are consistent with how the app is designed to handle load errors, so this is not a regression introduced by the change.",
+  "severity": null,
+  "wallMs": 55564
+}

@@ -1,0 +1,114 @@
+{
+  "findings": [
+    {
+      "title": "Oversized bed_id / watering id makes the watering endpoints return 500",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "Signed in, POST {\"bed_id\":99999999999999999999}; GET /api/waterings?bed_id=99999999999999999999; DELETE /api/waterings/99999999999999999999",
+      "expected": "4xx validation or not-found response",
+      "actual": "HTTP 500 Internal Server Error (plain text) on all three",
+      "evidence": "curl returned 'Internal Server Error 500' for each; bed_id is `int` with gt=0 but no upper bound, so sqlite raises OverflowError",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying 'Water now' or 'Save watering' after a timeout or lost response records a duplicate watering",
+      "where": "Beds page / POST /api/waterings",
+      "steps": "Click 'Water now'; the response is lost or slow (the request has no timeout), the user clicks again after the failure",
+      "expected": "One watering per intended action (idempotency key or dedupe)",
+      "actual": "Each POST inserts a new row and there is no idempotency key or dedupe. Several 'now' POSTs sent within the same second each created a separate row (ids 3, 4, 6).",
+      "evidence": "Separate POST /api/waterings calls within one second each returned 201 with a new id; the code has no request id or uniqueness check",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Watering requests have no timeout, so buttons can stay in 'Watering…'/'Saving…' forever",
+      "where": "Beds page Water now / Save watering, Waterings page delete, dashboard and waterings list fetches",
+      "steps": "Make the API hang (accept the connection but never answer), then click 'Water now'",
+      "expected": "Fail after 10 s with a visible error and the button enabled again",
+      "actual": "useApiClient/useApiFetch set no timeout, so the button stays disabled with 'Watering…' indefinitely",
+      "evidence": "composables/useApi.ts $fetch.create has no timeout option; recordWatering awaits the fetch with no limit",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Dashboard 'Recent waterings' error has no retry",
+      "where": "Dashboard (/)",
+      "steps": "Load the dashboard while /api/waterings fails",
+      "expected": "Error message with a Retry button that refetches",
+      "actual": "Only an alert is shown. `refresh` for the waterings fetch is never taken out of the fetch result, so the only way to recover is a full reload",
+      "evidence": "index.vue: `const { data: waterings, error: wateringsError } = wateringsResult`, and the template has no retry control",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page error state has no retry and the bed list fails silently",
+      "where": "/waterings",
+      "steps": "Open /waterings while the API errors (or /api/beds fails)",
+      "expected": "Error with a Retry button; the bed filter says it could not load beds",
+      "actual": "The waterings error alert has no retry. If /api/beds fails, the error is ignored: the filter only shows 'All beds' and gives no message",
+      "evidence": "waterings.vue only uses `data` from bedsResult; no retry button in the template",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Invalid ?bed= in the URL shows a raw validation message and an unselected filter",
+      "where": "/waterings?bed=abc, /waterings?bed=999",
+      "steps": "Open /waterings?bed=abc, or /waterings?bed=999 (a missing bed)",
+      "expected": "Ignore the bad filter or show a friendly message, with the select showing the active filter",
+      "actual": "bed=abc shows the alert 'Query.bed id: Input should be a valid integer, unable to parse string as an integer'. bed=999 shows 'No waterings for this bed' while the select shows no matching option",
+      "evidence": "SSR HTML of /waterings?bed=abc contains that alert text; bed=999 renders '0 waterings' with no selected option",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "'Watered X' success is shown even when refreshing the bed list fails",
+      "where": "Beds page Water now",
+      "steps": "Click 'Water now'; the POST succeeds but the following GET /api/beds fails",
+      "expected": "Success plus an error saying the list could not be refreshed, with no stale data presented as current",
+      "actual": "useFetch refresh() does not throw, so recordWatering returns true and shows the success notice while 'Last watered' stays stale",
+      "evidence": "beds.vue recordWatering: `await refresh(); return true`",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Tiny litre amounts are accepted but display as '0 L'; extreme past dates accepted",
+      "where": "Beds page past watering form / POST /api/waterings, waterings list",
+      "steps": "Record a past watering with litres 0.0001 (or watered_on 0001-01-01)",
+      "expected": "Reject the value with a reason, or show it accurately",
+      "actual": "The server accepts 0.0001 L and formatLitres (max 2 fraction digits) shows '0 L'. The date 0001-01-01 is accepted as a watering date",
+      "evidence": "POST litres 0.0001 -> 201 litres 0.0001; POST watered_on 0001-01-01 -> 201",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "litres: true is accepted as 1 litre",
+      "where": "POST /api/waterings",
+      "steps": "POST {\"bed_id\":1,\"litres\":true}",
+      "expected": "422",
+      "actual": "201 with litres 1.0",
+      "evidence": "curl response id 3 litres 1.0",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Past-watering form does not fit 375 px",
+      "where": "Beds page, Record past watering form",
+      "steps": "Open /beds at 375 px width and click 'Record past watering'",
+      "expected": "Fields stack on narrow screens",
+      "actual": ".water-form uses grid-template-columns: 1fr 1fr auto with no mobile override, so the date input, number input and two buttons sit in one row, likely wider than the card and causing sideways scrolling",
+      "evidence": "main.css: .water-form has no rule in @media (max-width: 720px), unlike .filters",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "'Water now' date and the client's max date can disagree across time zones",
+      "where": "POST /api/waterings and the past watering form",
+      "steps": "Use the app from a time zone ahead of the server and pick today's date in the form",
+      "expected": "Today is accepted",
+      "actual": "The form's max and default use the browser's todayIso(), but the server rejects dates after its own date.today() ('Watering date cannot be in the future.'). 'Water now' stores watered_on in server local time and watered_at in UTC",
+      "evidence": "schemas.py not_in_future uses date.today(); waterings.py uses now.astimezone().date()",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

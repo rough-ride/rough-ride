@@ -1,0 +1,44 @@
+{
+  "findings": [
+    {
+      "title": "Failed stats request is shown as 'No harvests in this range' with no error or retry",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Sign in. Make GET /api/stats/harvests return 500 (text/plain body) via browser_route. Click 'Stats' in the main nav.",
+      "expected": "A visible error message saying the stats could not be loaded, with a Retry button.",
+      "actual": "The page shows the empty state 'No harvests in this range – Pick a different date range, or log a harvest' and the results line is blank. The error is only in the console. The page only reads data/status from useApiFetch and ignores error, so any failure (5xx, network, timeout, 422) looks like an empty range. There is no retry control.",
+      "evidence": "Snapshot after the mocked 500: paragraph 'No harvests in this range', 2 console errors, no alert. stats.vue has no error branch and does not use error/refresh.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Range refused by the server (422) is shown as an empty result instead of the reason",
+      "where": "/stats",
+      "steps": "On /stats, clear the From field and set To to 2020-05-01. Or open /stats?from=2027-01-01&to=2026-12-31 directly.",
+      "expected": "A visible reason, e.g. 'The From date must be on or before the To date.', or the input refused on the client.",
+      "actual": "When From is blank the client leaves it out, so the server falls back to 2026-01-01, which is after To, and answers 422 'The From date must be on or before the To date.' The page swallows this and shows 'No harvests in this range'. The blank From field also hides that the server is really using 1 Jan of the current year.",
+      "evidence": "curl /api/stats/harvests?to=2020-05-01 -> 422 {\"detail\":\"The From date must be on or before the To date.\"}. stats.vue builds the query without 'from' when blank, and the template has no error branch.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no 10 s timeout; a hanging API leaves 'Loading stats…' forever",
+      "where": "/stats",
+      "steps": "Make GET /api/stats/harvests hang (never respond), then open /stats or change a date.",
+      "expected": "The request fails after 10 s and shows an error with a retry.",
+      "actual": "useApiFetch / useApiClient set no timeout, so the status stays 'pending' and 'Loading stats…' stays up for as long as the server hangs. Even after it fails, the result is shown as the empty state (see the first finding).",
+      "evidence": "composables/useApi.ts: $fetch.create sets no timeout, and stats.vue passes none.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Monthly table leaves out months with no harvests",
+      "where": "/stats table, GET /api/stats/harvests",
+      "steps": "Choose a range spanning several months where some months have no harvests, e.g. 2025-01-01 to 2026-12-31.",
+      "expected": "One column per month in the chosen range, with empty months shown as – or 0.",
+      "actual": "The server builds months only from months that have harvest rows, so the columns jump (e.g. 2025-08 then 2026-06) with no gaps shown. This can mislead the reader about seasonality.",
+      "evidence": "API response months: 2025-08, 2026-06, 2026-07, 2026-08, 2026-09. stats.py builds `months = sorted({row['month'] for row in rows})`.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+You have a Playwright browser through the playwright MCP tools. Besides navigating, clicking and typing, `browser_route` mocks or fails network requests matching a URL pattern (use it to make API calls fail, hang or return odd data), `browser_network_requests` lists requests, and `browser_network_state_set` takes the browser offline.

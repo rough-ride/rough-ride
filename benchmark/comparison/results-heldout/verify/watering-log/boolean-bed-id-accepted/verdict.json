@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "boolean-bed-id-accepted",
+  "sentence": "POST /api/waterings with bed_id set to JSON true returns 201 and records the watering on bed 1 instead of a 422.",
+  "verdict": "confirmed",
+  "evidence": "Signed in via POST /api/auth/login with the demo credentials, then POST /api/waterings with body {\"bed_id\":true}. Got HTTP 201 and {\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":\"2026-11-12 18:53:25\",\"litres\":null}, so a watering was saved on bed 1. For comparison, {\"bed_id\":\"abc\"} returns 422 int_parsing. The cause is that WateringIn.bed_id is declared as `int = Field(gt=0)` under pydantic's lax mode with no strict setting, so JSON true is turned into 1. I deleted the test watering afterwards (DELETE returned 204).",
+  "severity": "low",
+  "wallMs": 27837
+}

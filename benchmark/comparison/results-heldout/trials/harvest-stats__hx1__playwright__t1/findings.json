@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Late stats response overwrites newer date range results",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "On /stats set From to 2026-06-01 (response slowed to 3 s), then quickly set From to 2026-09-01 (fast response).",
+      "expected": "Page shows results for the latest range (1 Sep 2026 onwards).",
+      "actual": "The 1 Sep results appear first, then the late answer for 1 Jun replaces them, while the From field and the URL still say 2026-09-01.",
+      "evidence": "results-count went from '1 harvest from 1 Sept 2026 to 31 Dec 2026' to '5 harvests from 1 Jun 2026 to 31 Dec 2026'; input value 2026-09-01. loadStats in stats.vue has no request sequencing or abort.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Stats request never times out; page shows 'Loading stats…' forever with stale data",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests hang (no response), then change the From date.",
+      "expected": "Request fails after 10 s with a visible error and a retry.",
+      "actual": "After 15+ s it still shows 'Loading stats…', and the old range's table and best plants stay visible as though they matched the new range.",
+      "evidence": "useApiClient/useApiFetch set no timeout; the page text after 15 s was 'Loading stats…' above the previous Best plants list.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Error state has no retry button",
+      "where": "/stats",
+      "steps": "Open Stats from the nav while /api/stats/harvests returns 500.",
+      "expected": "Error message with a Try again button that refetches.",
+      "actual": "Only 'Could not load harvest stats.' is shown. The only ways to recover are changing a date or reloading.",
+      "evidence": "The AlertMessage in stats.vue has no retry action. Changing a date afterwards did recover, so a failed result is not cached.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Unreadable 200 response crashes the stats page",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests return 200 with an HTML body (e.g. from a proxy or captive portal), then change a date.",
+      "expected": "A clear 'could not load' error.",
+      "actual": "The render throws 'TypeError: Cannot read properties of undefined (reading 'length')' (stats.plants.length on a string), leaving 'Loading stats…' stuck and showing the Nuxt error overlay.",
+      "evidence": "Error dialog text: 'TypeError ... Cannot read properties of undefined (reading 'length')'. A response with null fields also renders as an empty table with '– total' and 'Harvest weight ... – to –' rather than an error.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Months without harvests are left out of the per-month table",
+      "where": "/stats table, GET /api/stats/harvests",
+      "steps": "Use the default range (this year), or 0001-01-01 to 9999-12-31.",
+      "expected": "One column per calendar month in the chosen range (with '–' or 0 for empty months), so the table really shows weight per month for the range.",
+      "actual": "Only months with harvests become columns: Jun, Jul, Aug, Sept 2026 for a Jan–Dec range. A wide range jumps straight from Aug 2025 to Jun 2026 with no columns in between.",
+      "evidence": "API months: [2025-08, 2026-06, 2026-07, ...]; stats.py builds months from the result rows only.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Clearing the From date silently falls back to 1 Jan and gives a confusing error",
+      "where": "/stats",
+      "steps": "Open /stats?to=2025-12-31 (or set To to a date last year), then clear the From field.",
+      "expected": "Blank From is refused with a clear reason, or treated visibly as 'no lower bound'.",
+      "actual": "The empty field is left out of the query, the server uses 1 Jan of this year, and the page says 'The From date must be on or before the To date.' while From is empty. When To is valid, the range text shows '1 Jan 2026' though the field is blank.",
+      "evidence": "Observed message with the input value ''.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

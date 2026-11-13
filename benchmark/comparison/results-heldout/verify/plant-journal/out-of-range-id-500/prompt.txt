@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-out-of-range-id-500/scratch.
+
+The reported problem: Journal endpoints (POST plant_id, GET ?plant_id=, PUT/DELETE /api/journal/{id}) return 500 instead of 4xx when given integers larger than 64 bits.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Out-of-range ids crash journal endpoints with 500",
+  "where": "POST /api/journal (plant_id), GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+  "steps": "curl POST /api/journal with plant_id 999999999999999999999, or GET /api/journal?plant_id=99999999999999999999, or PUT/DELETE /api/journal/99999999999999999999.",
+  "expected": "A 4xx (422 or 404).",
+  "actual": "500 Internal Server Error (the SQLite integer overflows).",
+  "evidence": "All four requests returned 'Internal Server Error [500]'. The id fields have no upper bound."
+ },
+ {
+  "title": "Out-of-range ids give 500 Internal Server Error on the journal endpoints",
+  "where": "POST /api/journal (plant_id), GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+  "steps": "POST {\"plant_id\":9223372036854775808,\"entry_on\":\"2026-01-01\",\"body\":\"x\"}; DELETE /api/journal/9223372036854775808; GET /api/journal?plant_id=9223372036854775808",
+  "expected": "4xx (422 or 404).",
+  "actual": "500 Internal Server Error (SQLite OverflowError on integers above 64 bits).",
+  "evidence": "curl: 'Internal Server Error 500' for all four calls; plant_id 99999999999999999999 also gives 500."
+ },
+ {
+  "title": "Server returns 500 for out-of-range ids and for invalid Unicode in journal endpoints",
+  "where": "POST/PUT/DELETE /api/journal, GET /api/journal?plant_id=",
+  "steps": "POST {plant_id: 99999999999999999999,...}; GET /api/journal?plant_id=99999999999999999999; PUT or DELETE /api/journal/99999999999999999999; POST or PUT with body \"\\ud800\" (a lone surrogate).",
+  "expected": "4xx validation error",
+  "actual": "500 Internal Server Error (SQLite OverflowError or encoding error)",
+  "evidence": "curl gave 'Internal Server Error 500' for each of these requests."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-out-of-range-id-500/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

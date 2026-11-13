@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Failed stats request is shown as 'No harvests in this range' (no error message, no retry)",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Sign in, make GET /api/stats/harvests return 500 (text/plain body), click 'Stats' in the nav.",
+      "expected": "An error message such as 'Could not load stats' with a Retry button. Never an empty state.",
+      "actual": "The page shows the empty state 'No harvests in this range. Pick a different date range, or log a harvest to see it here.' The error only appears in the console. stats.vue never reads `error` from useApiFetch: the EmptyState v-else branch matches any non-pending status, including 'error'. There is no retry control either; the only way to refetch is to change a date.",
+      "evidence": "main innerText with the 500 mocked: 'Stats … From To No harvests in this range Pick a different date range, or log a harvest to see it here. Log harvest'. Console: 2 errors.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Inverted or partly cleared date range shows 'No harvests' instead of the server's validation message",
+      "where": "/stats date fields",
+      "steps": "On /stats set From to 2026-06-01, then type 2020-01-01 into To (typing ignores the min/max attributes). Or clear From and set To to an earlier year: the server then fills in From as 1 Jan of the current year, which is after To.",
+      "expected": "A visible reason, e.g. 'The From date must be on or before the To date.' (the API already returns this as a 422 detail).",
+      "actual": "The 422 is ignored and the page shows 'No harvests in this range', which tells the user the range is valid but empty.",
+      "evidence": "After filling To=2020-01-01 the page read 'No harvests in this range …'. The API returns 422 {\"detail\":\"The From date must be on or before the To date.\"} for from=2026-01-01&to=2025-01-01 and also for to=2020-01-01 alone.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout; a request that never answers shows 'Loading stats…' forever",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests hang (never respond), then change a date on /stats and wait more than 10 seconds.",
+      "expected": "The request fails after 10 s and the page shows an error with a Retry button.",
+      "actual": "After 13 s the page still showed 'Loading stats…' and nothing else. useApiFetch is called without a timeout.",
+      "evidence": "main innerText at 13 s: 'Stats … From To This year Loading stats…'",
+      "status": "observed",
+      "severity": "medium"
+    }
+  ]
+}

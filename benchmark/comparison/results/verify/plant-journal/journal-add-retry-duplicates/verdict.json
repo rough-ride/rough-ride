@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-add-retry-duplicates",
+  "sentence": "Retrying 'Add entry' after a POST /api/journal whose response was lost or timed out creates a duplicate entry because the endpoint has no idempotency key or dedupe.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the mechanics through the API: two identical POST /api/journal requests (plant 1, same date and body) created two rows (ids 4 and 5). Both were listed, and I deleted them afterwards. create_entry in backend/routers/journal.py inserts without any idempotency key, but this matches the existing app: plants, beds, tasks and harvests all insert unconditionally too (I checked that a plain POST /api/tasks also just creates a row with 201). The client does not retry on its own: useApi.ts uses $fetch/ofetch, which does not retry POSTs by default, so a duplicate only happens when the user deliberately submits again after the 'The garden server could not be reached.' error. The request asks for add/edit/delete/list/search/counts and says nothing about idempotency or exactly-once delivery. A second entry after a lost response is the normal at-least-once behaviour of a plain REST create; the gardener can see it in the list and delete it. A retried DELETE returning 'not found' is the same thing. Neither is a regression, and the request does not require either to behave differently.",
+  "severity": null,
+  "wallMs": 53078
+}

@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Harvest count and harvest weight are multiplied by the number of journal entries",
+      "where": "GET /api/plants, GET /api/plants/{id}; Plants list, plant detail Harvests section and delete confirmation",
+      "steps": "Plant Tomato has 3 harvests (600+450+300 g) and 2 journal entries. Open /plants or /plants/1, or call GET /api/plants.",
+      "expected": "3 harvests, 1350 g",
+      "actual": "6 harvests, 2700 g. Adding a second journal entry to Lettuce changed its totals from 2 harvests/350 g to 4 harvests/700 g. The delete-plant question also says the wrong number of harvests.",
+      "evidence": "API returned Tomato harvest_count=6 harvest_grams=2700 while the harvests array has 3 items. The Lettuce detail page showed '700 g total, 4 harvests, averaging 175 g each' above a table with 2 rows. Cause: PLANT_SELECT adds LEFT JOIN journal_entries next to LEFT JOIN harvests (a cross product), so COUNT(h.id) and SUM(h.weight_grams) count each harvest once per journal entry. Only journal_count uses DISTINCT.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal requests have no timeout, so a request with no response leaves the form stuck on 'Saving…'",
+      "where": "Plant detail > Journal > Add entry (also Save entry, Delete, Journal page load)",
+      "steps": "On /plants/3, make POST /api/journal never respond. Type an entry and click 'Add entry'. Wait more than 10 s.",
+      "expected": "The request fails after 10 s with a visible error, and the button becomes usable again.",
+      "actual": "After 13 s the button still reads 'Saving…' and stays disabled, with no error. useApiClient sets no timeout. When the request was later let through, the entry was created anyway, so a user who reloads and tries again gets a duplicate.",
+      "evidence": "Playwright: button text 'Saving…', disabled=true after 13 s.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors have no Retry button",
+      "where": "/journal page and the Journal section of /plants/{id}",
+      "steps": "Make GET /api/journal?... return 502 (HTML body). Open the Journal page, either directly or from the nav link.",
+      "expected": "An error message with a Retry button that reloads the data once the server is back.",
+      "actual": "Only 'Could not load the journal.' appears, with no retry control. Reloading the page is the only way to recover. On the plant page, the entry list disappears when a refresh fails and also has no retry.",
+      "evidence": "Page text: 'Journal … Search … Could not load the journal.' No buttons other than search. The plant detail page showed 'Could not load the journal.' and no list after a failed refresh.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "If the entry is saved but the list refresh fails, the page doesn't show the new entry",
+      "where": "Plant detail > Journal > Add entry",
+      "steps": "Let POST /api/journal succeed and make the next GET /api/journal?plant_id=… fail. Add an entry.",
+      "expected": "The new entry appears, or the page clearly says it was saved and offers a reload.",
+      "actual": "The form is cleared, the count badge goes up, and the list is replaced by 'Could not load the journal.' with no retry. The user can't see whether the entry was saved.",
+      "evidence": "After submitting: '3 entries … Could not load the journal.', and the entry field was empty.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Very large IDs return 500 from the journal endpoints",
+      "where": "POST /api/journal (plant_id), PUT/DELETE /api/journal/{id}, GET /api/journal?plant_id=",
+      "steps": "curl -X PUT /api/journal/99999999999999999999 with a valid body, DELETE the same ID, GET /api/journal?plant_id=99999999999999999999, or POST with plant_id 99999999999999999999.",
+      "expected": "A 4xx response (404 or 422)",
+      "actual": "500 Internal Server Error with a plain-text body. SQLite overflows on integers larger than 64 bits.",
+      "evidence": "All four requests returned 'Internal Server Error 500'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Search box takes any length, but the server rejects more than 80 characters with a raw error",
+      "where": "/journal search",
+      "steps": "Type 81 or more characters into Search.",
+      "expected": "The input is limited to 80 characters, or a friendly message is shown.",
+      "actual": "The results are replaced by 'Query.q: String should have at most 80 characters'.",
+      "evidence": "Page text from Playwright.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Dates far in the past such as year 0001 are accepted and shown as '1 Jan 1'",
+      "where": "POST/PUT /api/journal, Journal entry form",
+      "steps": "POST an entry with entry_on 0001-01-01, or pick that date in the date input.",
+      "expected": "Dates that make no sense are refused with a reason (for example, before 1900).",
+      "actual": "201 Created. The entry is shown as '1 Jan 1' and sorts to the bottom.",
+      "evidence": "API response 201. Plant page showed '1 Jan 1'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Emoji count as 2 characters in the browser, so the client limit doesn't match the server's 500",
+      "where": "JournalEntryForm textarea",
+      "steps": "Type or paste emoji into the entry text.",
+      "expected": "Up to 500 characters, as the server counts them (code points).",
+      "actual": "The textarea maxlength and the 'characters left' counter use UTF-16 length, so only about 250 emoji fit and the counter goes down by 2 per emoji.",
+      "evidence": "Code: remaining = BODY_LIMIT - form.body.length, :maxlength=500. Pydantic counts code points.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Deleting again after a timed-out delete shows an error even though the entry is gone",
+      "where": "DELETE /api/journal/{id}",
+      "steps": "A delete succeeds on the server, but the response is lost or the request times out. The user clicks Delete again.",
+      "expected": "Deleting is idempotent: the second delete counts as success.",
+      "actual": "The second request gets 404 'Journal entry not found.', which is shown as an error.",
+      "evidence": "delete_entry calls _get_entry first and raises not_found.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

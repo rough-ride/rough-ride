@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Harvest count and harvested weight are multiplied by the number of journal entries",
+      "where": "GET /api/plants, GET /api/plants/{id}; Plants list, plant detail, delete-plant confirmation",
+      "steps": "Tomato has 3 harvests (600+450+300 g) and 2 journal entries. Open /plants or GET /api/plants.",
+      "expected": "Tomato: 3 harvests, 1.35 kg",
+      "actual": "Tomato: harvest_count 6, harvest_grams 2700 (shown as 2.7 kg). Adding a journal entry to any plant with harvests inflates its harvest totals again.",
+      "evidence": "GET /api/harvests lists plant 1 weights 600,450,300, but GET /api/plants returns harvest_count=6, harvest_grams=2700, journal_count=2. PLANT_SELECT adds LEFT JOIN journal_entries, but COUNT(h.id) and SUM(h.weight_grams) are not de-duplicated (only the journal count uses DISTINCT).",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal requests have no timeout: hung add/search spins forever",
+      "where": "Plant detail 'Add entry'; Journal page search",
+      "steps": "Make POST /api/journal hang (no response), type an entry and click Add entry, then wait over 10 s. Or on /journal make GET /api/journal hang and type a search.",
+      "expected": "Fails after 10 s with a visible error; the button becomes usable again",
+      "actual": "The button shows 'Saving…' and stays disabled indefinitely. The Journal page shows 'Loading entries…' indefinitely, with the previous search's results still listed under the new search term.",
+      "evidence": "After 12 s: 'Saving…' still shown; Journal page after 12 s for q=zzz: 'Loading entries…' plus the stale Lettuce result. useApiClient/useApiFetch set no timeout.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors have no retry",
+      "where": "/journal and the Journal section of /plants/{id}",
+      "steps": "Make GET /api/journal return 500, then open a plant or the Journal page through in-app links.",
+      "expected": "Error message with a Retry button that reloads the data when the server is back",
+      "actual": "Only 'Could not load the journal.' is shown, with no retry control. On the plant page the only way to recover is a reload, or adding or deleting an entry.",
+      "evidence": "Error text shown; count of buttons named retry/try again = 0 on both pages.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Unreadable (non-list) journal response is shown as an empty journal",
+      "where": "/journal (and the plant detail journal list)",
+      "steps": "Make GET /api/journal return 200 with {\"items\":[]} (any non-array), then navigate to Journal in the app.",
+      "expected": "Error state",
+      "actual": "Shows '0 entries' and 'No journal entries yet'",
+      "evidence": "Page text: '0 entries / No journal entries yet / Open a plant and write the first entry...'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Null fields render as 'null journal entries' or a bare dash",
+      "where": "/plants list badge; /journal feed",
+      "steps": "Mock GET /api/plants with journal_count null, or GET /api/journal with plant_name/body/entry_on null, then navigate in the app.",
+      "expected": "A sensible fallback or an error",
+      "actual": "Plants card shows 'null journal entries'; the journal feed item shows an empty plant link and body, with only '–' for the date.",
+      "evidence": "Page text 'null journal entries'; journal feed '1 entry\\n\\n–'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Oversized ids give 500 instead of 4xx on journal endpoints",
+      "where": "POST /api/journal, GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+      "steps": "POST {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-11-12\",\"body\":\"x\"}; GET /api/journal?plant_id=99999999999999999999; PUT or DELETE /api/journal/99999999999999999999",
+      "expected": "422 or 404",
+      "actual": "500 Internal Server Error (SQLite integer overflow)",
+      "evidence": "curl status codes: 500, 500, 500, 500",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying an add after a timeout or lost response creates duplicate entries",
+      "where": "POST /api/journal from plant detail",
+      "steps": "Submit an entry whose response is lost or slow, then click Add entry again once the button is usable",
+      "expected": "One entry",
+      "actual": "There is no idempotency key or de-duplication, so each retry inserts a new row. In testing, a POST that was held while the route was blocked was still delivered later and created 'Hang test entry', while the UI never confirmed it.",
+      "evidence": "'Hang test entry' appeared in the Courgette journal although the UI never confirmed that save.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Search over 80 characters shows a raw validation error",
+      "where": "/journal search box",
+      "steps": "Type or paste 81+ characters into Search",
+      "expected": "Input limited, or a friendly message",
+      "actual": "The API returns 422 (q max_length 80) and the page swaps the results for 'Q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "curl GET /api/journal?q=<81 a> -> 422 string_too_long",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "The 'today' rule uses different clocks on client and server",
+      "where": "JournalEntryForm date / JournalEntryIn.not_in_future",
+      "steps": "Use a browser whose time zone is ahead of the server's (e.g. UTC+13) just after local midnight, and add an entry dated today",
+      "expected": "Today's entry is accepted",
+      "actual": "The client allows today's date (browser time zone), but the server's date.today() still sees yesterday and rejects it as 'Journal date cannot be in the future.'",
+      "evidence": "Code: todayIso() uses the browser's local date; the validator uses the server's local date.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

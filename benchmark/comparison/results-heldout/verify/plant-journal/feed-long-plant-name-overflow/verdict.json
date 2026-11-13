@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "feed-long-plant-name-overflow",
+  "sentence": "On /journal at 375 px, a long unbroken plant name in the feed item link has no wrapping rule and makes the page scroll sideways.",
+  "verdict": "confirmed",
+  "evidence": "The backend allows plant names up to 80 characters (PlantIn.name max_length=80). Through the API I created plant 4, named 'Supercalifragilistic' x4 (80 characters, no spaces), in bed 1, and added one journal entry to it. I signed in in Playwright at a 375x800 viewport and opened /journal. document.documentElement.scrollWidth was 679 while clientWidth was 375, and html/body overflow-x was 'visible', so the page scrolls sideways. The computed style of A.journal-feed__plant showed overflow-wrap:normal and word-break:normal, and the link was 629 px wide. The elements sticking out past the viewport were LI.journal-feed__item (right edge 679), DIV.journal-entry__head, A.journal-feed__plant and P.journal-entry__body (right edge 662); the body is only pushed wider by its card. In main.css only .journal-entry__body gets overflow-wrap:anywhere. .journal-feed__plant has no wrapping rule. After I deleted the test plant (204), /journal went back to scrollWidth 375 = clientWidth 375. This is a valid 80-character name and it breaks the mobile layout of the new page.",
+  "severity": "low",
+  "wallMs": 77651
+}

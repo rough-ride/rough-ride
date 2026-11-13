@@ -1,0 +1,14 @@
+id: error-shown-as-empty
+category: silent-failure
+provenance: hand-written
+layer: frontend
+reach: direct
+needsAppKnowledge: false
+flow: stats
+exposedBy:
+  - { fault: 500, endpoint: GET /api/stats/harvests, after: change the From or To date }
+checks: [visible-error-message]
+symptom: "When loading the stats fails, the page says 'No harvests in this range' instead of showing an error"
+addedIn: 0.1.1
+review: single
+allowWords: []

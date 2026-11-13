@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "ssr-timestamp-timezone-hydration",
+  "sentence": "Watering timestamps are formatted without a fixed time zone, so viewing the pages from a time zone different from the Nuxt server's causes SSR/client mismatches.",
+  "verdict": "confirmed",
+  "evidence": "Code: frontend/app/utils/format.ts adds dateTimeFormatter (Intl.DateTimeFormat en-GB with hour/minute) with no timeZone option, while the existing date formatter pins timeZone 'UTC'. formatWatered/formatDateTime are rendered during SSR on /beds, / and /waterings (data comes from useFetch, with no ClientOnly wrapper). Repro: the Nuxt host is in CET. I opened a Playwright browser context with timezoneId Pacific/Auckland, signed in as demo@example.com, and clicked 'Water now' for North bed. On each of /beds, / and /waterings, the raw SSR HTML said '12 Nov 2026, 14:39' while the hydrated page said '13 Nov 2026, 02:39'. The console logged '[Vue warn]: Hydration text content mismatch ... rendered on server: 12 Nov 2026, 14:39 - expected on client: 13 Nov 2026, 02:39' and 'Hydration completed but contains mismatches.' on all three pages. So first paint shows the server's time zone (here a different calendar day too), then the text changes, and Vue reports hydration errors.",
+  "severity": "medium",
+  "wallMs": 131593
+}

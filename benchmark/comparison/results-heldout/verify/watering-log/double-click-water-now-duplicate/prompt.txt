@@ -1,0 +1,34 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-double-click-water-now-duplicate/scratch.
+
+The reported problem: Clicking 'Water now' twice quickly on /beds sends two POSTs before the button disables and records two waterings.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Double click on 'Water now' records two waterings",
+  "where": "Beds page – Water now (POST /api/waterings)",
+  "steps": "On /beds, click 'Water now' twice quickly (two clicks in the same tick, before Vue re-renders the disabled state). A retry after a timeout would also duplicate, because there is no idempotency key.",
+  "expected": "One watering is recorded.",
+  "actual": "Two waterings are recorded.",
+  "evidence": "GET /api/waterings count went from 3 to 5 after one double click."
+ },
+ {
+  "title": "Double click on 'Water now' records two waterings",
+  "where": "/beds Water now -> POST /api/waterings",
+  "steps": "On /beds, click 'Water now' twice quickly (two click events before the next render).",
+  "expected": "One watering is recorded.",
+  "actual": "Two POSTs go out and two identical waterings are stored. Nothing on the request (such as an idempotency key) and nothing on the server prevents duplicates, so retrying after a timeout also duplicates.",
+  "evidence": "The route counter saw 2 POSTs. GET /api/waterings then returned ids 4 and 5, both North bed at 2026-11-12 17:52:58."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-double-click-water-now-duplicate/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

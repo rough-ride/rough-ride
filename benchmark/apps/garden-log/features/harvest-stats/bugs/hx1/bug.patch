@@ -1,0 +1,42 @@
+diff --git a/frontend/app/pages/stats.vue b/frontend/app/pages/stats.vue
+index c817eb5..7948e4d 100644
+--- a/frontend/app/pages/stats.vue
++++ b/frontend/app/pages/stats.vue
+@@ -1,10 +1,12 @@
+ <script setup lang="ts">
++import type { NuxtError } from '#app'
+ import type { HarvestStats } from '~/types/api'
+ 
+ useHead({ title: 'Stats' })
+ 
+ const route = useRoute()
+ const router = useRouter()
++const api = useApiClient()
+ 
+ const year = todayIso().slice(0, 4)
+ const defaultFrom = `${year}-01-01`
+@@ -24,7 +26,23 @@ const query = computed(() => {
+   return params
+ })
+ 
+-const { data: stats, error: statsError, status } = await useApiFetch<HarvestStats>('/stats/harvests', { query })
++const { data: stats, error: statsError, status } = await useApiFetch<HarvestStats>('/stats/harvests', {
++  query: query.value,
++})
++
++async function loadStats(params: Record<string, string>): Promise<void> {
++  status.value = 'pending'
++  try {
++    stats.value = await api<HarvestStats>('/stats/harvests', { query: params })
++    statsError.value = undefined
++    status.value = 'success'
++  } catch (err) {
++    statsError.value = err as NuxtError
++    status.value = 'error'
++  }
++}
++
++watch(query, loadStats)
+ 
+ watch([dateFrom, dateTo], ([from, to]) => {
+   const next: Record<string, string> = {}

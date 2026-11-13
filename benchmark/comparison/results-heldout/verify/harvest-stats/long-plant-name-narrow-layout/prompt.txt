@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-long-plant-name-narrow-layout/scratch.
+
+The reported problem: On /stats at 375 px width, a long unbroken plant name is truncated in Best plants and the nowrap table row header pushes all month and total columns out of view (or makes the page scroll sideways); triggered by creating a plant with a very long name and viewing the page on a narrow screen.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Long plant names are unreadable at 375 px on the Stats page",
+  "where": "/stats at 375 px width",
+  "steps": "Create a plant with a long single-word name (e.g. 70 characters), log a harvest, and open /stats at 375 px.",
+  "expected": "The name wraps, and the weights stay visible next to it.",
+  "actual": "In Best plants the name is cut off with an ellipsis and can't be read in full. In the table the row header uses white-space: nowrap, so the name takes the whole visible width and every month and total column is pushed off-screen inside the scroll box. The page itself does not scroll sideways.",
+  "evidence": "Screenshot scratch/stats375.png: only the PLANT column is visible, and the long name is clipped."
+ },
+ {
+  "title": "Long plant names make the table's first column huge at 375 px, so all numbers are off-screen",
+  "where": "/stats at 375 px (.stats-table th[scope=row] white-space: nowrap)",
+  "steps": "Create a plant with an 80-character name with no spaces and harvest it. View /stats at 375 px wide.",
+  "expected": "The name wraps or truncates, so weights stay visible at phone width.",
+  "actual": "The row header is nowrap, so the first column is 833 px wide inside a 309 px scroll box. On load, no month or total column is visible, only plant names.",
+  "evidence": "The .table-scroll is 309 px wide with scrollWidth 1345 and a first column 833 px wide. A screenshot shows only the PLANT column. The page itself does not scroll sideways."
+ },
+ {
+  "title": "Long plant names are cut off with an ellipsis in Best plants and the dashboard with no way to read them",
+  "where": "/stats Best plants cards, dashboard 'Top plant this year' card (375 px)",
+  "steps": "Create a plant named 'Supercalifragilisticexpialidociousbeanstalkwithaverylongnamethatneverbreaks', log a harvest, then view /stats at 375 px.",
+  "expected": "The full name is readable (wrapped, or available as a tooltip).",
+  "actual": "Shown as 'Supercalifragilis…' with no title attribute. The table's nowrap row header also makes the plant column as wide as the screen, pushing every month column off-screen.",
+  "evidence": "Screenshot scratch/stats375.png"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-long-plant-name-narrow-layout/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

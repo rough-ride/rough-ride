@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-requests-no-timeout",
+  "sentence": "Journal fetches and mutations set no timeout, so when the API hangs the Add/Save button stays disabled on 'Saving…' or /journal stays on 'Loading entries…' indefinitely.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the behaviour: signed in as the demo user, opened /plants/2, used Playwright page.route to make POST /api/journal hang, typed an entry and clicked 'Add entry'. After 14 s the button still said 'Saving…' and was disabled, with no error. However, this is not something the change introduced. composables/useApi.ts (useApiClient/useApiFetch, $fetch.create with no timeout) is unchanged from main (git diff main --stat does not list it), and nothing in the app sets a request timeout (grep finds no 'timeout'). Control test with an existing feature: on the same page, I made the existing plant edit save (PUT /api/plants/2) hang and clicked Save. After 14 s it also stayed on 'Saving…'. Beds and harvests use the same pattern. The request says nothing about timeouts, and the '10 seconds' expectation in the reports comes from nowhere in the request or the codebase. The journal code follows the app's existing request handling, so this is the app's design (any problem is app-wide and predates the change), not a defect in this change. The idempotency point in report 3 is also beyond the request.",
+  "severity": null,
+  "wallMs": 134175
+}

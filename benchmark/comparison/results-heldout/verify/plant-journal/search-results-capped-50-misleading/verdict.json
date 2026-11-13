@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "search-results-capped-50-misleading",
+  "sentence": "A /journal search matching more than 50 entries says '50 entries match' and silently drops the rest.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and created 60 journal entries on Courgette through the API, each containing 'zqxtoken'. GET /api/journal?q=zqxtoken&limit=500 returned all 60. In the browser, /journal?q=zqxtoken showed the count text '50 entries match' and listed exactly 50 items. Nothing said the list was cut short, and there was no 'show more' or 'first 50' text, so 10 matching entries were missing without any sign. The code agrees: journal.vue sends limit=LATEST_LIMIT (50) with searches too, and when searching, resultText prints only the length of the returned list ('N entries match'). It only labels the cap ('Latest 50 entries') when there is no search. The backend LIMITs to the requested value. So the search shows a wrong total and quietly hides matches. The report's side point about the plant page loading at most 500 entries was not tested. The test entries were deleted afterwards.",
+  "severity": "medium",
+  "wallMs": 65828
+}

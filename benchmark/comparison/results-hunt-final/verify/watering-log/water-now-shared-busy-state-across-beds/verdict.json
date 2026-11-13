@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "water-now-shared-busy-state-across-beds",
+  "sentence": "On /beds, clicking Water now on two beds in quick succession re-enables the second bed's button when the first request finishes because a single shared wateringBedId tracks the in-flight request, and the first bed's notice is lost.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo, on /beds used page.route to delay POST /api/waterings (1st 1.5s, 2nd 4s), with stable per-bed locators ('.bed__actions button.btn--primary' nth 0/1). Clicked Water now on North bed: it became disabled, 'Watering…'. Clicked Water now on Shade corner 200ms later: Shade corner disabled, but North bed went back to enabled 'Water now' with its request still running. After the first request finished (second still in flight): both buttons were enabled and showed 'Water now', and only 'Watered North bed.' was shown. When the second finished, that notice was replaced by 'Watered Shade corner.', so the first bed's notice is gone. Cause: beds.vue keeps one shared wateringBedId (line 27) and one waterNotice. recordWatering sets the id, then sets it to null in finally (line 101) without checking which bed it belongs to. So a button can be clicked again while its own request is running, and that records a duplicate watering. (A first probe with a role-name locator gave misleading results because the button's label changes; the probe was rerun with stable locators.)",
+  "severity": "medium",
+  "wallMs": 74441
+}

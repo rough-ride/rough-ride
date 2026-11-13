@@ -1,0 +1,76 @@
+{
+  "id": "watering-log__clean__playwright__t1",
+  "feature": "watering-log",
+  "bug": "clean",
+  "arm": "playwright",
+  "trial": 1,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:15:38.120Z",
+  "materializeMs": 5579,
+  "repo": "$TMPDIR/rr-bench/work/watering-log__clean__playwright__t1/variant/jxyw1t26/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/beds.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/beds.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/waterings.py\n?? frontend/app/pages/waterings.vue\n",
+  "sessionId": "10862c15-e4a5-4fae-9406-ef275cd1ae4e",
+  "loadBefore": [
+    6.14892578125,
+    5.89990234375,
+    5.353515625
+  ],
+  "loadAfter": [
+    3.8681640625,
+    4.537109375,
+    4.87939453125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 409730,
+  "reportedCostUsd": 1.0934134000000002,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 62,
+      "outputTokens": 17835,
+      "cacheReadInputTokens": 1452567,
+      "cacheCreationInputTokens": 55744,
+      "webSearchRequests": 0,
+      "costUSD": 1.0934134000000002,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 3914,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 55744,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 31,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I wrote 16 findings to `out/findings.json`: 13 I saw in the running app and 3 I only suspect from reading the code.\n\n**High**\n- **\"Water now\" can spin forever (seen).** The requests have no timeout. When I made the save request hang, the button still said \"Watering…\" and was still disabled after more than 45 seconds, with no error shown. \"Save watering\" uses the same code, so it would do the same.\n\n**Medium**\n- **Watering a second bed re-enables the first bed's button (seen).** One shared \"busy\" value covers every bed. When Shade corner's watering finished, North bed's button came back while its own request was still pending, so a second click would record a duplicate.\n- **A retry after a timeout or lost response records a second watering (suspected).** Nothing on the client or server stops a repeated save from inserting another row.\n- **No retry button when loading fails (seen).** On both the waterings page and the dashboard's \"Recent waterings\", the error shows only a message. The only way back is to reload, or change the bed filter on the waterings page.\n- **The bed filter fails silently (seen).** If the bed list fails to load, the dropdown just shows \"All beds\" and no error.\n- **An unexpected response shape crashes the waterings page (seen).** A non-list response throws `reduce is not a function` and leaves navigation stuck on the previous page under the error overlay.\n- **Bad input causes server errors (seen).** An oversized integer id (bed or watering id, in save, list or delete) and a litres value of `NaN` all return 500 instead of a 4xx.\n- **The waterings table overflows at 375 px (seen).** With an allowed 58-character bed name, the page is 511 px wide and the Delete column goes off-screen.\n\n**Low**\n- (seen) 0.001 L is accepted but shows as \"0 L\".\n- (seen) A watering dated year 0001 is accepted and shows as \"1 Jan 1\".\n- (seen) Bad watering data from the server is shown as-is, for example \"x L\", a raw date string and a blank bed name.\n- (seen) Clicking the Waterings nav link (or Back) while filtered changes the URL to show all beds, but the dropdown and list stay filtered.\n- (seen) Opening `/waterings?bed=abc` shows the server's raw validation message.\n- (suspected) Retrying a delete that already succeeded shows \"Watering not found.\" as an error.\n- (suspected) \"Now\" entries take their date and time from different clocks (the server's local date and UTC), and the \"no future dates\" check uses the server's date. A user in a time zone ahead of the server may have today's date refused.\n\n**Checks that passed:** a double-click on \"Water now\" made only one watering, and a late answer from a quick filter change did not replace the newer results.\n\n**Leftover test data:** I deleted the test bed and the year-0001 watering. Several test waterings are still in the app, including the 0.001 L one and some \"Water now\" entries for North bed and Shade corner.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 62,
+    "output": 17835,
+    "cacheRead": 1452567,
+    "cacheWrite": 55744,
+    "requests": 31,
+    "toolCalls": {
+      "Bash": 10,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 16,
+      "mcp__playwright__browser_evaluate": 2,
+      "mcp__playwright__browser_snapshot": 1
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 16,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |   4 +-\n backend/db.py                    |  14 +++-\n backend/routers/beds.py          |   8 ++-\n backend/schemas.py               |  29 +++++++++\n frontend/app/assets/css/main.css |  24 ++++++-\n frontend/app/layouts/default.vue |   1 +\n frontend/app/pages/beds.vue      | 134 ++++++++++++++++++++++++++++++++++++++-\n frontend/app/pages/index.vue     |  44 ++++++++++++-\n frontend/app/types/api.ts        |  17 +++++\n frontend/app/utils/format.ts     |  26 ++++++++\n 10 files changed, 293 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:22:41.470Z"
+}

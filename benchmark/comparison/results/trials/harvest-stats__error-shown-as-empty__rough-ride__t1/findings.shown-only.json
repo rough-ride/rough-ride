@@ -1,0 +1,102 @@
+{
+  "findings": [
+    {
+      "title": "No way to retry without a reload after GET /api/stats/harvests is rate limited (429)",
+      "where": "/stats GET /api/stats/harvests (entry)",
+      "steps": "In the browser: view-stats/GET /api/stats/harvests #1/429!; checks that failed: retry-recovers",
+      "expected": "",
+      "actual": "settles: reload: a request is still in flight after 10 s",
+      "evidence": "settles: reload: a request is still in flight after 10 s",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "shown": null,
+        "members": [
+          "view-stats/GET /api/stats/harvests #1/500!",
+          "view-stats/GET /api/stats/harvests #1/400!",
+          "view-stats/GET /api/stats/harvests #1/reset!",
+          "view-stats/GET /api/stats/harvests #1/429!",
+          "view-stats/GET /api/stats/harvests #1/malformed-json!"
+        ]
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/dashboard/summary fails with 500",
+      "where": "/ GET /api/dashboard/summary (entry)",
+      "steps": "In the browser: sign-in/GET /api/dashboard/summary #1/500!; checks that failed: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | no-uncaught-error: overlay: dev error overlay | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function",
+      "evidence": "retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | no-uncaught-error: overlay: dev error overlay | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "shown": "shown",
+        "members": [
+          "sign-in/GET /api/dashboard/summary #1/500!",
+          "sign-in/GET /api/dashboard/summary #1/400!",
+          "sign-in/GET /api/dashboard/summary #1/reset!",
+          "sign-in/GET /api/dashboard/summary #1/429!"
+        ]
+      }
+    },
+    {
+      "title": "\"undefined\" shown on / after GET /api/dashboard/summary returns malformed JSON",
+      "where": "/ GET /api/dashboard/summary (entry)",
+      "steps": "In the browser: sign-in/GET /api/dashboard/summary #1/malformed-json!; checks that failed: no-broken-text",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "shown": "shown",
+        "members": [
+          "sign-in/GET /api/dashboard/summary #1/malformed-json!"
+        ]
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/auth/me fails with 500",
+      "where": "/login GET /api/auth/me (entry)",
+      "steps": "In the browser: sign-in/GET /api/auth/me #1/500!; checks that failed: retry-recovers",
+      "expected": "",
+      "actual": "no-broken-text: \"undefined\" in a new line",
+      "evidence": "no-broken-text: \"undefined\" in a new line",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "shown": "shown",
+        "members": [
+          "sign-in/GET /api/auth/me #1/500!",
+          "sign-in/GET /api/auth/me #1/400!",
+          "sign-in/GET /api/auth/me #1/reset!",
+          "sign-in/GET /api/auth/me #1/429!"
+        ]
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/tasks/upcoming fails with 500",
+      "where": "/ GET /api/tasks/upcoming (entry)",
+      "steps": "In the browser: sign-in/GET /api/tasks/upcoming #1/500!; checks that failed: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "shown": "shown",
+        "members": [
+          "sign-in/GET /api/tasks/upcoming #1/500!",
+          "sign-in/GET /api/tasks/upcoming #1/400!",
+          "sign-in/GET /api/tasks/upcoming #1/reset!",
+          "sign-in/GET /api/tasks/upcoming #1/429!"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "waterings-load-error-no-retry",
+  "sentence": "When GET /api/waterings fails, the /waterings page and the dashboard 'Recent waterings' section show only an error message with no Retry control, so recovery requires a reload.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the behaviour: signed in as the demo user, routed **/api/waterings* to a 500, then went to /waterings and / using in-app navigation. Both pages showed only an alert ('boom'), with no Retry button. The dashboard does not take `refresh` from the waterings fetch (index.vue:17). But this is how the whole app already handles load errors. On main, every load error is a bare AlertMessage with no retry: beds.vue 'Could not load beds.', plants/index.vue 'Could not load plants.', harvests/new.vue, and the dashboard's own summary and tasks sections. `git grep -i retry main -- frontend` finds nothing. The request did not ask for a retry control, and the new code copies the existing pattern exactly. A reload is not the only way back either: after removing the route, clicking 'All waterings' or the nav link refetched the list ('2 waterings, 14 L in total' with Delete buttons). On /waterings, changing the bed filter also refetches. A Retry button would be a nice improvement, but leaving it out matches the app's design and is not a regression from this change.",
+  "severity": null,
+  "wallMs": 90437
+}

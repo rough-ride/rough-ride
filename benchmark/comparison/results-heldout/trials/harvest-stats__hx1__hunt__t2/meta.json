@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__hx1__hunt__t2",
+  "feature": "harvest-stats",
+  "bug": "hx1",
+  "arm": "hunt",
+  "trial": 2,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:49:23.099Z",
+  "materializeMs": 5660,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__hx1__hunt__t2/variant/uv0hqu46/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "539f222d-7c60-48d0-868a-06b622a078a2",
+  "loadBefore": [
+    5.68408203125,
+    5.7177734375,
+    6.302734375
+  ],
+  "loadAfter": [
+    4.7333984375,
+    4.66650390625,
+    5.68505859375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 202294,
+  "reportedCostUsd": 0.30754139999999996,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 20,
+      "outputTokens": 7175,
+      "cacheReadInputTokens": 161232,
+      "cacheCreationInputTokens": 26343,
+      "webSearchRequests": 0,
+      "costUSD": 0.30754139999999996,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1541,
+      "cacheCreationEphemeral5mInputTokens": 26343,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 1,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 3m09s | run 20261112-174937-hunt-783a | 4 confirmed, 0 dropped on re-run\ntarget: http://localhost:3790\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Slower earlier stats response overwrites the newer one, so the table no longer matches the chosen dates\n   where: /stats (GET /api/stats/harvests)\n   expected: After changing From to 2026-08-01 and then back to 2026-01-01, the page shows the stats for 1 Jan 2026 to 31 Dec 2026 (5 harvests)\n   saw: {\"fields\":[{\"label\":\"From\",\"value\":\"2026-01-01\"},{\"label\":\"To\",\"value\":\"2026-12-31\"}],\"text\":[\"From\",\"To\",\"2 harvests from 1 Aug 2026 to 31 Dec 2026\",\"Best plants\",\"NO. 1\",\"Tomato\",\"600 g · Sungold\",\"View\",\"Tomato\"]}\n   repro: .rough-ride/runs/20261112-174937-hunt-783a/probes/faults.mjs (expectation \"newest-response-wins\")\n2. MEDIUM When loading fails, the summary line still shows the previous range's harvest count next to the error\n   where: /stats\n   expected: When the stats request fails for a new range, the page shows only an error and no harvest count from an earlier range\n   saw: [\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\",\"Garden Log · a journal for one garden\"]\n   repro: .rough-ride/runs/20261112-174937-hunt-783a/probes/faults.mjs (expectation \"no-stale-range-with-error\")\n3. MEDIUM A stats request that never answers leaves 'Loading stats…' on screen forever, above the old range's table\n   where: /stats\n   expected: A request that never answers ends in a visible error or a way to retry\n   saw: {\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\"],\"alerts\":[\"Loading stats…\"]}\n   repro: .rough-ride/runs/20261112-174937-hunt-783a/probes/misc.mjs (expectation \"hang-not-stuck-loading\")\n4. MEDIUM A blank From field quietly becomes 1 Jan of this year, so a valid To date in an earlier year is refused\n   where: /stats (GET /api/stats/harvests?to=2025-12-31)\n   expected: With From blank and To set to 2025-12-31, the page shows harvests up to that date, or asks for a From date\n   saw: {\"fields\":[{\"label\":\"From\",\"value\":\"\"},{\"label\":\"To\",\"value\":\"2025-12-31\"}],\"alerts\":[\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"The From date must be on or before the To date.\"],\"text\":[\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"The From date must be on or before the To date.\",\"Garden Log · a journal for one garden\"]}\n   repro: .rough-ride/runs/20261112-174937-hunt-783a/probes/blankfrom.mjs (expectation \"blank-from-not-silently-this-year\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-ae80f458fbea416bf.jsonl",
+    "agent-ae80f458fbea416bf.meta.json"
+  ],
+  "usage": {
+    "input": 20,
+    "output": 7175,
+    "cacheRead": 161232,
+    "cacheWrite": 26343,
+    "requests": 10,
+    "toolCalls": {
+      "Bash": 9,
+      "Read": 1
+    }
+  },
+  "findingCount": 4,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T16:52:59.236Z"
+}

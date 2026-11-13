@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-delete-retry-404",
+  "sentence": "Retrying a journal entry delete after the first DELETE succeeded server-side (lost response or another tab) returns 404 and the plant page shows 'Journal entry not found.' while the stale entry stays listed.",
+  "verdict": "confirmed",
+  "evidence": "API: signed in as demo user, created journal entry 4, DELETE /api/journal/4 -> 204, repeat DELETE -> 404 {\"detail\":\"Journal entry not found.\"} (delete_entry calls _get_entry first, which raises 404). Browser: opened /plants/2 with entry 'STALE-ENTRY-XYZ' shown, deleted it server-side with a separate fetch (simulating another tab or a lost response), then clicked the entry's Delete button in the page and accepted the confirm. The page showed 'Journal entry not found.' and the deleted entry stayed in the list, because removeEntry in pages/plants/[id].vue only calls refreshPlantAndJournal on success and has no 404-as-done handling. Note: harvest delete in the original code behaves the same way, so this follows an existing pattern. The error text is accurate and a reload clears the stale entry, so impact is small.",
+  "severity": "low",
+  "wallMs": 119967
+}

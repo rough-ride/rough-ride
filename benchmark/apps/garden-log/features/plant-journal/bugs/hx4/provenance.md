@@ -1,0 +1,1 @@
+Written by hand for the comparison benchmark (benchmark/comparison/), held-out set. The clean feature counts journal entries with a correlated subquery. This variant LEFT JOINs journal_entries next to harvests and counts DISTINCT entry ids, which keeps the journal count right but fans out the harvest rows, so COUNT(h.id) and SUM(h.weight_grams) are multiplied.

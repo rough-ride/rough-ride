@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "dashboard-waterings-no-loading-state",
+  "sentence": "The dashboard 'Recent waterings' section shows only its heading with no loading indicator while GET /api/waterings is pending.",
+  "verdict": "not-reproduced",
+  "evidence": "index.vue does useApiFetch('/waterings') (a thin wrapper over useFetch, not lazy) inside a top-level `await Promise.all([...])` in <script setup>, so Nuxt holds route navigation until the request settles; the dashboard never renders with waterings pending. In the browser, signed in as the demo user on /beds, I routed **/api/waterings* with a 6s delay and clicked the Dashboard nav link. At 0.5s, 2s and 4s the old Beds page (h1 'Beds') was still shown and no 'Recent waterings' section was in the DOM. At about 8s the dashboard rendered with the section already filled in (5 Nov 2026 Shade corner 4 L; 1 Nov 2026 North bed 10 L). A full page load is server-side rendered and also waits for the data. Nothing calls refresh() on the waterings fetch, so it never goes back to pending after the page is shown. The heading-only blank state described in the report never appeared. The template does lack a pending branch, but that branch could never be reached.",
+  "severity": null,
+  "wallMs": 110572
+}

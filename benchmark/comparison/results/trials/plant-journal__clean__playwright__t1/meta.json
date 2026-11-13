@@ -1,0 +1,76 @@
+{
+  "id": "plant-journal__clean__playwright__t1",
+  "feature": "plant-journal",
+  "bug": "clean",
+  "arm": "playwright",
+  "trial": 1,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T09:49:08.413Z",
+  "materializeMs": 5081,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__clean__playwright__t1/variant/66mkuktd/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "ce9b9a1a-b74c-40e8-a0ec-f29265a762d7",
+  "loadBefore": [
+    11.869140625,
+    13.095703125,
+    11.66357421875
+  ],
+  "loadAfter": [
+    21.12158203125,
+    12.263671875,
+    11.29443359375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 298017,
+  "reportedCostUsd": 1.0833951999999998,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 70,
+      "outputTokens": 15863,
+      "cacheReadInputTokens": 1629676,
+      "cacheCreationInputTokens": 54990,
+      "webSearchRequests": 0,
+      "costUSD": 1.0833951999999998,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 4034,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 54990,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 33,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 11 bugs in the journal change; I reproduced 10 in the running app and 1 is suspected from the code. They're written to `out/findings.json`, and that file passes a JSON check.\n\n**High**\n1. **Retry makes a duplicate entry (observed).** If an Add entry request reaches the server but the response is lost, the form says \"The garden server could not be reached.\" Clicking Add entry again creates a second, identical entry.\n2. **No request timeout (observed).** I made adding an entry hang: 12 seconds later the button still said \"Saving…\" and stayed disabled. A real hang would never recover, because the API client sets no timeout.\n\n**Medium**\n3. **Deleting again after a lost response (observed).** The retry shows \"Journal entry not found.\" and the deleted entry stays in the list, because the list isn't refreshed when a delete fails.\n4. **No retry button when the journal fails to load (observed).** Both the Journal page and the plant page's journal section show \"Could not load the journal.\" with no way to try again except reloading.\n5. **A broken response looks like an empty journal (observed).** If the server answers 200 with something that isn't a list, the Journal page shows \"0 entries / No journal entries yet\".\n6. **The Journal page scrolls sideways at 375 px (observed).** A plant with an 80-character name with no spaces widens the page to 679 px. The plant name link doesn't wrap; the journal section on the plant page does wrap.\n\n**Low**\n7. **Body starting with a NUL character returns 500 (observed).** The database counts the length as 0, its check fails, and the error isn't handled.\n8. **Very large ids return 500 instead of 404/422 (observed).** This affects updating, deleting, creating (plant id in the body) and filtering by plant id.\n9. **Emoji entries are cut at 250 (observed).** The text box counts each emoji as 2 characters, so it silently truncates. The server accepts 500.\n10. **Long searches show a raw validation message (observed).** Over 80 characters, the results vanish and \"Query.q: String should have at most 80 characters\" appears; the search box has no length limit.\n11. **Today's entry may be refused across time zones (suspected).** The server checks \"not in the future\" against its own date, while the form defaults to the browser's date.\n\nThings I checked that worked: double-clicking or pressing Enter while a save is in flight sent only one request. A slow, outdated search answer didn't replace newer results. A failed add kept the typed text.\n\nI left test data in the app. Through the API I added a plant with an 80-character name, plus entries dated 0001-01-01, one containing a NUL character, one of 500 emoji, and a long entry with markup and Arabic text. Through the UI I added the \"Enter double test\" and duplicate \"Lost response test\" entries; one duplicate was deleted.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 70,
+    "output": 15863,
+    "cacheRead": 1629676,
+    "cacheWrite": 54990,
+    "requests": 33,
+    "toolCalls": {
+      "Bash": 10,
+      "ToolSearch": 2,
+      "mcp__playwright__browser_run_code_unsafe": 17,
+      "mcp__playwright__browser_snapshot": 1,
+      "mcp__playwright__browser_handle_dialog": 2
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 11,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T09:54:21.928Z"
+}

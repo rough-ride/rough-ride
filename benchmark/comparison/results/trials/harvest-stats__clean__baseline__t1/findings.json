@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Stats error state has no retry button",
+      "where": "/stats page",
+      "steps": "Open /stats while the API is down or returns an error (e.g. /stats?from=2026-13-01, or stop the API and then change a date). Bring the API back.",
+      "expected": "The error message comes with a Retry action that reloads the stats on the same page, without a reload.",
+      "actual": "Only an AlertMessage with the error text appears. There is no retry control; the only way to refetch is to change a date field or reload the page. The useFetch refresh function is not even destructured.",
+      "evidence": "SSR HTML of /stats?from=2026-13-01 shows only 'Query.from: Input should be a valid date or datetime, month value is outside expected range of 1-12' and no button. stats.vue destructures only { data, error, status } from useApiFetch.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout, so it can spin forever",
+      "where": "/stats page (GET /api/stats/harvests), also dashboard",
+      "steps": "Make the API hang (accept the connection but never answer) and open /stats or change a date.",
+      "expected": "The request fails after 10 seconds and the error state appears.",
+      "actual": "useApiFetch / useApiClient set no timeout, so 'Loading stats…' stays forever (and SSR navigation hangs).",
+      "evidence": "composables/useApi.ts: $fetch.create({ baseURL, credentials, headers, onResponseError }) with no timeout option; stats.vue calls useApiFetch with only { query }.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Raw validation message with 'Query.from' prefix and blank field for an invalid date in the URL",
+      "where": "/stats?from=<invalid>",
+      "steps": "Open /stats?from=2026-13-01 (matches the YYYY-MM-DD regex but is not a real date), e.g. from a shared or edited link.",
+      "expected": "The invalid value is ignored (falls back to the default) or refused with a clear message next to the From field.",
+      "actual": "The page sends the bad value and shows the raw pydantic message 'Query.from: Input should be a valid date or datetime, month value is outside expected range of 1-12'. The From date input is blank because browsers reject the value, so the user cannot see what is wrong.",
+      "evidence": "The rendered HTML from the running app shows that message. queryDate() only checks the regex /^\\d{4}-\\d{2}-\\d{2}$/.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Clearing From with a To date in an earlier year gives a confusing error",
+      "where": "/stats date range form",
+      "steps": "Clear the From field (blank), then set To to 2025-12-31.",
+      "expected": "Either the blank field is treated as no lower bound, or the form says From is required.",
+      "actual": "The query leaves out 'from', the server silently uses 1 Jan of the current year, and it answers 422 'The From date must be on or before the To date.' even though the From field looks empty.",
+      "evidence": "API: GET /api/stats/harvests?to=2025-01-01 -> 422 {\"detail\":\"The From date must be on or before the To date.\"}. stats.vue drops empty values from the query; stats.py defaults date_from to year_start.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Date fields do not follow URL changes (back/forward, Stats nav link)",
+      "where": "/stats page",
+      "steps": "On /stats change From to 2026-03-01 (the URL gets ?from=2026-03-01). Press browser Back, or click 'Stats' in the main nav.",
+      "expected": "The fields and the results follow the URL (default range again).",
+      "actual": "dateFrom/dateTo are set from route.query only once, at setup, and the watch only goes refs -> URL. The URL changes but the fields and table keep showing the old range, so the URL and the page disagree.",
+      "evidence": "stats.vue: const dateFrom = ref(queryDate(route.query.from, ...)); there is no watch on route.query.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Intermediate date values while typing fire requests and flash errors",
+      "where": "/stats date inputs",
+      "steps": "Type a To date by hand in the date input, e.g. typing the year digit by digit.",
+      "expected": "Results update once a full, valid range is entered, with no error flashes.",
+      "actual": "Each keystroke gives a new valid date (e.g. year 0002), which immediately triggers a fetch. An intermediate To that is earlier than From returns 422 and briefly shows 'The From date must be on or before the To date.'",
+      "evidence": "The query is a computed value bound straight to v-model, with no debounce. The server answers 422 for from > to.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long variety text overflows Best plants cards at 375px",
+      "where": "/stats Best plants section",
+      "steps": "Create a plant with an 80-character variety that has no spaces, log a harvest for it this year, and view /stats at 375px width.",
+      "expected": "The text wraps or is truncated inside the card.",
+      "actual": "stat__hint has no overflow-wrap, so a long unbroken variety pushes past the card and causes sideways scrolling.",
+      "evidence": "The .stat__hint CSS has only margin, font-size and color. Variety allows up to 80 characters (schemas.py).",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Negative (and zero) litres are accepted and saved",
+      "where": "POST /api/waterings; Beds page 'Record past watering' form",
+      "steps": "On /beds open 'Record past watering', enter litres -5 and save (or POST {\"bed_id\":1,\"watered_on\":\"2026-11-01\",\"litres\":-5}). Also try litres 0 or -1e300 via the API.",
+      "expected": "Amounts of zero or below are refused with a visible reason. The client says 'greater than zero' and the server answers 4xx.",
+      "actual": "The client only rejects exactly 0, so -5 passes. The server's litres field has le=10000 but no lower bound, so it returns 201 for -5, 0 and -1e300. Negative amounts then show on the dashboard and the waterings page and lower the page's total.",
+      "evidence": "API returned 201 {\"id\":3,...,\"litres\":-5.0}, 201 for litres 0.0 and 201 for litres -1e+300. beds.vue savePastWatering checks only `litres === 0`. schemas.py WateringIn has `Field(default=None, le=10_000)` with no gt=0.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "NaN litres causes a 500 Internal Server Error",
+      "where": "POST /api/waterings",
+      "steps": "POST {\"bed_id\":1,\"watered_on\":\"2026-11-01\",\"litres\":NaN}",
+      "expected": "422 with a validation message",
+      "actual": "500 Internal Server Error, plain-text body",
+      "evidence": "curl returned 'Internal Server Error 500'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Out-of-range bed_id causes a 500 error on the waterings endpoints",
+      "where": "GET /api/waterings?bed_id=..., POST /api/waterings, /waterings?bed=99999999999999999999",
+      "steps": "GET /api/waterings?bed_id=99999999999999999999, or POST {\"bed_id\":99999999999999999999}. You can also open /waterings?bed=99999999999999999999 in the web app.",
+      "expected": "A 4xx answer (422 or 404)",
+      "actual": "500 Internal Server Error, because SQLite overflows on an integer that is too large",
+      "evidence": "Both requests returned 'Internal Server Error 500'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page and dashboard 'Recent waterings' error states have no retry",
+      "where": "/waterings, / (dashboard Recent waterings section)",
+      "steps": "Make GET /api/waterings fail, e.g. stop the API or use a bad bed query, then load / or /waterings",
+      "expected": "An error message with a Retry button that refetches without a page reload",
+      "actual": "Only an AlertMessage is shown. index.vue does not even take `refresh` from the waterings fetch, and waterings.vue has no retry control.",
+      "evidence": "index.vue: `const { data: waterings, error: wateringsError } = wateringsResult`, and the template shows no retry button. waterings.vue shows the same with no retry button.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Bed filter fails silently when the beds request fails",
+      "where": "/waterings",
+      "steps": "Make GET /api/beds fail while GET /api/waterings succeeds, then open /waterings",
+      "expected": "An error explaining that the bed list could not be loaded, with a retry",
+      "actual": "bedsResult.error is ignored. The filter dropdown shows only 'All beds' as if no beds existed, and a ?bed= value from a link has no matching option.",
+      "evidence": "waterings.vue: `const { data: beds } = bedsResult`. The error is never read.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "A retry after a timeout or network failure can record a watering twice",
+      "where": "Beds page 'Water now' / 'Save watering'; POST /api/waterings",
+      "steps": "Click 'Water now' and let the response be lost (slow network), then click again",
+      "expected": "One watering is recorded",
+      "actual": "Each POST inserts a new row and there is no idempotency key, so a retry after an unseen success creates a duplicate. The client fetch also has no 10 s timeout, so the button can stay on 'Watering…' as long as the request hangs.",
+      "evidence": "waterings.py create_watering always INSERTs. useApiClient sets no timeout.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "'Water now' date uses the server's local day while the time is UTC, and past dates are checked against the server's date",
+      "where": "POST /api/waterings, Beds page",
+      "steps": "Use the app from a time zone that differs from the server's near midnight. Click 'Water now', or record a past watering dated 'today' in your own time zone.",
+      "expected": "Dates follow the gardener's day",
+      "actual": "watered_on comes from the server's local date while the display converts the UTC watered_at to the viewer's zone, so the date and time can disagree. Sorting uses watered_on. A watering dated with the client's todayIso() can be refused as 'in the future' when the server is behind.",
+      "evidence": "waterings.py: `now.astimezone().date()` combined with a UTC watered_at, and schemas.py compares against date.today()",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

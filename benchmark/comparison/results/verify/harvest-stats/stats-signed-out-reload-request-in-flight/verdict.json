@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "error-shown-as-empty",
+  "key": "stats-signed-out-reload-request-in-flight",
+  "sentence": "After a signed-out reload of /stats, a request is still in flight after 10 seconds.",
+  "verdict": "not-reproduced",
+  "evidence": "With cookies cleared, I loaded /stats (it redirects to /login?redirect=/stats), let it reach network idle, reloaded, and tracked every request the reload started for 10.5 s. I did this 3 times for /stats and 3 times for /tasks (an unchanged page as a baseline). Every request finished every time; nothing was in flight. The 'pending' requests only appeared when goto was immediately followed by reload. Those were requests from the first load that the reload cut off: Vite /_nuxt/ dev modules, and once /api/auth/me. Playwright never fires finished/failed events for them, and the same thing happened on /tasks, which this change doesn't touch. So it's a measurement artifact, not a hanging request. Called directly with no session, the API answers at once: /api/stats/harvests returns 401 in 25 ms and /api/auth/me returns 200 in 4 ms. Signed out, the auth middleware redirects before stats.vue runs its fetch.",
+  "severity": null,
+  "wallMs": 172652
+}

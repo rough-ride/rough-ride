@@ -1,0 +1,84 @@
+{
+  "findings": [
+    {
+      "title": "Stats request that hangs shows 'Loading stats…' forever (no 10 s timeout)",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Open /stats, make /api/stats/harvests never respond (browser_route with no reply), change the From date, wait more than 10 s.",
+      "expected": "The request times out after 10 s and the page shows an error with a retry option.",
+      "actual": "'Loading stats…' stays indefinitely; no timeout or error is ever shown. useApiFetch/useFetch is called without a timeout.",
+      "evidence": "After 13 s the page text was still '... This year / Loading stats…'.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Stats error state has no retry action",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests return 500, change a date (or open /stats while the API is down). Then restore the API.",
+      "expected": "The error message comes with a Retry button that refetches once the server is back, without a reload.",
+      "actual": "Only 'Could not load harvest stats.' is shown. The page has no retry button (its only button is 'This year', and that only appears when the range is not the default). With the default range, the user has to reload or edit a date to recover.",
+      "evidence": "Buttons in #main after the error: ['This year']. stats.vue never uses the refresh function that useApiFetch returns.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Unreadable 200 response (HTML/non-JSON) is not treated as an error; page shows stale/garbage table and stuck 'Loading'",
+      "where": "/stats",
+      "steps": "Route /api/stats/harvests to return 200 with Content-Type text/html and body '<html>proxy</html>', then change the From date.",
+      "expected": "An error message with retry.",
+      "actual": "No error is shown. The page shows 'Loading stats…' with an empty 'Best plants' section, '– total', and a table whose caption reads '– to –'.",
+      "evidence": "Page text: 'Loading stats… Best plants Weight by plant and month – total Harvest weight per plant and month, – to – PLANT TOTAL –'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Null fields in stats response render as 'null harvests' and an empty, broken table",
+      "where": "/stats",
+      "steps": "Route /api/stats/harvests to return 200 JSON with harvest_count:null, date_from:null, months:null, top_plants:null, and plants:[{plant_id:1, plant_name:null, total_grams:null, monthly_grams:null}].",
+      "expected": "The response is rejected as invalid (error state), or the missing values are handled cleanly.",
+      "actual": "The page shows 'null harvests from – to –', an empty Best plants list, and a table row with no plant name.",
+      "evidence": "Page text: 'null harvests from – to – Best plants Weight by plant and month – total ... PLANT TOTAL –'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Clearing the From date silently falls back to 1 Jan this year and gives a misleading error",
+      "where": "/stats",
+      "steps": "On /stats, clear the From field and set To to 2025-12-31.",
+      "expected": "A blank From either means 'no lower bound' or is refused with a clear reason that mentions the blank field.",
+      "actual": "The page shows 'The From date must be on or before the To date.' while From is empty, because the server substitutes the start of the current year for a missing From value.",
+      "evidence": "From input value '' and the alert 'The From date must be on or before the To date.'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid dates show raw technical validation text",
+      "where": "/stats?from=2026-02-30 (also a 5-digit year typed in the date picker)",
+      "steps": "Open /stats?from=2026-02-30.",
+      "expected": "A friendly message such as 'From is not a valid date'.",
+      "actual": "The page shows 'Query.from: Input should be a valid date or datetime, day value is outside expected range'.",
+      "evidence": "Alert text as quoted. The API correctly answers with a 422.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Months with no harvests are left out of the table",
+      "where": "/stats, GET /api/stats/harvests",
+      "steps": "Pick a range such as 2025-01-01 to 2026-12-31. The sample data has harvests in 2025-08 and 2026-06..09.",
+      "expected": "A per-month table for the chosen range shows every month in it, with empty months as –/0.",
+      "actual": "Only months that have harvests get a column, so the timeline jumps from Aug 2025 straight to Jun 2026 and gaps are invisible.",
+      "evidence": "API months for 0001-01-01..9999-12-31: ['2025-08','2026-06','2026-07','2026-08','2026-09'].",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Long plant name (nowrap) pushes every number column off-screen at 375 px",
+      "where": "/stats table at 375 px",
+      "steps": "Create a plant with an 80-character name with no spaces and log a harvest for it. Open /stats at 375 px width.",
+      "expected": "The plant column wraps or truncates, so the weights stay readable.",
+      "actual": "The row header is white-space: nowrap, so the Plant column alone is wider than the card. Every month and Total column is pushed out of view, and the table must be scrolled sideways to see any weight. The page itself does not scroll sideways. In 'Best plants' the name is cut off with an ellipsis and the full name is not available.",
+      "evidence": "Screenshot stats375.png: the table shows only the PLANT column, and the long name is clipped.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

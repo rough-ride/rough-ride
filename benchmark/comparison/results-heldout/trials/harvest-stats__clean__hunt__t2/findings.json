@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Stats page crashes and stays on 'Loading stats…' with the previous range's table when the stats response is not in the expected shape",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe malformed, expectation bad-response-shows-error-without-crash",
+      "expected": "An error message such as 'Could not load harvest stats.', no uncaught error, and the old table not shown as the result for the new range",
+      "actual": "Uncaught TypeError 'Cannot read properties of undefined (reading 'length')'. The page keeps showing 'Loading stats…' with the old 1 Jan to 31 Dec table under From = 2026-07-01, and no error is shown",
+      "evidence": "{\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]} | {\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185109-hunt-4a95",
+        "probe": "malformed",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A stats request that hangs leaves 'Loading stats…' on screen forever, above the old range's results",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe faults, expectation hang-not-stuck-loading-silently",
+      "expected": "The request times out with a visible error, or the old results are clearly marked as out of date",
+      "actual": "After 13 s the page still shows 'Loading stats…' with no timeout or error, and the table and best plants from the previous range stay visible under the new From date",
+      "evidence": "[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"] | [\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185109-hunt-4a95",
+        "probe": "faults",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

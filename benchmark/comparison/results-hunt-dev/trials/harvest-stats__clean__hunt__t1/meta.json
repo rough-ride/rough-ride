@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__clean__hunt__t1",
+  "feature": "harvest-stats",
+  "bug": "clean",
+  "arm": "hunt",
+  "trial": 1,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:23:02.522Z",
+  "materializeMs": 7689,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__clean__hunt__t1/variant/cqp1l0u3/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "7b53930a-7fc4-4f0f-8a95-98beeeb006e5",
+  "loadBefore": [
+    9.7080078125,
+    8.3408203125,
+    6.42333984375
+  ],
+  "loadAfter": [
+    4.6748046875,
+    6.158203125,
+    5.97900390625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 268143,
+  "reportedCostUsd": 0.3705204,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 20,
+      "outputTokens": 8055,
+      "cacheReadInputTokens": 203752,
+      "cacheCreationInputTokens": 33718,
+      "webSearchRequests": 0,
+      "costUSD": 0.3705204,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1367,
+      "cacheCreationEphemeral5mInputTokens": 33718,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 3m52s | run 20261112-172324-hunt-d3f5 | 4 confirmed, 0 dropped on re-run\ntarget: http://localhost:3791\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Malformed or incomplete stats response crashes the page and leaves the previous range's table on screen under 'Loading stats…'\n   where: /stats (GET /api/stats/harvests)\n   expected: A visible error and no uncaught exception; data for the old range is not shown as the result for the new range\n   saw: {\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\",\"350 g · Little Gem\",\"View\",\"Lettuce\",\"Weight by plant and month\",\"2.6 kg total\",\"Harvest weight per plant and month, 1 Jan 2026 to 31 Dec 2026\",\"PLANT\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Sungold\\t–\\t450 g\\t600 g\\t–\\t1.05 kg\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"]}\n   repro: .rough-ride/runs/20261112-172324-hunt-d3f5/probes/faults.mjs (expectation \"malformed-handled\")\n2. MEDIUM Clearing the From date gives a contradictory 'From must be on or before To' error instead of an open start\n   where: /stats From field\n   expected: With From blank and To = 2025-12-31, stats from the beginning up to To, or a clear prompt to enter a From date\n   saw: {\"alerts\":[\"The From date must be on or before the To date.\"],\"fields\":[{\"label\":\"From\",\"value\":\"\"},{\"label\":\"To\",\"value\":\"2025-12-31\"}]}\n   repro: .rough-ride/runs/20261112-172324-hunt-d3f5/probes/faults.mjs (expectation \"cleared-from-no-contradictory-error\")\n3. MEDIUM Clearing the To date quietly falls back to 31 Dec of this year\n   where: /stats To field\n   expected: A blank To is refused or shown clearly; the range shown matches the inputs\n   saw: {\"rc\":\"6 harvests from 1 Mar 2025 to 31 Dec 2026\",\"fields\":[{\"label\":\"From\",\"value\":\"2025-03-01\"},{\"label\":\"To\",\"value\":\"\"}]}\n   repro: .rough-ride/runs/20261112-172324-hunt-d3f5/probes/baseline.mjs (expectation \"cleared-to-not-silently-replaced\")\n4. MEDIUM A stats request that hangs leaves 'Loading stats…' forever, with old data still showing\n   where: /stats (GET /api/stats/harvests)\n   expected: A timeout with an error and a way to retry\n   saw: [\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]\n   repro: .rough-ride/runs/20261112-172324-hunt-d3f5/probes/order.mjs (expectation \"hang-not-loading-forever\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a3105520a3c5fc167.jsonl",
+    "agent-a3105520a3c5fc167.meta.json"
+  ],
+  "usage": {
+    "input": 20,
+    "output": 8055,
+    "cacheRead": 203752,
+    "cacheWrite": 33718,
+    "requests": 10,
+    "toolCalls": {
+      "Bash": 9,
+      "Read": 1
+    }
+  },
+  "findingCount": 4,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T16:27:48.789Z"
+}

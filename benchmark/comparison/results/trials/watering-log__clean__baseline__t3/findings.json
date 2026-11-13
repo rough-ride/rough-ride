@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Out-of-range litres or bed_id cause 500 Internal Server Error on POST /api/waterings",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "Signed in, POST /api/waterings with {\"bed_id\":1,\"litres\":1e309} or {\"bed_id\":99999999999999999999999}; GET /api/waterings?bed_id=99999999999999999999999; DELETE /api/waterings/99999999999999999999999",
+      "expected": "422 with a validation message",
+      "actual": "500 Internal Server Error (plain text body)",
+      "evidence": "curl returned 'Internal Server Error 500' for all four requests",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Tiny litre amounts are accepted and then shown as \"0 L\"",
+      "where": "Beds page past-watering form / POST /api/waterings; Waterings page and dashboard",
+      "steps": "Record a past watering with 0.001 litres (the client only checks > 0 because the form uses novalidate; the server only checks gt=0), or POST litres 0.0000001; open /waterings",
+      "expected": "Amount refused with a reason (form has min=0.1) or shown accurately",
+      "actual": "Saved, and the Amount column shows '0 L'",
+      "evidence": "POST {bed_id:1, litres:1e-7} returned 201; SSR HTML of /waterings had <td class=\"num\">0 L</td>",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Watering load errors give no retry on the Waterings page or dashboard",
+      "where": "/waterings, / (Recent waterings card)",
+      "steps": "Open /waterings or the dashboard while the API is down or returns 5xx, then bring the server back",
+      "expected": "Error message with a Retry button that refetches without a reload",
+      "actual": "Only an AlertMessage is shown. There is no retry control, and the dashboard doesn't even pull out the refresh function for waterings, so the user has to reload the page",
+      "evidence": "index.vue: const { data: waterings, error: wateringsError } = wateringsResult (no refresh); waterings.vue error state has no button",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Bed filter list fails silently when /beds fails to load",
+      "where": "/waterings",
+      "steps": "Open /waterings while GET /api/beds fails (but /waterings succeeds)",
+      "expected": "An error saying the beds could not be loaded, with a retry",
+      "actual": "The bed dropdown only offers 'All beds' and no error is shown. bedsResult.error is never read",
+      "evidence": "waterings.vue: const { data: beds } = bedsResult; beds ?? [] in the select",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Filter state doesn't follow the URL when navigating within the Waterings page",
+      "where": "/waterings",
+      "steps": "Open a bed's 'Watering history' (/waterings?bed=1), then click the 'Waterings' nav link (/waterings), or use back/forward between filter URLs",
+      "expected": "The filter resets to All beds to match the URL",
+      "actual": "bedFilter is initialised from route.query only once and never watches the route. The reused page component keeps showing bed 1's list while the URL has no filter",
+      "evidence": "waterings.vue: const bedFilter = ref(route.query.bed ...) and only watch(bedFilter) -> router.replace; no watch on route.query",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Water now / Save watering have no timeout and no idempotency, so a hung request spins forever and a retry duplicates",
+      "where": "Beds page 'Water now' and 'Save watering'",
+      "steps": "Make the API slow or hang, then click Water now",
+      "expected": "The request fails after 10 s with a visible error. Retrying after a timeout records only one watering",
+      "actual": "useApiClient sets no timeout, so the button stays on 'Watering…' and disabled for as long as the request hangs. The POST has no idempotency key, so if the first request did land, a retry creates a second watering (Water now can't be deduplicated server-side at all)",
+      "evidence": "No 'timeout' anywhere in frontend/app; waterings POST inserts unconditionally (two identical POSTs created ids 5 and 6)",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Watering a second bed while the first is in flight re-enables the second bed's buttons early (double submit possible)",
+      "where": "Beds page",
+      "steps": "Click Water now on bed A and immediately on bed B. When A finishes, the finally block sets wateringBedId=null while B is still pending; click B again",
+      "expected": "B stays disabled until its own request finishes; one watering per click",
+      "actual": "A single shared wateringBedId is cleared by A's completion, so B's button re-enables and a second click records a duplicate. A's success message and B's error also overwrite each other (single waterNotice/waterError)",
+      "evidence": "beds.vue recordWatering: wateringBedId.value = bed.id ... finally { wateringBedId.value = null }",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Today's date can be rejected as 'in the future' (time zone mismatch between browser and server)",
+      "where": "Beds page past-watering form / POST /api/waterings",
+      "steps": "As a user whose time zone is ahead of the server's (e.g. UTC+10 while the server is on CET, evening server time), record a past watering with the default date (todayIso in the browser)",
+      "expected": "Today's date is accepted",
+      "actual": "The server validates against its own date.today() and returns 'Watering date cannot be in the future.' 'Water now' also stores watered_on as the server's local date while the time is shown in the viewer's zone, so the date and time can disagree",
+      "evidence": "schemas.py not_in_future uses date.today(); waterings.py uses now.astimezone().date(); the frontend's todayIso() uses the browser's local date",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long unbroken bed names can overflow the waterings tables at 375 px",
+      "where": "/waterings and the dashboard Recent waterings table",
+      "steps": "Create a bed named with 60 characters and no spaces, water it, and view /waterings at 375 px wide",
+      "expected": "The name wraps and the page has no sideways scroll",
+      "actual": "The 4-column table has no overflow-wrap/word-break and no scroll wrapper, so the long name widens the table past the viewport",
+      "evidence": "main.css .table rules have no overflow-wrap; there are no word-break rules in the stylesheet",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

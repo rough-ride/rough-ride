@@ -1,0 +1,1 @@
+Written by hand for the comparison benchmark (benchmark/comparison/). The clean feature binds the search pattern as a parameter. This variant formats the term into the SQL string, so a quote breaks the query.

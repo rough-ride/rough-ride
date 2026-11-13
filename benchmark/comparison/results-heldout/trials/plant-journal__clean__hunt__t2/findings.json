@@ -1,0 +1,79 @@
+{
+  "findings": [
+    {
+      "title": "Journal page shows a malformed list response as a list of blank entries",
+      "where": "/journal (GET /api/journal?limit=50)",
+      "steps": "Probe plant-journal-load-faults, expectation journal-malformed-not-shown-as-entries",
+      "expected": "A malformed response shows an error such as 'Could not load the journal.'",
+      "actual": "The page reports '14 entries' and lists 14 cards whose plant name, date and text are blank or '–', with no error",
+      "evidence": "{\"alerts\":[\"14 entries\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"],\"pe\":[]} | {\"alerts\":[\"14 entries\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"],\"pe\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-173407-hunt-0a37",
+        "probe": "plant-journal-load-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Plant journal shows a malformed response as blank entries with Edit and Delete buttons",
+      "where": "/plants/:id Journal section (GET /api/journal?plant_id=…)",
+      "steps": "Probe plant-journal-load-faults, expectation plant-journal-malformed-not-shown-as-entries",
+      "expected": "An error saying the journal could not be loaded",
+      "actual": "Many entries dated '–' with no text are listed, each with Edit and Delete buttons ('entry from –'), and no error is shown",
+      "evidence": "{\"alerts\":[],\"text\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\"],\"pe\":[]} | {\"alerts\":[],\"text\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\"],\"pe\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-173407-hunt-0a37",
+        "probe": "plant-journal-load-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Plant journal shows a bad response as 'No journal entries yet' while the badge says 2 entries",
+      "where": "/plants/:id Journal section",
+      "steps": "Probe plant-journal-load-faults, expectation plant-journal-empty-object-not-shown-as-empty",
+      "expected": "A response that is not a list is shown as a load error",
+      "actual": "The section shows the empty state 'No journal entries yet' next to the badge '2 entries', and no error",
+      "evidence": "{\"alerts\":[],\"text\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"No journal entries yet\",\"Note what you see: first shoots, pests, the weather.\",\"Garden Log · a journal for one garden\"],\"pe\":[]} | {\"alerts\":[],\"text\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"No journal entries yet\",\"Note what you see: first shoots, pests, the weather.\",\"Garden Log · a journal for one garden\"],\"pe\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-173407-hunt-0a37",
+        "probe": "plant-journal-load-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Journal search shows a bad response as 'No entries match'",
+      "where": "/journal search (GET /api/journal?q=…)",
+      "steps": "Probe plant-journal-load-faults, expectation journal-empty-object-not-shown-as-no-match",
+      "expected": "A response that is not a list is shown as an error",
+      "actual": "The page shows '0 entries match' and 'No entries match' for a search ('canes') that has a real match",
+      "evidence": "{\"alerts\":[\"0 entries match\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"0 entries match\",\"No entries match\",\"Try a different word or plant name.\",\"Clear search\",\"Garden Log · a journal for one garden\"]} | {\"alerts\":[\"0 entries match\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"0 entries match\",\"No entries match\",\"Try a different word or plant name.\",\"Clear search\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-173407-hunt-0a37",
+        "probe": "plant-journal-load-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Hung journal search stays on 'Loading entries…' and keeps showing the old results",
+      "where": "/journal search",
+      "steps": "Probe journal-search-hang, expectation hung-search-not-stuck-loading",
+      "expected": "After a while the page shows an error or a timeout and offers a retry",
+      "actual": "After 20 s the page still shows 'Loading entries…', with the unfiltered list (including entries that don't match 'canes') under the search, and no error",
+      "evidence": "{\"alerts\":[\"Loading entries…\"],\"text\":[\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Loading entries…\",\"Tomato\",\"2 Jul 2026\",\"Tied the stems to canes.\",\"Tomato\",\"1 Jun 2026\",\"First flowers opened; watered deeply.\"]} | {\"alerts\":[\"Loading entries…\"],\"text\":[\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Loading entries…\",\"Tomato\",\"2 Jul 2026\",\"Tied the stems to canes.\",\"Tomato\",\"1 Jun 2026\",\"First flowers opened; watered deeply.\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-173407-hunt-0a37",
+        "probe": "journal-search-hang",
+        "state": "confirmed"
+      }
+    }
+  ]
+}
