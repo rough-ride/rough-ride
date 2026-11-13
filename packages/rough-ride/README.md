@@ -4,7 +4,7 @@
 
 **Resilience testing for agent-built web apps.** After a coding agent changes your app, rough-ride attacks what changed with network faults, bad inputs and timing tricks in a real browser, and tells you where the app breaks or lies.
 
-> Early preview: how often it catches real bugs, and how often it raises false alarms, hasn't been measured yet. Treat findings as leads to check.
+> **Deprecated: rough-ride is no longer maintained.** On our benchmark, `/rough-ride:standard` caught the planted bug in 5 of 18 runs (2 of the 6 bugs) with 9.4 false alarms per run, where Claude Code with Playwright and a resilience checklist caught it in 18 of 18 runs with 3.1 ([report](https://github.com/rough-ride/rough-ride/blob/main/benchmark/comparison/REPORT.md)). Its successor, Stillhunter, is in development ([its first test](https://github.com/rough-ride/rough-ride/blob/main/benchmark/comparison/REPORT-hunt.md)).
 
 ## Quick start
 
