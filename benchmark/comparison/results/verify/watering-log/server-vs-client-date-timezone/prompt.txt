@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3791, API http://localhost:8791/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-watering-log-server-vs-client-date-timezone/scratch.
+
+The reported problem: When the browser's time zone is ahead of the server's, a past watering dated with the form's default 'today' is refused as in the future, and 'Water now' stores a server-local date with a UTC time.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "'Water now' date uses the server's local day while the time is UTC, and past dates are checked against the server's date",
+  "where": "POST /api/waterings, Beds page",
+  "steps": "Use the app from a time zone that differs from the server's near midnight. Click 'Water now', or record a past watering dated 'today' in your own time zone.",
+  "expected": "Dates follow the gardener's day",
+  "actual": "watered_on comes from the server's local date while the display converts the UTC watered_at to the viewer's zone, so the date and time can disagree. Sorting uses watered_on. A watering dated with the client's todayIso() can be refused as 'in the future' when the server is behind.",
+  "evidence": "waterings.py: `now.astimezone().date()` combined with a UTC watered_at, and schemas.py compares against date.today()"
+ },
+ {
+  "title": "Today's date can be refused as 'in the future' across time zones",
+  "where": "Past watering form / POST /api/waterings",
+  "steps": "Browser in a time zone ahead of the server; keep default date (browser's today) and save.",
+  "expected": "Today is accepted.",
+  "actual": "Server compares with its own date.today() and returns 'Watering date cannot be in the future.'",
+  "evidence": "Code: todayIso uses browser local date, not_in_future uses server local date."
+ },
+ {
+  "title": "Past watering 'today' can be refused because the client and server time zones differ",
+  "where": "Beds page 'Record past watering'",
+  "steps": "Use a browser whose local date is ahead of the server's (e.g. UTC+13 in the evening, server UTC/CET) and save with the default date (todayIso)",
+  "expected": "Today's date is accepted",
+  "actual": "The server checks date.today() in its own time zone and returns 'Watering date cannot be in the future.' Also, 'Water now' stores watered_on as the server's local date but watered_at in UTC",
+  "evidence": "Code: todayIso uses the browser time zone; not_in_future uses the server's date.today()"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-watering-log-server-vs-client-date-timezone/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

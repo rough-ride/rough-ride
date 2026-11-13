@@ -1,0 +1,74 @@
+{
+  "id": "watering-log__hx5__hunt__t3",
+  "feature": "watering-log",
+  "bug": "hx5",
+  "arm": "hunt",
+  "trial": 3,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T18:03:54.448Z",
+  "materializeMs": 6679,
+  "repo": "$TMPDIR/rr-bench/work/watering-log__hx5__hunt__t3/variant/rym2jmag/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/beds.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/beds.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/waterings.py\n?? frontend/app/pages/waterings.vue\n",
+  "sessionId": "afc3232c-4705-4f0c-af80-322e39a7e61f",
+  "loadBefore": [
+    6.6689453125,
+    7.08544921875,
+    8.70703125
+  ],
+  "loadAfter": [
+    5.04638671875,
+    7.51953125,
+    8.72314453125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 325816,
+  "reportedCostUsd": 0.48221160000000013,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 26,
+      "outputTokens": 11298,
+      "cacheReadInputTokens": 316438,
+      "cacheCreationInputTokens": 38572,
+      "webSearchRequests": 0,
+      "costUSD": 0.48221160000000013,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2467,
+      "cacheCreationEphemeral5mInputTokens": 38572,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 5m08s | run 20261112-190413-hunt-10ac | 4 confirmed, 0 dropped on re-run\ntarget: http://localhost:3791\n\nFindings (each reproduced twice from scratch)\n1. MEDIUM Tiny litre amounts are accepted and then shown as \"0 L\"\n   where: /beds Record past watering form (POST /api/waterings)\n   expected: An amount below the field's 0.1 L minimum is refused, or it is shown as a non-zero amount\n   saw: {\"alerts\":[\"Recorded 0 L on 11 Nov 2026.\"]}\n   repro: .rough-ride/runs/20261112-190413-hunt-10ac/probes/misc.mjs (expectation \"tiny-litres-refused-or-shown-nonzero\")\n2. MEDIUM Waterings page crashes on a malformed list response and stays on \"Loading waterings…\"\n   where: /waterings bed filter (GET /api/waterings?bed_id=)\n   expected: A visible error, no uncaught exception, and the loading text cleared\n   saw: {\"pe\":[\"waterings.value?.reduce is not a function\"],\"alerts\":[\"Loading waterings…\"],\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"Loading waterings…\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\",\"ACTIONS\",\"12 Nov 2026, 19:05\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"11 Nov 2026\\tShade corner\\t0 L\\tDelete\",\"watering of Shade corner\",\"11 Nov 2026\\tShade corner\\t0 L\\tDelete\",\"watering of Shade corner\",\"11 Nov 2026\\tShade corner\\t0 L\\tDelete\"]}\n   repro: .rough-ride/runs/20261112-190413-hunt-10ac/probes/waterings-faults.mjs (expectation \"malformed-no-crash\")\n3. MEDIUM Hung filter request leaves other beds' waterings under the chosen bed filter, loading forever\n   where: /waterings bed filter\n   expected: After choosing Shade corner, only its waterings show, or a loading or timeout state replaces the old list\n   saw: {\"alerts\":[\"Loading waterings…\"],\"north\":[\"12 Nov 2026, 19:05\\tNorth bed\\t–\\tDelete\",\"10 Nov 2026\\tNorth bed\\t0 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\",\"1 Jan 1\\tNorth bed\\t1 L\\tDelete\"],\"fields\":[{\"label\":\"Bed\",\"value\":\"2\"}]}\n   repro: .rough-ride/runs/20261112-190413-hunt-10ac/probes/filter-hang.mjs (expectation \"hang-no-other-bed-rows-under-filter\")\n4. LOW    Past watering accepts a date in year 1\n   where: /beds Record past watering form (POST /api/waterings)\n   expected: A date such as 0001-01-01 is refused as implausible\n   saw: {\"alerts\":[\"Recorded 2 L on 1 Jan 1.\"]}\n   repro: .rough-ride/runs/20261112-190413-hunt-10ac/probes/misc.mjs (expectation \"ancient-date-refused\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-add9e41556ebeeb62.jsonl",
+    "agent-add9e41556ebeeb62.meta.json"
+  ],
+  "usage": {
+    "input": 26,
+    "output": 11298,
+    "cacheRead": 316438,
+    "cacheWrite": 38572,
+    "requests": 13,
+    "toolCalls": {
+      "Bash": 12,
+      "Read": 1
+    }
+  },
+  "findingCount": 4,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |   4 +-\n backend/db.py                    |  14 +++-\n backend/routers/beds.py          |   8 ++-\n backend/schemas.py               |  29 +++++++++\n frontend/app/assets/css/main.css |  21 ++++++\n frontend/app/layouts/default.vue |   1 +\n frontend/app/pages/beds.vue      | 134 ++++++++++++++++++++++++++++++++++++++-\n frontend/app/pages/index.vue     |  44 ++++++++++++-\n frontend/app/types/api.ts        |  17 +++++\n frontend/app/utils/format.ts     |  26 ++++++++\n 10 files changed, 291 insertions(+), 7 deletions(-)\n",
+  "finishedAt": "2026-11-12T18:09:36.388Z"
+}

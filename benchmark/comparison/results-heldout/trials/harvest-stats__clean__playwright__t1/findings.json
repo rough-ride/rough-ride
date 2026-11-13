@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Stats request that hangs never times out; page shows 'Loading stats…' forever",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Open /stats, make /api/stats/harvests hang (browser_route with no response), change the From date, wait 14 s.",
+      "expected": "Request aborts after 10 s and an error with a retry option appears.",
+      "actual": "Still 'Loading stats…' after 14 s; no timeout is set on useApiFetch.",
+      "evidence": "Page text after 14 s: '... This year\\n\\nLoading stats…'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Error state has no retry button",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests return 500 (HTML body), change the From date. Restore the API.",
+      "expected": "Error message plus a Try again button that reloads the stats once the server is back.",
+      "actual": "Only 'Could not load harvest stats.' is shown, with no retry control. The only way to recover is to change a date or reload; re-entering the same date does nothing.",
+      "evidence": "Buttons in main after failure: ['This year'] only; after unrouting and re-filling the same date the error stayed.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Non-JSON 200 response crashes the render: stale results stay up with a stuck 'Loading stats…'",
+      "where": "/stats",
+      "steps": "Open /stats, route /api/stats/harvests to 200 with text/html body '<html>proxy</html>', change the From date.",
+      "expected": "An error saying the stats could not be read.",
+      "actual": "Render throws 'TypeError: Cannot read properties of undefined (reading length)' (stats.plants on a string). The page keeps the previous range's Best plants and table under a permanent 'Loading stats…', so old data looks like the new range's results.",
+      "evidence": "Console TypeError at stats.vue render; page text shows 'Loading stats…' followed by the old Best plants list.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Null/missing fields in the stats response render as blank or broken tables, or crash",
+      "where": "/stats",
+      "steps": "Route /api/stats/harvests to 200 JSON with months:null, top_plants:null, plant_name:null, monthly_grams:null, total_grams:null, date_from:null, then change a date.",
+      "expected": "Response is validated and treated as an error; the page is never half-rendered.",
+      "actual": "The page renders an empty 'Best plants' section, '– total', 'Harvest weight per plant and month, – to –', and a plant row with an empty name. A Vue render error is also thrown and the page stays on 'Loading stats…'.",
+      "evidence": "Page text: 'Loading stats… Best plants Weight by plant and month – total ... PLANT TOTAL – Total –'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Clearing the From field silently falls back to 1 Jan of this year, giving a misleading error",
+      "where": "/stats",
+      "steps": "Set To = 2025-12-31 (valid with From=2025-...), then clear the From field.",
+      "expected": "A blank From either means 'no lower bound' or shows a field-level message that From is required.",
+      "actual": "The client omits 'from', so the server uses 2026-01-01. The page shows 'The From date must be on or before the To date.' while the From field looks empty. Opening the resulting URL (?to=2025-12-31) directly shows the same error.",
+      "evidence": "URL became /stats?to=2025-12-31; page text 'The From date must be on or before the To date.'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Months without harvests are left out of the per-month table",
+      "where": "GET /api/stats/harvests, /stats table",
+      "steps": "GET /api/stats/harvests?from=0001-01-01&to=9999-12-31 (or choose a range of several years in the UI).",
+      "expected": "Per-month totals across the chosen range, with empty months shown as 0/–, so columns are contiguous.",
+      "actual": "Only months that have harvests become columns (e.g. 2025-08 then 2026-06), which hides the gap and makes the timeline misleading.",
+      "evidence": "months: [2025-08, 2026-06, 2026-07, 2026-08, 2026-09]",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Long plant names are cut off with an ellipsis in Best plants and the dashboard with no way to read them",
+      "where": "/stats Best plants cards, dashboard 'Top plant this year' card (375 px)",
+      "steps": "Create a plant named 'Supercalifragilisticexpialidociousbeanstalkwithaverylongnamethatneverbreaks', log a harvest, then view /stats at 375 px.",
+      "expected": "The full name is readable (wrapped, or available as a tooltip).",
+      "actual": "Shown as 'Supercalifragilis…' with no title attribute. The table's nowrap row header also makes the plant column as wide as the screen, pushing every month column off-screen.",
+      "evidence": "Screenshot scratch/stats375.png",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "malformed-journal-response-no-error",
+  "sentence": "When GET /api/journal returns a non-list body (object, string, HTML), the Journal page or plant journal section shows blank '–' entries or an empty/no-match state instead of a load error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user, opened /plants and then used Playwright browser_route so that **/api/journal* returned 200 application/json. (1) With the body \"unexpected text\" (a JSON string), clicking the Journal nav link (a client-side fetch) rendered '15 entries' and 15 cards that only show '–', with no plant name, no text and no error. The 15 cards are the 15 characters of the string, iterated because entries.length is truthy. (2) With the body {\"items\":[]}, the plant detail page /plants/1 Journal section showed 'No journal entries yet', while its header still said '2 entries' (that count comes from the plant record). No load error appeared in either case. Code: pages/journal.vue:19 and pages/plants/[id].vue:15 pass the useApiFetch<JournalEntry[]> result straight to the template, and nothing checks Array.isArray. useApiFetch has no transform or validation, so an unreadable response is shown as fake entries or as an empty journal instead of the existing 'Could not load the journal.' error.",
+  "severity": "medium",
+  "wallMs": 74985
+}

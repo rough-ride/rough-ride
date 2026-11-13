@@ -1,0 +1,1 @@
+Written by hand for the comparison benchmark (benchmark/comparison/), held-out set. The clean feature reads and writes the filter as `?bed=`. This variant writes `?bed_id=` while the page still reads `?bed=`, so the filter set from the select does not survive a reload; the Watering history links from the beds page still use `?bed=` and work.

@@ -1,0 +1,105 @@
+{
+  "findings": [
+    {
+      "title": "button \"Save plant\" stays busy after POST /api/plants fails with 500",
+      "where": "/plants/new POST /api/plants",
+      "steps": "In the browser: journal-add/POST /api/plants #1/500!; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 4yopli5z) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 4yopli5z) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 4yopli5z) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 4yopli5z) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-091353-plan-y60t",
+        "shown": "shown",
+        "members": [
+          "journal-add/POST /api/plants #1/500!",
+          "journal-add/label \"Name\"/empty",
+          "journal-add/POST /api/plants #1/double-submit",
+          "journal-add/POST /api/plants #1/reset!",
+          "journal-add/label \"Name\"/long",
+          "journal-add/label \"Name\"/spaces",
+          "journal-add/label \"Name\"/specials",
+          "journal-add/label \"Name\"/unicode"
+        ]
+      }
+    },
+    {
+      "title": "button \"Add entry\" stays busy after POST /api/journal fails with 500",
+      "where": "/plants/{} POST /api/journal",
+      "steps": "In the browser: journal-add/POST /api/journal #1/500!; checks that failed: settles, values-survive, retry-recovers",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 4yopli5z) after 10 s | values-survive: label \"Entry\" held \"Entry fy3quib9\", then \"\" after the failed request | retry-recovers: step 10 (expect text \"Entry ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 4yopli5z) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10 s | values-survive: label \"Entry\" held \"Entry lc21vrt2\", then \"\" after the failed request | retry-recovers: step 10 (expect text \"Entry ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 4yopli5z) after 10 s | values-survive: label \"Entry\" held \"Entry fy3quib9\", then \"\" after the failed request | retry-recovers: step 10 (expect text \"Entry ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 4yopli5z) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10 s | values-survive: label \"Entry\" held \"Entry lc21vrt2\", then \"\" after the failed request | retry-recovers: step 10 (expect text \"Entry ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-091353-plan-y60t",
+        "shown": "shown",
+        "members": [
+          "journal-add/POST /api/journal #1/500!",
+          "journal-add/label \"Entry\"/long",
+          "journal-add/POST /api/journal #1/double-submit",
+          "journal-add/POST /api/journal #1/reset!",
+          "journal-add/label \"Entry\"/empty"
+        ]
+      }
+    },
+    {
+      "title": "label \"Search\" stays busy after GET /api/plants fails with 500",
+      "where": "/plants GET /api/plants",
+      "steps": "In the browser: plant-detail/GET /api/plants #2/500!; checks that failed: settles, retry-recovers",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10 s | retry-recovers: step 10 (click link \"Plant ${unique}\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10 s | retry-recovers: step 10 (click link \"Plant ${unique}\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1v0cvqlz) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-091353-plan-y60t",
+        "shown": "shown",
+        "members": [
+          "plant-detail/label \"Search\"/specials",
+          "plant-detail/GET /api/plants #2/500!",
+          "plant-detail/GET /api/plants #2/empty-200!"
+        ]
+      }
+    },
+    {
+      "title": "button \"Save entry\" stays busy after PUT /api/journal/{entry_id} fails with 500",
+      "where": "/plants/{} control button \"Save entry\"",
+      "steps": "In the browser: journal-edit/PUT /api/journal/{entry_id} #1/500!; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-091353-plan-y60t",
+        "shown": "shown",
+        "members": [
+          "journal-edit/PUT /api/journal/{entry_id} #1/500!",
+          "journal-edit/PUT /api/journal/{entry_id} #1/reset!"
+        ]
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after POST /api/beds fails with 500",
+      "where": "/beds POST /api/beds",
+      "steps": "In the browser: journal-add/POST /api/beds #1/500!; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 3z8839iz) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-091353-plan-y60t",
+        "shown": "unchecked",
+        "members": [
+          "journal-add/POST /api/beds #1/500!",
+          "journal-add/POST /api/beds #1/double-submit",
+          "journal-add/POST /api/beds #1/reset!"
+        ]
+      }
+    }
+  ]
+}

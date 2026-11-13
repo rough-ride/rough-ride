@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3792, API http://localhost:8792/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-harvest-stats-stats-raw-validation-message-for-invalid-url-date/scratch.
+
+The reported problem: Opening /stats with an impossible but well-formed date such as ?from=2026-02-30 shows a raw 'Query.from: Input should be a valid date...' message and a blank From field, because queryDate() only checks the regex.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Bad date in URL shows a raw technical validation message and a blank field",
+  "where": "/stats?from=2026-02-31",
+  "steps": "Open /stats?from=2026-02-31. A shared or edited link does this.",
+  "expected": "A friendly message such as 'From is not a valid date', or the bad value falls back to the default.",
+  "actual": "The page shows 'Query.from: Input should be a valid date or datetime, day value is outside expected range' and the From input is empty. queryDate() only checks the regex, not that the date is real.",
+  "evidence": "This text appears in the SSR HTML of /stats?from=2026-02-31."
+ },
+ {
+  "title": "Invalid date in the URL shows a blank field and a raw validation message",
+  "where": "/stats?from=2026-02-30",
+  "steps": "Open /stats?from=2026-02-30 directly.",
+  "expected": "The bad query value is ignored (falls back to the default) or the From field is shown as invalid.",
+  "actual": "The From input is empty because the browser rejects the value. The request still sends it and the page shows 'Query.from: Input should be a valid date or datetime, day value is outside expected range'.",
+  "evidence": "Page text: 'Query.from: Input should be a valid date or datetime, day value is outside expected range'; inputValue('#stats-from') = ''."
+ },
+ {
+  "title": "Bad date in the URL shows a raw technical validation message",
+  "where": "/stats",
+  "steps": "Open /stats?from=2026-02-30 (it matches the page's regex but is not a real date).",
+  "expected": "A friendly reason, or a fallback to the default date.",
+  "actual": "The page shows the raw API message, roughly 'Query.from: Input should be a valid date or datetime, day value is outside expected range'.",
+  "evidence": "The API returns 422 with loc [query, from]. apiErrorMessage only strips 'body' from loc, not 'query'. queryDate() checks only the \\d{4}-\\d{2}-\\d{2} pattern."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-harvest-stats-stats-raw-validation-message-for-invalid-url-date/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

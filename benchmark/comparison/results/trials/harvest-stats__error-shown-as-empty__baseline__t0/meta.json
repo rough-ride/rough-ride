@@ -1,0 +1,62 @@
+{
+  "id": "harvest-stats__error-shown-as-empty__baseline__t0",
+  "feature": "harvest-stats",
+  "bug": "error-shown-as-empty",
+  "arm": "baseline",
+  "trial": 0,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T08:36:21.165Z",
+  "materializeMs": 15421,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__error-shown-as-empty__baseline__t0/variant/mamswmzh/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "31d83621-182c-4644-8af3-c57f12b228db",
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 74248,
+  "reportedCostUsd": 0.3273946,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 16,
+      "outputTokens": 4651,
+      "cacheReadInputTokens": 215873,
+      "cacheCreationInputTokens": 23892,
+      "webSearchRequests": 0,
+      "costUSD": 0.3273946,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 779,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 23892,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 9,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found five problems; the main one is that a failed stats request looks like an empty result. All five are in `out/findings.json`, and the file parses as valid JSON.\n\n1. **High, observed: errors look like \"No harvests in this range\".** `pages/stats.vue` never reads the `error` that `useApiFetch` returns. When the request fails, the page shows the empty-state message with no error text and no Retry button. To reproduce, open `/stats?from=2026-12-01&to=2026-01-01`: the API answers 422 (\"The From date must be on or before the To date.\"), but the page shows \"No harvests in this range\". A server error or a dropped connection follows the same path in the code.\n2. **Medium, observed: impossible dates in the link become \"No harvests\".** The page only checks that a link date looks like YYYY-MM-DD, so `?from=2026-02-30` gets through. The server rejects it with a 422, and the page again shows the empty state.\n3. **Medium, suspected: no timeout.** There is no timeout anywhere in the frontend, so if the API stalls, \"Loading stats…\" can stay on screen forever. Even when the request does fail, the page only shows the empty state.\n4. **Low, suspected: a cleared date field quietly uses this year's default.** The field stays blank while the summary line says \"from 1 Jan 2026\". If the To date is before this year, the hidden default causes a 422, and the page shows \"No harvests\".\n5. **Low, observed: months with no harvests are missing from the table.** For the widest possible range, the API returns 2025-08 followed directly by 2026-06, so the nine months in between don't appear.\n\nNothing else turned up. The server rejects malformed dates with a 4xx, never a 5xx; the page layout fits 375 px; and the dashboard's \"Top plant this year\" card works.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 16,
+    "output": 4651,
+    "cacheRead": 215873,
+    "cacheWrite": 23892,
+    "requests": 8,
+    "toolCalls": {
+      "Bash": 8
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 5,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T08:38:00.013Z"
+}

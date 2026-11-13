@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3792, API http://localhost:8792/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-harvest-stats-stats-malformed-200-not-handled/scratch.
+
+The reported problem: When GET /api/stats/harvests returns a malformed or non-JSON 200 response (e.g. '{}' or an HTML body), /stats throws a render error or shows a garbage table instead of an error state.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Uncaught error on /stats after GET /api/stats/harvests is rate limited (429)",
+  "where": "/stats",
+  "steps": "In the browser: /stats | 429!, malformed-json! on GET /api/stats/harvests #1 | fails: no-uncaught-error",
+  "expected": "",
+  "actual": "no-uncaught-error: overlay: dev error overlay | no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function",
+  "evidence": "no-uncaught-error: overlay: dev error overlay | no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function"
+ },
+ {
+  "title": "Unreadable 200 response (HTML/non-JSON) is not treated as an error; page shows stale/garbage table and stuck 'Loading'",
+  "where": "/stats",
+  "steps": "Route /api/stats/harvests to return 200 with Content-Type text/html and body '<html>proxy</html>', then change the From date.",
+  "expected": "An error message with retry.",
+  "actual": "No error is shown. The page shows 'Loading stats…' with an empty 'Best plants' section, '– total', and a table whose caption reads '– to –'.",
+  "evidence": "Page text: 'Loading stats… Best plants Weight by plant and month – total Harvest weight per plant and month, – to – PLANT TOTAL –'."
+ },
+ {
+  "title": "Stats page crashes on a malformed or unreadable 200 response (null fields, {} or HTML body)",
+  "where": "/stats (frontend/app/pages/stats.vue, utils/format.ts formatMonth)",
+  "steps": "Sign in, open the Dashboard, mock GET /api/stats/harvests to return 200 with '{}', or an HTML body, or months[].month = null. Click 'Stats' in the nav.",
+  "expected": "An error state saying the stats could not be read, with a retry.",
+  "actual": "Rendering throws. The URL changes to /stats but the Dashboard content stays on screen and the Nuxt error dialog opens. The template reads stats.plants.length and formatMonth(null).slice without any checks.",
+  "evidence": "Console: 'TypeError: Cannot read properties of null (reading 'slice') at formatMonth (utils/format.ts:20)' and '[Vue warn]: Unhandled error during execution of render function at <Stats>'. With '{}' and with an HTML body the page stayed on Dashboard content at URL /stats and an 'Error details' dialog was present."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-harvest-stats-stats-malformed-200-not-handled/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

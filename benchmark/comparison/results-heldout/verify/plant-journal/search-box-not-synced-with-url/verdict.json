@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "search-box-not-synced-with-url",
+  "sentence": "On /journal?q=tom, clicking Journal in the nav or using back/forward changes the URL but the search box and results keep the old query.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /journal?q=tom: the search box said 'tom' and the page showed '2 entries match'. Clicked 'Journal' in the top nav: the URL changed to /journal, but the box still said 'tom' and the page still showed '2 entries match' with 2 items. Then I cleared the search (URL /journal, 3 entries) and pressed browser back: the URL went to /journal?q=tom, but the box stayed empty and the page showed '3 entries' (unfiltered). Code cause: in pages/journal.vue, `search` is read from route.query.q only once when the page is created. A watcher pushes search -> URL, but nothing watches route.query.q, and Nuxt reuses the page component when only the query changes. So the URL and the UI drift apart.",
+  "severity": "medium",
+  "wallMs": 53836
+}

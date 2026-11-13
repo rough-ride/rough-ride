@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "create-not-idempotent",
+  "sentence": "POST /api/waterings has no idempotency key or dedupe, so retrying 'Water now' or 'Save watering' after a lost or timed-out response records a duplicate watering.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the mechanics: signed in as demo user, on /beds used Playwright route to let the first POST /api/waterings reach the server (route.fetch) and then abort the response as timed out; clicked 'Water now' on North bed, then clicked again. GET /api/waterings went from 2 to 4 rows (ids 3 and 4, 18:48:24 and 18:48:25), second click showed 'Watered North bed.'. Code: create_watering always INSERTs, frontend sends no key. However, this is plain non-idempotent POST behaviour consistent with the rest of the app: no create endpoint in the codebase (beds, plants, harvests, tasks) has idempotency keys or dedupe (grep finds none), and the request does not ask for it. Content-based dedupe would be wrong because watering the same bed twice, even close together, is a legitimate action. The button is disabled while a request is in flight, so double clicks are prevented, and an accidental duplicate shows up on the waterings page where it can be deleted. A duplicate only happens on the rare case of a response lost after commit followed by a manual retry, which is a general hardening idea, not a defect in this change.",
+  "severity": null,
+  "wallMs": 88513
+}

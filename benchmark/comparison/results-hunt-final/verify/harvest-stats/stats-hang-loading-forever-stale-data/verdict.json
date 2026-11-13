@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-hang-loading-forever-stale-data",
+  "sentence": "On /stats, when the stats request never answers after changing the date range, 'Loading stats…' stays indefinitely above the previous range's results with no timeout, error or retry.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo user, opened /stats (default 1 Jan-31 Dec 2026 loaded: Courgette 1.2 kg, Tomato 1.05 kg, Lettuce 350 g, 2.6 kg total). Then routed **/api/stats/harvests** to never respond and set From to 2026-05-01 (URL became /stats?from=2026-05-01). After 1 s and again after 21 s the page still showed 'Loading stats…' above the full previous-range Best plants and table (caption 'Harvest weight per plant and month, 1 Jan 2026 to 31 Dec 2026', Total 2.6 kg). No timeout, error or retry appeared. Code: stats.vue uses useApiFetch (plain useFetch with no timeout or abort) and renders the old `stats` data while status === 'pending'. Only the old caption hints that the data is out of date. The page does say 'Loading', and the shared fetch helper has no timeout anywhere in the app, so this only matters when the server hangs.",
+  "severity": "low",
+  "wallMs": 102946
+}

@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Failed 'Add entry' wipes the text the user typed",
+      "where": "Plant detail page /plants/:id, Journal > New entry (pages/plants/[id].vue addEntry)",
+      "steps": "Open /plants/2, make POST /api/journal fail (e.g. 500), type 'My important note 🌱' in Entry, click Add entry.",
+      "expected": "Error shown and the typed text stays in the textarea so the user can retry.",
+      "actual": "Error 'Could not add the entry.' is shown but the textarea is emptied, because entryForm.reset() is called in the finally block on both success and failure.",
+      "evidence": "After the failed POST the textarea value was '' and the alert read 'Could not add the entry.'",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal saves have no timeout; button stays 'Saving…' forever when the server hangs",
+      "where": "Plant detail page: Add entry, Edit entry save, Delete entry (useApiClient has no timeout)",
+      "steps": "Make POST /api/journal hang (never respond), type text, click Add entry, wait more than 10 s.",
+      "expected": "The request fails after 10 s with a visible error, and the button is enabled again.",
+      "actual": "The button still read 'Saving…' and stayed disabled after 12 s, with no error. The same applies to edit (PUT) and delete (DELETE).",
+      "evidence": "Submit button text was 'Saving…' 12 s after the click.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal page error state has no retry",
+      "where": "/journal page",
+      "steps": "Make GET /api/journal?... return 503, go from Plants to Journal using the nav link.",
+      "expected": "Error message with a Retry button that reloads the entries.",
+      "actual": "Only 'Could not load the journal.' is shown, with no button. The user has to reload or change the search to recover.",
+      "evidence": "Main area showed the alert and no buttons (the main button list was empty).",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Plant detail journal list error has no retry",
+      "where": "Plant detail page Journal section",
+      "steps": "Make GET /api/journal?plant_id=... fail and open a plant.",
+      "expected": "Error state with a retry button.",
+      "actual": "The code shows only an AlertMessage with no retry button (refreshJournal is never offered to the user).",
+      "evidence": "Code: pages/plants/[id].vue renders <AlertMessage v-if=\"journalLoadError\"> without any retry control.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Out-of-range ids give 500 instead of 4xx",
+      "where": "POST /api/journal (plant_id), DELETE/PUT /api/journal/{entry_id}",
+      "steps": "POST {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-11-12\",\"body\":\"x\"}, or DELETE /api/journal/99999999999999999999.",
+      "expected": "4xx validation or not-found response.",
+      "actual": "HTTP 500 Internal Server Error (SQLite integer overflow).",
+      "evidence": "curl returned 'Internal Server Error [500]' for both requests.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Absurd journal dates accepted and shown oddly",
+      "where": "POST/PUT /api/journal, entry list",
+      "steps": "POST an entry with entry_on 0001-01-01.",
+      "expected": "Dates before a sensible minimum are refused with a reason.",
+      "actual": "The entry is accepted (201), shown as '1 Jan 1', and sorted to the bottom.",
+      "evidence": "201 response. The time element rendered '1 Jan 1'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "'Future date' check uses server date vs browser date",
+      "where": "JournalEntryForm / JournalEntryIn.not_in_future",
+      "steps": "Use a browser in a timezone ahead of the server's around midnight and pick today's local date.",
+      "expected": "Today's date is accepted.",
+      "actual": "The client allows it (todayIso is local) but the server's date.today() may still be yesterday, so it answers 'Journal date cannot be in the future.'",
+      "evidence": "Code inspection.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

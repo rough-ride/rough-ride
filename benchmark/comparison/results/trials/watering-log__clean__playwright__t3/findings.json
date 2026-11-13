@@ -1,0 +1,134 @@
+{
+  "findings": [
+    {
+      "title": "Water now / Save watering spin forever when the request hangs (no 10 s timeout)",
+      "where": "/beds (POST /api/waterings)",
+      "steps": "On /beds, make POST /api/waterings hang (route with no response), click 'Water now' on a bed, wait more than 10 s.",
+      "expected": "The request times out after 10 s, an error is shown and the button can be used again.",
+      "actual": "After 11 s the button still reads 'Watering…' and is disabled, with no error. Neither useApiClient nor useApiFetch sets a timeout.",
+      "evidence": "hangBtn='Watering…\\nShade corner', hangDisabled=true after 11 s",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Waterings list stays on 'Loading waterings…' forever when the request hangs",
+      "where": "/waterings",
+      "steps": "Open /waterings, make GET /api/waterings?bed_id=1 hang, then pick 'North bed' in the filter. Wait 12 s.",
+      "expected": "A timeout error with a retry after 10 s.",
+      "actual": "'Loading waterings…' is still shown after 12 s, with no error and no retry.",
+      "evidence": "main text after 12 s: '... Clear filter | Loading waterings…'",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Retrying Water now after a timeout or lost response records a duplicate watering",
+      "where": "POST /api/waterings, /beds",
+      "steps": "Click Water now while the network is slow or the response is lost, then click again once the button is usable.",
+      "expected": "One watering is recorded (idempotency key or dedupe).",
+      "actual": "Each POST inserts a new row. The endpoint has no idempotency. While testing, two hung 'Water now' requests for Shade corner both landed 12 s apart, even though the UI never confirmed either.",
+      "evidence": "GET /api/waterings showed ids 6 and 7, both Shade corner Water now entries (12:02:39 and 12:02:51), from requests the UI never confirmed",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Error states on the waterings page and the dashboard's recent waterings have no retry",
+      "where": "/waterings, / (Recent waterings section)",
+      "steps": "Make GET /api/waterings return 500, then open /waterings through the nav link, or open the dashboard.",
+      "expected": "An error message with a 'Try again' button that refetches without a reload.",
+      "actual": "Only the text 'Could not load waterings.' / 'Could not load recent waterings.' appears. There is no button, so the only way to recover is to reload or change the filter. The dashboard does not even destructure refresh for waterings.",
+      "evidence": "buttons in main: [] ; dashButtons: []",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Bed filter silently empty when /api/beds fails on the waterings page",
+      "where": "/waterings",
+      "steps": "From the dashboard, make GET /api/beds return 500, then click the 'Waterings' nav link.",
+      "expected": "A visible error that the beds could not be loaded, with a retry.",
+      "actual": "The Bed select only offers 'All beds' and no error is shown. The bedsResult error is ignored.",
+      "evidence": "options: 'All beds' only; no alert text",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Past watering refused as 'in the future' for users whose local date is ahead of the server",
+      "where": "/beds 'Record past watering', POST /api/waterings",
+      "steps": "Use a browser in a time zone ahead of the server (e.g. Pacific/Kiritimati while the server is on CET, 12 Nov). Open 'Record past watering': the date defaults to the user's today (13 Nov). Enter 3 litres and save.",
+      "expected": "Today's date in the user's time zone is accepted.",
+      "actual": "Error 'Watered on: Watering date cannot be in the future.' The default date the form itself fills in is refused, because the server compares against its own date.today(). Water now likewise stores watered_on as the server's local date and watered_at in UTC, so the two fields can disagree for the user.",
+      "evidence": "tzDefaultDate=2026-11-13, tzErr=['Watered on: Watering date cannot be in the future.']",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Huge bed_id or litres values cause 500 Internal Server Error",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=",
+      "steps": "POST {\"bed_id\":99999999999999999999}, or {\"bed_id\":1,\"litres\":1e309}, or GET /api/waterings?bed_id=99999999999999999999; or open /waterings?bed=99999999999999999999.",
+      "expected": "4xx validation error.",
+      "actual": "HTTP 500 'Internal Server Error'. The bed_id has no upper bound, so the SQLite integer overflows. With litres 1e309 (infinity), serialising the error fails. The page shows a generic 'Could not load waterings.'",
+      "evidence": "curl: 'Internal Server Error 500' for all three requests",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Small litre amounts are saved but shown as '0 L'",
+      "where": "/beds past-watering form, /waterings, dashboard",
+      "steps": "Record a past watering with litres 0.004 (or POST litres 0.001).",
+      "expected": "Either refuse it with a minimum amount (the input says min 0.1), or show the real amount.",
+      "actual": "The form accepts it and says 'Recorded 0 L on 10 Nov 2026.' The lists show '0 L'. Server and client only check > 0, while the display rounds to 2 decimals.",
+      "evidence": "tiny=['Recorded 0 L on 10 Nov 2026.']; dashboard row '12 Nov 2026, 12:58 North bed 0 L'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Absurd past dates (year 0001) accepted and shown as '1 Jan 1'",
+      "where": "POST /api/waterings, /waterings, dashboard",
+      "steps": "POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\",\"litres\":1}, or type that date in the form.",
+      "expected": "Refused with a reason, e.g. 'date too far in the past'.",
+      "actual": "201 Created. The lists show '1 Jan 1'.",
+      "evidence": "Dashboard row '1 Jan 1 North bed 1 L'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Long bed names make the new watering tables overflow at 375 px",
+      "where": "/ (Recent waterings), /waterings",
+      "steps": "Create a bed named '🍓<b>x</b>AVeryLongBedNameWithoutAnySpacesAtAll_Lorem' (within the 60-char limit) and water it. View / and /waterings at 375 px wide.",
+      "expected": "No sideways scrolling; the name wraps.",
+      "actual": "scrollWidth is 608 px on / and 694 px on /waterings (viewport 375). With a short name both fit at 375.",
+      "evidence": "Overflowing cells: TD with the long bed name, TH Amount/Actions",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Bed list vanishes after a successful Water now if the refresh fails",
+      "where": "/beds",
+      "steps": "Make GET /api/beds return 500 while the POST succeeds, then click Water now.",
+      "expected": "Confirmation that the watering was recorded, and the existing list kept (or an error with a retry).",
+      "actual": "The watering is recorded, but the whole bed list is replaced by 'Could not load beds.' with no retry and no confirmation (the success notice belonged to the vanished bed card). The user may water again and create a duplicate.",
+      "evidence": "main text: 'All beds | Could not load beds.'; buttons only ['Add bed']; GET /api/waterings showed the new row id 5",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid or unknown ?bed= on the waterings page shows a technical message or a blank filter",
+      "where": "/waterings?bed=abc, /waterings?bed=999",
+      "steps": "Open /waterings?bed=abc, then /waterings?bed=999.",
+      "expected": "Fall back to all beds, or say clearly that the bed does not exist.",
+      "actual": "For 'abc' the page shows the raw validation text 'Query.bed id: Input should be a valid integer, unable to parse string as an integer'. For 999 the select is blank (no matching option) and the page says 'No waterings for this bed'.",
+      "evidence": "select value '' in both cases",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Dashboard recent-waterings section has no loading state",
+      "where": "/ (Recent waterings)",
+      "steps": "Navigate to the dashboard client-side while GET /api/waterings is slow.",
+      "expected": "A loading indicator.",
+      "actual": "The template only handles error, data and empty. While the request is pending (waterings undefined) the section is blank apart from its heading.",
+      "evidence": "index.vue template: v-if wateringsError / v-else-if waterings.length / v-else-if waterings, with no pending branch",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

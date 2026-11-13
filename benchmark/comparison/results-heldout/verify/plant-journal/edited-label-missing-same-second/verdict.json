@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "edited-label-missing-same-second",
+  "sentence": "Editing a journal entry within the same second it was created shows no 'edited' label because timestamps have one-second resolution.",
+  "verdict": "not-a-defect",
+  "evidence": "The mechanism is real. JournalEntryItem.vue:20 sets edited = updated_at !== created_at, and both columns are written with SQLite datetime('now') (journal.py update_entry, db.py defaults), which only stores whole seconds. Via the API: POST /api/journal created entry 4 at created_at=updated_at='2026-11-12 18:42:53'. An immediate PUT returned the changed body but updated_at was still '18:42:53'. A PUT 1.5s later gave updated_at '18:42:55'. In the UI (Playwright on /plants/2), a script that added an entry, clicked Edit, changed the text and clicked Save entry took 168 ms in total, and the edited entry showed no 'edited' label. The entry edited 2 s after creation did show it. However, the request never asks for an 'edited' label; it is an extra. The only way to miss it is to finish an edit within the same wall-clock second as creation, which a person opening the editor, typing and saving cannot realistically do. Edits made at human speed are labelled correctly. Second-precision timestamps are also the convention for every table in the app (plants.updated_at works the same way). So this is a theoretical edge case, not a defect a user or the request would reject.",
+  "severity": null,
+  "wallMs": 165911
+}

@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3791, API http://localhost:8791/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-plant-journal-future-date-timezone-mismatch/scratch.
+
+The reported problem: The no-future-date check compares against the server's date.today() while the form uses the browser's local date, so a user in a time zone ahead of the server can have today's entry rejected as a future date.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "'Future date' check uses server date vs browser date",
+  "where": "JournalEntryForm / JournalEntryIn.not_in_future",
+  "steps": "Use a browser in a timezone ahead of the server's around midnight and pick today's local date.",
+  "expected": "Today's date is accepted.",
+  "actual": "The client allows it (todayIso is local) but the server's date.today() may still be yesterday, so it answers 'Journal date cannot be in the future.'",
+  "evidence": "Code inspection."
+ },
+ {
+  "title": "The 'today' limit uses the server's local date while the form uses the browser's",
+  "where": "JournalEntryIn.not_in_future (date.today()) vs JournalEntryForm todayIso()",
+  "steps": "As a user ahead of the server's time zone (e.g. UTC+10 against a UTC server), in the early morning add an entry dated the browser's today.",
+  "expected": "Today's entry is accepted.",
+  "actual": "The server rejects it: 'Entry on: Journal date cannot be in the future.'",
+  "evidence": "Code: the backend compares against date.today() in the server's time zone, while the form's max is the client's local date."
+ },
+ {
+  "title": "Today's entry can be refused because client and server use different time zones for 'today'",
+  "where": "POST/PUT /api/journal (not_in_future validator)",
+  "steps": "Use the app from a time zone ahead of the server's (e.g. UTC+10 early morning while the server is still on the previous date). Add an entry with the default date (today).",
+  "expected": "Today's date in the user's time zone is accepted",
+  "actual": "The server compares against date.today() in its own time zone and returns 'Journal date cannot be in the future.', while the client default and max use the browser's local date",
+  "evidence": "Code: schemas.JournalEntryIn.not_in_future uses date.today(). JournalEntryForm uses todayIso() (browser local)."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-plant-journal-future-date-timezone-mismatch/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

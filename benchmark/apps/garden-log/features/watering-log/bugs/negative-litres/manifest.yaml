@@ -1,0 +1,14 @@
+id: negative-litres
+category: missing-input-guard
+provenance: hand-written
+layer: both
+reach: direct
+needsAppKnowledge: false
+flow: beds
+exposedBy:
+  - { badInput: negative number, field: Litres }
+checks: [visible-error-message, server-validates]
+symptom: "A past watering of -5 litres is accepted and listed as a negative amount"
+addedIn: 0.1.1
+review: single
+allowWords: []

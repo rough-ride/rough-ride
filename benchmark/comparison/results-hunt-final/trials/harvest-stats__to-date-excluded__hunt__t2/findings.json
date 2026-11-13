@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Harvests on the To date are left out of stats (and of the dashboard's best plant on 31 Dec)",
+      "where": "/stats and GET /api/stats/harvests (also /api/dashboard/summary via top_plants)",
+      "steps": "Probe to-inclusive, expectation single-day-range-includes-its-harvests",
+      "expected": "With From = To = 2026-09-30, the 150 g Lettuce harvest logged that day is counted (1 harvest, 150 g)",
+      "actual": "\"0 harvests from 30 Sept 2026 to 30 Sept 2026\" and \"No harvests in this range\"; the API returns harvest_count 0 because the query uses harvested_on < to",
+      "evidence": "{\"day\":\"2026-09-30\",\"expectedHarvests\":1,\"grams\":150,\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"0 harvests from 30 Sept 2026 to 30 Sept 2026\",\"No harvests in this range\",\"Pick a different date range, or log a harvest to see it here.\",\"Log harvest\",\"Garden Log · a journal for one garden\"]} | {\"day\":\"2026-09-30\",\"expectedHarvests\":1,\"grams\":150,\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"0 harvests from 30 Sept 2026 to 30 Sept 2026\",\"No harvests in this range\",\"Pick a different date range, or log a harvest to see it here.\",\"Log harvest\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-192348-hunt-35eb",
+        "probe": "to-inclusive",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Stats page crashes and stays on 'Loading stats…' with the old data when the stats response is malformed or empty",
+      "where": "/stats",
+      "steps": "Probe stats-faults, expectation fault-empty-object-shows-error",
+      "expected": "A visible error message and no uncaught errors when /api/stats/harvests returns an unexpected body",
+      "actual": "Uncaught TypeError \"Cannot read properties of undefined (reading 'length')\"; the page shows \"Loading stats…\" next to the previous range's best plants, and no error",
+      "evidence": "{\"alerts\":[\"Loading stats…\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\"]} | {\"alerts\":[\"Loading stats…\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-192348-hunt-35eb",
+        "probe": "stats-faults",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,1846 @@
+{
+  "feature": "watering-log",
+  "pass": 2,
+  "count": 299,
+  "missing": [],
+  "costUsd": 1.1995928,
+  "reports": [
+    {
+      "id": "F9a295d9e",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__negative-litres__playwright__t1#2"
+    },
+    {
+      "id": "F71c64ddd",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__clean__playwright__t3#8"
+    },
+    {
+      "id": "Fb482bf8c",
+      "planted": null,
+      "issue": "shared-busy-flag-across-beds",
+      "key": "watering-log__negative-litres__playwright__t2#9"
+    },
+    {
+      "id": "F67de9e12",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t1#3"
+    },
+    {
+      "id": "Ff6756287",
+      "planted": null,
+      "issue": "waterings-bed-select-bad-input-crash",
+      "key": "watering-log__water-now-twice__rough-ride__t1#7"
+    },
+    {
+      "id": "F675849ba",
+      "planted": null,
+      "issue": "dashboard-summary-malformed-json-undefined",
+      "key": "watering-log__negative-litres__rough-ride__t2#14"
+    },
+    {
+      "id": "F54277116",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__water-now-twice__rough-ride__t2#7"
+    },
+    {
+      "id": "F876327af",
+      "planted": null,
+      "issue": "waterings-signed-out-reload-crash",
+      "key": "watering-log__negative-litres__rough-ride__t2#11"
+    },
+    {
+      "id": "Fa12b2297",
+      "planted": null,
+      "issue": "tiny-litres-shown-as-zero",
+      "key": "watering-log__clean__baseline__t1#3"
+    },
+    {
+      "id": "Ff4ff0acf",
+      "planted": null,
+      "issue": "upcoming-tasks-malformed-json-nan",
+      "key": "watering-log__clean__rough-ride__t2#12"
+    },
+    {
+      "id": "F95e79614",
+      "planted": null,
+      "issue": "water-now-hang-uncaught-error",
+      "key": "watering-log__negative-litres__rough-ride__t3#4"
+    },
+    {
+      "id": "Fac5b2b04",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__playwright__t2#5"
+    },
+    {
+      "id": "F73ca347e",
+      "planted": null,
+      "issue": "beds-reload-uncaught-error",
+      "key": "watering-log__clean__rough-ride__t1#8"
+    },
+    {
+      "id": "Ffb93b436",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__water-now-twice__baseline__t2#5"
+    },
+    {
+      "id": "F656c7c37",
+      "planted": null,
+      "issue": "shared-busy-flag-across-beds",
+      "key": "watering-log__clean__baseline__t1#10"
+    },
+    {
+      "id": "F9bc466b0",
+      "planted": null,
+      "issue": "login-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t3#5"
+    },
+    {
+      "id": "F1a3d438a",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__playwright__t3#3"
+    },
+    {
+      "id": "F58829625",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__water-now-twice__rough-ride__t1#6"
+    },
+    {
+      "id": "F405f73b1",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__negative-litres__rough-ride__t2#7"
+    },
+    {
+      "id": "Ff65deed5",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__baseline__t1#0"
+    },
+    {
+      "id": "F3aac1855",
+      "planted": null,
+      "issue": "litres-bad-input-crash",
+      "key": "watering-log__clean__rough-ride__t2#4"
+    },
+    {
+      "id": "F7932ae17",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__clean__playwright__t1#0"
+    },
+    {
+      "id": "F8d3655ea",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__clean__playwright__t1#3"
+    },
+    {
+      "id": "F1f8f8b34",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__negative-litres__rough-ride__t3#6"
+    },
+    {
+      "id": "F494c74ed",
+      "planted": null,
+      "issue": "water-now-hang-uncaught-error",
+      "key": "watering-log__negative-litres__rough-ride__t2#5"
+    },
+    {
+      "id": "F1d27d1d7",
+      "planted": null,
+      "issue": "long-bed-name-table-overflow",
+      "key": "watering-log__clean__baseline__t1#14"
+    },
+    {
+      "id": "F2b2b9e0c",
+      "planted": null,
+      "issue": "auth-me-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t2#9"
+    },
+    {
+      "id": "Fc94ac3aa",
+      "planted": null,
+      "issue": "nonfinite-litres-500",
+      "key": "watering-log__clean__playwright__t1#4"
+    },
+    {
+      "id": "Fafeb5b84",
+      "planted": null,
+      "issue": "nonfinite-litres-500",
+      "key": "watering-log__negative-litres__baseline__t2#1"
+    },
+    {
+      "id": "F0c210e1a",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__negative-litres__playwright__t3#4"
+    },
+    {
+      "id": "Fca477cef",
+      "planted": null,
+      "issue": "invalid-bed-query-raw-message",
+      "key": "watering-log__water-now-twice__playwright__t2#8"
+    },
+    {
+      "id": "F79797744",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__water-now-twice__playwright__t1#1"
+    },
+    {
+      "id": "Fad8c4306",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__clean__rough-ride__t2#6"
+    },
+    {
+      "id": "F83dd5851",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__playwright__t2#0"
+    },
+    {
+      "id": "F631985f4",
+      "planted": null,
+      "issue": "shared-busy-flag-across-beds",
+      "key": "watering-log__clean__playwright__t1#9"
+    },
+    {
+      "id": "F3ada0fed",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__baseline__t2#0"
+    },
+    {
+      "id": "Ffc89fd61",
+      "planted": null,
+      "issue": "beds-reload-uncaught-error",
+      "key": "watering-log__water-now-twice__rough-ride__t1#10"
+    },
+    {
+      "id": "F30e8063b",
+      "planted": null,
+      "issue": "auth-me-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t1#6"
+    },
+    {
+      "id": "F33fed1e9",
+      "planted": null,
+      "issue": "water-now-hang-uncaught-error",
+      "key": "watering-log__water-now-twice__rough-ride__t2#6"
+    },
+    {
+      "id": "F48b5eb25",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t2#3"
+    },
+    {
+      "id": "F6b2c0d08",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__clean__playwright__t3#4"
+    },
+    {
+      "id": "Faf170d37",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__negative-litres__playwright__t2#3"
+    },
+    {
+      "id": "Ff4b19d23",
+      "planted": null,
+      "issue": "login-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t3#9"
+    },
+    {
+      "id": "F0b44e051",
+      "planted": null,
+      "issue": "delete-missing-watering-error",
+      "key": "watering-log__negative-litres__baseline__t3#6"
+    },
+    {
+      "id": "Fb439fd34",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__baseline__t2#0"
+    },
+    {
+      "id": "Fd477814d",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__playwright__t2#0"
+    },
+    {
+      "id": "Fcf23ab51",
+      "planted": null,
+      "issue": "login-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t1#9"
+    },
+    {
+      "id": "F8ec9ed33",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__playwright__t3#4"
+    },
+    {
+      "id": "Feca0d95a",
+      "planted": null,
+      "issue": "dashboard-summary-malformed-json-undefined",
+      "key": "watering-log__negative-litres__rough-ride__t1#12"
+    },
+    {
+      "id": "Fb07d2b63",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t3#1"
+    },
+    {
+      "id": "Fa01a69b2",
+      "planted": null,
+      "issue": "shared-busy-flag-across-beds",
+      "key": "watering-log__clean__baseline__t3#6"
+    },
+    {
+      "id": "F3b5b0dc4",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__water-now-twice__baseline__t2#3"
+    },
+    {
+      "id": "Ff4209a09",
+      "planted": null,
+      "issue": "beds-malformed-json-crash",
+      "key": "watering-log__water-now-twice__rough-ride__t1#0"
+    },
+    {
+      "id": "F6d33be66",
+      "planted": null,
+      "issue": "water-now-hang-uncaught-error",
+      "key": "watering-log__water-now-twice__rough-ride__t1#4"
+    },
+    {
+      "id": "F758d7951",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__negative-litres__rough-ride__t1#7"
+    },
+    {
+      "id": "F08963674",
+      "planted": null,
+      "issue": "nonfinite-litres-500",
+      "key": "watering-log__clean__baseline__t1#2"
+    },
+    {
+      "id": "F2241b6f0",
+      "planted": null,
+      "issue": "add-bed-values-lost-on-beds-error",
+      "key": "watering-log__clean__rough-ride__t3#1"
+    },
+    {
+      "id": "Fc6ca5ab7",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__playwright__t1#1"
+    },
+    {
+      "id": "F574f8cfd",
+      "planted": null,
+      "issue": "water-refresh-failure-loses-confirmation",
+      "key": "watering-log__clean__playwright__t3#10"
+    },
+    {
+      "id": "F51cf64a5",
+      "planted": null,
+      "issue": "long-bed-name-table-overflow",
+      "key": "watering-log__clean__playwright__t1#7"
+    },
+    {
+      "id": "Fde8e0411",
+      "planted": null,
+      "issue": "invalid-bed-query-raw-message",
+      "key": "watering-log__clean__baseline__t1#6"
+    },
+    {
+      "id": "F2f45eb99",
+      "planted": null,
+      "issue": "watering-post-no-idempotency",
+      "key": "watering-log__clean__baseline__t2#1"
+    },
+    {
+      "id": "F19ea966a",
+      "planted": null,
+      "issue": "upcoming-tasks-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t3#11"
+    },
+    {
+      "id": "F04943aa7",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__water-now-twice__rough-ride__t2#8"
+    },
+    {
+      "id": "F14d51af7",
+      "planted": null,
+      "issue": "login-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t1#7"
+    },
+    {
+      "id": "Fa39368cf",
+      "planted": null,
+      "issue": "upcoming-tasks-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t1#10"
+    },
+    {
+      "id": "F43bcb044",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__clean__playwright__t3#5"
+    },
+    {
+      "id": "Fab8e21ed",
+      "planted": null,
+      "issue": "shared-busy-flag-across-beds",
+      "key": "watering-log__negative-litres__baseline__t1#5"
+    },
+    {
+      "id": "Fe96aefd7",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__clean__baseline__t3#7"
+    },
+    {
+      "id": "F62b07b63",
+      "planted": null,
+      "issue": "nonfinite-litres-500",
+      "key": "watering-log__negative-litres__baseline__t1#2"
+    },
+    {
+      "id": "F2be6faf8",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__clean__rough-ride__t2#5"
+    },
+    {
+      "id": "F567ea1ca",
+      "planted": null,
+      "issue": "tiny-litres-shown-as-zero",
+      "key": "watering-log__clean__baseline__t3#1"
+    },
+    {
+      "id": "F0991d975",
+      "planted": null,
+      "issue": "auth-me-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t2#7"
+    },
+    {
+      "id": "F8418b438",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__clean__rough-ride__t1#4"
+    },
+    {
+      "id": "F814a4015",
+      "planted": null,
+      "issue": "watering-post-no-idempotency",
+      "key": "watering-log__negative-litres__baseline__t3#5"
+    },
+    {
+      "id": "F3a2b5165",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__water-now-twice__baseline__t3#4"
+    },
+    {
+      "id": "Fdde69e41",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__playwright__t3#0"
+    },
+    {
+      "id": "Ffa9a7ce6",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t1#3"
+    },
+    {
+      "id": "Fd8efee63",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__water-now-twice__playwright__t3#6"
+    },
+    {
+      "id": "Fbcb50d86",
+      "planted": null,
+      "issue": "dashboard-summary-malformed-json-undefined",
+      "key": "watering-log__clean__rough-ride__t1#11"
+    },
+    {
+      "id": "Fc1070c33",
+      "planted": null,
+      "issue": "auth-me-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t2#9"
+    },
+    {
+      "id": "Fa895c4d9",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t1#2"
+    },
+    {
+      "id": "Fd68ef603",
+      "planted": null,
+      "issue": "tiny-litres-shown-as-zero",
+      "key": "watering-log__clean__playwright__t2#6"
+    },
+    {
+      "id": "Fcc5c4010",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__negative-litres__playwright__t3#5"
+    },
+    {
+      "id": "Fe1382727",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__baseline__t3#2"
+    },
+    {
+      "id": "Fe8ef448a",
+      "planted": null,
+      "issue": "upcoming-tasks-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t1#11"
+    },
+    {
+      "id": "F17dbfc57",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__clean__baseline__t1#13"
+    },
+    {
+      "id": "F0f029561",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__clean__baseline__t2#4"
+    },
+    {
+      "id": "F91b1e8a0",
+      "planted": null,
+      "issue": "waterings-bed-select-bad-input-crash",
+      "key": "watering-log__negative-litres__rough-ride__t3#7"
+    },
+    {
+      "id": "F04408ad5",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__clean__baseline__t2#6"
+    },
+    {
+      "id": "F65dac650",
+      "planted": null,
+      "issue": "auth-me-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t1#8"
+    },
+    {
+      "id": "F4caa4e2d",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__clean__playwright__t2#7"
+    },
+    {
+      "id": "Fb26ab02b",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t1#2"
+    },
+    {
+      "id": "Fee4d71a7",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__water-now-twice__rough-ride__t3#6"
+    },
+    {
+      "id": "F2e66aeee",
+      "planted": null,
+      "issue": "nonfinite-litres-500",
+      "key": "watering-log__water-now-twice__baseline__t3#7"
+    },
+    {
+      "id": "F91d230b3",
+      "planted": null,
+      "issue": "dashboard-summary-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t3#10"
+    },
+    {
+      "id": "F880607b7",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__water-now-twice__baseline__t3#9"
+    },
+    {
+      "id": "F60d4f4d9",
+      "planted": null,
+      "issue": "boolean-litres-accepted",
+      "key": "watering-log__water-now-twice__baseline__t1#6"
+    },
+    {
+      "id": "F9954ff2a",
+      "planted": null,
+      "issue": "long-bed-name-table-overflow",
+      "key": "watering-log__clean__baseline__t3#8"
+    },
+    {
+      "id": "F0bac7606",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__negative-litres__baseline__t1#4"
+    },
+    {
+      "id": "Ffc101b26",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__baseline__t3#3"
+    },
+    {
+      "id": "Fa5bc1bb0",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__clean__baseline__t3#5"
+    },
+    {
+      "id": "F6a842e1d",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__playwright__t1#2"
+    },
+    {
+      "id": "Fcde2828c",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__rough-ride__t2#0"
+    },
+    {
+      "id": "F9f8b8df1",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__negative-litres__playwright__t3#9"
+    },
+    {
+      "id": "F5a950bfb",
+      "planted": null,
+      "issue": "dashboard-summary-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t3#10"
+    },
+    {
+      "id": "F54e328d2",
+      "planted": null,
+      "issue": "dashboard-waterings-no-loading-state",
+      "key": "watering-log__clean__playwright__t3#12"
+    },
+    {
+      "id": "F14332336",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__clean__baseline__t1#5"
+    },
+    {
+      "id": "F97b0e668",
+      "planted": null,
+      "issue": "delete-missing-watering-error",
+      "key": "watering-log__clean__baseline__t2#10"
+    },
+    {
+      "id": "F61340b53",
+      "planted": null,
+      "issue": "invalid-bed-query-raw-message",
+      "key": "watering-log__negative-litres__playwright__t2#10"
+    },
+    {
+      "id": "Fb1a9c8e0",
+      "planted": null,
+      "issue": "watering-post-no-idempotency",
+      "key": "watering-log__clean__playwright__t3#2"
+    },
+    {
+      "id": "Fa398f36d",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__negative-litres__baseline__t2#6"
+    },
+    {
+      "id": "Ff85a5b6b",
+      "planted": null,
+      "issue": "add-bed-values-lost-on-beds-error",
+      "key": "watering-log__clean__rough-ride__t2#1"
+    },
+    {
+      "id": "F3891fb84",
+      "planted": null,
+      "issue": "beds-malformed-json-crash",
+      "key": "watering-log__water-now-twice__rough-ride__t3#1"
+    },
+    {
+      "id": "F33e0d8a4",
+      "planted": null,
+      "issue": "datetime-ssr-timezone-mismatch",
+      "key": "watering-log__clean__baseline__t1#15"
+    },
+    {
+      "id": "F8751a9fe",
+      "planted": null,
+      "issue": "watering-post-no-idempotency",
+      "key": "watering-log__negative-litres__baseline__t2#5"
+    },
+    {
+      "id": "F16ad7a30",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__clean__rough-ride__t1#5"
+    },
+    {
+      "id": "Fb7808937",
+      "planted": null,
+      "issue": "add-bed-hang-uncaught-error",
+      "key": "watering-log__negative-litres__rough-ride__t3#3"
+    },
+    {
+      "id": "F8180e1fe",
+      "planted": null,
+      "issue": "add-bed-values-lost-on-beds-error",
+      "key": "watering-log__water-now-twice__rough-ride__t3#2"
+    },
+    {
+      "id": "F40188e58",
+      "planted": null,
+      "issue": "add-bed-values-lost-on-beds-error",
+      "key": "watering-log__clean__rough-ride__t1#1"
+    },
+    {
+      "id": "Fdf978684",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__clean__baseline__t3#3"
+    },
+    {
+      "id": "Fc8aa732b",
+      "planted": null,
+      "issue": "dashboard-summary-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t1#9"
+    },
+    {
+      "id": "Fff581bf8",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__water-now-twice__playwright__t1#6"
+    },
+    {
+      "id": "Fc2c711e4",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__negative-litres__baseline__t1#6"
+    },
+    {
+      "id": "F628f4b66",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__playwright__t1#3"
+    },
+    {
+      "id": "F2d543b40",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t2#3"
+    },
+    {
+      "id": "F39477e7d",
+      "planted": null,
+      "issue": "dashboard-summary-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t2#12"
+    },
+    {
+      "id": "F7a8fc3a9",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__baseline__t3#10"
+    },
+    {
+      "id": "Ff1157944",
+      "planted": null,
+      "issue": "upcoming-tasks-malformed-json-nan",
+      "key": "watering-log__water-now-twice__rough-ride__t1#14"
+    },
+    {
+      "id": "F56220e6d",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__water-now-twice__baseline__t3#2"
+    },
+    {
+      "id": "F9d8043db",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t3#3"
+    },
+    {
+      "id": "F9b465ab8",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__clean__baseline__t1#1"
+    },
+    {
+      "id": "F49141dc5",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__negative-litres__baseline__t3#4"
+    },
+    {
+      "id": "F935dae3e",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__water-now-twice__baseline__t1#1"
+    },
+    {
+      "id": "Fd6db0217",
+      "planted": null,
+      "issue": "dashboard-summary-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t1#11"
+    },
+    {
+      "id": "Ff81fc3d8",
+      "planted": null,
+      "issue": "watering-post-no-idempotency",
+      "key": "watering-log__negative-litres__playwright__t3#7"
+    },
+    {
+      "id": "F039d8531",
+      "planted": null,
+      "issue": "shared-busy-flag-across-beds",
+      "key": "watering-log__clean__playwright__t2#2"
+    },
+    {
+      "id": "F80ab0678",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__clean__playwright__t3#1"
+    },
+    {
+      "id": "Fb18086c9",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__water-now-twice__playwright__t2#4"
+    },
+    {
+      "id": "Fa1d14d6a",
+      "planted": null,
+      "issue": "dashboard-summary-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t1#10"
+    },
+    {
+      "id": "F53bcc46f",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__clean__playwright__t2#9"
+    },
+    {
+      "id": "F9639d8a9",
+      "planted": null,
+      "issue": "water-now-check-no-post-after-reload",
+      "key": "watering-log__water-now-twice__rough-ride__t3#8"
+    },
+    {
+      "id": "F8ec1973b",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__baseline__t1#0"
+    },
+    {
+      "id": "Fcddad8ac",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t3#2"
+    },
+    {
+      "id": "Fb687ebdf",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__negative-litres__playwright__t3#8"
+    },
+    {
+      "id": "Fbb50a5f4",
+      "planted": null,
+      "issue": "tiny-litres-shown-as-zero",
+      "key": "watering-log__water-now-twice__playwright__t2#6"
+    },
+    {
+      "id": "F8af321d6",
+      "planted": null,
+      "issue": "shared-busy-flag-across-beds",
+      "key": "watering-log__water-now-twice__playwright__t1#8"
+    },
+    {
+      "id": "F1d125798",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__clean__playwright__t2#8"
+    },
+    {
+      "id": "F37483f71",
+      "planted": null,
+      "issue": "watering-post-no-idempotency",
+      "key": "watering-log__clean__playwright__t1#8"
+    },
+    {
+      "id": "F9bf5a412",
+      "planted": null,
+      "issue": "beds-malformed-json-crash",
+      "key": "watering-log__negative-litres__rough-ride__t1#0"
+    },
+    {
+      "id": "Fc8467581",
+      "planted": null,
+      "issue": "upcoming-tasks-malformed-json-nan",
+      "key": "watering-log__negative-litres__rough-ride__t1#13"
+    },
+    {
+      "id": "Fe3224eb1",
+      "planted": null,
+      "issue": "beds-malformed-json-crash",
+      "key": "watering-log__negative-litres__rough-ride__t2#0"
+    },
+    {
+      "id": "Fb6fd6933",
+      "planted": null,
+      "issue": "dashboard-summary-malformed-json-undefined",
+      "key": "watering-log__negative-litres__rough-ride__t3#12"
+    },
+    {
+      "id": "F17d442e8",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__baseline__t1#4"
+    },
+    {
+      "id": "Fed88d411",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__water-now-twice__baseline__t2#6"
+    },
+    {
+      "id": "Ffed73d8a",
+      "planted": null,
+      "issue": "login-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t3#7"
+    },
+    {
+      "id": "Fa24d383a",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t2#3"
+    },
+    {
+      "id": "Fd29d2f98",
+      "planted": null,
+      "issue": "upcoming-tasks-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t2#13"
+    },
+    {
+      "id": "F2c35d4c5",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__playwright__t3#0"
+    },
+    {
+      "id": "F12309784",
+      "planted": null,
+      "issue": "nonfinite-litres-500",
+      "key": "watering-log__water-now-twice__playwright__t2#5"
+    },
+    {
+      "id": "Fae59393c",
+      "planted": null,
+      "issue": "add-bed-values-lost-on-beds-error",
+      "key": "watering-log__water-now-twice__rough-ride__t2#2"
+    },
+    {
+      "id": "Fb8f3daa8",
+      "planted": null,
+      "issue": "auth-me-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t3#6"
+    },
+    {
+      "id": "F2db9b15a",
+      "planted": null,
+      "issue": "boolean-litres-accepted",
+      "key": "watering-log__clean__baseline__t2#7"
+    },
+    {
+      "id": "F2dd0e941",
+      "planted": null,
+      "issue": "waterings-navigation-blocked-while-loading",
+      "key": "watering-log__water-now-twice__playwright__t3#2"
+    },
+    {
+      "id": "F8d559c31",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t3#7"
+    },
+    {
+      "id": "F32e7a172",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__baseline__t3#0"
+    },
+    {
+      "id": "Fdd274d4b",
+      "planted": null,
+      "issue": "dashboard-summary-malformed-json-undefined",
+      "key": "watering-log__clean__rough-ride__t2#11"
+    },
+    {
+      "id": "F262fc454",
+      "planted": null,
+      "issue": "dashboard-summary-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t2#9"
+    },
+    {
+      "id": "Ffca3ec1d",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__rough-ride__t3#0"
+    },
+    {
+      "id": "F90030a32",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t3#0"
+    },
+    {
+      "id": "F98759194",
+      "planted": null,
+      "issue": "auth-me-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t3#4"
+    },
+    {
+      "id": "F2a8cd0e5",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__negative-litres__playwright__t2#4"
+    },
+    {
+      "id": "F00f8866d",
+      "planted": null,
+      "issue": "upcoming-tasks-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t3#11"
+    },
+    {
+      "id": "F74daf8f8",
+      "planted": null,
+      "issue": "water-refresh-failure-loses-confirmation",
+      "key": "watering-log__clean__playwright__t2#0"
+    },
+    {
+      "id": "Fd1fe6316",
+      "planted": null,
+      "issue": "add-bed-values-lost-on-beds-error",
+      "key": "watering-log__water-now-twice__rough-ride__t1#1"
+    },
+    {
+      "id": "F43fab301",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__baseline__t2#3"
+    },
+    {
+      "id": "F52cb0b61",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__negative-litres__rough-ride__t3#5"
+    },
+    {
+      "id": "Feec9d921",
+      "planted": null,
+      "issue": "tiny-litres-shown-as-zero",
+      "key": "watering-log__clean__baseline__t2#5"
+    },
+    {
+      "id": "F4a3f27e3",
+      "planted": null,
+      "issue": "waterings-bed-select-bad-input-crash",
+      "key": "watering-log__negative-litres__rough-ride__t2#8"
+    },
+    {
+      "id": "F69f6180f",
+      "planted": null,
+      "issue": "beds-malformed-json-crash",
+      "key": "watering-log__clean__rough-ride__t3#0"
+    },
+    {
+      "id": "F0ae75827",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t1#2"
+    },
+    {
+      "id": "F998deaf5",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t3#8"
+    },
+    {
+      "id": "Fcc26e893",
+      "planted": null,
+      "issue": "watering-post-no-idempotency",
+      "key": "watering-log__clean__baseline__t1#9"
+    },
+    {
+      "id": "F7e94a87c",
+      "planted": null,
+      "issue": "login-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t1#9"
+    },
+    {
+      "id": "F0de977ff",
+      "planted": null,
+      "issue": "upcoming-tasks-429-uncaught-error",
+      "key": "watering-log__water-now-twice__rough-ride__t3#10"
+    },
+    {
+      "id": "Ffaf40ac0",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__water-now-twice__playwright__t3#1"
+    },
+    {
+      "id": "F9fece21e",
+      "planted": null,
+      "issue": "huge-litres-overflow-layout",
+      "key": "watering-log__negative-litres__playwright__t3#2"
+    },
+    {
+      "id": "F27af4f03",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__baseline__t3#3"
+    },
+    {
+      "id": "F394d3f2e",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__clean__playwright__t2#5"
+    },
+    {
+      "id": "F210380c9",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__clean__rough-ride__t3#4"
+    },
+    {
+      "id": "F07849e58",
+      "planted": null,
+      "issue": "waterings-filter-stale-results",
+      "key": "watering-log__negative-litres__playwright__t1#7"
+    },
+    {
+      "id": "F05ae54aa",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__playwright__t1#0"
+    },
+    {
+      "id": "Ff822de58",
+      "planted": null,
+      "issue": "long-bed-name-table-overflow",
+      "key": "watering-log__clean__playwright__t2#4"
+    },
+    {
+      "id": "Fe0143cfe",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__playwright__t2#1"
+    },
+    {
+      "id": "F0a0c0ec6",
+      "planted": null,
+      "issue": "waterings-bed-select-bad-input-crash",
+      "key": "watering-log__clean__rough-ride__t3#5"
+    },
+    {
+      "id": "F36472a6a",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__negative-litres__baseline__t3#2"
+    },
+    {
+      "id": "F554cd305",
+      "planted": null,
+      "issue": "auth-me-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t3#8"
+    },
+    {
+      "id": "Fbc71cfbf",
+      "planted": null,
+      "issue": "upcoming-tasks-malformed-json-nan",
+      "key": "watering-log__negative-litres__rough-ride__t2#15"
+    },
+    {
+      "id": "F28e5450b",
+      "planted": null,
+      "issue": "nonfinite-litres-500",
+      "key": "watering-log__clean__baseline__t3#0"
+    },
+    {
+      "id": "Fbcd700eb",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__clean__baseline__t1#12"
+    },
+    {
+      "id": "Fecc2c5cc",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__clean__playwright__t1#1"
+    },
+    {
+      "id": "F6fe3ef75",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__playwright__t3#3"
+    },
+    {
+      "id": "F75a3026b",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__playwright__t2#6"
+    },
+    {
+      "id": "F21a48be5",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__water-now-twice__baseline__t1#3"
+    },
+    {
+      "id": "Fc413e590",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__water-now-twice__baseline__t2#1"
+    },
+    {
+      "id": "F488c6747",
+      "planted": null,
+      "issue": "invalid-bed-query-raw-message",
+      "key": "watering-log__clean__playwright__t3#11"
+    },
+    {
+      "id": "F4e7fccf8",
+      "planted": null,
+      "issue": "dashboard-summary-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t2#11"
+    },
+    {
+      "id": "F10975ed9",
+      "planted": null,
+      "issue": "upcoming-tasks-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t1#12"
+    },
+    {
+      "id": "Fefa5118f",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__negative-litres__playwright__t3#6"
+    },
+    {
+      "id": "F6905100c",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__negative-litres__rough-ride__t2#6"
+    },
+    {
+      "id": "F096a1bdd",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__playwright__t1#3"
+    },
+    {
+      "id": "F98f043a1",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t2#4"
+    },
+    {
+      "id": "Fc53a954c",
+      "planted": null,
+      "issue": "long-bed-name-table-overflow",
+      "key": "watering-log__clean__playwright__t3#9"
+    },
+    {
+      "id": "Fe327e3dd",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__clean__baseline__t2#2"
+    },
+    {
+      "id": "Ff81e2cff",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__playwright__t2#3"
+    },
+    {
+      "id": "Fb8575d09",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__negative-litres__playwright__t1#5"
+    },
+    {
+      "id": "Fd1019f30",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__water-now-twice__playwright__t3#7"
+    },
+    {
+      "id": "Fe7d12611",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__baseline__t2#0"
+    },
+    {
+      "id": "F922f981f",
+      "planted": null,
+      "issue": "upcoming-tasks-malformed-json-nan",
+      "key": "watering-log__clean__rough-ride__t1#12"
+    },
+    {
+      "id": "Ffa1d1e18",
+      "planted": null,
+      "issue": "waterings-filter-not-synced-to-url",
+      "key": "watering-log__clean__baseline__t3#4"
+    },
+    {
+      "id": "Fb564be99",
+      "planted": null,
+      "issue": "dashboard-summary-malformed-json-undefined",
+      "key": "watering-log__clean__rough-ride__t3#12"
+    },
+    {
+      "id": "Ff06439a0",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t3#3"
+    },
+    {
+      "id": "Ff9003999",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__playwright__t1#2"
+    },
+    {
+      "id": "Fb00aea93",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__water-now-twice__baseline__t1#5"
+    },
+    {
+      "id": "Fe2efd6b0",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__baseline__t2#2"
+    },
+    {
+      "id": "Fdfb84e05",
+      "planted": null,
+      "issue": "dashboard-summary-malformed-json-undefined",
+      "key": "watering-log__water-now-twice__rough-ride__t2#13"
+    },
+    {
+      "id": "F480dbfb4",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__water-now-twice__playwright__t2#7"
+    },
+    {
+      "id": "F30dc06ac",
+      "planted": null,
+      "issue": "beds-malformed-json-crash",
+      "key": "watering-log__clean__rough-ride__t1#0"
+    },
+    {
+      "id": "F91337003",
+      "planted": null,
+      "issue": "tiny-litres-shown-as-zero",
+      "key": "watering-log__water-now-twice__baseline__t3#8"
+    },
+    {
+      "id": "Ff3b27f43",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__water-now-twice__baseline__t1#4"
+    },
+    {
+      "id": "F1560b854",
+      "planted": null,
+      "issue": "delete-missing-watering-error",
+      "key": "watering-log__clean__baseline__t1#11"
+    },
+    {
+      "id": "Fe42fc955",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__negative-litres__playwright__t2#7"
+    },
+    {
+      "id": "F28c763f6",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__negative-litres__baseline__t2#4"
+    },
+    {
+      "id": "Faff47322",
+      "planted": null,
+      "issue": "delete-missing-watering-error",
+      "key": "watering-log__water-now-twice__playwright__t3#8"
+    },
+    {
+      "id": "F33375b9e",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__clean__playwright__t2#1"
+    },
+    {
+      "id": "F027db3e1",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t2#2"
+    },
+    {
+      "id": "Fe6a759fc",
+      "planted": null,
+      "issue": "add-bed-values-lost-on-beds-error",
+      "key": "watering-log__negative-litres__rough-ride__t1#1"
+    },
+    {
+      "id": "F11ca9c3a",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__negative-litres__baseline__t2#2"
+    },
+    {
+      "id": "F85899dfb",
+      "planted": null,
+      "issue": "auth-me-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t1#8"
+    },
+    {
+      "id": "F04094910",
+      "planted": null,
+      "issue": "upcoming-tasks-malformed-json-nan",
+      "key": "watering-log__negative-litres__rough-ride__t3#13"
+    },
+    {
+      "id": "F54d8300e",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__clean__playwright__t1#6"
+    },
+    {
+      "id": "F8be3129c",
+      "planted": null,
+      "issue": "upcoming-tasks-malformed-json-nan",
+      "key": "watering-log__water-now-twice__rough-ride__t2#14"
+    },
+    {
+      "id": "Fd2e2cc53",
+      "planted": null,
+      "issue": "upcoming-tasks-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t2#12"
+    },
+    {
+      "id": "F407c1ea4",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__clean__baseline__t1#8"
+    },
+    {
+      "id": "F585c6f17",
+      "planted": null,
+      "issue": "nonfinite-litres-500",
+      "key": "watering-log__negative-litres__playwright__t2#2"
+    },
+    {
+      "id": "F7622a367",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__water-now-twice__playwright__t2#1"
+    },
+    {
+      "id": "F74baa101",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__negative-litres__baseline__t3#1"
+    },
+    {
+      "id": "Fff75811d",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__playwright__t1#0"
+    },
+    {
+      "id": "F1db870d3",
+      "planted": null,
+      "issue": "waterings-beds-malformed-json-crash",
+      "key": "watering-log__clean__rough-ride__t3#9"
+    },
+    {
+      "id": "F4a176a5a",
+      "planted": null,
+      "issue": "ancient-watering-date-accepted",
+      "key": "watering-log__negative-litres__baseline__t1#7"
+    },
+    {
+      "id": "F57559678",
+      "planted": null,
+      "issue": "dashboard-summary-malformed-json-undefined",
+      "key": "watering-log__water-now-twice__rough-ride__t1#13"
+    },
+    {
+      "id": "F8c31de67",
+      "planted": null,
+      "issue": "waterings-filter-stale-results",
+      "key": "watering-log__water-now-twice__baseline__t3#5"
+    },
+    {
+      "id": "Fa745f964",
+      "planted": null,
+      "issue": "water-now-hang-uncaught-error",
+      "key": "watering-log__negative-litres__rough-ride__t1#5"
+    },
+    {
+      "id": "Fff738ba3",
+      "planted": null,
+      "issue": "add-bed-hang-uncaught-error",
+      "key": "watering-log__negative-litres__rough-ride__t1#4"
+    },
+    {
+      "id": "Ff4390248",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__negative-litres__rough-ride__t1#6"
+    },
+    {
+      "id": "Fa03f74e9",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__clean__baseline__t2#8"
+    },
+    {
+      "id": "F22f335ff",
+      "planted": null,
+      "issue": "login-error-no-retry",
+      "key": "watering-log__water-now-twice__rough-ride__t2#10"
+    },
+    {
+      "id": "Fe59231a9",
+      "planted": null,
+      "issue": "tiny-litres-shown-as-zero",
+      "key": "watering-log__negative-litres__playwright__t3#1"
+    },
+    {
+      "id": "F9f925f5d",
+      "planted": null,
+      "issue": "login-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t2#8"
+    },
+    {
+      "id": "Fc6f3e59a",
+      "planted": null,
+      "issue": "tiny-litres-shown-as-zero",
+      "key": "watering-log__clean__playwright__t3#7"
+    },
+    {
+      "id": "F383b2015",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__clean__playwright__t3#6"
+    },
+    {
+      "id": "Fcd28c527",
+      "planted": null,
+      "issue": "tiny-litres-shown-as-zero",
+      "key": "watering-log__clean__playwright__t1#5"
+    },
+    {
+      "id": "F59c77212",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__water-now-twice__playwright__t1#4"
+    },
+    {
+      "id": "F9b37e151",
+      "planted": null,
+      "issue": "waterings-filter-not-synced-to-url",
+      "key": "watering-log__clean__baseline__t1#7"
+    },
+    {
+      "id": "Fea8e9ee0",
+      "planted": null,
+      "issue": "huge-litres-overflow-layout",
+      "key": "watering-log__negative-litres__baseline__t1#1"
+    },
+    {
+      "id": "Fd5883460",
+      "planted": null,
+      "issue": "watering-post-no-idempotency",
+      "key": "watering-log__negative-litres__playwright__t1#6"
+    },
+    {
+      "id": "F314c3eb1",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__water-now-twice__playwright__t3#5"
+    },
+    {
+      "id": "F635b6773",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__baseline__t1#2"
+    },
+    {
+      "id": "Fad779400",
+      "planted": null,
+      "issue": "water-refresh-failure-loses-confirmation",
+      "key": "watering-log__negative-litres__playwright__t2#8"
+    },
+    {
+      "id": "F45c3416d",
+      "planted": null,
+      "issue": "water-refresh-failure-loses-confirmation",
+      "key": "watering-log__water-now-twice__baseline__t3#1"
+    },
+    {
+      "id": "F431bde8e",
+      "planted": null,
+      "issue": "beds-malformed-json-crash",
+      "key": "watering-log__water-now-twice__rough-ride__t2#1"
+    },
+    {
+      "id": "F45e8f347",
+      "planted": null,
+      "issue": "watering-requests-no-timeout",
+      "key": "watering-log__clean__playwright__t3#0"
+    },
+    {
+      "id": "F6c3cd71f",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__playwright__t3#3"
+    },
+    {
+      "id": "Fcc9a7dd2",
+      "planted": null,
+      "issue": "invalid-bed-query-raw-message",
+      "key": "watering-log__water-now-twice__baseline__t2#4"
+    },
+    {
+      "id": "F7cbaab11",
+      "planted": null,
+      "issue": "add-bed-hang-uncaught-error",
+      "key": "watering-log__water-now-twice__rough-ride__t2#5"
+    },
+    {
+      "id": "Fd168d9b5",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__water-now-twice__playwright__t1#5"
+    },
+    {
+      "id": "F75442f6c",
+      "planted": null,
+      "issue": "add-bed-values-lost-on-beds-error",
+      "key": "watering-log__negative-litres__rough-ride__t2#1"
+    },
+    {
+      "id": "Fb3c4f838",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__baseline__t3#0"
+    },
+    {
+      "id": "F2e1b2bad",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__negative-litres__playwright__t1#4"
+    },
+    {
+      "id": "F22e73938",
+      "planted": null,
+      "issue": "waterings-malformed-json-crash",
+      "key": "watering-log__water-now-twice__rough-ride__t1#5"
+    },
+    {
+      "id": "Fd979b4a8",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t2#2"
+    },
+    {
+      "id": "Fc8c1867a",
+      "planted": null,
+      "issue": "add-bed-hang-uncaught-error",
+      "key": "watering-log__negative-litres__rough-ride__t2#4"
+    },
+    {
+      "id": "F54e5a5c7",
+      "planted": null,
+      "issue": "beds-malformed-json-crash",
+      "key": "watering-log__negative-litres__rough-ride__t3#2"
+    },
+    {
+      "id": "Fa3a9b7ef",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__water-now-twice__baseline__t3#6"
+    },
+    {
+      "id": "F7bed9612",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__negative-litres__playwright__t2#11"
+    },
+    {
+      "id": "Fa88860b5",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__water-now-twice__playwright__t2#2"
+    },
+    {
+      "id": "F3aa79c95",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__water-now-twice__playwright__t1#7"
+    },
+    {
+      "id": "F68b90984",
+      "planted": null,
+      "issue": "upcoming-tasks-malformed-json-nan",
+      "key": "watering-log__clean__rough-ride__t3#13"
+    },
+    {
+      "id": "F5f10003b",
+      "planted": null,
+      "issue": "invalid-bed-query-raw-message",
+      "key": "watering-log__negative-litres__baseline__t1#3"
+    },
+    {
+      "id": "F1308fe4b",
+      "planted": null,
+      "issue": "water-now-check-no-post-after-reload",
+      "key": "watering-log__water-now-twice__rough-ride__t3#9"
+    },
+    {
+      "id": "F3b2d2b2f",
+      "planted": null,
+      "issue": "long-bed-name-table-overflow",
+      "key": "watering-log__clean__baseline__t2#9"
+    },
+    {
+      "id": "F5b834518",
+      "planted": null,
+      "issue": "waterings-beds-error-silent",
+      "key": "watering-log__water-now-twice__playwright__t2#3"
+    },
+    {
+      "id": "F3d2bee29",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__clean__baseline__t1#0"
+    },
+    {
+      "id": "F569e8f41",
+      "planted": null,
+      "issue": "waterings-load-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t1#3"
+    },
+    {
+      "id": "F11c0c1a7",
+      "planted": null,
+      "issue": "beds-malformed-json-crash",
+      "key": "watering-log__clean__rough-ride__t2#0"
+    },
+    {
+      "id": "F5514316d",
+      "planted": null,
+      "issue": "huge-integer-id-500",
+      "key": "watering-log__clean__baseline__t2#3"
+    },
+    {
+      "id": "F60684977",
+      "planted": null,
+      "issue": "upcoming-tasks-error-no-retry",
+      "key": "watering-log__clean__rough-ride__t2#10"
+    },
+    {
+      "id": "F776376f0",
+      "planted": null,
+      "issue": "login-error-no-retry",
+      "key": "watering-log__negative-litres__rough-ride__t2#10"
+    },
+    {
+      "id": "Fce52422a",
+      "planted": null,
+      "issue": "watering-date-timezone-mismatch",
+      "key": "watering-log__clean__playwright__t1#10"
+    }
+  ],
+  "issues": {
+    "water-now-twice": "Double-clicking 'Water now' on the beds page sends two POST /api/waterings requests and records two waterings, because the button is not disabled while the request is in flight.",
+    "negative-litres": "The beds page past-watering form and POST /api/waterings accept negative (and zero or negative-infinite) litres such as -5 and list them as negative amounts.",
+    "huge-integer-id-500": "POST /api/waterings, GET /api/waterings?bed_id= and DELETE /api/waterings/{id} return 500 when given an integer id larger than 64 bits, such as 99999999999999999999.",
+    "nonfinite-litres-500": "POST /api/waterings returns 500 instead of 422 when litres is NaN or overflows to infinity, such as 1e400.",
+    "ancient-watering-date-accepted": "POST /api/waterings and the past-watering form accept implausible dates such as 0001-01-01 and list them as '1 Jan 1'.",
+    "tiny-litres-shown-as-zero": "Past waterings with tiny litre amounts such as 0.001 are accepted despite the field's 0.1 minimum and then displayed as '0 L' in lists and notices.",
+    "shared-busy-flag-across-beds": "On the beds page a single shared wateringBedId means clicking Water now on a second bed while the first is pending re-enables the first bed's button early (allowing a duplicate) and mixes up busy states and messages.",
+    "watering-requests-no-timeout": "Watering requests (Water now, Save watering, waterings list and delete) have no 10 s timeout, so a hung request leaves 'Watering…', 'Saving…' or 'Loading waterings…' on screen indefinitely.",
+    "watering-post-no-idempotency": "POST /api/waterings has no idempotency key or dedupe, so retrying Water now or Save watering after a lost or timed-out response records a duplicate watering.",
+    "water-refresh-failure-loses-confirmation": "On the beds page, when Water now succeeds but the follow-up GET /api/beds refresh fails, the bed list is replaced by 'Could not load beds.' or an error is shown and the save confirmation is lost, inviting a duplicate retry.",
+    "waterings-load-error-no-retry": "When GET /api/waterings fails, the dashboard 'Recent waterings' section and the /waterings page show only an error message with no Retry control, so recovery requires a reload.",
+    "auth-me-error-no-retry": "On /login, after GET /api/auth/me fails with 500 or similar, there is no way to retry without reloading the page.",
+    "login-error-no-retry": "On /login, after POST /api/auth/login fails with 500 or similar, retrying does not reach the Dashboard without a reload.",
+    "upcoming-tasks-error-no-retry": "On the dashboard, after GET /api/tasks/upcoming fails with 500 or similar, there is no way to retry without a reload.",
+    "dashboard-summary-error-no-retry": "On the dashboard, after GET /api/dashboard/summary fails with 500 or similar, there is no way to retry without a reload.",
+    "waterings-malformed-json-crash": "Opening /waterings when GET /api/waterings returns malformed JSON throws an uncaught render error and shows the dev error overlay.",
+    "dashboard-summary-malformed-json-undefined": "The dashboard shows the text 'undefined' when GET /api/dashboard/summary returns malformed JSON.",
+    "upcoming-tasks-malformed-json-nan": "The dashboard shows the text 'NaN' when GET /api/tasks/upcoming returns malformed JSON.",
+    "water-now-hang-uncaught-error": "On /beds, when POST /api/waterings hangs, an uncaught error appears in the dev error overlay.",
+    "add-bed-hang-uncaught-error": "On /beds, when POST /api/beds hangs, an uncaught error appears in the dev error overlay.",
+    "beds-malformed-json-crash": "On /beds, when GET /api/beds returns malformed JSON, the page throws an uncaught render error and the 'Add bed' button stays disabled on 'Adding…'.",
+    "add-bed-values-lost-on-beds-error": "On /beds, when GET /api/beds fails after adding a bed, the typed bed name is cleared and the retry does not recover.",
+    "waterings-bed-select-bad-input-crash": "On /waterings, choosing unexpected values in the 'Bed' filter select causes an uncaught error in the dev error overlay.",
+    "litres-bad-input-crash": "On /beds, entering bad values such as negatives into the 'Litres' field causes an uncaught error in the dev error overlay.",
+    "beds-reload-uncaught-error": "Reloading /beds or returning to it via back/forward causes an uncaught error in the dev error overlay.",
+    "waterings-signed-out-reload-crash": "Reloading /waterings while signed out causes an uncaught error in the dev error overlay.",
+    "upcoming-tasks-429-uncaught-error": "On the dashboard, a 429 response from GET /api/tasks/upcoming causes an uncaught error in the dev error overlay.",
+    "waterings-beds-malformed-json-crash": "Opening /waterings when GET /api/beds returns malformed JSON or 500 throws an uncaught render error.",
+    "waterings-beds-error-silent": "On /waterings, when GET /api/beds fails, the error is ignored and the Bed filter silently offers only 'All beds' with no message or retry.",
+    "invalid-bed-query-raw-message": "Opening /waterings?bed=abc (or an unknown bed id) shows the raw validation text 'Query.bed id: Input should be a valid integer…' and a filter select with no matching option.",
+    "long-bed-name-table-overflow": "A long bed name without spaces makes the waterings tables on /waterings and the dashboard overflow the 375 px viewport because cells do not wrap.",
+    "huge-litres-overflow-layout": "A stored extreme litres value such as -1e308 renders as a several-hundred-digit number that forces sideways scrolling on /waterings and the dashboard at 375 px.",
+    "watering-date-timezone-mismatch": "The future-date check and Water now's watered_on use the server's local date while the client uses the browser's date and UTC times, so a user ahead of the server can have today's date refused as 'in the future' and entries can land on the wrong day.",
+    "datetime-ssr-timezone-mismatch": "Watering timestamps are formatted without a fixed time zone, so server-rendered times use the server's zone and can mismatch the browser's on hydration.",
+    "delete-missing-watering-error": "Deleting a watering that was already deleted (second tab or retry) on /waterings shows a 404 'Watering not found.' error and leaves the stale row instead of refreshing.",
+    "boolean-litres-accepted": "POST /api/waterings accepts litres: true and stores it as 1.0 L instead of returning 422.",
+    "dashboard-waterings-no-loading-state": "The dashboard 'Recent waterings' section shows nothing but its heading while GET /api/waterings is pending on client-side navigation.",
+    "waterings-filter-stale-results": "On /waterings, quickly changing the bed filter or a failed refetch can leave the previous bed's rows shown under the new filter or above the error.",
+    "waterings-filter-not-synced-to-url": "On /waterings the bed filter is read from the URL only once, so navigating from /waterings?bed=1 to /waterings or using back/forward keeps the old filter.",
+    "waterings-navigation-blocked-while-loading": "Clicking the Waterings nav link while GET /api/waterings hangs leaves the previous page on screen indefinitely with no loading indicator.",
+    "water-now-check-no-post-after-reload": "After reloading / or /waterings, the app-water-now-records-once check fails because no POST /api/waterings is sent at all."
+  }
+}

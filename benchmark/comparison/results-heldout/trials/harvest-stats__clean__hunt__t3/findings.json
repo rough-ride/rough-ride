@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "A malformed stats response crashes the Stats page, which then shows 'Loading stats…' with the old table for the previous range",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe stats-malformed, expectation malformed-shows-error-without-crash",
+      "expected": "An error message such as 'Could not load harvest stats.' and no uncaught error",
+      "actual": "Uncaught TypeError 'Cannot read properties of undefined (reading 'length')'. The page keeps showing 'Loading stats…' next to the previous range's Best plants and table, so old numbers look like results for the new range.",
+      "evidence": "{\"alerts\":[\"Loading stats…\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"SupercalifragilisticexpialidociousSquashSquashSquashSquashSquashSquashSquashXX\"]} | {\"alerts\":[\"Loading stats…\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"SupercalifragilisticexpialidociousSquashSquashSquashSquashSquashSquashSquashXX\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-181101-hunt-58d3",
+        "probe": "stats-malformed",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A stats request that never answers leaves the page on 'Loading stats…' forever, with old results still shown",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe stats-hang, expectation hang-not-showing-stale-table-as-new-range",
+      "expected": "The request times out with an error and a way to retry, or at least the old table is not shown as current",
+      "actual": "13 s after From was changed to 2026-07-01, the page still says 'Loading stats…' and shows the 1 Jan to 31 Dec 2026 table and Best plants. There is no error, timeout or retry.",
+      "evidence": "{\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"SupercalifragilisticexpialidociousSquashSquashSquashSquashSquashSquashSquashXX\",\"5 kg · O'Brien \\\"x\\\" <b>x</b>\",\"View\",\"SupercalifragilisticexpialidociousSquashSquashSquashSquashSquashSquashSquashXX\",\"NO. 2\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 3\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"Weight by plant and month\",\"7.6 kg total\",\"Harvest weight per plant and month, 1 Jan 2026 to 31 Dec 2026\",\"PLANT\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tOCT 2026\\tTOTAL\",\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t–\\t1.2 kg\",\"Lettuce · Li… | {\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"SupercalifragilisticexpialidociousSquashSquashSquashSquashSquashSquashSquashXX\",\"5 kg · O'Brien \\\"x\\\" <b>x</b>\",\"View\",\"SupercalifragilisticexpialidociousSquashSquashSquashSquashSquashSquashSquashXX\",\"NO. 2\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 3\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"Weight by plant and month\",\"7.6 kg total\",\"Harvest weight per plant and month, 1 Jan 2026 to 31 Dec 2026\",\"PLANT\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tOCT 2026\\tTOTAL\",\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t–\\t1.2 kg\",\"Lettuce · Li…",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-181101-hunt-58d3",
+        "probe": "stats-hang",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

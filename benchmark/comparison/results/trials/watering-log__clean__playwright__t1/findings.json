@@ -1,0 +1,114 @@
+{
+  "findings": [
+    {
+      "title": "Water now / Save watering requests have no timeout; button stays on 'Watering…' forever",
+      "where": "/beds (POST /api/waterings)",
+      "steps": "On /beds, make POST /api/waterings hang (never respond), then click 'Water now' on North bed. Wait more than 10 s.",
+      "expected": "Request fails after 10 s with a visible error, and the button becomes usable again.",
+      "actual": "After 12 s the button still read 'Watering…', stayed disabled and showed no error. The API client ($fetch.create in useApi.ts) sets no timeout and the new code adds none.",
+      "evidence": "Bed card text after 12 s: 'LAST WATERED 1 Nov 2026 | Watering… | North bed'",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Waterings list hangs on 'Loading waterings…' forever when the request stalls",
+      "where": "/waterings (GET /api/waterings?bed_id=…)",
+      "steps": "On /waterings, make GET /api/waterings?bed_id=3 hang, then pick that bed in the Bed filter. Wait 12 s.",
+      "expected": "Times out after 10 s and shows an error with a retry.",
+      "actual": "'Loading waterings…' stays indefinitely.",
+      "evidence": "Page text after 12 s: 'Clear filter | Loading waterings…'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page and dashboard error states have no retry",
+      "where": "/waterings, / (Recent waterings section)",
+      "steps": "Navigate in the app to /waterings (or to the dashboard) while GET /api/waterings returns 502/503.",
+      "expected": "The error message comes with a 'Try again' button that reloads the data without a page reload.",
+      "actual": "Only 'Could not load waterings.' / 'Could not load recent waterings.' is shown, with no button. The dashboard does not even take `refresh` from wateringsResult. The only way to retry is reloading the page or changing the filter.",
+      "evidence": "Recent waterings section: 'Could not load recent waterings.' with 0 buttons; /waterings: 'Could not load waterings.' with no retry control.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Bed filter fails silently when the beds request fails, and shows a blank or raw message for unknown or bad ?bed values",
+      "where": "/waterings",
+      "steps": "1) Open /waterings with GET /api/beds failing: no error is shown, and the dropdown has only the options the server rendered, or only 'All beds' on client navigation. 2) Open /waterings?bed=abc. 3) Open /waterings?bed=999.",
+      "expected": "A visible error when the bed list can't load. A friendly message for an invalid bed, with the select showing what is being filtered.",
+      "actual": "The beds error is ignored (`bedsResult.error` is never used). ?bed=abc shows the raw validation text 'Query.bed id: Input should be a valid integer, unable to parse string as an integer', and the select is blank. ?bed=999 shows 'No waterings for this bed' while the select shows a blank value.",
+      "evidence": "bed=abc page text: 'Clear filter | Query.bed id: Input should be a valid integer, unable to parse string as an integer'; bed=999: select value ''.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "POST /api/waterings returns 500 for out-of-range numbers",
+      "where": "POST /api/waterings, GET /api/waterings",
+      "steps": "POST {\"bed_id\":1,\"litres\":1e400}, or {\"bed_id\":1,\"litres\":NaN}, or {\"bed_id\":99999999999999999999,\"litres\":1}. GET /api/waterings?bed_id=99999999999999999999.",
+      "expected": "422 with a validation message.",
+      "actual": "500 Internal Server Error in every case. Infinity and NaN reach the le/gt checks or SQLite, and an integer above 64 bits overflows the SQLite binding.",
+      "evidence": "curl: '{\"bed_id\":1,\"litres\":1e400} -> Internal Server Error 500', 'NaN -> 500', huge bed_id -> 500 for both POST and GET.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Tiny litre amounts are accepted but shown as '0 L'",
+      "where": "/beds past-watering form, /waterings, dashboard",
+      "steps": "On /beds, click 'Record past watering', enter litres 0.001 and save.",
+      "expected": "Either refuse amounts below the field's 0.1 minimum with a reason, or show the real amount.",
+      "actual": "The client check (> 0) and the server check (gt=0) both accept it. The notice reads 'Recorded 0 L on 10 Nov 2026.', and the list shows '0 L', because formatLitres rounds to 2 decimals.",
+      "evidence": "Notice text 'Recorded 0 L on 10 Nov 2026.'; a 0.0001 L entry shows '0 L' on /waterings.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Absurd past dates such as year 1 are accepted",
+      "where": "POST /api/waterings, /waterings",
+      "steps": "POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\",\"litres\":1}, or type year 0001 in the date field.",
+      "expected": "Refused with a reason; there is no sensible minimum date now.",
+      "actual": "201 Created. The entry then shows as '1 Jan 1' at the bottom of the log.",
+      "evidence": "API response 201 with watered_on 0001-01-01; /waterings row '1 Jan 1 North bed 1 L'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Long bed names make the waterings table overflow at 375 px",
+      "where": "/waterings",
+      "steps": "Create a bed with a long name without spaces (60 chars allowed), record a watering for it, open /waterings at 375 px width.",
+      "expected": "No sideways scrolling; the name wraps.",
+      "actual": "The document is 800 px wide. Hiding that row brings it back to 375 px. (The /beds card with the same name also overflows, to 842 px, though that bed header may predate this change.)",
+      "evidence": "document.documentElement.scrollWidth = 800 on /waterings; 375 with the long-name row hidden.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "A retried or timed-out Water now can record twice; no idempotency",
+      "where": "POST /api/waterings",
+      "steps": "Click Water now. The request reaches the server, but the response is lost or slow, so the user clicks again after the error or reload.",
+      "expected": "One watering is recorded.",
+      "actual": "Each POST inserts a new row; there is no idempotency key or dedupe. A double click is blocked by the disabled button (observed only 1 POST), but retries are not.",
+      "evidence": "Code: create_watering always INSERTs; the client sends no request id.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Watering two beds at once re-enables the first bed's button early",
+      "where": "/beds",
+      "steps": "Click 'Water now' on bed A while its request is slow, then click 'Water now' on bed B.",
+      "expected": "Each bed's button stays disabled until its own request finishes.",
+      "actual": "wateringBedId is one shared ref. Clicking bed B moves it off A, so A's button is enabled again while its request is still pending, which allows a duplicate. A's finally block also clears B's busy state, and waterError and waterNotice only show for one bed at a time.",
+      "evidence": "beds.vue recordWatering sets and clears a single wateringBedId.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Dates mix server local time, UTC and browser time, so today's watering can be refused or land on the wrong day",
+      "where": "POST /api/waterings, /beds",
+      "steps": "Use the app from a browser whose time zone is ahead of the server's, e.g. late evening in UTC+9 while the server is on CET. Record a past watering with the default date (the browser's today).",
+      "expected": "Today's date is accepted, and 'Water now' entries fall on the user's day.",
+      "actual": "not_in_future compares against the server's date.today(), so the browser's today is refused as 'in the future'. 'Water now' stores watered_on as the server-local date but watered_at in UTC, so the list's day ordering and the displayed time can disagree around midnight.",
+      "evidence": "schemas.py WateringIn.not_in_future uses date.today(); waterings.py uses now.astimezone().date() for watered_on and UTC for watered_at; the client uses todayIso() in browser time.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

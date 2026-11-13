@@ -1,0 +1,26 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3797, API http://localhost:8797/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-hf/verify-watering-log-unknown-bed-filter-select-mismatch/scratch.
+
+The reported problem: Opening /waterings?bed=99999 with an unknown bed id filters the list to 'No waterings for this bed' while the Bed select shows no selection, so the select and list disagree.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Filter by unknown bed id shows 'No waterings for this bed' while the Bed select shows no selection",
+  "where": "/waterings?bed=99999",
+  "steps": "Probe malformed, expectation unknown-bed-filter-consistent",
+  "expected": "The select and the list agree (unknown bed reset to All beds or flagged)",
+  "actual": "Select has no selected option (looks like All beds) while the list is filtered and says 'No waterings for this bed'",
+  "evidence": "{\"sel\":\"\",\"selText\":\"(none)\",\"text\":[\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\",\"Garden Log · a journal for one garden\"]} | {\"sel\":\"\",\"selText\":\"(none)\",\"text\":[\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\",\"Garden Log · a journal for one garden\"]}"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-hf/verify-watering-log-unknown-bed-filter-select-mismatch/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

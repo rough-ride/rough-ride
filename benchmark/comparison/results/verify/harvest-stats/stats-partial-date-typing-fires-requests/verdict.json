@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-partial-date-typing-fires-requests",
+  "sentence": "Typing a year digit by digit in a /stats date input fires a request per keystroke, and intermediate dates earlier than From flash a 422 validation error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /stats (From 2026-01-01, To 2026-12-31). Clicked the To input, moved to the year segment and typed 2026 one digit at a time, 250ms apart, in Chromium. Four GET /api/stats/harvests requests went out: to=0002-12-31, 0020-12-31 and 0202-12-31 each came back 422, and only to=2026-12-31 came back 200. While I was typing, the page showed the alert 'The From date must be on or before the To date.' in place of the table, and the console logged 3 errors. Code cause: in stats.vue the useFetch query is a computed built straight from the v-model refs, with no debounce and no check that from <= to or that the year is plausible. The backend returns 422 when from > to. Typing a date is a normal way to use the page, and the spec expects a working date-range filter, so flashing an error on every half-typed year is not acceptable behaviour.",
+  "severity": "medium",
+  "wallMs": 44931
+}

@@ -1,0 +1,99 @@
+{
+  "findings": [
+    {
+      "title": "button \"Water now Bed ${unique}\" sends 2 successful POST /api/waterings on a double click (if this control is a toggle, give it aria-pressed)",
+      "where": "/beds POST /api/waterings",
+      "steps": "In the browser: water-bed/POST /api/waterings #1/double-submit; checks that failed: one-write",
+      "expected": "",
+      "actual": "one-write: one-write: 2 successful POST /api/waterings (the baseline run sent 1) (if this control is a toggle, give it aria-pressed)",
+      "evidence": "one-write: one-write: 2 successful POST /api/waterings (the baseline run sent 1) (if this control is a toggle, give it aria-pressed)",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-122556-plan-07he",
+        "shown": "shown",
+        "members": [
+          "water-bed/POST /api/waterings #1/double-submit"
+        ]
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after GET /api/beds returns malformed JSON",
+      "where": "/beds GET /api/beds",
+      "steps": "In the browser: water-bed/GET /api/beds #1/malformed-json!; checks that failed: settles, no-uncaught-error",
+      "expected": "",
+      "actual": "no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function | settles: click button \"Add bed\": control stays disabled (Adding\\u2026) after 10.2 s | no-uncaught-error: overlay: dev error overlay",
+      "evidence": "no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function | settles: click button \"Add bed\": control stays disabled (Adding\\u2026) after 10.2 s | no-uncaught-error: overlay: dev error overlay",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-122556-plan-07he",
+        "shown": "shown",
+        "members": [
+          "water-bed/GET /api/beds #1/malformed-json!",
+          "water-bed/GET /api/beds #1/500"
+        ]
+      }
+    },
+    {
+      "title": "Typed values lost after GET /api/beds fails with 500 (button \"Add bed\")",
+      "where": "/beds GET /api/beds",
+      "steps": "In the browser: water-bed/GET /api/beds #1/500!; checks that failed: values-survive, retry-recovers",
+      "expected": "",
+      "actual": "values-survive: label \"Name\" held \"Bed hkgy40tj\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed 5170wdxn\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed a9ikee91\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed xxjpg24x\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s",
+      "evidence": "values-survive: label \"Name\" held \"Bed hkgy40tj\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed 5170wdxn\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed a9ikee91\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed xxjpg24x\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-122556-plan-07he",
+        "shown": "shown",
+        "members": [
+          "water-bed/GET /api/beds #1/500!",
+          "water-bed/GET /api/beds #1/400!",
+          "water-bed/GET /api/beds #1/reset!",
+          "water-bed/GET /api/beds #1/429!"
+        ]
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/waterings fails with 500",
+      "where": "/waterings GET /api/waterings",
+      "steps": "In the browser: watering-log/GET /api/waterings #3/500!; checks that failed: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: step 10 (expect text \"1 watering\"): not visible after 10 s | retry-recovers: step 10 (expect text \"1 watering\"): not visible after 10 s | retry-recovers: step 10 (expect text \"1 watering\"): not visible after 10 s | retry-recovers: step 10 (expect text \"1 watering\"): not visible after 10 s",
+      "evidence": "retry-recovers: step 10 (expect text \"1 watering\"): not visible after 10 s | retry-recovers: step 10 (expect text \"1 watering\"): not visible after 10 s | retry-recovers: step 10 (expect text \"1 watering\"): not visible after 10 s | retry-recovers: step 10 (expect text \"1 watering\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-122556-plan-07he",
+        "shown": "shown",
+        "members": [
+          "watering-log/GET /api/waterings #3/500!",
+          "watering-log/GET /api/waterings #3/400!",
+          "watering-log/GET /api/waterings #3/reset!",
+          "watering-log/GET /api/waterings #3/429!"
+        ]
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/beds fails with 500",
+      "where": "/waterings GET /api/beds (entry)",
+      "steps": "In the browser: watering-log/GET /api/beds #3/500!; checks that failed: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-122556-plan-07he",
+        "shown": "capped",
+        "members": [
+          "watering-log/GET /api/beds #3/500!",
+          "watering-log/GET /api/beds #3/400!",
+          "watering-log/GET /api/beds #3/reset!",
+          "watering-log/GET /api/beds #3/429!"
+        ]
+      }
+    }
+  ]
+}

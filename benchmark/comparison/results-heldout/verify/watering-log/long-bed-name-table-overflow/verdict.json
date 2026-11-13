@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "long-bed-name-table-overflow",
+  "sentence": "At 375px, a long unbroken bed name makes the watering tables on /waterings and the dashboard wider than the viewport, causing horizontal scrolling.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and created a bed whose name was 60 'A' characters with no spaces (60 is the maximum the schema allows). Recorded a 12.5 L watering for it through POST /api/waterings, then loaded the pages at a 375x800 viewport. On /waterings, document.documentElement.scrollWidth was 869 against a clientWidth of 375, and the table was 836px wide. On the dashboard (/), scrollWidth was 784 and the Recent waterings table was 751px wide. Both pages scroll sideways. main.css has no overflow-wrap or word-break rules, and neither table sits in a scroll container. A gardener's own bed name breaks the mobile layout of both new watering views. Afterwards I deleted the test bed.",
+  "severity": "medium",
+  "wallMs": 54354
+}

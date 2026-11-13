@@ -1,7 +1,7 @@
 // `npm run bench -- materialize <app> <feature> [<bug>]` (spec part 7 section 29.5).
 import { spawnSync } from 'node:child_process';
 import { randomInt } from 'node:crypto';
-import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { filesUnder, loadApp, productSlug } from './apps.mts';
@@ -14,7 +14,19 @@ export interface MaterializeOptions {
   workDir?: string;
   install?: boolean;
   platform?: NodeJS.Platform;
+  // Serve the variant on other ports, so several variants can run side by side.
+  ports?: { web: number; api: number };
 }
+
+// Every `:PORT`, `(PORT` or ` PORT` naming the app's registered web or API port, in
+// text that is not a lockfile.
+function remapPorts(text: string, from: { web: number; api: number }, to: { web: number; api: number }): string {
+  return text
+    .replace(new RegExp(`(?<=[:( ])${from.web}(?![0-9])`, 'g'), String(to.web))
+    .replace(new RegExp(`(?<=[:( ])${from.api}(?![0-9])`, 'g'), String(to.api));
+}
+
+const LOCKFILES = new Set(['package-lock.json', 'uv.lock']);
 
 function randomName(): string {
   let out = '';
@@ -77,6 +89,15 @@ function baseRepoWithConfig(app: ReturnType<typeof loadApp>, options: Materializ
   mkdirSync(outer);
   const dir = path.join(outer, productSlug(app.yaml.product));
   cpSync(path.join(app.dir, 'base'), dir, { recursive: true });
+  if (options.ports) {
+    for (const file of filesUnder(dir)) {
+      if (LOCKFILES.has(path.basename(file))) continue;
+      const full = path.join(dir, file);
+      const before = readFileSync(full, 'utf8');
+      const after = remapPorts(before, app.yaml.ports, options.ports);
+      if (after !== before) writeFileSync(full, after);
+    }
+  }
   const configDir = mkdtempSync(path.join(tmpdir(), 'bench-git-'));
   const emptyConfig = path.join(configDir, 'gitconfig');
   writeFileSync(emptyConfig, '');
@@ -94,8 +115,14 @@ export function materialize(appId: string, featureId: string, bugId: string | nu
   if (bugId !== null && !bug) throw new Error(`no bug ${bugId} in ${appId}/${featureId}`);
 
   const { dir, emptyConfig } = baseRepoWithConfig(app, options);
-  gitIn(dir, emptyConfig, ['apply', path.join(feature.dir, 'feature.patch')]);
-  if (bug) gitIn(dir, emptyConfig, ['apply', path.join(bug.dir, 'bug.patch')]);
+  const patchFile = (file: string): string => {
+    if (!options.ports) return file;
+    const copy = path.join(path.dirname(emptyConfig), path.basename(path.dirname(file)) + '.patch');
+    writeFileSync(copy, remapPorts(readFileSync(file, 'utf8'), app.yaml.ports, options.ports));
+    return copy;
+  };
+  gitIn(dir, emptyConfig, ['apply', patchFile(path.join(feature.dir, 'feature.patch'))]);
+  if (bug) gitIn(dir, emptyConfig, ['apply', patchFile(path.join(bug.dir, 'bug.patch'))]);
 
   const specs = path.join(dir, '.rough-ride', 'specs');
   mkdirSync(specs, { recursive: true });

@@ -44,6 +44,21 @@ test('a buggy variant and its clean twin differ only by the bug.patch lines', ()
   assert.equal(readFileSync(path.join(buggy, 'tags.mjs'), 'utf8').includes('tag.toLowerCase()'), true);
 });
 
+test('with ports, every file names the new ports and the uncommitted change is the same feature and bug', () => {
+  const root = work();
+  const plain = materialize('garden-log', 'watering-log', 'negative-litres', { workDir: root, install: false });
+  const moved = materialize('garden-log', 'watering-log', 'negative-litres', { workDir: root, install: false, ports: { web: 3791, api: 8791 } });
+  const files = filesUnder(moved);
+  assert.deepEqual(files, filesUnder(plain));
+  const named = (dir: string, port: string) => files.filter((f) => !/(^|\/)(package-lock\.json|uv\.lock)$/.test(f) && readFileSync(path.join(dir, f), 'utf8').includes(port));
+  assert.deepEqual([...named(moved, '3701'), ...named(moved, '8701')], []);
+  assert.deepEqual(named(moved, '3791').sort(), named(plain, '3701').sort());
+  assert.deepEqual(named(moved, '8791').sort(), named(plain, '8701').sort());
+  const diff = (dir: string) => git(dir, 'diff', '--stat');
+  assert.equal(diff(moved), diff(plain));
+  assert.equal(git(moved, 'status', '--porcelain'), git(plain, 'status', '--porcelain'));
+});
+
 test('one Initial commit on main by Dev at the fixed date; the feature is uncommitted, untracked files included', () => {
   const dir = materialize('fixture', 'add-tags', 'tags-keep-spaces', { workDir: work(), install: false });
   // Epoch seconds: git versions print the ISO date with Z or +00:00.

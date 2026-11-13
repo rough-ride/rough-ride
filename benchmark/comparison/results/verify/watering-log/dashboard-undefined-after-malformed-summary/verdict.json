@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "dashboard-undefined-after-malformed-summary",
+  "sentence": "On /, when GET /api/dashboard/summary returns malformed JSON, the page shows the text 'undefined'.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /beds. I then used page.route to make GET /api/dashboard/summary return status 200, content-type application/json, with the malformed body '{\"plant_count\": 3, broken', and clicked the Dashboard link (client-side navigation). The / page showed the stat cards as 'In undefined beds', 'HARVESTED IN UNDEFINED' and 'undefined harvests' instead of the 'Could not load the summary.' alert. Cause: when JSON parsing fails, ofetch falls back to the raw text string, so useFetch puts that string in data with no error. index.vue checks `v-else-if=\"summary\"` (the string is truthy) and then reads summary.bed_count, summary.year and so on, which are undefined. Note: per git diff, this summary block in index.vue is unchanged from main. The watering change only added the Recent waterings section, which still rendered fine. So the defect is real and visible on /, but it was already there before this change. Severity is low because it only happens when the server sends a malformed response.",
+  "severity": "low",
+  "wallMs": 69635
+}

@@ -1,0 +1,14 @@
+id: hx6
+category: url-state
+provenance: hand-written
+layer: frontend
+reach: direct
+needsAppKnowledge: false
+flow: waterings
+exposedBy:
+  - { action: "choose a bed in the Waterings filter, then reload or open the copied link" }
+checks: [state-survives-reload]
+symptom: "After choosing a bed in the Waterings filter, reloading the page (or opening its link) shows all beds again"
+addedIn: 0.1.1
+review: single
+allowWords: []

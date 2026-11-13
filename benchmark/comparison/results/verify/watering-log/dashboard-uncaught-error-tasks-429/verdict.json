@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "water-now-twice",
+  "key": "dashboard-uncaught-error-tasks-429",
+  "sentence": "On /, when GET /api/tasks/upcoming is rate limited with 429, the dev error overlay appears.",
+  "verdict": "not-reproduced",
+  "evidence": "Signed in as the demo user and used Playwright to return 429 for GET /api/tasks/upcoming, then went to / with client-side navigation (Beds -> Dashboard) so the browser made the request itself (a full reload fetches during SSR, where the browser route does not apply). I tried four cases: (1) 429 with JSON body {detail:'Too many requests'}: the Upcoming tasks section showed the alert 'Too many requests'; (2) 429 with a text/plain body: alert 'Could not load upcoming tasks.'; (3) 429 on tasks together with 401 on /api/dashboard/summary, the combination the report mentions: both sections showed inline alerts; (4) 429 with an empty body: alert 'Could not load upcoming tasks.'. In every case the dashboard rendered, the recent-waterings table still loaded, there was no vite/nuxt error-overlay element in the DOM, and the console held only 'Failed to load resource' network messages, no uncaught exceptions. The code agrees: index.vue reads tasksError from useFetch and shows it through apiErrorMessage, which guards every property it reads. The change did not touch the tasks fetch.",
+  "severity": null,
+  "wallMs": 133760
+}

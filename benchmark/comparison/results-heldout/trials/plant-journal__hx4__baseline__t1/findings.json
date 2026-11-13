@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Harvest count and harvest weight multiplied by number of journal entries",
+      "where": "GET /api/plants, GET /api/plants/{id}; Plants list and plant detail pages",
+      "steps": "Sign in. GET /api/plants/1 (Tomato, has 3 harvests totalling 1350 g and 2 journal entries).",
+      "expected": "harvest_count 3, harvest_grams 1350",
+      "actual": "harvest_count 6, harvest_grams 2700. The new LEFT JOIN journal_entries in PLANT_SELECT creates one row per harvest per journal entry, so COUNT(h.id) and SUM(h.weight_grams) are multiplied. Only journal_count uses DISTINCT.",
+      "evidence": "API returned harvest_count=6 harvest_grams=2700 journal_count=2, but the plant's harvests array has 3 items summing to 1350 g. The delete-plant confirmation also says '6 harvests'.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal page error state has no retry",
+      "where": "/journal",
+      "steps": "Open /journal while the API is down or returns an error, then bring the API back.",
+      "expected": "An error message with a Retry button that reloads the entries without reloading the page.",
+      "actual": "Only an AlertMessage is shown. There is no retry control, and the page does not use useFetch's refresh. The only way to recover is to change the search text or reload the page.",
+      "evidence": "pages/journal.vue does not destructure refresh, and the loadError branch has no button.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Plant detail journal load error has no retry",
+      "where": "/plants/{id} Journal section",
+      "steps": "Load a plant page while GET /api/journal fails (e.g. a timeout or 500), then let the server recover.",
+      "expected": "The journal error offers a Retry button.",
+      "actual": "The page shows 'Could not load the journal.' with no retry. The list stays empty until the user adds or deletes an entry or reloads the page. refreshJournal exists but is never offered to the user.",
+      "evidence": "pages/plants/[id].vue journalLoadError AlertMessage has no action.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal requests have no timeout; Saving… can spin forever",
+      "where": "Add/edit/delete journal entry, Journal page",
+      "steps": "Make the API hang (accept the connection but never answer), then click 'Add entry' or 'Save entry'.",
+      "expected": "The request fails after 10 seconds with a visible error, and the button is enabled again.",
+      "actual": "useApiClient/useApiFetch set no timeout, so the button stays on 'Saving…' and stays disabled indefinitely.",
+      "evidence": "composables/useApi.ts: $fetch.create has no timeout option. The new journal calls use it unchanged.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying an add after a timeout or network error creates duplicate entries",
+      "where": "POST /api/journal from the plant detail 'Add entry' form",
+      "steps": "Submit an entry. The server saves it, but the response is lost or slow. The form keeps the text, and the user clicks Add entry again.",
+      "expected": "One entry is created.",
+      "actual": "Two identical entries are created. POST has no idempotency key or duplicate check.",
+      "evidence": "routers/journal.py create_entry always INSERTs.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Out-of-range integer ids return 500 instead of 4xx",
+      "where": "POST /api/journal, PUT/DELETE /api/journal/{id}, GET /api/journal?plant_id=",
+      "steps": "POST {\"plant_id\":99999999999999999999,\"entry_on\":\"2026-11-12\",\"body\":\"x\"}, or PUT /api/journal/99999999999999999999, or GET /api/journal?plant_id=99999999999999999999.",
+      "expected": "422 or 404",
+      "actual": "500 Internal Server Error (sqlite OverflowError). No upper bound is set on the ints.",
+      "evidence": "All three requests returned 'Internal Server Error' with HTTP 500.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Long journal search (>80 chars) shows a confusing error instead of a refused input",
+      "where": "/journal search box",
+      "steps": "Type or paste more than 80 characters into Search.",
+      "expected": "The input is limited to 80 characters, or a clear reason is shown.",
+      "actual": "The API returns 422. The page replaces the results with an error that reads like 'Query.q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "GET /api/journal?q=<81 chars> returned 422. The search input in journal.vue has no maxlength attribute.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Long plant names overflow the Journal feed at 375 px",
+      "where": "/journal",
+      "steps": "Create a plant with an 80-character name with no spaces, add a journal entry, and view /journal at 375 px width.",
+      "expected": "The name wraps.",
+      "actual": ".journal-feed__plant has no overflow-wrap (only .journal-entry__body has it), so the name in the flex head runs past the card and the page scrolls sideways.",
+      "evidence": "main.css: overflow-wrap:anywhere is applied only to .journal-entry__body.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Emoji-heavy entries are cut to fewer than 500 characters on the client",
+      "where": "Journal entry form",
+      "steps": "Type or paste 500 emoji into the entry.",
+      "expected": "500 characters are accepted, the same as the server, which counts code points.",
+      "actual": "textarea maxlength and the 'characters left' counter count UTF-16 units, so only 250 emoji fit, and the text is silently truncated on paste.",
+      "evidence": "JournalEntryForm.vue uses :maxlength=500 and form.body.length. The server accepted 500 multi-byte characters via the API.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "'Today' is judged by the server's timezone, so a valid today entry can be refused",
+      "where": "POST/PUT /api/journal",
+      "steps": "As a user whose local date is ahead of the server's (e.g. early morning in UTC+10 against a CET server), add an entry dated today.",
+      "expected": "The entry is accepted, because the client's date picker allows today.",
+      "actual": "The server's date.today() check rejects it with 'Journal date cannot be in the future.'",
+      "evidence": "schemas.py JournalEntryIn.not_in_future uses the server's local date, while the client uses the browser's local date (todayIso).",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "id": "harvest-stats__clean__playwright__t3",
+  "feature": "harvest-stats",
+  "bug": "clean",
+  "arm": "playwright",
+  "trial": 3,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T11:02:12.559Z",
+  "materializeMs": 5561,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__clean__playwright__t3/variant/s0mc7llh/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "538fda18-ab46-4900-85bc-6cb2c76d81cb",
+  "loadBefore": [
+    5.40966796875,
+    6.982421875,
+    7.9111328125
+  ],
+  "loadAfter": [
+    13.90234375,
+    10.0234375,
+    8.8115234375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 311686,
+  "reportedCostUsd": 0.8837534,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 52,
+      "outputTokens": 12930,
+      "cacheReadInputTokens": 1118527,
+      "cacheCreationInputTokens": 50155,
+      "webSearchRequests": 0,
+      "costUSD": 0.8837534,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2476,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 50155,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 27,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 7 bugs in the new Stats page, and I saw all of them in the running app. They're written to `out/findings.json`.\n\n**High**\n1. **The page crashes on an unreadable response.** If the stats request comes back as `{}`, as an HTML page, or with a month set to null, the address changes to `/stats` but the Dashboard stays on screen and an error dialog opens. The console shows `Cannot read properties of null (reading 'slice')` from `formatMonth`. The page uses `stats.plants.length` and the month values without checking them first.\n\n**Medium**\n2. **No timeout.** When the request hangs, \"Loading stats…\" was still showing after 12 seconds. The table from the previous date range stays underneath, still captioned with the old dates.\n3. **No retry button on the error.** After a server error the page only says \"Could not load harvest stats.\" The only ways to try again are changing a date or reloading.\n4. **Long variety names break the 375 px layout.** A plant with an unbroken 80-character name and variety makes the page 548 px wide. It's the variety text in the \"Best plants\" cards that overflows. The table itself scrolls correctly inside its own box.\n\n**Low**\n5. **Clearing From gives a misleading error.** With To set to 31 Dec 2025, a blank From quietly becomes 1 Jan 2026, so the page says \"The From date must be on or before the To date.\" even though From is empty. A blank To quietly becomes 31 Dec of this year, which the empty field doesn't show.\n6. **An invalid date in the URL shows a blank field and a raw message.** Opening `?from=2026-02-30` leaves the From field empty and shows \"Query.from: Input should be a valid date or datetime…\".\n7. **Empty months are missing from the table.** For the whole of 2026, only Jun–Sept appear as columns; months with no harvests are dropped instead of showing \"–\".\n\n**What held up:**\n- An answer that arrives late doesn't overwrite a newer date range.\n- Retrying after a server error works without a reload.\n- The server returns a 4xx for every bad date I tried.\n- A 401 sends you to sign in.\n- The Dashboard's top plant and the Stats link both work.\n\nFor the 375 px check I added a test plant and harvest through the API, then deleted the plant. Afterwards the dashboard summary showed the original figures again.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 52,
+    "output": 12930,
+    "cacheRead": 1118527,
+    "cacheWrite": 50155,
+    "requests": 26,
+    "toolCalls": {
+      "Bash": 11,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 12,
+      "mcp__playwright__browser_evaluate": 1,
+      "Write": 1
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 7,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T11:07:37.565Z"
+}

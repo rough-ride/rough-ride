@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "delete-bed-control-stays-disabled",
+  "sentence": "In automated fault-injection runs, after a failure or reload on various pages, navigating to /beds leaves a DeleteBed control disabled for more than 10 seconds.",
+  "verdict": "not-a-defect",
+  "evidence": "beds.vue is not touched by the change. Its Delete button is bound to :disabled=\"deletingId === bed.id || bed.plant_count > 0\" with title 'Move or delete its plants first'. In the browser I signed in, opened /stats, reloaded it, then went to /beds and waited 11 s. The Delete buttons for 'North bed' (2 plants) and 'Shade corner' (1 plant) stayed disabled, and each showed the tooltip 'Move or delete its plants first'. I then created an empty bed through the API and reloaded /beds. Its Delete button was enabled immediately, so the button is not stuck on loading after a reload or failure. It is disabled on purpose, with the reason shown, for beds that still contain plants. The fault-injection runs create plants and beds, which explains why they saw disabled Delete buttons. The temporary bed was deleted afterwards (HTTP 204).",
+  "severity": null,
+  "wallMs": 74140
+}

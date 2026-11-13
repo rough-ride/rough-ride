@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "hx2",
+  "key": "dashboard-top-plant-ambiguous",
+  "sentence": "On the dashboard, the 'Top plant this year' card shows only the plant name and links to /stats, so same-named plants cannot be told apart; triggered by having two plants with the same name and viewing the dashboard.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user. Added a second plant through the API: 'Tomato' (variety 'Gardeners Delight', id 4), alongside the existing 'Tomato' Sungold (id 1), and logged a 2000 g harvest for it on 2026-08-01. GET /api/dashboard/summary then returned top_plant 'Tomato', top_plant_id 4, top_plant_grams 2000. On the dashboard at http://localhost:3794/ the 'Top plant this year' card showed only 'Tomato' / '2 kg harvested'. Its link, labelled 'View top plant this year', points to /stats, not /plants/4. index.vue only reads summary.top_plant and top_plant_grams; top_plant_id is never used, and SummaryOut has no variety field. So there is no way to tell which Tomato is meant. The stats page does show ' · variety' next to plant names, so the app treats same-named plants as needing the variety everywhere except this card. The test plant and harvest were deleted afterwards.",
+  "severity": "low",
+  "wallMs": 65467
+}

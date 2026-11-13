@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-year-one-date-accepted/scratch.
+
+The reported problem: The past-watering form and POST /api/waterings accept implausible dates such as 0001-01-01, which are saved and listed as '1 Jan 1'.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Past watering form accepts the year 1 as a date",
+  "where": "/beds Record past watering form, POST /api/waterings",
+  "steps": "Probe past-form-input, expectation year-1-date-refused",
+  "expected": "An implausible date such as 0001-01-01 is refused with a reason",
+  "actual": "Saved and confirmed as 'Recorded 5 L on 1 Jan 1.'; it then appears in the watering log and totals",
+  "evidence": "{\"alerts\":[\"Recorded 5 L on 1 Jan 1.\"],\"created\":[{\"id\":3,\"bed_id\":2,\"bed_name\":\"Shade corner\",\"watered_on\":\"0001-01-01\",\"watered_at\":null,\"litres\":5}]} | {\"alerts\":[\"Recorded 5 L on 1 Jan 1.\"],\"created\":[{\"id\":3,\"bed_id\":2,\"bed_name\":\"Shade corner\",\"watered_on\":\"0001-01-01\",\"watered_at\":null,\"litres\":5}]}"
+ },
+ {
+  "title": "Absurd past dates accepted (e.g. year 0001)",
+  "where": "POST /api/waterings, beds page past-watering form",
+  "steps": "Submit watered_on 0001-01-01 with 5 litres",
+  "expected": "Refuse implausible dates with a visible reason (only the future is checked)",
+  "actual": "201 Created; the bed's history/log shows a watering in year 1",
+  "evidence": "curl returned {\"id\":4,...,\"watered_on\":\"0001-01-01\"} [201]"
+ },
+ {
+  "title": "Absurd past dates accepted (year 0001)",
+  "where": "POST /api/waterings, /beds past watering form",
+  "steps": "Record a past watering dated 0001-01-01.",
+  "expected": "Refused with a visible reason (no lower bound, e.g. before the garden or before 1900).",
+  "actual": "Saved and listed as '1 Jan 1'.",
+  "evidence": "API 201. The Waterings table showed '1 Jan 1 North bed 1 L'."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-year-one-date-accepted/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

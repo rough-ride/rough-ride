@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-page-malformed-shows-fake-entries",
+  "sentence": "On the Journal page, a malformed (non-list, e.g. string) GET /api/journal response is rendered as an entry count and blank '–' cards instead of an error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and used Playwright to route **/api/journal?** to return 200 application/json with the body \"not a list\" (a JSON string), then opened /journal from the nav. The page showed '10 entries' and drew 10 .journal-feed__item cards whose only text was '–'. No role=alert error appeared. Cause: journal.vue uses useApiFetch<JournalEntry[]> and never checks Array.isArray. It counts with entries.value?.length, which is the string's length, and v-for walks over the characters, so plant_name, entry_on and body are all undefined. The 'Could not load the journal.' alert only shows when loadError is set.",
+  "severity": "low",
+  "wallMs": 37204
+}

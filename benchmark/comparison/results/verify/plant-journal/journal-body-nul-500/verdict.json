@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-body-nul-500",
+  "sentence": "POST or PUT /api/journal with a body starting with a NUL character returns 500 because SQLite length() fails the CHECK constraint and the IntegrityError is unhandled.",
+  "verdict": "confirmed",
+  "evidence": "Logged in as the demo user through the API. POST /api/journal {\"entry_on\":\"2025-01-01\",\"body\":\"\\u0000x\",\"plant_id\":1} returned 'Internal Server Error' [500]. PUT /api/journal/5 with body \"\\u0000abc\" also returned 500. Control cases: 'nul\\u0000x' and 'ok' both returned 201. Code check: JournalEntryIn.body only has min_length=1/max_length=500, so Pydantic accepts the value. db.py has CHECK (length(body) BETWEEN 1 AND 500), and SQLite's length() on TEXT stops at the first NUL, so it returns 0 and the INSERT/UPDATE fails. routers/journal.py does not catch sqlite3.IntegrityError, so the client gets an unhandled 500 instead of a 4xx validation error. I deleted the test entries afterwards.",
+  "severity": "low",
+  "wallMs": 38967
+}

@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-empty-months-omitted/scratch.
+
+The reported problem: On /stats, the weight-by-month table only has columns for months with harvests, so empty months in the chosen range are silently skipped; triggered by choosing a range that includes months without harvests.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Months with no harvests are left out of the per-month table",
+  "where": "/stats table; GET /api/stats/harvests",
+  "steps": "Open /stats with the default range (Jan–Dec 2026).",
+  "expected": "One column per month in the chosen range, showing – or 0 for empty months.",
+  "actual": "Only months that have harvests appear (Jun, Jul, Aug, Sep 2026), so gaps such as an empty month in between disappear silently and the table doesn't show the range the user picked.",
+  "evidence": "API response months: [2026-06, 2026-07, 2026-08, 2026-09] for range 2026-01-01..2026-12-31."
+ },
+ {
+  "title": "Months without harvests are left out of the per-month table",
+  "where": "/stats table, GET /api/stats/harvests",
+  "steps": "Use the default range (this year), or 0001-01-01 to 9999-12-31.",
+  "expected": "One column per calendar month in the chosen range (with '–' or 0 for empty months), so the table really shows weight per month for the range.",
+  "actual": "Only months with harvests become columns: Jun, Jul, Aug, Sept 2026 for a Jan–Dec range. A wide range jumps straight from Aug 2025 to Jun 2026 with no columns in between.",
+  "evidence": "API months: [2025-08, 2026-06, 2026-07, ...]; stats.py builds months from the result rows only."
+ },
+ {
+  "title": "Months with no harvests are left out of the per-month table",
+  "where": "/stats, GET /api/stats/harvests",
+  "steps": "Open /stats with the default range (this year), or with from=2025-01-01&to=2026-12-31.",
+  "expected": "One column per month of the chosen range (blank or 0 where nothing was harvested), so the table covers the range.",
+  "actual": "Only months that have harvests appear. The default range shows Jun–Sep 2026 only, and the two-year range jumps straight from Aug 2025 to Jun 2026.",
+  "evidence": "The API returns months [2025-08, 2026-06, 2026-07, 2026-08, 2026-09] for 2025-01-01..2026-12-31. The rendered table header is 'Jun 2026 Jul 2026 Aug 2026 Sept 2026'."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-empty-months-omitted/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

@@ -1,0 +1,19 @@
+{
+  "findings": [
+    {
+      "title": "Malformed or incomplete stats response crashes the page and leaves the previous range's data under a permanent 'Loading stats…'",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe order-mobile, expectation bad-response-shows-error-not-stale-data",
+      "expected": "When the stats response is unusable (e.g. an empty object or invalid JSON), the page shows an error such as 'Could not load harvest stats.' and no uncaught error.",
+      "actual": "An uncaught TypeError \"Cannot read properties of undefined (reading 'length')\" (from stats.plants.length), 'Loading stats…' stays on screen, and the Best plants list and table still show the old 1 Jan-31 Dec 2026 data while From reads 2026-07-01. No error is shown.",
+      "evidence": "{\"alerts\":[\"Loading stats…\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Supercalifragilisticexpialidociouscourgettevarietynamexxxxxxxxxxxxxxxxxxxxxxxxxx\",\"5 kg · O'Brien \\\"x\\\" <b>x</b> 🍅\",\"View\",\"Supercalifragilisticexpialidociouscourgettevarietynamexxxxxxxxxxxxxxxxxxxxxxxxxx\",\"NO. 2\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 3\",\"Tomato\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\"]} | {\"alerts\":[\"Loading stats…\"],\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Supercalifragilisticexpialidociouscourgettevarietynamexxxxxxxxxxxxxxxxxxxxxxxxxx\",\"5 kg · O'Brien \\\"x\\\" <b>x</b> 🍅\",\"View\",\"Supercalifragilisticexpialidociouscourgettevarietynamexxxxxxxxxxxxxxxxxxxxxxxxxx\",\"NO. 2\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 3\",\"Tomato\"],\"pageErrors\":[\"Cannot read properties of undefined (reading 'length')\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-181032-hunt-0972",
+        "probe": "order-mobile",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

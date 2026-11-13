@@ -1,0 +1,35 @@
+diff --git a/frontend/app/pages/stats.vue b/frontend/app/pages/stats.vue
+index c817eb5..057a781 100644
+--- a/frontend/app/pages/stats.vue
++++ b/frontend/app/pages/stats.vue
+@@ -24,7 +24,7 @@ const query = computed(() => {
+   return params
+ })
+ 
+-const { data: stats, error: statsError, status } = await useApiFetch<HarvestStats>('/stats/harvests', { query })
++const { data: stats, status } = await useApiFetch<HarvestStats>('/stats/harvests', { query })
+ 
+ watch([dateFrom, dateTo], ([from, to]) => {
+   const next: Record<string, string> = {}
+@@ -76,11 +76,7 @@ function resetRange(): void {
+       <span v-else-if="stats">{{ rangeText }}</span>
+     </p>
+ 
+-    <AlertMessage v-if="statsError">
+-      {{ apiErrorMessage(statsError, 'Could not load harvest stats.') }}
+-    </AlertMessage>
+-
+-    <template v-else-if="stats && stats.plants.length">
++    <template v-if="stats && stats.plants.length">
+       <section aria-labelledby="top-heading" class="section">
+         <h2 id="top-heading">Best plants</h2>
+         <ol class="stats">
+@@ -143,7 +139,7 @@ function resetRange(): void {
+     </template>
+ 
+     <EmptyState
+-      v-else-if="stats"
++      v-else-if="status !== 'pending'"
+       title="No harvests in this range"
+       message="Pick a different date range, or log a harvest to see it here."
+     >

@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "malformed-response-crash",
+  "sentence": "On /stats, a 200 response with a malformed, non-JSON, empty or null-field body throws an uncaught TypeError, leaving the page stuck on 'Loading stats…' over old data (or not rendering at all on client navigation); triggered by mocking /api/stats/harvests with such a body and changing a date or navigating to Stats.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user. (1) On the dashboard I routed /api/stats/harvests to return 200 {\"plants\":null} and clicked the nav link 'Stats'. The URL changed to /stats, but #main still showed the Dashboard content, and an 'Error details' dialog appeared with 'TypeError Cannot read properties of null (reading 'length')' (also caught as a pageerror). The Stats page never rendered. (2) I loaded /stats normally, then routed the endpoint to return 200 with months:[{month:null}], plants:[{monthly_grams:null}] and top_plants:null, and set From to 2026-07-01. The URL became /stats?from=2026-07-01. A pageerror and an error dialog showed 'Cannot read properties of null (reading 'slice')'. The page stayed on 'Loading stats…' while still showing the old 1 Jan–31 Dec 2026 table and best plants (Courgette 1.2 kg and so on) under the new range. Cause in code: stats.vue uses the useApiFetch data directly with no shape checks (stats.plants.length, formatMonth(month.month), and so on), so the 'Could not load harvest stats.' AlertMessage never appears.",
+  "severity": "medium",
+  "wallMs": 59511
+}

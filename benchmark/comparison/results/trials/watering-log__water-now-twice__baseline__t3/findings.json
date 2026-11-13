@@ -1,0 +1,114 @@
+{
+  "findings": [
+    {
+      "title": "\"Water now\" is never disabled and has no idempotency: a double click records two waterings",
+      "where": "Beds page \"Water now\" button / POST /api/waterings",
+      "steps": "On /beds, double-click \"Water now\" on a bed (or retry after a slow response). Equivalent API check: send two POST /api/waterings {\"bed_id\":1} at the same time.",
+      "expected": "One watering is recorded.",
+      "actual": "Two waterings are recorded. The button has no :disabled binding, wateringBedId only changes its label, and the server has no dedupe or idempotency key.",
+      "evidence": "Two concurrent POSTs returned id 5 and id 6, both North bed with watered_at 2026-11-12 10:59:39, and both appear in GET /api/waterings. In beds.vue the Water now button has only @click=\"waterNow(bed)\".",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Watering saved but reported as failed when the follow-up beds refresh fails, so the user retries and creates a duplicate",
+      "where": "Beds page recordWatering()",
+      "steps": "Click Water now (or Save watering) while the POST succeeds but the GET /beds refresh fails or times out.",
+      "expected": "The page says the watering was recorded and offers a way to reload the list.",
+      "actual": "The POST and refresh() share one try block, so a refresh failure shows 'Could not record the watering.' and keeps the past form open. Saving again records a second watering.",
+      "evidence": "beds.vue: try { await api('/waterings', POST); await refresh(); return true } catch { waterError = 'Could not record the watering.' }",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "New requests have no timeout; a hung server leaves 'Watering…'/'Saving…' and 'Loading waterings…' on screen indefinitely",
+      "where": "Beds page, Waterings page, Dashboard",
+      "steps": "Make the API hang (accept the connection but never respond), then click Water now or open /waterings.",
+      "expected": "The request fails after 10 seconds and shows an error with a retry.",
+      "actual": "useApiClient and useApiFetch set no timeout, so the request waits until the browser gives up.",
+      "evidence": "composables/useApi.ts: $fetch.create({...}) and useFetch(...) set no timeout option.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Recent waterings on the dashboard and the Waterings page have no retry when loading fails",
+      "where": "Dashboard 'Recent waterings' section; /waterings",
+      "steps": "Open the dashboard or /waterings while GET /api/waterings fails, then bring the server back.",
+      "expected": "The error state has a Retry button that reloads the data without a page reload.",
+      "actual": "Only an AlertMessage is shown. The dashboard does not even keep the refresh function (const { data, error } = wateringsResult), and /waterings has no retry button. The only way to recover is a full page reload.",
+      "evidence": "index.vue destructures only data and error for wateringsResult; waterings.vue renders <AlertMessage v-if=\"wateringsError\"> with no action.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "When the beds list fails to load, the Waterings bed filter silently shows only 'All beds'",
+      "where": "/waterings bed filter",
+      "steps": "Open /waterings while GET /api/beds fails.",
+      "expected": "An error explains that the beds could not be loaded and offers a retry.",
+      "actual": "The error from bedsResult is ignored and the select renders `beds ?? []`, i.e. an empty choice list with no explanation. A ?bed= deep link shows a blank selected option.",
+      "evidence": "waterings.vue: const { data: beds } = bedsResult; v-for=\"bed in beds ?? []\".",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Stale or failed list shown together with an error, and a late filter response can overwrite a newer one",
+      "where": "/waterings filter",
+      "steps": "Change the bed filter quickly between beds on a slow network, or change it while the request fails.",
+      "expected": "The newest filter's results are shown, and an error does not leave the previous bed's rows looking current.",
+      "actual": "If the refetch fails, the error shows above the previous rows, which still render (v-if on waterings, not on the error). Rows for another bed then appear under the new filter.",
+      "evidence": "waterings.vue renders the table whenever waterings.length, independent of wateringsError.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Huge bed_id or watering id returns 500 instead of 4xx",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":99999999999999999999}; GET /api/waterings?bed_id=99999999999999999999; DELETE /api/waterings/99999999999999999999",
+      "expected": "422 or 404",
+      "actual": "500 Internal Server Error (SQLite integer overflow)",
+      "evidence": "All three requests returned HTTP 500 'Internal Server Error'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Body containing a raw NaN litres value causes a 500",
+      "where": "POST /api/waterings",
+      "steps": "POST raw JSON {\"bed_id\":1,\"litres\":NaN}",
+      "expected": "422 with a reason",
+      "actual": "500 Internal Server Error",
+      "evidence": "curl returned 'Internal Server Error 500'. Other endpoints behave the same, so the app-wide handler is the root cause, but the new endpoint inherits it.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Tiny litre amounts are accepted but displayed as '0 L'; absurd dates such as year 0001 are accepted",
+      "where": "Beds past-watering form, POST /api/waterings, watering lists",
+      "steps": "Record a past watering with litres 0.0000001, or with watered_on 0001-01-01.",
+      "expected": "Either refuse the value with a reason, or show it as entered.",
+      "actual": "Server returns 201. formatLitres rounds to 2 decimals, so the amount shows as '0 L'. Year 0001 is stored and becomes the oldest entry.",
+      "evidence": "POST litres 1e-7 -> 201 and stored litres 1e-07; POST watered_on 0001-01-01 -> 201 (test rows deleted afterwards).",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Future-date check uses the server's date, the date picker uses the browser's, and 'Water now' mixes server-local date with UTC time",
+      "where": "POST /api/waterings, beds past-watering form",
+      "steps": "Use the app from a time zone ahead of the server's and record a past watering for today (the default value), shortly after local midnight.",
+      "expected": "Today's date is accepted, and dates sort the same way as the times shown.",
+      "actual": "The server's date.today() rejects it with 'Watering date cannot be in the future.' 'Water now' stores watered_on as the server-local date and watered_at in UTC, so the stored day can differ from the displayed day and ordering against past entries can be wrong.",
+      "evidence": "schemas.py not_in_future uses date.today(); waterings.py uses now.astimezone().date() for watered_on but UTC for watered_at; the frontend default is todayIso() (browser local).",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Water now button shows no busy state while the past-watering form for the same bed is open",
+      "where": "Beds page",
+      "steps": "Open 'Record past watering' on a bed, then click 'Water now' on that bed.",
+      "expected": "The button shows 'Watering…' and is disabled.",
+      "actual": "The label condition `pastFormBedId !== bed.id` keeps it reading 'Water now', so repeated clicks each record another watering.",
+      "evidence": "beds.vue label: wateringBedId === bed.id && pastFormBedId !== bed.id ? 'Watering…' : 'Water now'",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

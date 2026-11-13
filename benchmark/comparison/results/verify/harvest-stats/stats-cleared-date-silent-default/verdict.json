@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-cleared-date-silent-default",
+  "sentence": "Clearing the From or To field on /stats drops it from the query and the server silently uses the current-year bound, so the blank input disagrees with the range used and can yield a confusing 'From must be on or before To' error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo user, opened /stats (initial: '5 harvests from 1 Jan 2026 to 31 Dec 2026'). Cleared the From input with Playwright fill(''): the input stayed blank, the request went out as GET /api/stats/harvests?to=2026-12-31 with no 'from', the result text still said 'from 1 Jan 2026 to 31 Dec 2026', and the 'This year' reset button appeared even though the data shown was this year's. Then I set To to 2025-12-31 with From still blank: the request was ?to=2025-12-31, the page showed the error 'The From date must be on or before the To date.' while From looked empty, and no results appeared. Code matches: stats.vue's query computed leaves out empty values, and stats.py replaces a missing from/to with year_bounds(today.year). The visible inputs disagree with the range the server actually uses, and the user gets a misleading validation error.",
+  "severity": "low",
+  "wallMs": 44095
+}

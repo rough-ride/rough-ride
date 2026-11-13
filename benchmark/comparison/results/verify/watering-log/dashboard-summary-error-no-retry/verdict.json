@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "dashboard-summary-error-no-retry",
+  "sentence": "On /, when GET /api/dashboard/summary fails (500, 400, reset, 429), there is no way to retry without a page reload.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo user, routed GET **/api/dashboard/summary to 500 {\"detail\":\"boom\"}, navigated client-side /beds -> Dashboard. The Summary region showed only an alert 'boom' with no retry button or link (AlertMessage has just a slot; index.vue renders only the message when summaryError is set). After removing the route the alert stayed, with no refetch on focus or anything else; the only ways to recover are reloading, navigating away and back, or toggling a task (completeTask calls refreshSummary as a side effect). Grep finds no retry control anywhere in the app, and the summary error block is unchanged from main, so this is an existing gap that the change kept (the new Recent waterings section also has no retry). It is real but low impact: the other sections still render and navigating away and back recovers.",
+  "severity": "low",
+  "wallMs": 81006
+}

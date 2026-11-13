@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Double-clicking \"Water now\" records two waterings",
+      "where": "/beds, Water now button; POST /api/waterings",
+      "steps": "On /beds, slow POST /api/waterings by 800 ms, then click \"Water now\" for North bed twice quickly.",
+      "expected": "One watering is recorded. The button is disabled while saving and/or the server deduplicates (for example with an idempotency key).",
+      "actual": "Two POST requests go out and two waterings are created about 2 s apart. The button is never disabled; only its label changes to \"Watering…\". recordWatering has no in-flight guard, and the server has no idempotency key.",
+      "evidence": "Playwright counted posts=2 and isDisabled()=false right after the first click. The API list then showed ids 5 and 6, both North bed, at 09:44:13 and 09:44:15.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Watering requests have no timeout; a hung POST leaves \"Watering…\" forever",
+      "where": "/beds Water now / Save watering",
+      "steps": "Make POST /api/waterings hang (route with no response) and click \"Water now\" for Shade corner. Wait 12 s.",
+      "expected": "After 10 s the request fails and the page shows an error with a way to retry.",
+      "actual": "After 12 s the button still says \"Watering…\" and no error appears. useApiClient sets no timeout, so the same applies to GET /api/waterings and DELETE.",
+      "evidence": "Button texts after 12 s included \"Watering…\\nShade corner\" and no role=alert was present.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page and dashboard error states have no retry",
+      "where": "/waterings and dashboard 'Recent waterings' section",
+      "steps": "Navigate inside the app (client side) to the dashboard and then to Waterings while GET /api/waterings returns 500.",
+      "expected": "An error message plus a Retry button that refetches without reloading the page.",
+      "actual": "Only 'Could not load recent waterings.' / 'Could not load waterings.' is shown, with no button. The dashboard does not even destructure refresh for waterings. The only way to recover is a full reload.",
+      "evidence": "Buttons inside the dashboard waterings section: []. Buttons in main on /waterings: [].",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Beds fetch failure on the Waterings page is silent; the filter just shows 'All beds'",
+      "where": "/waterings bed filter",
+      "steps": "Navigate client side to /waterings while GET /api/beds returns 500.",
+      "expected": "A visible message that beds could not be loaded, with a retry.",
+      "actual": "The bed select silently contains only 'All beds'. bedsResult.error is never read.",
+      "evidence": "The page text showed 'Bed / All beds' with no alert about beds.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Large bed_id or watering id causes a 500 instead of a 4xx",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":99999999999999999999}; GET /api/waterings?bed_id=99999999999999999999; DELETE /api/waterings/99999999999999999999.",
+      "expected": "422 or 404.",
+      "actual": "500 Internal Server Error, because SQLite overflows on integers larger than 64 bits. No upper bound is validated.",
+      "evidence": "curl returned 'Internal Server Error 500' for all three requests.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Litres value 1e400 (infinity) causes a 500",
+      "where": "POST /api/waterings",
+      "steps": "POST {\"bed_id\":1,\"litres\":1e400}",
+      "expected": "422 with a validation message.",
+      "actual": "500 Internal Server Error.",
+      "evidence": "curl returned 'Internal Server Error 500'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Tiny litre amounts are accepted but shown as '0 L'",
+      "where": "/beds Record past watering form; /waterings and dashboard Amount column",
+      "steps": "Record a past watering with litres 0.0001. The form has novalidate, and the JS only checks > 0 and ignores min=0.1.",
+      "expected": "The amount is refused with a reason (for example a minimum of 0.1 L), or shown accurately.",
+      "actual": "It is saved and displayed as '0 L', because formatLitres uses maximumFractionDigits 2.",
+      "evidence": "The watering list showed a row '12 Nov 2026, 10:43  North bed  0 L' for a 0.0001 L entry. It was created through the API; the frontend validation lets the same value through.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Absurd past dates such as year 0001 are accepted",
+      "where": "POST /api/waterings, Record past watering form",
+      "steps": "POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\",\"litres\":1}",
+      "expected": "Implausible dates are refused with a visible reason.",
+      "actual": "201 Created. The entry then sorts as the oldest watering, and the date input has no min.",
+      "evidence": "The response was {\"id\":3,...,\"watered_on\":\"0001-01-01\"} with status 201.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid ?bed= in the URL shows a raw validation message and an empty-looking filter",
+      "where": "/waterings?bed=abc",
+      "steps": "Open /waterings?bed=abc.",
+      "expected": "The invalid filter is ignored or reset, or a friendly message is shown.",
+      "actual": "The page shows 'Query.bed id: Input should be a valid integer, unable to parse string as an integer' while the select matches no option.",
+      "evidence": "The page text included that message.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

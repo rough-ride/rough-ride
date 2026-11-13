@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-raw-validation-message-for-invalid-url-date",
+  "sentence": "Opening /stats with an impossible but well-formed date such as ?from=2026-02-30 shows a raw 'Query.from: Input should be a valid date...' message and a blank From field, because queryDate() only checks the regex.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user in Playwright and opened http://localhost:3792/stats?from=2026-02-30. inputValue('#stats-from') was '' (the browser rejects the impossible date). The page showed only the raw API error 'Query.from: Input should be a valid date or datetime, day value is outside expected range', with no table. Code: frontend/app/pages/stats.vue:13-14 queryDate() only checks /^\\d{4}-\\d{2}-\\d{2}$/, so the bad value is sent to the API, which returns a 422 that is shown with its technical loc prefix. The user sees an empty From field next to a technical error, and gets no fallback to the default.",
+  "severity": "low",
+  "wallMs": 34351
+}

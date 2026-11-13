@@ -1,0 +1,72 @@
+{
+  "id": "harvest-stats__clean__baseline__t2",
+  "feature": "harvest-stats",
+  "bug": "clean",
+  "arm": "baseline",
+  "trial": 2,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T18:15:25.370Z",
+  "materializeMs": 4469,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__clean__baseline__t2/variant/hw3sbbw4/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "b140eb9e-0aad-413a-b4f3-08b189ef3292",
+  "loadBefore": [
+    3.7490234375,
+    4.8837890625,
+    7.0078125
+  ],
+  "loadAfter": [
+    3.63818359375,
+    4.5244140625,
+    6.66259765625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 84340,
+  "reportedCostUsd": 0.371992,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 18,
+      "outputTokens": 5612,
+      "cacheReadInputTokens": 248320,
+      "cacheCreationInputTokens": 26252,
+      "webSearchRequests": 0,
+      "costUSD": 0.371992,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2094,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 26252,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 9,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found four problems with the new Stats page. Only one I reproduced in the running app; two are suspected from reading the code, and the fourth is a design gap. The findings are written to `out/findings.json`.\n\n| # | Finding | Status | Severity |\n|---|---|---|---|\n| 1 | **No retry when loading fails.** The page shows the error text but no Retry button. After the server comes back, the only ways to try again are changing a date or reloading. The page's code never uses the refetch function it gets from its data request. | suspected | medium |\n| 2 | **A cleared date field quietly falls back to the default.** If From is cleared, the server uses 1 January of this year, so with To set to 2025-06-01 the page says \"The From date must be on or before the To date\" while From looks empty. When there's no error, the table can cover a different range from what the fields show. | observed (API: `?to=2025-06-01` and `?from=2027-02-01` both return that error) | medium |\n| 3 | **No 10-second timeout.** Neither the page nor the shared request code sets one, so a hung server leaves \"Loading stats…\" on screen forever. | suspected | medium |\n| 4 | **Months with no harvests are left out of the table.** Only months that have harvests get a column. For this year that's June to September 2026, so gaps in the chosen range don't show. | observed | low |\n\nThese held up in testing:\n- **Bad input:** the server answers bad dates, an empty parameter and From after To with a 4xx, never a 5xx.\n- **Extreme dates:** years 0001 to 9999 return results without errors.\n- **Late answers:** I didn't see one replace newer results; by default the page's data loader cancels the previous request when the dates change.\n- **Narrow screens:** the date filters stack at 375 px. A long plant name in the table scrolls inside the table, and in the best-plant cards it's cut off with \"…\".\n- **Signed-out access:** opening `/stats` while signed out redirects to sign-in.\n- **Dashboard:** its new top-plant card returns correct data.\n\nI had no browser, so everything on the page itself was checked through the API, the server-rendered HTML and the code.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 18,
+    "output": 5612,
+    "cacheRead": 248320,
+    "cacheWrite": 26252,
+    "requests": 9,
+    "toolCalls": {
+      "Bash": 8
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 4,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T18:17:01.830Z"
+}

@@ -1,0 +1,114 @@
+{
+  "findings": [
+    {
+      "title": "Watering requests have no timeout: a hung 'Water now' leaves the button disabled forever with no message",
+      "where": "Beds page – Water now / Save watering (POST /api/waterings); also GET /api/waterings on dashboard and Waterings page",
+      "steps": "Open /beds, make POST /api/waterings hang (never respond), click 'Water now'.",
+      "expected": "The request fails after 10 s, an error shows on the bed, and the button is enabled again.",
+      "actual": "After 15+ s the button is still disabled. No error or timeout appears. useApiClient/useApiFetch set no timeout.",
+      "evidence": "Playwright: after 15 s, isDisabled() returned true for the first 'Water now' button.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Double click on 'Water now' records two waterings",
+      "where": "Beds page – Water now (POST /api/waterings)",
+      "steps": "On /beds, click 'Water now' twice quickly (two clicks in the same tick, before Vue re-renders the disabled state). A retry after a timeout would also duplicate, because there is no idempotency key.",
+      "expected": "One watering is recorded.",
+      "actual": "Two waterings are recorded.",
+      "evidence": "GET /api/waterings count went from 3 to 5 after one double click.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page error state has no retry; the only way to refetch is to change the filter or reload",
+      "where": "/waterings",
+      "steps": "Make GET /api/waterings return 500 (non-JSON body), open /waterings directly or through the nav link.",
+      "expected": "An error message with a Retry button that refetches once the server is back.",
+      "actual": "'Could not load waterings.' shows with no retry button. The main area has no buttons. Re-selecting the same filter value does not refetch.",
+      "evidence": "main buttons list was [] while the error was shown.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Dashboard 'Recent waterings' error state has no retry",
+      "where": "Dashboard (/) – Recent waterings section",
+      "steps": "Make GET /api/waterings fail, then navigate to the Dashboard through the in-app link.",
+      "expected": "Error with a retry control.",
+      "actual": "Only 'Could not load recent waterings.' shows. There is no retry button (the refresh function is not even destructured), so the section can only be recovered by reloading the page.",
+      "evidence": "Section text: 'Recent waterings / All waterings / Could not load recent waterings.'; buttons in the section: [].",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Bed filter silently shows only 'All beds' when the beds request fails",
+      "where": "/waterings – Bed filter",
+      "steps": "Make GET /api/beds return 500, then open /waterings via the nav link.",
+      "expected": "An error saying the bed list could not be loaded, with a retry.",
+      "actual": "The select has only 'All beds' and no error is shown, so the filter by bed is unusable without explanation. A ?bed=N link shows a blank selection.",
+      "evidence": "options: ['All beds']; no alert on the page. The bedsResult error is never read.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Record-past-watering form is unusable at 375 px: date and litres inputs squashed to ~30 px",
+      "where": "/beds – Record past watering form",
+      "steps": "Set the viewport to 375x800, open /beds, click 'Record past watering'.",
+      "expected": "The fields stack and are full width and usable.",
+      "actual": ".water-form keeps grid-template-columns 1fr 1fr auto with no mobile breakpoint. The date and litres inputs are each about 30 px wide, so you can't see the value you typed.",
+      "evidence": "Screenshot scratch/playwright/form375.png shows tiny Date/Litres boxes next to the Save/Cancel buttons.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings table overflows horizontally at 375 px with a long bed name",
+      "where": "/waterings (and dashboard Recent waterings table)",
+      "steps": "Create a bed with a 60-character name without spaces, record a watering for it, and view /waterings at 375 px.",
+      "expected": "No sideways scrolling; long names wrap.",
+      "actual": "The page scrollWidth is 997 px. The bed-name cell doesn't wrap and the table has no overflow handling.",
+      "evidence": "document.documentElement.scrollWidth = 997 at a 375 px viewport.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Today's date refused as 'in the future' for users ahead of the server's time zone; 'Water now' dates use the server's zone",
+      "where": "/beds – Record past watering; POST /api/waterings",
+      "steps": "Use a browser in a time zone ahead of the server (e.g. Pacific/Kiritimati), open Record past watering (defaults to the browser's today), enter 3 litres and save.",
+      "expected": "Today's date is accepted.",
+      "actual": "Error 'Watered on: Watering date cannot be in the future.' The server checks against date.today() in its own zone, and 'Water now' stores watered_on as the server-local date but watered_at in UTC. So the date and the displayed time can disagree, and ordering against past entries (browser dates) is inconsistent around midnight.",
+      "evidence": "Default date 2026-11-13 in the Kiritimati context; alert text shown above. The form kept the values.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Server answers 500 for out-of-range numbers on the new endpoints",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":1,\"litres\":1e309}; POST {\"bed_id\":99999999999999999999}; GET /api/waterings?bed_id=99999999999999999999; DELETE /api/waterings/99999999999999999999",
+      "expected": "4xx validation error.",
+      "actual": "500 Internal Server Error (plain-text body) for all four.",
+      "evidence": "curl: 'Internal Server Error 500' for each request.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Tiny amounts and year-1 dates accepted and shown misleadingly",
+      "where": "POST /api/waterings, /beds form, /waterings list",
+      "steps": "Record litres 0.001 (the client allows any value > 0, and the server allows gt=0) or watered_on 0001-01-01.",
+      "expected": "Refused with a reason (e.g. minimum 0.1 L, a plausible date range) or shown accurately.",
+      "actual": "Accepted. The amount shows as '0 L', and the date shows as '1 Jan 1'.",
+      "evidence": "Waterings list rows: '12 Nov 2026, 17:57 North bed 0 L' (litres 1e-7) and '1 Jan 1 North bed 1 L'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "'Water now' shows no progress label while the past-watering form is open, and concurrent waterings on two beds share one busy/error state",
+      "where": "/beds",
+      "steps": "Open 'Record past watering' on a bed, then click 'Water now' on it with a slow server. Or click 'Water now' on bed A then bed B while A is pending.",
+      "expected": "'Watering…' feedback, and independent state per bed.",
+      "actual": "The button is disabled but still reads 'Water now'. With two beds, wateringBedId/waterError are single refs: B's request re-enables A's button while A is still pending, and B clears A's error.",
+      "evidence": "Hang test returned button text 'Water now' and disabled=true with the form open; the shared refs are in the beds.vue code.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

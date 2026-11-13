@@ -1,0 +1,184 @@
+{
+  "findings": [
+    {
+      "title": "button \"Save plant\" stays busy after POST /api/plants fails with 500",
+      "where": "/plants/new",
+      "steps": "In the browser: /plants/new | 500!, reset! on POST /api/plants #1; double-submit on POST /api/plants #1; 5 ... | fails: settles | page showed a record from add-journal-entry/POST /api/journal #1/reset!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "shown",
+        "repro": "r01"
+      }
+    },
+    {
+      "title": "button \"Add entry\" stays busy after POST /api/journal fails with 500",
+      "where": "/plants/{}",
+      "steps": "In the browser: /plants/{} | 500!, reset! on POST /api/journal #1; double-submit on POST /api/journal #1; ... | fails: settles, values-survive, retry-recovers | page showed a record from add-journal-entry/GET /api/journal #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | values-survive: label \"Entry\" held \"Shoots lri54hrh\", then \"\" after the failed request | retry-recovers: step 9 (expect text \"Shoots ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 6krwcxkx) after 10 s | values-survive: label \"Entry\" held \"Shoots 13aguvqg\", then \"\" after the failed request | retry-recovers: step 9 (expect text \"Shoots ${unique}\"): not visible after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | values-survive: label \"Entry\" held \"Shoots lri54hrh\", then \"\" after the failed request | retry-recovers: step 9 (expect text \"Shoots ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 6krwcxkx) after 10 s | values-survive: label \"Entry\" held \"Shoots 13aguvqg\", then \"\" after the failed request | retry-recovers: step 9 (expect text \"Shoots ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "shown",
+        "repro": "r02"
+      }
+    },
+    {
+      "title": "button \"Save plant\" stays busy after GET /api/journal fails with 500",
+      "where": "/plants/{}",
+      "steps": "In the browser: /plants/{} | 500!, 400! on GET /api/journal #1 | fails: settles, retry-recovers | page showed a record from add-journal-entry/POST /api/journal #1/reset!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10 s | retry-recovers: step 7 (fill label \"Entry\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10 s | retry-recovers: step 7 (fill label \"Entry\"): not found after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10 s | retry-recovers: step 7 (fill label \"Entry\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10 s | retry-recovers: step 7 (fill label \"Entry\"): not found after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "shown",
+        "repro": "r07"
+      }
+    },
+    {
+      "title": "button \"Save plant\" stays busy after GET /api/plants/{plant_id} fails with 500",
+      "where": "/plants/{}",
+      "steps": "In the browser: /plants/{} | 500! on GET /api/plants/{plant_id} #1 | fails: settles, retry-recovers",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | retry-recovers: no retry path without a reload",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed gwzu1jqf) after 10.1 s | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "shown",
+        "repro": "r08"
+      }
+    },
+    {
+      "title": "button \"Save entry\" stays busy after PUT /api/journal/{entry_id} fails with 500",
+      "where": "/plants/{}",
+      "steps": "In the browser: /plants/{} | 500!, reset! on PUT /api/journal/{entry_id} #1 | fails: settles | page showed a record from add-journal-entry/POST /api/journal #1/reset!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "unchecked",
+        "repro": "r18"
+      }
+    },
+    {
+      "title": "link \"Journal\" stays busy after GET /api/journal fails with 500",
+      "where": "/journal",
+      "steps": "In the browser: /journal | 500!, empty-200! on GET /api/journal #3 | fails: settles, retry-recovers | page showed a record from add-journal-entry/POST /api/journal #1/reset!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10 s | retry-recovers: no retry path without a reload | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "unchecked",
+        "repro": "r20"
+      }
+    },
+    {
+      "title": "label \"Search\" stays busy after GET /api/journal fails with 500",
+      "where": "/journal",
+      "steps": "In the browser: /journal | 500!, empty-200! on GET /api/journal #4 | fails: settles, retry-recovers | page showed a record from add-journal-entry/POST /api/journal #1/reset!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | retry-recovers: step 12 (expect text \"Shoots ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | retry-recovers: step 12 (expect text \"Shoots ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "unchecked",
+        "repro": "r21"
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after POST /api/beds fails with 500",
+      "where": "/beds",
+      "steps": "In the browser: /beds | 500!, reset! on POST /api/beds #1; double-submit on POST /api/beds #1 | fails: settles | page showed a record from add-journal-entry/GET /api/journal #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 6krwcxkx) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 6krwcxkx) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 6krwcxkx) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 6krwcxkx) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "unchecked",
+        "repro": "r12"
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after GET /api/beds fails with 500",
+      "where": "/beds",
+      "steps": "In the browser: /beds | 500!, empty-200! on GET /api/beds #1 | fails: settles, values-survive, retry-recovers | page showed a record from add-journal-entry/GET /api/journal #1/500!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 6krwcxkx) after 10 s | values-survive: label \"Name\" held \"Bed 20imlck8\", then \"\" after the failed request | retry-recovers: step 4 (click link \"Add plant to Bed ${unique}\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 6krwcxkx) after 10 s | values-survive: label \"Name\" held \"Bed 20imlck8\", then \"\" after the failed request | retry-recovers: step 4 (click link \"Add plant to Bed ${unique}\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "unchecked",
+        "repro": "r14"
+      }
+    },
+    {
+      "title": "viewport 375 stays busy after the 375px viewport",
+      "where": "/beds",
+      "steps": "In the browser: /beds | viewport 375 | fails: settles | page showed a record from add-journal-entry/POST /api/journal #1/reset!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "unchecked",
+        "repro": "r17"
+      }
+    },
+    {
+      "title": "link \"Basil ${unique}\" stays busy after GET /api/beds fails with 500",
+      "where": "/plants/{}",
+      "steps": "In the browser: /plants/{} | 500!, empty-200! on GET /api/beds #2 | fails: settles, retry-recovers | page showed a record from add-journal-entry/POST /api/journal #1/reset!",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | retry-recovers: step 12 (expect text \"Shoots ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s | retry-recovers: step 12 (expect text \"Shoots ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 13aguvqg) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "unchecked",
+        "repro": "r25"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/plants fails with 500",
+      "where": "/plants",
+      "steps": "In the browser: /plants | 500! on GET /api/plants #1 | fails: retry-recovers | page showed a record from add-journal-entry/POST /api/journal #1/reset!",
+      "expected": "",
+      "actual": "retry-recovers: step 12 (expect text \"Basil ${unique}\"): not visible after 10 s",
+      "evidence": "retry-recovers: step 12 (expect text \"Basil ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-114227-plan-pxmz",
+        "state": "unchecked",
+        "repro": "r27"
+      }
+    }
+  ]
+}

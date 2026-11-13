@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Late stats response overwrites newer results for the current date range",
+      "where": "/stats (frontend/app/pages/stats.vue loadStats)",
+      "steps": "On /stats, make the request for from=2026-07-01 slow (3 s). Set From to 2026-07-01, then quickly to 2026-09-01.",
+      "expected": "The page shows results for 1 Sep 2026 to 31 Dec 2026, matching the From field.",
+      "actual": "The 1 Sep results appear briefly. Then the slow response arrives and replaces them, so the page shows the 1 Jul range while the From field still says 2026-09-01.",
+      "evidence": "results-count changed from '1 harvest from 1 Sept 2026 to 31 Dec 2026' to '4 harvests from 1 Jul 2026 to 31 Dec 2026'. Input value stayed 2026-09-01 and the URL had ?from=2026-09-01. Typing a year digit by digit (0002, 0020, 0060) sends a request for each partial year, so this race is easy to hit.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Stats request has no timeout: a hung request leaves 'Loading stats…' forever, with the old range's data still shown",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests never respond, then change the From date. Wait more than 13 s.",
+      "expected": "After about 10 s the request fails with a visible error and a retry option.",
+      "actual": "'Loading stats…' stays indefinitely. The old range's best plants and table stay visible under the new dates, with no error.",
+      "evidence": "After 13 s main still showed 'Loading stats…' plus the 1 Jan to 31 Dec table. useApiClient/$fetch is created without a timeout option.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats error state has no retry action",
+      "where": "/stats",
+      "steps": "Make /api/stats/harvests return 500 or 502, either by changing a date or by opening Stats from the nav.",
+      "expected": "An error message with a Retry button that refetches the same range once the server is back.",
+      "actual": "Only 'Could not load harvest stats.' is shown. The only way to try again is to change a date or reload.",
+      "evidence": "In the error state the only button in main was 'This year', and that button only appears when the range is not the default. Opening Stats via the nav with the API failing showed the message with no buttons.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Old range summary stays on screen next to the error",
+      "where": "/stats",
+      "steps": "Load /stats successfully, then make the API return 500 and change From to 2026-06-01.",
+      "expected": "Only the error is shown, or the summary is clearly marked as out of date.",
+      "actual": "'5 harvests from 1 Jan 2026 to 31 Dec 2026' stays above 'Could not load harvest stats.', even though the selected range is now 1 Jun.",
+      "evidence": "main text: 'From To This year 5 harvests from 1 Jan 2026 to 31 Dec 2026 Could not load harvest stats.'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "A blank From or To date is silently treated as the start or end of this year, giving a confusing error",
+      "where": "/stats date fields; GET /api/stats/harvests",
+      "steps": "Clear the From field and set To to 2025-06-01.",
+      "expected": "A blank date is either refused with a clear reason or treated as open-ended. The page should not say an empty field is after To.",
+      "actual": "The request omits 'from', so the server falls back to 2026-01-01 and answers 'The From date must be on or before the To date.' while From is visibly empty. Clearing a field also leaves the range text showing a date the user removed.",
+      "evidence": "URL ?to=2025-06-01. Page showed '5 harvests from 1 Jan 2026 to 31 Dec 2026' and 'The From date must be on or before the To date.'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Malformed or partial stats response renders 'undefined' and dashes instead of an error",
+      "where": "/stats",
+      "steps": "Mock /api/stats/harvests to return 200 with null fields, e.g. date_from:null, months:null, harvest_count missing, plant with null name or totals.",
+      "expected": "The response is treated as unreadable and the page shows the error state.",
+      "actual": "The page shows 'undefined harvests from – to –', an empty 'Best plants' section, and a table with a blank plant row.",
+      "evidence": "main text: 'undefined harvests from – to – Best plants Weight by plant and month – total ... PLANT TOTAL – Total –'",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-date-fields-ignore-url-changes",
+  "sentence": "On /stats the From/To fields are read from the URL only at setup, so pressing Back or clicking the Stats nav link changes the URL but leaves the old range shown.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /stats. Set From to 2026-03-01. The URL became /stats?from=2026-03-01 and the page read '5 harvests from 1 Mar 2026 to 31 Dec 2026'. Then I clicked the 'Stats' link in the main nav. The URL changed to /stats with no query, which is the default this-year range, but the From field still said 2026-03-01 and the results still read '5 harvests from 1 Mar 2026 to 31 Dec 2026'. So the URL and the page disagree. Code agrees: stats.vue sets dateFrom/dateTo from route.query only once at setup, and the only watch goes from the refs to the URL (router.replace). Nothing watches route.query, so when the URL changes while the component stays mounted, the fields are never updated. I only tested the nav-link path. Because the page uses router.replace, Back usually leaves /stats, but the same root cause applies to any in-page URL change.",
+  "severity": "medium",
+  "wallMs": 45579
+}

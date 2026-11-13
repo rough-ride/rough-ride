@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-hung-filter-stale-rows/scratch.
+
+The reported problem: On /waterings, when the request for a newly chosen bed filter hangs, the page stays on 'Loading waterings…' and keeps listing other beds' rows under the selected bed.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "A hanging waterings request leaves the page stuck loading with stale rows from other beds",
+  "where": "/waterings, GET /api/waterings?bed_id=2",
+  "steps": "Probe order-and-hang, expectation hang-not-stuck-loading",
+  "expected": "After a while, an error and a way to retry; the old rows should not be presented as the filtered results",
+  "actual": "After 13 s it still says 'Loading waterings…' and lists every bed's waterings under the 'Shade corner' filter. There is no error and no timeout",
+  "evidence": "[\"Loading waterings…\"] | [\"Loading waterings…\"]"
+ },
+ {
+  "title": "Hung filter request leaves other beds' waterings under the chosen bed filter, loading forever",
+  "where": "/waterings bed filter",
+  "steps": "Probe filter-hang, expectation hang-no-other-bed-rows-under-filter",
+  "expected": "After choosing Shade corner, only its waterings show, or a loading or timeout state replaces the old list",
+  "actual": "After 13 s the filter still says Shade corner and the page says \"Loading waterings…\", but the table still lists the North bed waterings from the unfiltered list",
+  "evidence": "{\"alerts\":[\"Loading waterings…\"],\"north\":[\"12 Nov 2026, 19:05\\tNorth bed\\t–\\tDelete\",\"10 Nov 2026\\tNorth bed\\t0 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\",\"1 Jan 1\\tNorth bed\\t1 L\\tDelete\"],\"fields\":[{\"label\":\"Bed\",\"value\":\"2\"}]} | {\"alerts\":[\"Loading waterings…\"],\"north\":[\"12 Nov 2026, 19:05\\tNorth bed\\t–\\tDelete\",\"10 Nov 2026\\tNorth bed\\t0 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\",\"1 Jan 1\\tNorth bed\\t1 L\\tDelete\"],\"fields\":[{\"label\":\"Bed\",\"value\":\"2\"}]}"
+ },
+ {
+  "title": "Hung filter request leaves the waterings page stuck on 'Loading waterings…' showing other beds' rows",
+  "where": "/waterings (GET /api/waterings?bed_id=)",
+  "steps": "Probe dash-fault, expectation hang-not-loading-forever",
+  "expected": "A request that never answers ends in a visible error or timeout, and rows for other beds are not shown under the chosen bed's filter",
+  "actual": "13 s after picking 'Shade corner' the page still says 'Loading waterings…' and still lists all four waterings, including North bed's, under the Shade corner filter. It never times out and shows no error",
+  "evidence": "[\"Loading waterings…\"] | [\"Loading waterings…\"]"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-hung-filter-stale-rows/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

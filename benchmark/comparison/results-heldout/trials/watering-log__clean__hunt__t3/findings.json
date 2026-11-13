@@ -1,0 +1,124 @@
+{
+  "findings": [
+    {
+      "title": "Waterings page crashes on an unexpected list response; navigation silently fails",
+      "where": "/waterings (GET /api/waterings)",
+      "steps": "Probe client-nav-faults, expectation waterings-empty-object-shows-error",
+      "expected": "A visible error on the Waterings page, no uncaught error",
+      "actual": "Uncaught 'waterings.value?.reduce is not a function'; the app stays on the previous page (Tasks) with no message",
+      "evidence": "{\"pe\":[\"waterings.value?.reduce is not a function\"],\"alerts\":[],\"text\":[\"Tasks\",\"Jobs to do in the garden. Tick one off when it is done.\",\"Add a task\",\"Title\",\"Due date\",\"Add task\",\"Task list\",\"Open\",\"Done\",\"All\",\"All caught up\",\"Add a task with the form.\",\"Garden Log · a journal for one garden\"]} | {\"pe\":[\"waterings.value?.reduce is not a function\"],\"alerts\":[],\"text\":[\"Tasks\",\"Jobs to do in the garden. Tick one off when it is done.\",\"Add a task\",\"Title\",\"Due date\",\"Add task\",\"Task list\",\"Open\",\"Done\",\"All\",\"All caught up\",\"Add a task with the form.\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-185742-hunt-4704",
+        "probe": "client-nav-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard shows 'No waterings yet' when the recent-waterings response is invalid",
+      "where": "/ (GET /api/waterings?limit=5)",
+      "steps": "Probe misc, expectation dashboard-bad-response-not-shown-as-empty",
+      "expected": "An error saying recent waterings could not be loaded",
+      "actual": "The empty state 'No waterings yet' is shown, so a failure looks like there is no data",
+      "evidence": "{\"text\":[\"Waterings\",\"Add sowing, watering or pruning jobs to keep track of them here.\",\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\"],\"alerts\":[]} | {\"text\":[\"Waterings\",\"Add sowing, watering or pruning jobs to keep track of them here.\",\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\"],\"alerts\":[]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-185742-hunt-4704",
+        "probe": "misc",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "While a bed filter loads, rows from other beds stay listed under the new filter",
+      "where": "/waterings bed filter",
+      "steps": "Probe misc, expectation loading-filter-hides-other-bed-rows",
+      "expected": "Only the selected bed's waterings (or no rows) while loading",
+      "actual": "With 'Shade corner' selected and 'Loading waterings…' showing, North bed rows are still listed. If the request hangs, this stays that way",
+      "evidence": "{\"rows\":[\"12 Nov 2026, 18:58\\tNorth bed\\t–\\tDelete\",\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t0 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\",\"4 Mar 201\\tShade corner\\t3 L\\tDelete\",\"1 Jan 1\\tNorth bed\\t1 L\\tDelete\"],\"alerts\":[\"Loading waterings…\"]} | {\"rows\":[\"12 Nov 2026, 18:58\\tNorth bed\\t–\\tDelete\",\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t0 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\",\"4 Mar 201\\tShade corner\\t3 L\\tDelete\",\"1 Jan 1\\tNorth bed\\t1 L\\tDelete\"],\"alerts\":[\"Loading waterings…\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185742-hunt-4704",
+        "probe": "misc",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "No way to retry after the waterings list fails to load",
+      "where": "/waterings",
+      "steps": "Probe waterings-faults, expectation retry-after-error-on-waterings",
+      "expected": "A retry control after a load error",
+      "actual": "Only 'Injected 500' is shown, with no retry button. The user must change the filter or reload",
+      "evidence": "{\"btns\":0,\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"Injected 500\",\"Garden Log · a journal for one garden\"]} | {\"btns\":0,\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"Injected 500\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185742-hunt-4704",
+        "probe": "waterings-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard recent waterings has no retry after an error",
+      "where": "/ Recent waterings section",
+      "steps": "Probe client-nav-faults, expectation dashboard-waterings-retry-after-error",
+      "expected": "A retry control in the section after a load error",
+      "actual": "An error alert with no button; refresh is not wired for waterings",
+      "evidence": "{\"alerts\":[\"Injected 500\"],\"retry\":0} | {\"alerts\":[\"Injected 500\"],\"retry\":0}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185742-hunt-4704",
+        "probe": "client-nav-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Tiny litre amounts accepted and shown as '0 L'",
+      "where": "/beds Record past watering (POST /api/waterings)",
+      "steps": "Probe beds-water, expectation tiny-litres-not-shown-as-0L",
+      "expected": "Amounts below the field's 0.1 minimum refused, or shown accurately",
+      "actual": "0.001 is saved. The success message says 'Recorded 0 L on 1 Nov 2026.' and the list shows '0 L'",
+      "evidence": "[\"Recorded 0 L on 1 Nov 2026.\"] | [\"Recorded 0 L on 1 Nov 2026.\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185742-hunt-4704",
+        "probe": "beds-water",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Far-past watering dates accepted (year 201)",
+      "where": "/beds Record past watering (POST /api/waterings)",
+      "steps": "Probe ancient-date, expectation far-past-date-refused",
+      "expected": "An implausible date such as 0201-03-04 is refused with a reason",
+      "actual": "Saved, with the message 'Recorded 3 L on 4 Mar 201.' The API also accepts 0001-01-01, which then shows as '1 Jan 1'",
+      "evidence": "{\"before\":2,\"after\":3,\"alerts\":[\"Recorded 3 L on 4 Mar 201.\"],\"latest\":[\"2026-11-05\",\"0201-03-04\",\"0201-03-04\"]} | {\"before\":3,\"after\":4,\"alerts\":[\"Recorded 3 L on 4 Mar 201.\"],\"latest\":[\"2026-11-05\",\"0201-03-04\",\"0201-03-04\",\"0201-03-04\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185742-hunt-4704",
+        "probe": "ancient-date",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Bed filter select shows 'All beds' while a filter from the URL is applied",
+      "where": "/waterings?bed=99999",
+      "steps": "Probe query-select, expectation select-matches-applied-filter",
+      "expected": "The select matches the applied filter, or an unknown bed is reported",
+      "actual": "The select shows 'All beds' while the page says 'No waterings for this bed' and shows 'Clear filter'",
+      "evidence": "{\"select\":{\"label\":\"Bed\",\"value\":\"\"},\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\"]} | {\"select\":{\"label\":\"Bed\",\"value\":\"\"},\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\"]}",
+      "status": "observed",
+      "severity": "low",
+      "tool": {
+        "run": "20261112-185742-hunt-4704",
+        "probe": "query-select",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "title": "Stats page shows a failed request as \"No harvests in this range\" with no error and no retry",
+      "where": "/stats (frontend/app/pages/stats.vue)",
+      "steps": "Sign in. Open /stats while the API is failing or unreachable (or trigger any 4xx/5xx, e.g. /stats?from=2026-05-01&to=2026-01-01).",
+      "expected": "An error message that the stats could not be loaded, with a Retry button. Other pages do this, e.g. the dashboard's AlertMessage on summaryError.",
+      "actual": "The page never reads `error` from useApiFetch. Any failure lands in the v-else-if branch and shows the empty state \"No harvests in this range – Pick a different date range, or log a harvest\". There is no retry other than changing the dates.",
+      "evidence": "Server-side render of /stats?from=2026-05-01&to=2026-01-01 contains \"No harvests in this range\". The API answered 422 {\"detail\":\"The From date must be on or before the To date.\"}. The code destructures only { data, status } and has no error branch.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Invalid date range (From after To) is shown as an empty result instead of the server's validation message",
+      "where": "/stats date fields, GET /api/stats/harvests",
+      "steps": "On /stats, type a From date later than the To date (the min/max attributes do not stop typed or URL values), e.g. /stats?from=2026-05-01&to=2026-01-01.",
+      "expected": "A visible reason, such as \"The From date must be on or before the To date.\"",
+      "actual": "\"No harvests in this range\". It looks like there really are no harvests, and the 422 detail is thrown away.",
+      "evidence": "Observed in the SSR HTML. The API returns a 422 with the detail string.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Impossible date in the URL (e.g. 2026-02-30) is shown as an empty range",
+      "where": "/stats?from=2026-02-30",
+      "steps": "Open /stats?from=2026-02-30. It passes the page's /^\\d{4}-\\d{2}-\\d{2}$/ check and is sent to the API.",
+      "expected": "Fall back to the default date, or show a validation error.",
+      "actual": "The API answers 422 and the page shows \"No harvests in this range\".",
+      "evidence": "SSR HTML for /stats?from=2026-02-30 contains \"No harvests in this range\". The API returns 422 date_from_datetime_parsing.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Stats request has no 10 s timeout, so a hung API leaves \"Loading stats…\" up indefinitely",
+      "where": "/stats (useApiFetch has no timeout option)",
+      "steps": "Make the API accept the connection but never respond, then open or refresh /stats.",
+      "expected": "The request fails after 10 seconds and an error with a retry is shown.",
+      "actual": "No timeout is set in useApiFetch/useApiClient or in the page. The page stays on \"Loading stats…\", and once it does fail it shows the empty state (see the first finding).",
+      "evidence": "Code reading: grep finds no timeout anywhere in frontend/app.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "After a failed refetch, stale data or the empty state can be shown for the newly chosen range",
+      "where": "/stats",
+      "steps": "Load a valid range, then change the dates so that the request fails (server down or invalid range).",
+      "expected": "An error tied to the new range.",
+      "actual": "Nothing tells the user the request failed. Depending on how Nuxt handles data on error, the page shows either the old range's table and range text (\"N harvests from <old dates>\") or a false empty state, while the inputs show the new dates.",
+      "evidence": "Code reading: there is no error handling, and rangeText/table render whenever stats.value is truthy.",
+      "status": "suspected",
+      "severity": "medium"
+    }
+  ]
+}

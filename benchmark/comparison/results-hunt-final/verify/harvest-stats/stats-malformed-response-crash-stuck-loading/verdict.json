@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-malformed-response-crash-stuck-loading",
+  "sentence": "On /stats, when GET /api/stats/harvests returns a malformed or empty-object body, an uncaught TypeError (reading 'length') is thrown, no error is shown, and 'Loading stats…' stays on screen over the previous range's table and best plants.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and loaded /stats. It showed '5 harvests from 1 Jan 2026 to 31 Dec 2026', the best plants (Courgette 1.2 kg, Tomato 1.05 kg, Lettuce 350 g) and the month table. I then used page.route to make GET /api/stats/harvests** return 200 with body '{}', and set From to 2026-03-01. The URL changed to ?from=2026-03-01 and a pageerror fired: \"Cannot read properties of undefined (reading 'length')\". The console shows a Vue 'Unhandled error during execution of render function' at stats.vue _sfc_render. After waiting 5s the status line still said 'Loading stats…', no error alert was shown, and the old 1 Jan–31 Dec best plants and table were still on screen under From=1 Mar. Cause in code: frontend/app/pages/stats.vue has `v-else-if=\"stats && stats.plants.length\"` with no check on the response shape, so the render throws and the page stops updating. Worse variant: while the route was active, signing in and being redirected to /stats crashed the first render, and the login form stayed on screen with the URL at /stats.",
+  "severity": "medium",
+  "wallMs": 143159
+}

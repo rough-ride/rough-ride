@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Dashboard 'Recent waterings' shows 'No waterings yet' when the API returns a non-list",
+      "where": "/ (Recent waterings, GET /api/waterings?limit=5)",
+      "steps": "Probe client-faults, expectation dash-empty-object-not-empty-state",
+      "expected": "An unexpected response shows an error, not the empty state",
+      "actual": "With an {} response the section says 'No waterings yet. Use Water now on a bed to record one.' even though waterings exist",
+      "evidence": "{\"t2\":\"Recent waterings\\nAll waterings\\n\\nNo waterings yet\\n\\nUse “Water now” on a bed to record one.\\n\\nGo to beds\",\"pe\":[]} | {\"t2\":\"Recent waterings\\nAll waterings\\n\\nNo waterings yet\\n\\nUse “Water now” on a bed to record one.\\n\\nGo to beds\",\"pe\":[]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-185717-hunt-048d",
+        "probe": "client-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Bed filter on Waterings page is lost on reload: page writes ?bed_id= to the URL but only reads ?bed=",
+      "where": "/waterings",
+      "steps": "Probe filter-url, expectation filter-survives-reload",
+      "expected": "After choosing a bed, reloading or sharing the URL (/waterings?bed_id=1) keeps the bed filter and shows only that bed's waterings",
+      "actual": "URL becomes /waterings?bed_id=1, but after reload the select shows 'All beds' and every bed's waterings are listed (2 waterings, 14 L) while the URL still says bed_id=1",
+      "evidence": "{\"url\":\"/waterings?bed_id=1\",\"select\":\"\",\"text\":[\"Waterings\",\"Waterings\",\"2 waterings, 14 L in total\",\"Watering log\",\"Waterings, most recent first\",\"watering of Shade corner\",\"watering of North bed\"]} | {\"url\":\"/waterings?bed_id=1\",\"select\":\"\",\"text\":[\"Waterings\",\"Waterings\",\"2 waterings, 14 L in total\",\"Watering log\",\"Waterings, most recent first\",\"watering of Shade corner\",\"watering of North bed\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185717-hunt-048d",
+        "probe": "filter-url",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard 'Recent waterings' renders rows of 'Never' for a malformed response",
+      "where": "/ (Recent waterings)",
+      "steps": "Probe client-faults, expectation dash-malformed-shows-error",
+      "expected": "A visible error when the response cannot be parsed",
+      "actual": "The table shows many rows reading 'Never' with an empty bed and '–' amount, one per character of the response text",
+      "evidence": "{\"t3\":\"Recent waterings\\nAll waterings\\nThe five most recent waterings\\nWHEN\\tBED\\tAMOUNT\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\",\"pe\":[]} | {\"t3\":\"Recent waterings\\nAll waterings\\nThe five most recent waterings\\nWHEN\\tBED\\tAMOUNT\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\\nNever\\t\\t–\",\"pe\":[]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185717-hunt-048d",
+        "probe": "client-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Past watering form accepts 0.001 L and reports 'Recorded 0 L'",
+      "where": "/beds Record past watering form, POST /api/waterings",
+      "steps": "Probe past-form-input, expectation tiny-litres-refused-or-shown-correctly",
+      "expected": "Amounts below the input's min of 0.1 L are refused, or the saved amount is shown truthfully",
+      "actual": "0.001 is saved (litres 0.001) and the success message and list both show '0 L'",
+      "evidence": "{\"alerts\":[\"Recorded 0 L on 2 Nov 2026.\"],\"created\":[{\"id\":3,\"bed_id\":2,\"bed_name\":\"Shade corner\",\"watered_on\":\"2026-11-02\",\"watered_at\":null,\"litres\":0.001}]} | {\"alerts\":[\"Recorded 0 L on 2 Nov 2026.\"],\"created\":[{\"id\":3,\"bed_id\":2,\"bed_name\":\"Shade corner\",\"watered_on\":\"2026-11-02\",\"watered_at\":null,\"litres\":0.001}]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185717-hunt-048d",
+        "probe": "past-form-input",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Past watering form accepts the year 1 as a date",
+      "where": "/beds Record past watering form, POST /api/waterings",
+      "steps": "Probe past-form-input, expectation year-1-date-refused",
+      "expected": "An implausible date such as 0001-01-01 is refused with a reason",
+      "actual": "Saved and confirmed as 'Recorded 5 L on 1 Jan 1.'; it then appears in the watering log and totals",
+      "evidence": "{\"alerts\":[\"Recorded 5 L on 1 Jan 1.\"],\"created\":[{\"id\":3,\"bed_id\":2,\"bed_name\":\"Shade corner\",\"watered_on\":\"0001-01-01\",\"watered_at\":null,\"litres\":5}]} | {\"alerts\":[\"Recorded 5 L on 1 Jan 1.\"],\"created\":[{\"id\":3,\"bed_id\":2,\"bed_name\":\"Shade corner\",\"watered_on\":\"0001-01-01\",\"watered_at\":null,\"litres\":5}]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-185717-hunt-048d",
+        "probe": "past-form-input",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "POST /api/waterings returns 500 for an oversized bed_id",
+      "where": "POST /api/waterings",
+      "steps": "Probe race, expectation huge-bed-id-not-5xx",
+      "expected": "A 4xx validation error for bed_id 99999999999999999999",
+      "actual": "500 Internal Server Error",
+      "evidence": "{\"status\":500,\"text\":\"Internal Server Error\"} | {\"status\":500,\"text\":\"Internal Server Error\"}",
+      "status": "observed",
+      "severity": "low",
+      "tool": {
+        "run": "20261112-185717-hunt-048d",
+        "probe": "race",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-ancient-date-accepted",
+  "sentence": "POST/PUT /api/journal accepts implausible past dates such as 0001-01-01 (201 Created) with no lower bound, showing them as '1 Jan 1' at the bottom of the list.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced: logged in via API and POST /api/journal {plant_id:1, entry_on:'0001-01-01'} returned 201 and stored the entry. However, the request only asks for 'dated journal entries' and specifies no lower date bound. The implementation (JournalEntryIn.not_in_future in backend/schemas.py) deliberately mirrors the pre-existing, unchanged harvest validation (HarvestIn.not_in_future): I confirmed POST /api/harvests with harvested_on 0001-01-01 also returns 201 on main's existing code. Accepting old dates and rejecting only future dates is the app's established convention, and an entry dated year 1 sorting last in a newest-first list is correct ordering. Test data was deleted afterwards (journal 4, harvest 7).",
+  "severity": null,
+  "wallMs": 42401
+}

@@ -1,0 +1,75 @@
+{
+  "id": "harvest-stats__clean__playwright__t3",
+  "feature": "harvest-stats",
+  "bug": "clean",
+  "arm": "playwright",
+  "trial": 3,
+  "lane": 2,
+  "ports": {
+    "web": 3792,
+    "api": 8792
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:25:37.567Z",
+  "materializeMs": 7820,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__clean__playwright__t3/variant/dk61k7ns/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "3b3d6bdd-a281-4fc5-9ae2-a4da00d43328",
+  "loadBefore": [
+    5.25244140625,
+    4.7763671875,
+    4.89892578125
+  ],
+  "loadAfter": [
+    4.80712890625,
+    4.72509765625,
+    4.8349609375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 211473,
+  "reportedCostUsd": 0.6691904,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 36,
+      "outputTokens": 9825,
+      "cacheReadInputTokens": 696452,
+      "cacheCreationInputTokens": 41657,
+      "webSearchRequests": 0,
+      "costUSD": 0.6691904,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2033,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 41657,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 18,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found seven problems in the Stats change: six I saw in the running app and one I worked out from the code. They're written to `out/findings.json`.\n\n**Medium**\n1. **A request that never answers keeps the page loading forever.** I made the stats API hang and changed the From date. After 12 seconds the page still said \"Loading stats…\" and showed no error, because the request has no timeout.\n2. **The error state has no retry.** When the API returned a 500, the page showed \"Could not load harvest stats.\" with no \"Try again\" button. After the server came back, the error stayed until I changed a date or reloaded.\n3. **A malformed response crashes the page and leaves old data on screen.** A 200 with an HTML body, or JSON with `plants` set to null, makes the page code throw an error (`Cannot read properties of undefined (reading 'length')`). The page then sits on \"Loading stats…\" above the previous range's table, so the old numbers look like the new result.\n\n**Low**\n4. **Clearing a date field uses a hidden default.** With From blank, the page quietly uses 1 Jan of this year. If To is then set to 31 Dec 2025, the user sees \"The From date must be on or before the To date.\" even though they entered no From date.\n5. **Months with no harvests are left out of the table.** Over a range covering 2025–2026, the Aug 2025 column sits right next to Jun 2026, so the gap is hidden.\n6. **An invalid date shows a raw technical message (suspected).** I confirmed with curl that a date like `from=2026-02-30` gets a 422 with a technical error body. From the code, the page would show it as \"Query.from: Input should be a valid date or datetime…\"; I didn't check this on the page.\n7. **Long plant names are unreadable at 375 px.** In \"Best plants\" a long name is cut off with \"…\". In the table the name column won't wrap, so it pushes every month and total column out of view. The page itself doesn't scroll sideways.\n\n**Checked and working:**\n- A slow answer for an older date range does not replace newer results.\n- The server rejects From after To, and bad or blank dates, with a 422 rather than a 500.\n- A 401 sends the user towards sign-in.\n- Neither the Stats page nor the dashboard scrolls sideways at 375 px.\n- The dashboard's top plant and its link to Stats work.\n\nTo test long names I added a plant with a long name, quotes, emoji and markup, plus a 1,000 kg harvest. I deleted that plant afterwards.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 36,
+    "output": 9825,
+    "cacheRead": 696452,
+    "cacheWrite": 41657,
+    "requests": 18,
+    "toolCalls": {
+      "Bash": 8,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 7,
+      "Read": 1
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 7,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:29:25.329Z"
+}

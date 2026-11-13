@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Let the gardener record watering. On the beds page, each bed gets a "Water now" button that records a watering with the current time, and a small form to record a past watering with a date and an amount in litres. Show when each bed was last watered on the beds page, list the five most recent waterings on the dashboard, and add a page that lists every watering with a filter by bed.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-timezone-today-mismatch/scratch.
+
+The reported problem: The server checks future dates and stamps 'Water now' dates using its own time zone while the form uses the browser's today, so users ahead of the server have today's date rejected and dates can disagree with displayed times.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "'Today' rejected as future date for users ahead of the server's time zone; date and time computed in different zones",
+  "where": "Beds page 'Record past watering' form; POST /api/waterings",
+  "steps": "As a user whose local date is already the next day relative to the server (e.g. UTC+9 late evening while server is CET), submit the form with the default date (today).",
+  "expected": "Today's date is accepted.",
+  "actual": "Client defaults/max to its local today (todayIso), server validates against server-local date.today() and answers 'Watering date cannot be in the future.' Also 'Water now' stores watered_on in server local date but watered_at in UTC, so list ordering/date can disagree with the time shown to the viewer.",
+  "evidence": "schemas.WateringIn.not_in_future uses date.today(); waterings.create_watering uses now.astimezone().date() for watered_on and UTC for watered_at."
+ },
+ {
+  "title": "Water now's date and time come from different clocks, and the future-date check uses the server's date",
+  "where": "POST /api/waterings, /beds past form",
+  "steps": "Use the app from a time zone ahead of the server's, near midnight.",
+  "expected": "Today's date is accepted, and 'now' entries are dated consistently with their time.",
+  "actual": "watered_on uses the server's local date while watered_at is UTC, and the client's max date is the browser's local date. A user ahead of the server is refused for 'today' with 'cannot be in the future', and 'now' entries can show a date that disagrees with their time and sort wrongly.",
+  "evidence": "Code: waterings.py now.astimezone().date() vs strftime of the UTC time; schemas.not_in_future uses date.today()."
+ },
+ {
+  "title": "Future-date check uses the server's date, not the user's",
+  "where": "POST /api/waterings, /beds past-watering form",
+  "steps": "A user in a time zone ahead of the server records a past watering for their 'today' (the form defaults to todayIso() in the browser) shortly after their midnight.",
+  "expected": "Today's date is accepted",
+  "actual": "The server compares against date.today() in its own zone and returns 'Watering date cannot be in the future.' 'Water now' also stamps watered_on with the server's local date, which can differ from the user's.",
+  "evidence": "schemas.py not_in_future uses date.today(). waterings.py uses now.astimezone().date()."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-watering-log-timezone-today-mismatch/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

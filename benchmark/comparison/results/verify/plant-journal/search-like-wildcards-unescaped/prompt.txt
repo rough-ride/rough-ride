@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3792, API http://localhost:8792/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-plant-journal-search-like-wildcards-unescaped/scratch.
+
+The reported problem: Searching the journal for '%' or '_' returns all entries because the term is used as an unescaped SQL LIKE pattern, so literal % or _ cannot be searched.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Journal search treats % and _ as SQL LIKE wildcards instead of literal characters",
+  "where": "GET /api/journal?q=... (backend/routers/journal.py list_entries); Journal page search box",
+  "steps": "Sign in, open Journal page, search for a single '%' (or '_'). API: curl -G 'http://localhost:8790/api/journal' --data-urlencode 'q=%'.",
+  "expected": "Searching for '%' should match only entries that literally contain a percent sign (likely none), not every entry.",
+  "actual": "Searching '%' returns ALL entries (it is used as a LIKE wildcard), and '_' matches any single character. Results are misleading; a user searching for a literal % or _ can never find it.",
+  "evidence": "LIKE pattern is built by raw interpolation with no ESCAPE clause; curl with q=%25 returned the full entry list identical to no filter."
+ },
+ {
+  "title": "Search treats % and _ as wildcards",
+  "where": "GET /api/journal?q=%",
+  "steps": "Search the Journal page for '%' or '_'.",
+  "expected": "Only entries that contain a literal % or _.",
+  "actual": "Every entry is returned, because LIKE wildcards are not escaped.",
+  "evidence": "curl /api/journal?q=%25 returned all entries"
+ },
+ {
+  "title": "Search treats % and _ as wildcards",
+  "where": "GET /api/journal?q=_ , /journal search",
+  "steps": "Search for '_' or '%'.",
+  "expected": "Only entries that contain that character literally.",
+  "actual": "Every entry comes back as a match.",
+  "evidence": "curl ?q=_ returned all entries; escape_like is never used."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-plant-journal-search-like-wildcards-unescaped/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

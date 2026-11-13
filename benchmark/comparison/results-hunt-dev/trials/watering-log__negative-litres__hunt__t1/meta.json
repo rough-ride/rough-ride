@@ -1,0 +1,74 @@
+{
+  "id": "watering-log__negative-litres__hunt__t1",
+  "feature": "watering-log",
+  "bug": "negative-litres",
+  "arm": "hunt",
+  "trial": 1,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:17:30.944Z",
+  "materializeMs": 8331,
+  "repo": "$TMPDIR/rr-bench/work/watering-log__negative-litres__hunt__t1/variant/9q6a8tel/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/beds.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/beds.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/waterings.py\n?? frontend/app/pages/waterings.vue\n",
+  "sessionId": "becd67cd-187e-4551-8f4c-cc2d9f350ece",
+  "loadBefore": [
+    6.79296875,
+    5.3740234375,
+    4.814453125
+  ],
+  "loadAfter": [
+    9.67529296875,
+    7.158203125,
+    5.62841796875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 145772,
+  "reportedCostUsd": 0.29594279999999995,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 18,
+      "outputTokens": 6170,
+      "cacheReadInputTokens": 138379,
+      "cacheCreationInputTokens": 28959,
+      "webSearchRequests": 0,
+      "costUSD": 0.29594279999999995,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 664,
+      "cacheCreationEphemeral5mInputTokens": 28959,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 2m07s | run 20261112-171750-hunt-5901 | 3 confirmed, 0 dropped on re-run\ntarget: http://localhost:3791\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Past watering form accepts a negative amount in litres\n   where: /beds, Record past watering form\n   expected: An amount of -5 litres is refused with a message such as 'Enter an amount in litres greater than zero.'\n   saw: {\"alerts\":[\"Recorded -5 L on 12 Nov 2026.\"],\"negative\":[{\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5}],\"n0\":2,\"n1\":3}\n   repro: .rough-ride/runs/20261112-171750-hunt-5901/probes/negative-litres.mjs (expectation \"negative-litres-refused-in-ui\")\n2. HIGH   POST /api/waterings stores negative litres\n   where: POST /api/waterings\n   expected: 422 for litres -20 (WateringIn.litres has le=10000 but no lower bound)\n   saw: {\"status\":201,\"body\":{\"id\":4,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-01\",\"watered_at\":null,\"litres\":-20}}\n   repro: .rough-ride/runs/20261112-171750-hunt-5901/probes/negative-litres.mjs (expectation \"api-refuses-negative-litres\")\n3. MEDIUM Malformed waterings response crashes the list and leaves it stuck on 'Loading waterings…' with stale rows\n   where: /waterings, bed filter\n   expected: A visible error and no uncaught exception\n   saw: {\"pageErrors\":[\"waterings.value?.reduce is not a function\"],\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"Loading waterings…\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\"]}\n   repro: .rough-ride/runs/20261112-171750-hunt-5901/probes/malformed-list.mjs (expectation \"malformed-response-handled\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-ad0d2538869bcec7e.jsonl",
+    "agent-ad0d2538869bcec7e.meta.json"
+  ],
+  "usage": {
+    "input": 18,
+    "output": 6170,
+    "cacheRead": 138379,
+    "cacheWrite": 28959,
+    "requests": 9,
+    "toolCalls": {
+      "Bash": 8,
+      "Read": 1
+    }
+  },
+  "findingCount": 3,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |   4 +-\n backend/db.py                    |  14 ++++-\n backend/routers/beds.py          |   8 ++-\n backend/schemas.py               |  29 +++++++++\n frontend/app/assets/css/main.css |  24 ++++++-\n frontend/app/layouts/default.vue |   1 +\n frontend/app/pages/beds.vue      | 133 ++++++++++++++++++++++++++++++++++++++-\n frontend/app/pages/index.vue     |  44 ++++++++++++-\n frontend/app/types/api.ts        |  17 +++++\n frontend/app/utils/format.ts     |  26 ++++++++\n 10 files changed, 292 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T16:20:14.542Z"
+}

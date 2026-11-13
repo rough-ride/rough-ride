@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3790, API http://localhost:8790/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-plant-journal-entry-limit-counts-utf16/scratch.
+
+The reported problem: The JournalEntryForm textarea maxlength and character counter count UTF-16 code units, so emoji count double, only about 250 emoji fit, and existing server-accepted emoji entries cannot be re-saved when edited.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Character limit counts UTF-16 units on the client but code points on the server; emoji entries can't be saved or edited",
+  "where": "JournalEntryForm (new and edit) on /plants/[id]",
+  "steps": "Type emoji in the entry (e.g. 300 🌱), or edit an entry made of 500 🌱 (the API accepts it: POST returned 201)",
+  "expected": "The same 500-character limit as the server",
+  "actual": "textarea maxlength=500 and form.body.length count each emoji as 2, so you get only 250 emoji and a wrong 'characters left' count. Editing an existing 500-emoji entry fails with 'Keep the entry to 500 characters.' even when nothing was changed",
+  "evidence": "API accepted a 500×🌱 body (201); JournalEntryForm uses form.body.length and :maxlength"
+ },
+ {
+  "title": "Emoji and other astral characters cut the 500-character limit roughly in half",
+  "where": "Journal entry form (add/edit)",
+  "steps": "Type or paste emoji-heavy text into the entry textarea",
+  "expected": "Up to 500 characters accepted, as the server allows (Python counts code points)",
+  "actual": "textarea maxlength and the counter use UTF-16 length, so only about 250 emoji are accepted and the 'characters left' count drops by 2 per emoji. The server accepts 500",
+  "evidence": "JournalEntryForm.vue uses :maxlength=500 and form.body.length; the server's max_length=500 counts code points"
+ },
+ {
+  "title": "Emoji entries are capped at 250 in the browser though the server accepts 500",
+  "where": "JournalEntryForm textarea (maxlength / character counter)",
+  "steps": "Type or paste emoji (e.g. 🌱) into the entry text.",
+  "expected": "500 characters allowed, as the request specifies and the server enforces (code points).",
+  "actual": "textarea maxlength and form.body.length count UTF-16 code units, so each emoji counts as 2: input stops at 250 emoji and the 'characters left' counter is wrong.",
+  "evidence": "Server: POST with 500 x 🌱 -> 201. Client: :maxlength=\"500\" and remaining = 500 - form.body.length."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-plant-journal-entry-limit-counts-utf16/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Malformed journal search response is rendered as a list of blank entries",
+      "where": "/journal (GET /api/journal?q=...)",
+      "steps": "Probe journal-bad-responses-client, expectation malformed-search-shows-error-not-entries",
+      "expected": "An error saying the journal could not be loaded, with no fake entries",
+      "actual": "Shows '14 entries match' and 14 cards that contain only '–' (no plant, date or text), with no error",
+      "evidence": "{\"cards\":[\"–\",\"–\",\"–\",\"–\"],\"t\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"14 entries match\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\"]} | {\"cards\":[\"–\",\"–\",\"–\",\"–\"],\"t\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"14 entries match\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-192314-hunt-a985",
+        "probe": "journal-bad-responses-client",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Malformed journal response on plant detail shows dozens of blank entries with Edit/Delete buttons",
+      "where": "/plants/:id Journal section (GET /api/journal?plant_id=...)",
+      "steps": "Probe journal-bad-responses-client, expectation malformed-detail-journal-shows-error",
+      "expected": "'Could not load the journal.' alert",
+      "actual": "The list shows many entries dated '–' with empty text and active Edit/Delete buttons ('entry from –'), while the badge says 3 entries",
+      "evidence": "[\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"Garden Log · a journal for one garden\"] | [\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"Garden Log · a journal for one garden\"]",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-192314-hunt-a985",
+        "probe": "journal-bad-responses-client",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Non-list journal response is shown as 'No entries match'",
+      "where": "/journal search",
+      "steps": "Probe journal-bad-responses-client, expectation empty-object-search-not-shown-as-no-match",
+      "expected": "An error, not an empty result",
+      "actual": "When the API returns an object instead of a list, the page shows '0 entries match' / 'No entries match' with no error",
+      "evidence": "[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"0 entries match\",\"No entries match\",\"Try a different word or plant name.\",\"Clear search\",\"Garden Log · a journal for one garden\"] | [\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"0 entries match\",\"No entries match\",\"Try a different word or plant name.\",\"Clear search\",\"Garden Log · a journal for one garden\"]",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-192314-hunt-a985",
+        "probe": "journal-bad-responses-client",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Journal search stays on 'Loading entries…' forever when the request hangs, while showing stale results",
+      "where": "/journal search",
+      "steps": "Probe journal-bad-responses, expectation hang-not-loading-forever",
+      "expected": "A timeout with an error and a way to retry",
+      "actual": "After 13 s the page still says 'Loading entries…' under the results of the previous search, with no error or timeout",
+      "evidence": "[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Loading entries…\",\"Courgette\",\"12 Nov 2026\",\"Newest entry\",\"Garden Log · a journal for one garden\"] | [\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Loading entries…\",\"Courgette\",\"12 Nov 2026\",\"Newest entry\",\"Garden Log · a journal for one garden\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-192314-hunt-a985",
+        "probe": "journal-bad-responses",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

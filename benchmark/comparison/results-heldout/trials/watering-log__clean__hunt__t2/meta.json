@@ -1,0 +1,74 @@
+{
+  "id": "watering-log__clean__hunt__t2",
+  "feature": "watering-log",
+  "bug": "clean",
+  "arm": "hunt",
+  "trial": 2,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:29:24.292Z",
+  "materializeMs": 7122,
+  "repo": "$TMPDIR/rr-bench/work/watering-log__clean__hunt__t2/variant/y9f1ld2g/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/beds.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/beds.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/waterings.py\n?? frontend/app/pages/waterings.vue\n",
+  "sessionId": "34d4e9d1-a354-480b-874b-56fc08187f28",
+  "loadBefore": [
+    5.1123046875,
+    4.8017578125,
+    4.85986328125
+  ],
+  "loadAfter": [
+    6.40283203125,
+    5.36962890625,
+    5.08935546875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 293930,
+  "reportedCostUsd": 0.5475479999999999,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 30,
+      "outputTokens": 12410,
+      "cacheReadInputTokens": 398090,
+      "cacheCreationInputTokens": 43922,
+      "webSearchRequests": 0,
+      "costUSD": 0.5475479999999999,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2773,
+      "cacheCreationEphemeral5mInputTokens": 43922,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 4m36s | run 20261112-182945-hunt-1b38 | 4 confirmed, 0 dropped on re-run\ntarget: http://localhost:3791\n\nFindings (each reproduced twice from scratch)\n1. MEDIUM Waterings filter shows other beds' rows and 'Loading' forever when the filtered request hangs\n   where: /waterings (GET /api/waterings?bed_id=1)\n   expected: With 'North bed' selected and the request hanging, the old list is hidden or marked stale, and after a while a timeout error appears\n   saw: {\"field\":[{\"label\":\"Bed\",\"value\":\"1\"}],\"rows\":[\"12 Nov 2026, 18:31\\tShade corner\\t–\\tDelete\",\"12 Nov 2026, 18:30\\tNorth bed\\t–\\tDelete\",\"9 Nov 2026\\tShade corner\\t2.5 L\\tDelete\",\"5 Nov 2026\\tShade corner\\t4 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\"]}\n   repro: .rough-ride/runs/20261112-182945-hunt-1b38/probes/waterings-hang.mjs (expectation \"hang-filter-not-showing-other-bed-rows\")\n2. MEDIUM Dashboard 'Recent waterings' renders a malformed response as rows of 'Never'\n   where: / (GET /api/waterings?limit=5)\n   expected: A malformed response shows an error in the Recent waterings section\n   saw: {\"alerts\":[],\"sec\":[\"Recent waterings\",\"All waterings\",\"The five most recent waterings\",\"WHEN\\tBED\\tAMOUNT\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\",\"Never\\t\\t–\"],\"pe\":[]}\n   repro: .rough-ride/runs/20261112-182945-hunt-1b38/probes/dashboard-nav.mjs (expectation \"dash-malformed-shows-error\")\n3. MEDIUM Past watering form accepts year 0001 and shows 'Recorded 3 L on 1 Jan 1.'\n   where: /beds Record past watering (POST /api/waterings)\n   expected: An impossible far-past date such as 0001-01-01 is refused with a reason\n   saw: {\"alerts\":[\"Recorded 3 L on 1 Jan 1.\"],\"stored\":[{\"id\":6,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"0001-01-01\",\"watered_at\":null,\"litres\":3}]}\n   repro: .rough-ride/runs/20261112-182945-hunt-1b38/probes/ancient-date.mjs (expectation \"far-past-date-refused\")\n4. LOW    Unknown bed in the URL says 'No waterings for this bed' while the select shows 'All beds'\n   where: /waterings?bed=999\n   expected: The filter control and the results agree (or the unknown bed is reported)\n   saw: {\"fields\":[{\"label\":\"Bed\",\"value\":\"\"}],\"text\":[\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\"]}\n   repro: .rough-ride/runs/20261112-182945-hunt-1b38/probes/ancient-date.mjs (expectation \"unknown-bed-param-consistent\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-ad4c15ae425aa6209.jsonl",
+    "agent-ad4c15ae425aa6209.meta.json"
+  ],
+  "usage": {
+    "input": 30,
+    "output": 12410,
+    "cacheRead": 398090,
+    "cacheWrite": 43922,
+    "requests": 15,
+    "toolCalls": {
+      "Bash": 14,
+      "Read": 1
+    }
+  },
+  "findingCount": 4,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |   4 +-\n backend/db.py                    |  14 +++-\n backend/routers/beds.py          |   8 ++-\n backend/schemas.py               |  29 +++++++++\n frontend/app/assets/css/main.css |  24 ++++++-\n frontend/app/layouts/default.vue |   1 +\n frontend/app/pages/beds.vue      | 134 ++++++++++++++++++++++++++++++++++++++-\n frontend/app/pages/index.vue     |  44 ++++++++++++-\n frontend/app/types/api.ts        |  17 +++++\n frontend/app/utils/format.ts     |  26 ++++++++\n 10 files changed, 293 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:34:33.788Z"
+}

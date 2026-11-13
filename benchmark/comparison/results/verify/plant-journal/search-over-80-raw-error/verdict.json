@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "search-over-80-raw-error",
+  "sentence": "Typing more than 80 characters into the /journal search box (which has no maxlength) makes the API return 422 and the page replace results with a raw 'String should have at most 80 characters' message.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo user, opened /journal, filled the Search input (#journal-search) with 81 'a' characters. Input accepted all 81 chars (maxlength attribute is null). After the request, the <main> text was: 'Journal ... Search / Clear search / Query.q: String should have at most 80 characters' — the entries list was replaced by the raw Pydantic validation message, with a console error from the failed request. Code agrees: backend/routers/journal.py declares q: str = Query(default=\"\", max_length=80), and frontend/app/pages/journal.vue sends the trimmed search value with no length limit and shows apiErrorMessage(loadError) in place of results. The user is not told the limit in plain words and cannot see any results until they shorten the text.",
+  "severity": "low",
+  "wallMs": 52302
+}

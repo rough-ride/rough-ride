@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "timezone-today-mismatch",
+  "sentence": "The server checks future dates and stamps 'Water now' dates using its own time zone while the form uses the browser's today, so users ahead of the server have today's date rejected and dates can disagree with displayed times.",
+  "verdict": "confirmed",
+  "evidence": "Server clock: Thu Nov 12 19:49 CET (18:49 UTC). Opened a Playwright browser context with timezoneId Asia/Tokyo (browser time Fri Nov 13 03:49 JST), signed in as the demo user and went to /beds. Clicked 'Record past watering' on North bed: the date input defaulted to 2026-11-13 with max=2026-11-13 (the browser's today). Entered 3 litres and clicked Save. POST /api/waterings {bed_id:1, watered_on:'2026-11-13', litres:3} returned 422 'Value error, Watering date cannot be in the future.', and the form showed 'Watered on: Watering date cannot be in the future.' So the user's own today, which the form offers by default, is rejected. Cause: schemas.WateringIn.not_in_future compares against the server's date.today(), while the client uses todayIso() in browser local time. Then clicked 'Water now' in the same context: 201 with watered_on '2026-11-12' (server CET date) and watered_at '2026-11-12 18:49:51' (UTC), which is Nov 13 03:49 for this user. The date is stamped from the server's zone, not the user's.",
+  "severity": "medium",
+  "wallMs": 68273
+}

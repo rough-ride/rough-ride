@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "waterings-beds-error-silent",
+  "sentence": "On /waterings, a failing GET /api/beds is ignored and the bed filter silently offers only 'All beds' with no error or retry.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user, then used Playwright to make GET /api/beds return 500 and clicked through to /waterings in the browser. The network log shows GET /api/waterings 200 and GET /api/beds 500 (twice). The page listed 2 waterings (Shade corner, North bed), but the Bed select had only one option, 'All beds'. The page showed no error alert and no retry control. The cause is in waterings.vue: `const { data: beds } = bedsResult` never reads bedsResult.error, and the select loops over `beds ?? []`. So the user cannot filter by bed and is not told why, which looks the same as having no beds. Other load failures in the app do show an AlertMessage.",
+  "severity": "medium",
+  "wallMs": 65007
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "waterings-page-crash-non-list-response",
+  "sentence": "When GET /api/waterings returns a non-array body (malformed or empty object), /waterings throws an uncaught 'waterings.value?.reduce is not a function' and never renders, leaving the previous page on screen with no error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /beds. Then used Playwright page.route to make GET localhost:8796/api/waterings return 200 with the body {\"unexpected\":true}, and clicked the Waterings nav link. Result: the URL changed to /waterings but the document title stayed 'Beds · Garden Log' and the Beds headings ('Beds', 'Add a bed', 'All beds') stayed on screen. There was no role=alert. A pageerror 'waterings.value?.reduce is not a function' was raised. The only place that message showed up was the Nuxt dev error overlay, not the app's own error UI. Cause in the code: frontend/app/pages/waterings.vue:34 totalLitres calls waterings.value?.reduce(...) without checking that the value is an array. Optional chaining only guards against null/undefined, so a non-array object throws while rendering. The page's AlertMessage only runs on fetch errors, and a 200 with the wrong shape is not one. Note that beds.vue:34 and tasks.vue:28 use the same unguarded pattern, so the fragility existed before this change. It also only happens when the API returns the wrong shape, which the real backend does not do in normal use. Even so, the new page fails silently instead of showing an error.",
+  "severity": "low",
+  "wallMs": 97585
+}

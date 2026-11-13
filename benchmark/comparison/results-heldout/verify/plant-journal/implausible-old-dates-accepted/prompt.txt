@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3793, API http://localhost:8793/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-implausible-old-dates-accepted/scratch.
+
+The reported problem: POST/PUT /api/journal accepts implausible dates such as 0001-01-01, which are then shown as '1 Jan 1'.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Dates like year 0001 are accepted",
+  "where": "POST /api/journal",
+  "steps": "POST entry_on '0001-01-01'.",
+  "expected": "Implausible dates are refused with a visible reason.",
+  "actual": "201 Created; the entry is listed as the oldest, dated '1 Jan 1'.",
+  "evidence": "curl returned 201 with entry_on 0001-01-01 (test entry deleted afterwards)."
+ },
+ {
+  "title": "Dates far in the past such as year 0001 are accepted and shown as '1 Jan 1'",
+  "where": "POST/PUT /api/journal, Journal entry form",
+  "steps": "POST an entry with entry_on 0001-01-01, or pick that date in the date input.",
+  "expected": "Dates that make no sense are refused with a reason (for example, before 1900).",
+  "actual": "201 Created. The entry is shown as '1 Jan 1' and sorts to the bottom.",
+  "evidence": "API response 201. Plant page showed '1 Jan 1'."
+ },
+ {
+  "title": "Journal accepts nonsense dates such as year 0001",
+  "where": "POST /api/journal, Date field",
+  "steps": "POST entry_on 0001-01-01, or type year 1 in the date input.",
+  "expected": "Dates far in the past are refused with a reason, or at least limited to a sensible range.",
+  "actual": "The entry is accepted (201) and listed as the oldest entry, dated '1 Jan 1'.",
+  "evidence": "POST with entry_on 0001-01-01 returned 201 with id 4 (deleted afterwards)."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-implausible-old-dates-accepted/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

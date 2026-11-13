@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-no-request-timeout",
+  "sentence": "useApiFetch sets no timeout, so if GET /api/stats/harvests hangs, /stats shows 'Loading stats…' (or blocks navigation to Stats) indefinitely instead of failing after 10 seconds.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the behaviour: signed in as the demo user, opened /stats (it loaded 5 harvests and the table), then used page.route('**/stats/harvests**') with a handler that never responds and changed To to 2026-06-30. One request went out (GET /api/stats/harvests?from=2026-01-01&to=2026-06-30). After 3 s and again after 15 s the page showed 'Loading stats…' with no error, and the old table and best plants stayed on screen (the table was not removed, unlike sample report 1). But this isn't a defect of this change. The request doesn't mention a timeout, and nothing in the repo specifies one: grep finds no 'timeout' anywhere in frontend/app or nuxt.config. composables/useApi.ts (useApiFetch/useApiClient) is untouched by the diff (git diff main shows no change to composables), so every existing page fetches the same way with no timeout. stats.vue does use the project's shared fetch wrapper as intended and does have an error state (AlertMessage on statsError), which shows if the request fails. The '10 seconds' expectation comes from the reports, not from the request or the codebase.",
+  "severity": null,
+  "wallMs": 81024
+}

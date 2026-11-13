@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "login-error-no-retry",
+  "sentence": "On /login, after POST /api/auth/login fails (500, reset, 400, 429), a retry does not reach the Dashboard within 10 s.",
+  "verdict": "not-a-defect",
+  "evidence": "In Playwright I made the first POST /api/auth/login fail as 500, connection reset, 400 and 429, one run each, with later calls passing through. Every time the form showed an error ('err 500', 'The garden server could not be reached.', etc.) and the password field was emptied, because login.vue sets password.value = '' in its catch block. Clicking Sign in again right away sent no request. It only showed 'Enter your email and password.', which is why the reported retry never reached the Dashboard. When I typed the password again and clicked Sign in, the second request succeeded and the Dashboard heading appeared in all four cases. The button is re-enabled, so the user can retry without reloading. Emptying the password after a failed sign-in is a common, deliberate choice. login.vue, useAuth and useApi are not part of the watering change (git diff main does not touch them).",
+  "severity": null,
+  "wallMs": 77369
+}

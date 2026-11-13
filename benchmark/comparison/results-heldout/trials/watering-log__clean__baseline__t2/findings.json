@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Oversized bed_id makes watering endpoints return 500",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "Signed in, POST {\"bed_id\":9223372036854775808} (or 99999999999999999999) to /api/waterings; also GET /api/waterings?bed_id=9223372036854775808 and DELETE /api/waterings/9223372036854775808",
+      "expected": "4xx validation error (no upper bound is set on the ints)",
+      "actual": "500 Internal Server Error (SQLite integer overflow)",
+      "evidence": "curl got 'Internal Server Error [500]' for all three. Opening /waterings?bed=99999999999999999999 shows only 'Could not load waterings.'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Non-finite litres (1e400 / NaN) make POST /api/waterings return 500",
+      "where": "POST /api/waterings",
+      "steps": "POST {\"bed_id\":1,\"litres\":1e400} or {\"bed_id\":1,\"litres\":NaN}",
+      "expected": "422 with a readable message",
+      "actual": "500 Internal Server Error",
+      "evidence": "curl: 'Internal Server Error [500]' for both payloads",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "No retry on the watering error states (dashboard and waterings page)",
+      "where": "/ (Recent waterings section), /waterings",
+      "steps": "Make GET /api/waterings fail (server down or bad query, e.g. /waterings?bed=abc), then open the dashboard or /waterings",
+      "expected": "Error message with a Retry button that loads again without a page reload",
+      "actual": "Only an AlertMessage is shown. The dashboard never destructures refresh for waterings and the waterings page offers no retry. Changing the filter is the only way to refetch.",
+      "evidence": "SSR of /waterings?bed=abc shows the error text and no retry control. index.vue: `const { data: waterings, error: wateringsError } = wateringsResult`, with no refresh",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Failed bed list on the waterings page is silent; filter shows only 'All beds'",
+      "where": "/waterings",
+      "steps": "Make GET /api/beds fail while GET /api/waterings succeeds, then open /waterings",
+      "expected": "An error saying beds could not be loaded, with a retry",
+      "actual": "bedsResult.error is ignored. The Bed select just has 'All beds', as if the garden had no beds, so the filter by bed can't be used",
+      "evidence": "waterings.vue: `const { data: beds } = bedsResult`, and the error is never rendered",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Water now / Save watering have no timeout and no duplicate protection on retry",
+      "where": "/beds Water now and Record past watering; POST /api/waterings",
+      "steps": "Click Water now while the API is slow or hangs. Wait, then click again once it fails or re-enables",
+      "expected": "Request fails after 10 s with a visible error, and a retry after a timeout leaves only one watering",
+      "actual": "The $fetch client sets no timeout, so the button can stay 'Watering…'/'Saving…' indefinitely. POST has no idempotency key, so a retry after a timed-out-but-applied request records a second watering",
+      "evidence": "useApiClient() sets no timeout. recordWatering sends a plain POST. Each POST creates a new row (API returned new ids 4, 5, 6 for repeated posts)",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Tiny litre amounts are accepted but displayed as '0 L'",
+      "where": "/beds Record past watering, /waterings, dashboard",
+      "steps": "Record a past watering with litres 0.001 (the form uses novalidate and only checks > 0). The API also accepts 1e-7",
+      "expected": "Reject amounts below the 0.1 step/min, or show the actual value",
+      "actual": "Saved, and formatLitres (maximumFractionDigits 2) shows '0 L' in the notice and lists",
+      "evidence": "POST litres 0.0000001 returned 201 with litres 1e-7. formatLitres rounds to 2 decimals",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Absurd past dates such as year 0001 are accepted",
+      "where": "POST /api/waterings, /beds past watering form",
+      "steps": "POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\",\"litres\":1}",
+      "expected": "Refuse implausible dates with a reason (there is only an upper bound)",
+      "actual": "201 Created, and it shows in the log as 1 Jan 1",
+      "evidence": "API returned id 3 with watered_on 0001-01-01 (deleted afterwards)",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Bed filter does not follow URL changes within the waterings page",
+      "where": "/waterings",
+      "steps": "Open /waterings?bed=1, then click the 'Waterings' nav link (route becomes /waterings), or use browser back/forward between filter values",
+      "expected": "List and select match the URL",
+      "actual": "bedFilter is read from route.query only once at setup, so the list stays filtered to the old bed while the URL says all beds",
+      "evidence": "waterings.vue: ref initialised from route.query.bed. A watch syncs filter→URL but nothing syncs URL→filter",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Raw validation text shown for an invalid ?bed= value and the select goes blank",
+      "where": "/waterings?bed=abc",
+      "steps": "Open /waterings?bed=abc",
+      "expected": "Ignore the bad filter or show a friendly message",
+      "actual": "Shows 'Query.bed id: Input should be a valid integer, unable to parse string as an integer'. The select has no matching option, and there's no retry",
+      "evidence": "SSR HTML of /waterings?bed=abc contains that text",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Long unbroken bed names can overflow the watering tables at 375 px",
+      "where": "/waterings, dashboard Recent waterings",
+      "steps": "Create a bed with a 60-character name without spaces, water it, and view /waterings at 375 px wide",
+      "expected": "Text wraps and there is no sideways scroll",
+      "actual": "The .table cells have no overflow-wrap/word-break and the table has no scroll wrapper. The 4-column table (date+time, bed, amount, Delete) is likely wider than the viewport",
+      "evidence": "main.css .table rules have no wrapping. There is no overflow-wrap anywhere in the stylesheet",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

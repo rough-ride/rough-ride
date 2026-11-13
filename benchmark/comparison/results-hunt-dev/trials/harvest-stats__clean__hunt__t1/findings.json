@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Malformed or incomplete stats response crashes the page and leaves the previous range's table on screen under 'Loading stats…'",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe faults, expectation malformed-handled",
+      "expected": "A visible error and no uncaught exception; data for the old range is not shown as the result for the new range",
+      "actual": "Uncaught 'Cannot read properties of undefined (reading 'length')'; the page stays on 'Loading stats…' and still shows the 1 Jan to 31 Dec 2026 table and Best plants while From reads 2026-06-02",
+      "evidence": "{\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\",\"350 g · Little Gem\",\"View\",\"Lettuce\",\"Weight by plant and month\",\"2.6 kg total\",\"Harvest weight per plant and month, 1 Jan 2026 to 31 Dec 2026\",\"PLANT\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Sungold\\t–\\t450 g\\t600 g\\t–\\t1.05 kg\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"]} | {\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\",\"350 g · Little Gem\",\"View\",\"Lettuce\",\"Weight by plant and month\",\"2.6 kg total\",\"Harvest weight per plant and month, 1 Jan 2026 to 31 Dec 2026\",\"PLANT\\tJUN 2026\\tJUL 2026\\tAUG 2026\\tSEPT 2026\\tTOTAL\",\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Sungold\\t–\\t450 g\\t600 g\\t–\\t1.05 kg\"],\"pe\":[\"Cannot read properties of undefined (reading 'length')\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-172324-hunt-d3f5",
+        "probe": "faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Clearing the From date gives a contradictory 'From must be on or before To' error instead of an open start",
+      "where": "/stats From field",
+      "steps": "Probe faults, expectation cleared-from-no-contradictory-error",
+      "expected": "With From blank and To = 2025-12-31, stats from the beginning up to To, or a clear prompt to enter a From date",
+      "actual": "The page sends only to=2025-12-31; the server fills From with 1 Jan of this year (2026) and answers 422; the page shows 'The From date must be on or before the To date.' even though From is empty",
+      "evidence": "{\"alerts\":[\"The From date must be on or before the To date.\"],\"fields\":[{\"label\":\"From\",\"value\":\"\"},{\"label\":\"To\",\"value\":\"2025-12-31\"}]} | {\"alerts\":[\"The From date must be on or before the To date.\"],\"fields\":[{\"label\":\"From\",\"value\":\"\"},{\"label\":\"To\",\"value\":\"2025-12-31\"}]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-172324-hunt-d3f5",
+        "probe": "faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Clearing the To date quietly falls back to 31 Dec of this year",
+      "where": "/stats To field",
+      "steps": "Probe baseline, expectation cleared-to-not-silently-replaced",
+      "expected": "A blank To is refused or shown clearly; the range shown matches the inputs",
+      "actual": "To field blank, URL ?from=2025-03-01, results say '6 harvests from 1 Mar 2025 to 31 Dec 2026'",
+      "evidence": "{\"rc\":\"6 harvests from 1 Mar 2025 to 31 Dec 2026\",\"fields\":[{\"label\":\"From\",\"value\":\"2025-03-01\"},{\"label\":\"To\",\"value\":\"\"}]} | {\"rc\":\"6 harvests from 1 Mar 2025 to 31 Dec 2026\",\"fields\":[{\"label\":\"From\",\"value\":\"2025-03-01\"},{\"label\":\"To\",\"value\":\"\"}]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-172324-hunt-d3f5",
+        "probe": "baseline",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A stats request that hangs leaves 'Loading stats…' forever, with old data still showing",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe order, expectation hang-not-loading-forever",
+      "expected": "A timeout with an error and a way to retry",
+      "actual": "13 s after changing From, the page still shows 'Loading stats…' above the previous range's Best plants and table",
+      "evidence": "[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"] | [\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-172324-hunt-d3f5",
+        "probe": "order",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

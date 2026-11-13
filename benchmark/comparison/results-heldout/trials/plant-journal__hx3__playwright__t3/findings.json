@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Failed journal delete removes the entry from the page even though it still exists",
+      "where": "/plants/:id journal section (removeEntry in pages/plants/[id].vue)",
+      "steps": "Open /plants/1. Make DELETE /api/journal/* return 500. Click Delete on an entry and confirm.",
+      "expected": "The entry stays in the list with an error, or the list is restored after the failure.",
+      "actual": "The entry is removed from the list before the request and never put back on failure. 'Could not delete the entry.' is shown, but the list no longer contains the entry, so the page suggests it was deleted.",
+      "evidence": "Before: 2 entries. After the failed DELETE: 1 entry shown plus the alert 'Could not delete the entry.'. GET /api/journal?plant_id=1 still returns ids [2,1].",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal requests have no timeout; a hung request shows 'Loading entries…' forever",
+      "where": "/journal (also plant journal add/edit/delete through useApiClient)",
+      "steps": "On /journal, make GET /api/journal hang (never respond). Type 'tom' in the search box and wait more than 10 s.",
+      "expected": "The request fails after 10 s with an error and a way to retry.",
+      "actual": "'Loading entries…' stays on screen indefinitely. The $fetch client has no timeout set, so Add entry / Save entry would also stay 'Saving…' with the button disabled.",
+      "evidence": "After 12 s the results-count element still read 'Loading entries…'.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal page error state has no retry",
+      "where": "/journal",
+      "steps": "Make GET /api/journal?* return 503 with an HTML body. Go to /plants and click Journal in the nav. Then restore the API.",
+      "expected": "An error message with a Retry button that reloads the list without a page reload.",
+      "actual": "Only 'Could not load the journal.' is shown, with no retry control. The only way to recover is to edit the search text or reload the page.",
+      "evidence": "Main text: 'Journal … Search  Could not load the journal.' Buttons named retry/try again: 0.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Plant page journal load error has no retry, and the form still shows",
+      "where": "/plants/:id journal section",
+      "steps": "Open a plant while GET /api/journal?plant_id=… fails.",
+      "expected": "An error with a Retry button.",
+      "actual": "AlertMessage 'Could not load the journal.' with no retry action. Nothing else on the page refetches the journal except a successful add or delete.",
+      "evidence": "Code: pages/plants/[id].vue shows <AlertMessage v-if=\"journalLoadError\"> with no button. refreshJournal is only called after mutations.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Body starting with a NUL character causes a 500",
+      "where": "POST /api/journal, PUT /api/journal/{id}",
+      "steps": "POST /api/journal with {\"plant_id\":1,\"entry_on\":\"2026-01-01\",\"body\":\"\\u0000abc\"}",
+      "expected": "A 422 validation error.",
+      "actual": "500 Internal Server Error. Pydantic accepts the string, but SQLite length() stops at the NUL, so CHECK(length(body) BETWEEN 1 AND 500) fails with an unhandled IntegrityError.",
+      "evidence": "curl response: 'Internal Server Error 500'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Very large ids cause a 500 instead of a 4xx",
+      "where": "POST /api/journal (plant_id), PUT/DELETE /api/journal/{entry_id}, GET /api/journal?plant_id=",
+      "steps": "PUT /api/journal/99999999999999999999 with a valid body; or GET /api/journal?plant_id=99999999999999999999; or POST with plant_id 99999999999999999999.",
+      "expected": "404 or 422.",
+      "actual": "500 Internal Server Error. The int passes validation (no upper bound), and sqlite3 raises OverflowError.",
+      "evidence": "All three requests returned 'Internal Server Error 500'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Search longer than 80 characters shows a raw validation error instead of results",
+      "where": "/journal search box",
+      "steps": "Type or paste 81 characters into Search.",
+      "expected": "The input limits its length, or the page explains the limit in plain words.",
+      "actual": "The list is replaced by 'Query.q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "Main text after typing 81 'a's: 'Query.q: String should have at most 80 characters'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal feed scrolls sideways at 375 px when a plant name is long",
+      "where": "/journal",
+      "steps": "Create a plant named 'Supercalifragilistic' repeated 4 times (80 chars, no spaces), add a journal entry, open /journal at 375 px wide.",
+      "expected": "No horizontal scrolling; the name wraps.",
+      "actual": "The page is 679 px wide. The .journal-feed__plant link has no overflow-wrap and pushes the card wider than the screen.",
+      "evidence": "document.documentElement.scrollWidth = 679 with innerWidth 375. The overflowing element is A.journal-feed__plant (right edge 662 px).",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Retrying an add after a timeout or lost response creates a duplicate entry",
+      "where": "POST /api/journal from the plant page's Add entry form",
+      "steps": "Submit an entry. The server saves it, but the response is lost or slow. The user clicks Add entry again.",
+      "expected": "One entry is created.",
+      "actual": "The request carries no idempotency key and the server does no deduplication, so every retry inserts another row. The button is disabled only while a request is pending.",
+      "evidence": "Code: create_entry always INSERTs. addEntry sends no request id.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "The textarea limit counts emoji as 2 characters, unlike the server",
+      "where": "/plants/:id journal form",
+      "steps": "Type emoji such as 🌱 into the Entry field.",
+      "expected": "500 characters as the server counts them (code points).",
+      "actual": "maxlength and the 'characters left' counter use UTF-16 length, so only 250 emoji fit and the counter drops by 2 per emoji, although the server would accept 500.",
+      "evidence": "Code: remaining = 500 - form.body.length; the textarea has maxlength=500. The server uses Pydantic max_length (code points).",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

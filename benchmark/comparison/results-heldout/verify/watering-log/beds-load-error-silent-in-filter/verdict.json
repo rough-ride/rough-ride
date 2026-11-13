@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "beds-load-error-silent-in-filter",
+  "sentence": "On /waterings, when GET /api/beds fails the error is ignored and the Bed select silently offers only 'All beds' with no message or retry.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user, used Playwright to make /api/beds return 500, opened the dashboard, then clicked the Waterings link (client-side navigation). The #watering-bed select had only ['All beds'], there were no [role=alert] elements, and the main text was 'Bed / All beds / 2 waterings, 14 L in total' plus the table, with no error and no retry. With the route removed, the select shows 'All beds', 'North bed', 'Shade corner'. (Loading /waterings directly is server-rendered, so the browser route did not affect it.) The code in frontend/app/pages/waterings.vue matches: `const { data: beds } = bedsResult` never reads the error, and the options come from `beds ?? []`, whereas wateringsError is shown in an AlertMessage. So filtering by bed is silently impossible.",
+  "severity": "medium",
+  "wallMs": 38747
+}

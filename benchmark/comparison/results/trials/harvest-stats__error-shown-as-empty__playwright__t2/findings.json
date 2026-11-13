@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Failed stats request is shown as 'No harvests in this range' instead of an error",
+      "where": "/stats (frontend/app/pages/stats.vue), GET /api/stats/harvests",
+      "steps": "Sign in, open Stats. Make GET /api/stats/harvests return 500 (text/plain body) or go offline, then change the From date (or open /stats directly).",
+      "expected": "An error message saying the stats could not be loaded, with a Retry button.",
+      "actual": "The page shows the empty state 'No harvests in this range. Pick a different date range, or log a harvest…'. There is no error message and no retry. The page only reads `data` and `status` from useApiFetch and ignores `error`, so any failure falls through to the EmptyState v-else branch.",
+      "evidence": "With the mock in place, the main text was: 'From / To / This year / No harvests in this range / Pick a different date range, or log a harvest to see it here.' The dashboard, by contrast, uses summaryError with AlertMessage.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "From date after To date (server 422) is shown as an empty range with no reason",
+      "where": "/stats",
+      "steps": "On Stats, type From = 2026-12-01 and To = 2026-02-01. The min/max attributes do not stop typed values.",
+      "expected": "A visible message like 'The From date must be on or before the To date.', which the API already returns.",
+      "actual": "The page shows 'No harvests in this range', which wrongly suggests the range is valid and empty.",
+      "evidence": "The API returns 422 {\"detail\":\"The From date must be on or before the To date.\"}, and the UI shows the empty state.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Invalid date in the URL (e.g. ?from=2026-02-30) is shown as empty instead of being rejected or explained",
+      "where": "/stats?from=2026-02-30",
+      "steps": "Open http://localhost:3790/stats?from=2026-02-30 directly.",
+      "expected": "Fall back to the default date, or show a validation error.",
+      "actual": "queryDate() only checks the \\d{4}-\\d{2}-\\d{2} pattern, so the impossible date is sent. The API answers 422 and the page says 'No harvests in this range'.",
+      "evidence": "The main text was the empty-state message. curl returns 422 'day value is outside expected range'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "No request timeout: a hung stats request spins forever while the previous range's data stays on screen",
+      "where": "/stats",
+      "steps": "On Stats, make /api/stats/harvests hang (route never answers), then change From to 2026-04-01 and wait more than 10 s.",
+      "expected": "After 10 s the request fails and the page shows an error with a retry.",
+      "actual": "After 13 s the page still showed 'Loading stats…' along with the old 1 Jan–31 Dec 2026 table and best plants, even though the From field said 1 Apr. useApiFetch sets no timeout, and the stale table is not hidden or marked while loading.",
+      "evidence": "After 13 s the text showed 'Loading stats…' and the caption 'Harvest weight per plant and month, 1 Jan 2026 to 31 Dec 2026'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Error state cannot be retried without a reload",
+      "where": "/stats",
+      "steps": "Make the request fail, then restore the server.",
+      "expected": "A Retry button that reloads the stats.",
+      "actual": "There is no error UI and no retry. The only way to recover is to change a date or reload the page. `refresh` is never exposed.",
+      "evidence": "Code: stats.vue destructures only { data, status }. There is no button in the failed state.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Null fields in a response render as the text 'null'",
+      "where": "/stats",
+      "steps": "Mock /api/stats/harvests with harvest_count: null (and date fields null).",
+      "expected": "A defensive fallback.",
+      "actual": "The results line reads 'null harvests from – to –'.",
+      "evidence": "The text was 'null harvests from – to –'. This only happens with a mocked response; the real backend always sends numbers.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

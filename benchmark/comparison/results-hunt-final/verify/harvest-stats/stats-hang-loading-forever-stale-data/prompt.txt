@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3797, API http://localhost:8797/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-hf/verify-harvest-stats-stats-hang-loading-forever-stale-data/scratch.
+
+The reported problem: On /stats, when the stats request never answers after changing the date range, 'Loading stats…' stays indefinitely above the previous range's results with no timeout, error or retry.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Hung stats request leaves 'Loading stats…' forever with the old range's data shown",
+  "where": "/stats",
+  "steps": "Probe more, expectation hang-not-stuck-loading",
+  "expected": "A timeout or error after a reasonable wait, and stale results not shown as if they were current",
+  "actual": "After 13 s the page still shows 'Loading stats…' above the previous range's table (1 Jan to 31 Dec 2026) while From reads 2026-05-01",
+  "evidence": "{\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\"]} | {\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\"]}"
+ },
+ {
+  "title": "Stats request that never answers leaves 'Loading stats…' on screen forever, with no error or retry",
+  "where": "/stats (GET /api/stats/harvests)",
+  "steps": "Probe hang, expectation hang-not-loading-forever",
+  "expected": "After a reasonable wait, an error and a way to try again",
+  "actual": "After 14 s the page still shows 'Loading stats…' above the old range's table, with no timeout, error or retry",
+  "evidence": "{\"alerts\":[\"Loading stats…\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\"]} | {\"alerts\":[\"Loading stats…\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\"]}"
+ },
+ {
+  "title": "Stats request that never answers leaves 'Loading stats…' forever with the old range's results shown",
+  "where": "/stats",
+  "steps": "Probe hang, expectation hang-not-stuck-loading",
+  "expected": "After changing From to 2026-07-01 and the request hanging, a timeout or error and a way to retry; old results not presented as current",
+  "actual": "After 13 s the page still shows 'Loading stats…' with the previous 1 Jan-31 Dec table and best plants under the new From date, with no error and no timeout",
+  "evidence": "{\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"]} | {\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"]}"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-hf/verify-harvest-stats-stats-hang-loading-forever-stale-data/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "edited-marker-same-second",
+  "sentence": "An entry edited within the same second it was created is not marked 'edited' because created_at and updated_at have one-second resolution and compare equal.",
+  "verdict": "confirmed",
+  "evidence": "Through the API: POST /api/journal (plant 2) returned entry 4 with created_at = updated_at = '2026-11-12 13:30:14'. A PUT straight after it changed the body to 'same-second test EDITED', but updated_at stayed '2026-11-12 13:30:14' because SQLite datetime('now') only has 1-second resolution. On /plants/2 in the browser, that entry showed the changed text with no 'edited' marker (JournalEntryItem.vue:20 compares updated_at !== created_at). Control: editing the same entry again through the UI more than a second later made the 'edited' marker appear (1 .journal-entry__edited element). So whether an edit is marked depends on timing: a real edit made in the same second is shown as never edited.",
+  "severity": "low",
+  "wallMs": 73343
+}

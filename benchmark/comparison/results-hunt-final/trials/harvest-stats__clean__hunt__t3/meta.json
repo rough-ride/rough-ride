@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__clean__hunt__t3",
+  "feature": "harvest-stats",
+  "bug": "clean",
+  "arm": "hunt",
+  "trial": 3,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T18:43:00.754Z",
+  "materializeMs": 5488,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__clean__hunt__t3/variant/rmirdz9q/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "14eece87-b409-4be6-a3af-82a1ee7604b9",
+  "loadBefore": [
+    7.47119140625,
+    8.87060546875,
+    9.12890625
+  ],
+  "loadAfter": [
+    5.84423828125,
+    8.0283203125,
+    8.7705078125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 136712,
+  "reportedCostUsd": 0.30935300000000004,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 18,
+      "outputTokens": 6384,
+      "cacheReadInputTokens": 177930,
+      "cacheCreationInputTokens": 29203,
+      "webSearchRequests": 0,
+      "costUSD": 0.30935300000000004,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1369,
+      "cacheCreationEphemeral5mInputTokens": 29203,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 2m04s | run 20261112-194317-hunt-3fce | 1 confirmed, 0 dropped on re-run\ntarget: http://localhost:3790\n\nFindings (each reproduced twice from scratch)\n1. MEDIUM Stats page crashes on an unexpected or malformed stats response and keeps showing the previous range's table under a permanent 'Loading stats…'\n   where: /stats (GET /api/stats/harvests)\n   expected: When the stats response is malformed or missing fields, the page shows an error such as 'Could not load harvest stats.' with no uncaught errors, and does not present old figures as the current range\n   saw: {\"pe\":[\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\",\"Cannot read properties of undefined (reading 'length')\"],\"alerts\":[\"Loading stats…\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\",\"1.05 kg · Sungold\",\"View\",\"Tomato\",\"NO. 3\",\"Lettuce\"]}\n   repro: .rough-ride/runs/20261112-194317-hunt-3fce/probes/faults.mjs (expectation \"malformed-shows-error\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a22e9325aa07812d9.jsonl",
+    "agent-a22e9325aa07812d9.meta.json"
+  ],
+  "usage": {
+    "input": 18,
+    "output": 6384,
+    "cacheRead": 177930,
+    "cacheWrite": 29203,
+    "requests": 9,
+    "toolCalls": {
+      "Bash": 8,
+      "Read": 1
+    }
+  },
+  "findingCount": 1,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T18:45:31.085Z"
+}

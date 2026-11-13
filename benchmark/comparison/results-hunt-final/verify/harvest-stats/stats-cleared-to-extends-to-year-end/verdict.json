@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "error-shown-as-empty",
+  "key": "stats-cleared-to-extends-to-year-end",
+  "sentence": "On /stats, clearing the To field while From is set silently queries up to 31 Dec of the current year while the To field stays blank.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user on /stats. Set From=2025-01-01, then cleared To. The To input stays blank, the URL becomes ?from=2025-01-01 (no 'to'), and the results line reads '6 harvests from 1 Jan 2025 to 31 Dec 2026'. Cause in the code: stats.vue drops an empty 'to' from the query, and backend/routers/stats.py replaces a missing 'to' with year_bounds(today.year)[1], i.e. 31 Dec of the current year. The empty field is never refused, and the page never shows the end date it actually used except in that summary line. Worse cases: (1) From=2027-02-01 with To cleared makes the backend's year-end fallback earlier than From, so the API returns 422. The page shows 'No harvests in this range' with no error and no range line. (2) Reloading ?from=2027-02-01 fills To back in with 2026-12-31 (queryDate fallback), so the form now shows an inverted From/To pair. Blank To is handled inconsistently and can break the page silently.",
+  "severity": "medium",
+  "wallMs": 49665
+}

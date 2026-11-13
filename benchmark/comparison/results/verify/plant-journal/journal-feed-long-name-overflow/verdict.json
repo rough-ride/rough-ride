@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "journal-feed-long-name-overflow",
+  "sentence": "On /journal at 375 px width, a long unbroken plant name in .journal-feed__plant has no overflow-wrap and pushes the page into horizontal scrolling.",
+  "verdict": "confirmed",
+  "evidence": "Via the API (signed in as the demo user) I created a plant named 'W'x80. PlantIn allows max_length=80, so the API accepted it. I added a journal entry for it, then opened /journal in Playwright at a 375x800 viewport. document.documentElement.scrollWidth was 1568 against a clientWidth of 375, and the A.journal-feed__plant link for the long name reached right=1551px. Its computed overflow-wrap and word-break were both 'normal'. In main.css, overflow-wrap:anywhere is set only on .journal-entry__body; .journal-feed__plant has neither overflow-wrap nor word-break. So the page scrolls sideways on mobile when a plant name is valid but long. (The exact numbers differ from the reports because 'W' is a wide glyph.) I deleted the test plant afterwards.",
+  "severity": "medium",
+  "wallMs": 78215
+}

@@ -1,0 +1,49 @@
+{
+  "findings": [
+    {
+      "title": "Past watering form accepts a negative amount in litres",
+      "where": "/beds, Record past watering form",
+      "steps": "Probe negative-litres, expectation negative-litres-refused-in-ui",
+      "expected": "An amount of -5 litres is refused with a message such as 'Enter an amount in litres greater than zero.'",
+      "actual": "The watering is saved and the page says 'Recorded -5 L on 12 Nov 2026.'. The /waterings list then shows '-5 L'. The client only rejects exactly 0, and the input has no min.",
+      "evidence": "{\"alerts\":[\"Recorded -5 L on 12 Nov 2026.\"],\"negative\":[{\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5}],\"n0\":2,\"n1\":3} | {\"alerts\":[\"Recorded -5 L on 12 Nov 2026.\"],\"negative\":[{\"id\":3,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-12\",\"watered_at\":null,\"litres\":-5}],\"n0\":2,\"n1\":3}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-171750-hunt-5901",
+        "probe": "negative-litres",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "POST /api/waterings stores negative litres",
+      "where": "POST /api/waterings",
+      "steps": "Probe negative-litres, expectation api-refuses-negative-litres",
+      "expected": "422 for litres -20 (WateringIn.litres has le=10000 but no lower bound)",
+      "actual": "201 Created with litres -20. The record shows as '-20 L' in the watering log.",
+      "evidence": "{\"status\":201,\"body\":{\"id\":4,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-01\",\"watered_at\":null,\"litres\":-20}} | {\"status\":201,\"body\":{\"id\":4,\"bed_id\":1,\"bed_name\":\"North bed\",\"watered_on\":\"2026-11-01\",\"watered_at\":null,\"litres\":-20}}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-171750-hunt-5901",
+        "probe": "negative-litres",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Malformed waterings response crashes the list and leaves it stuck on 'Loading waterings…' with stale rows",
+      "where": "/waterings, bed filter",
+      "steps": "Probe malformed-list, expectation malformed-response-handled",
+      "expected": "A visible error and no uncaught exception",
+      "actual": "Uncaught 'waterings.value?.reduce is not a function'. The page keeps showing 'Loading waterings…' forever, and the North bed filter still lists the old Shade corner rows.",
+      "evidence": "{\"pageErrors\":[\"waterings.value?.reduce is not a function\"],\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"Loading waterings…\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\"]} | {\"pageErrors\":[\"waterings.value?.reduce is not a function\"],\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"Loading waterings…\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-171750-hunt-5901",
+        "probe": "malformed-list",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

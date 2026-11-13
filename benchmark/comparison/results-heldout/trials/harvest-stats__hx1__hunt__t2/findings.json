@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Slower earlier stats response overwrites the newer one, so the table no longer matches the chosen dates",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe faults, expectation newest-response-wins",
+      "expected": "After changing From to 2026-08-01 and then back to 2026-01-01, the page shows the stats for 1 Jan 2026 to 31 Dec 2026 (5 harvests)",
+      "actual": "The delayed earlier response arrives last and wins: the fields say 2026-01-01 to 2026-12-31 but the page shows '2 harvests from 1 Aug 2026 to 31 Dec 2026' and Tomato as the only best plant",
+      "evidence": "{\"fields\":[{\"label\":\"From\",\"value\":\"2026-01-01\"},{\"label\":\"To\",\"value\":\"2026-12-31\"}],\"text\":[\"From\",\"To\",\"2 harvests from 1 Aug 2026 to 31 Dec 2026\",\"Best plants\",\"NO. 1\",\"Tomato\",\"600 g · Sungold\",\"View\",\"Tomato\"]} | {\"fields\":[{\"label\":\"From\",\"value\":\"2026-01-01\"},{\"label\":\"To\",\"value\":\"2026-12-31\"}],\"text\":[\"From\",\"To\",\"2 harvests from 1 Aug 2026 to 31 Dec 2026\",\"Best plants\",\"NO. 1\",\"Tomato\",\"600 g · Sungold\",\"View\",\"Tomato\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-174937-hunt-783a",
+        "probe": "faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "When loading fails, the summary line still shows the previous range's harvest count next to the error",
+      "where": "/stats",
+      "steps": "Probe faults, expectation no-stale-range-with-error",
+      "expected": "When the stats request fails for a new range, the page shows only an error and no harvest count from an earlier range",
+      "actual": "'5 harvests from 1 Jan 2026 to 31 Dec 2026' stays visible above the 'Injected 500' error, even though From is now 2026-07-01",
+      "evidence": "[\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\",\"Garden Log · a journal for one garden\"] | [\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"Injected 500\",\"Garden Log · a journal for one garden\"]",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-174937-hunt-783a",
+        "probe": "faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A stats request that never answers leaves 'Loading stats…' on screen forever, above the old range's table",
+      "where": "/stats",
+      "steps": "Probe misc, expectation hang-not-stuck-loading",
+      "expected": "A request that never answers ends in a visible error or a way to retry",
+      "actual": "After 13 s the page still shows 'Loading stats…', with the full-year table from before (2.6 kg total) under it, while From says 2026-07-01",
+      "evidence": "{\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\"],\"alerts\":[\"Loading stats…\"]} | {\"text\":[\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\"],\"alerts\":[\"Loading stats…\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-174937-hunt-783a",
+        "probe": "misc",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A blank From field quietly becomes 1 Jan of this year, so a valid To date in an earlier year is refused",
+      "where": "/stats (GET /api/stats/harvests?to=2025-12-31)",
+      "steps": "Probe blankfrom, expectation blank-from-not-silently-this-year",
+      "expected": "With From blank and To set to 2025-12-31, the page shows harvests up to that date, or asks for a From date",
+      "actual": "The server fills in From as 2026-01-01 and refuses with 'The From date must be on or before the To date.', even though the From field is empty; the old '5 harvests from 1 Jan 2026 to 31 Dec 2026' line also stays visible",
+      "evidence": "{\"fields\":[{\"label\":\"From\",\"value\":\"\"},{\"label\":\"To\",\"value\":\"2025-12-31\"}],\"alerts\":[\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"The From date must be on or before the To date.\"],\"text\":[\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"The From date must be on or before the To date.\",\"Garden Log · a journal for one garden\"]} | {\"fields\":[{\"label\":\"From\",\"value\":\"\"},{\"label\":\"To\",\"value\":\"2025-12-31\"}],\"alerts\":[\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"The From date must be on or before the To date.\"],\"text\":[\"From\",\"To\",\"This year\",\"5 harvests from 1 Jan 2026 to 31 Dec 2026\",\"The From date must be on or before the To date.\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-174937-hunt-783a",
+        "probe": "blankfrom",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

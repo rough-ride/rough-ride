@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "empty-months-omitted",
+  "sentence": "On /stats, the weight-by-month table only has columns for months with harvests, so empty months in the chosen range are silently skipped; triggered by choosing a range that includes months without harvests.",
+  "verdict": "confirmed",
+  "evidence": "Signed in through POST /api/auth/login as the demo user. GET /api/stats/harvests with the default range (2026-01-01..2026-12-31) returned months ['2026-06','2026-07','2026-08','2026-09']. With from=2025-01-01&to=2026-12-31 it returned ['2025-08','2026-06','2026-07','2026-08','2026-09'], jumping from Aug 2025 straight to Jun 2026. In backend/routers/stats.py, months is built only from the grouped result rows (months = sorted({row['month'] for row in rows})), so the range's calendar months are never filled in. frontend/app/pages/stats.vue makes one table column for each entry in stats.months and adds no gap months. So the per-month table does not cover the chosen range: empty months, including gaps in the middle, disappear without any sign, and that misrepresents 'weight per month for the chosen range'. I did not check the rendered page in the browser.",
+  "severity": "medium",
+  "wallMs": 38607
+}

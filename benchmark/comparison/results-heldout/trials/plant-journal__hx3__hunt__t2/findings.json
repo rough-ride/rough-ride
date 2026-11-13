@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "A journal entry disappears from the plant page when deleting it fails",
+      "where": "/plants/:id Journal section (DELETE /api/journal/:id)",
+      "steps": "Probe delete-fail, expectation failed-delete-keeps-entry-visible",
+      "expected": "When the delete request fails, the entry stays in the list next to the error, because it is still in the database.",
+      "actual": "The entry is removed from the list before the request is sent and never comes back. With a 500 the page shows 'Injected 500' and 'No journal entries yet', but the entry is still in the database.",
+      "evidence": "{\"visible\":0,\"alerts\":[\"Injected 500\"]} | {\"visible\":0,\"alerts\":[\"Injected 500\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-191719-hunt-912a",
+        "probe": "delete-fail",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "A malformed journal response is shown as a list of blank entries",
+      "where": "/journal (GET /api/journal)",
+      "steps": "Probe journal-malformed, expectation malformed-response-shown-as-error-not-entries",
+      "expected": "An unreadable response shows an error, not entries.",
+      "actual": "The page says '14 entries' and lists 14 cards that contain only '–', with no error.",
+      "evidence": "{\"items\":14,\"alerts\":[\"14 entries\"],\"t\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\"]} | {\"items\":14,\"alerts\":[\"14 entries\"],\"t\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-191719-hunt-912a",
+        "probe": "journal-malformed",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

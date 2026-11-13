@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "error-shown-as-empty",
+  "key": "dashboard-summary-no-retry-after-failure",
+  "sentence": "After GET /api/dashboard/summary fails on the dashboard, there is no way to retry without a page reload.",
+  "verdict": "not-a-defect",
+  "evidence": "Signed in as the demo user, opened /plants, then used Playwright page.route to fail GET /api/dashboard/summary and went to the Dashboard with a client-side link click. (A first page load is rendered on the server, so browser_route can't touch it.) One 500 never shows an error: ofetch's built-in GET retry sent a second request (n=2) and the summary cards loaded normally. When I failed it with 400 once, 500 twice or 429 twice, the summary section showed only the AlertMessage text ('Server exploded') with no button or link in it, so the report is right that there is no retry control. But a reload isn't the only way out: clicking Plants and then Dashboard in the nav fetched again and showed the full summary every time. The error branch in index.vue (`<AlertMessage v-if=\"summaryError\">`) is the same on main; the change only edited the top-plant StatCard hint and link. AlertMessage has no retry option, and no page in the app (tasks, beds, plants/[id]) has a retry button for a failed load. This is the app's existing error pattern, which this change neither added nor touched, and the request asked for nothing here. The claim that only a reload helps is also false, because going to another page and back recovers.",
+  "severity": null,
+  "wallMs": 121416
+}

@@ -1,0 +1,277 @@
+{
+  "ranAt": "2026-11-12T16:30:36.453Z",
+  "rows": [
+    {
+      "variant": "harvest-stats/hx1",
+      "check": "hx1",
+      "pass": false,
+      "observed": {
+        "line": "4 harvests from 1 Jul 2026 to 31 Dec 2026",
+        "total": "2.4 kg total",
+        "requestedTo": [
+          "2026-12-31",
+          "2026-07-31"
+        ]
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "harvest-stats/hx1",
+      "check": "hx2",
+      "pass": true,
+      "observed": {
+        "tomatoes": [
+          "Tomato · Gardener's Delight = 500 g",
+          "Tomato · Sungold = 1.05 kg"
+        ],
+        "want": [
+          "Tomato · Gardener's Delight = 500 g",
+          "Tomato · Sungold = 1.05 kg"
+        ]
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "harvest-stats/hx2",
+      "check": "hx1",
+      "pass": true,
+      "observed": {
+        "line": "2 harvests from 1 Jul 2026 to 31 Jul 2026",
+        "total": "1.65 kg total",
+        "requestedTo": [
+          "2026-12-31",
+          "2026-07-31"
+        ]
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "harvest-stats/hx2",
+      "check": "hx2",
+      "pass": false,
+      "observed": {
+        "tomatoes": [
+          "Tomato · Sungold = 1.55 kg"
+        ],
+        "want": [
+          "Tomato · Gardener's Delight = 500 g",
+          "Tomato · Sungold = 1.05 kg"
+        ]
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "harvest-stats/clean",
+      "check": "hx1",
+      "pass": true,
+      "observed": {
+        "line": "2 harvests from 1 Jul 2026 to 31 Jul 2026",
+        "total": "1.65 kg total",
+        "requestedTo": [
+          "2026-12-31",
+          "2026-07-31"
+        ]
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "harvest-stats/clean",
+      "check": "hx2",
+      "pass": true,
+      "observed": {
+        "tomatoes": [
+          "Tomato · Gardener's Delight = 500 g",
+          "Tomato · Sungold = 1.05 kg"
+        ],
+        "want": [
+          "Tomato · Gardener's Delight = 500 g",
+          "Tomato · Sungold = 1.05 kg"
+        ]
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/hx3",
+      "check": "hx3",
+      "pass": false,
+      "observed": {
+        "stillListed": false,
+        "alerts": 1
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/hx3",
+      "check": "hx4",
+      "pass": true,
+      "observed": {
+        "list": {
+          "harvest_count": 3,
+          "harvest_grams": 1350,
+          "journal_count": 2
+        },
+        "detail": {
+          "harvest_count": 3,
+          "harvest_grams": 1350,
+          "harvests_listed": 3
+        }
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/hx4",
+      "check": "hx3",
+      "pass": true,
+      "observed": {
+        "stillListed": true,
+        "alerts": 1
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/hx4",
+      "check": "hx4",
+      "pass": false,
+      "observed": {
+        "list": {
+          "harvest_count": 6,
+          "harvest_grams": 2700,
+          "journal_count": 2
+        },
+        "detail": {
+          "harvest_count": 6,
+          "harvest_grams": 2700,
+          "harvests_listed": 3
+        }
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/clean",
+      "check": "hx3",
+      "pass": true,
+      "observed": {
+        "stillListed": true,
+        "alerts": 1
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "plant-journal/clean",
+      "check": "hx4",
+      "pass": true,
+      "observed": {
+        "list": {
+          "harvest_count": 3,
+          "harvest_grams": 1350,
+          "journal_count": 2
+        },
+        "detail": {
+          "harvest_count": 3,
+          "harvest_grams": 1350,
+          "harvests_listed": 3
+        }
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/hx5",
+      "check": "hx5",
+      "pass": false,
+      "observed": {
+        "viewport": 375,
+        "scrollWidth": 375,
+        "formRight": 342,
+        "cardRight": 359,
+        "inputWidths": [
+          29,
+          29
+        ]
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/hx5",
+      "check": "hx6",
+      "pass": true,
+      "observed": {
+        "url": "/waterings?bed=2",
+        "chosen": "Shade corner",
+        "rows": 1
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/hx6",
+      "check": "hx5",
+      "pass": true,
+      "observed": {
+        "viewport": 375,
+        "scrollWidth": 375,
+        "formRight": 342,
+        "cardRight": 359,
+        "inputWidths": [
+          283,
+          283
+        ]
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/hx6",
+      "check": "hx6",
+      "pass": false,
+      "observed": {
+        "url": "/waterings?bed_id=2",
+        "chosen": "All beds",
+        "rows": 2
+      },
+      "expected": false,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/clean",
+      "check": "hx5",
+      "pass": true,
+      "observed": {
+        "viewport": 375,
+        "scrollWidth": 375,
+        "formRight": 342,
+        "cardRight": 359,
+        "inputWidths": [
+          283,
+          283
+        ]
+      },
+      "expected": true,
+      "asExpected": true
+    },
+    {
+      "variant": "watering-log/clean",
+      "check": "hx6",
+      "pass": true,
+      "observed": {
+        "url": "/waterings?bed=2",
+        "chosen": "Shade corner",
+        "rows": 1
+      },
+      "expected": true,
+      "asExpected": true
+    }
+  ]
+}

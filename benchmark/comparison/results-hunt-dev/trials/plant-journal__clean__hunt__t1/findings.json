@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Journal search shows a malformed API response as a list of blank matching entries",
+      "where": "/journal (GET /api/journal?q=...)",
+      "steps": "Probe plant-journal-faults, expectation journal-search-malformed-not-shown-as-results",
+      "expected": "A malformed response is shown as a load error, not as search results",
+      "actual": "The page says '14 entries match' and lists 14 cards that show only '–', with no error",
+      "evidence": "{\"alerts\":[\"14 entries match\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"14 entries match\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\"]} | {\"alerts\":[\"14 entries match\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"14 entries match\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-172805-hunt-0b47",
+        "probe": "plant-journal-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Plant journal section shows a malformed response as fake entries with Edit/Delete buttons",
+      "where": "/plants/:id Journal section (GET /api/journal?plant_id=...)",
+      "steps": "Probe plant-journal-faults, expectation journal-fault-malformed-shows-error",
+      "expected": "An error saying the journal could not load",
+      "actual": "Several entries dated '–' with no text show up, each with 'Edit entry from –' and 'Delete entry from –' buttons, and there is no alert",
+      "evidence": "{\"seg\":[\"Entries, newest first\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\"],\"alerts\":[]} | {\"seg\":[\"Entries, newest first\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\"],\"alerts\":[]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-172805-hunt-0b47",
+        "probe": "plant-journal-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Plant journal shows an invalid (empty-object) response as 'No journal entries yet' while the badge counts entries",
+      "where": "/plants/:id Journal section",
+      "steps": "Probe plant-journal-faults, expectation journal-fault-empty-object-shows-error",
+      "expected": "A visible load error",
+      "actual": "It shows the 'No journal entries yet' empty state with no alert, while the badge says '2 entries'",
+      "evidence": "{\"seg\":[\"Entries, newest first\",\"No journal entries yet\",\"Note what you see: first shoots, pests, the weather.\",\"Garden Log · a journal for one garden\"],\"alerts\":[]} | {\"seg\":[\"Entries, newest first\",\"No journal entries yet\",\"Note what you see: first shoots, pests, the weather.\",\"Garden Log · a journal for one garden\"],\"alerts\":[]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-172805-hunt-0b47",
+        "probe": "plant-journal-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "No way to retry after the plant journal fails to load without reloading the page",
+      "where": "/plants/:id Journal section",
+      "steps": "Probe plant-journal-retry, expectation journal-load-failure-offers-retry",
+      "expected": "A Retry button, or some other way to load the journal again once the fault clears",
+      "actual": "Only the error text 'Injected 500' shows, and there is no retry control in the Journal section",
+      "evidence": "{\"retryButtons\":0,\"text\":\"Journal\\n2 entries\\nNew entry\\nDate\\nEntry\\n\\n500 characters left\\n\\nAdd entry\\nEntries, newest first\\nInjected 500\"} | {\"retryButtons\":0,\"text\":\"Journal\\n2 entries\\nNew entry\\nDate\\nEntry\\n\\n500 characters left\\n\\nAdd entry\\nEntries, newest first\\nInjected 500\"}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-172805-hunt-0b47",
+        "probe": "plant-journal-retry",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

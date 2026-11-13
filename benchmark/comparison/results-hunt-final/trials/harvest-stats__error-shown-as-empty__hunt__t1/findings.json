@@ -1,0 +1,49 @@
+{
+  "findings": [
+    {
+      "title": "Failed stats request is shown as 'No harvests in this range'",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe stats-errors, expectation server-error-not-shown-as-empty",
+      "expected": "When the stats request fails (500), the page shows a visible error and a way to retry",
+      "actual": "No error appears. The page shows the empty state 'No harvests in this range', so it looks as if the range has no harvests",
+      "evidence": "{\"alerts\":[],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"No harvests in this range\",\"Pick a different date range, or log a harvest to see it here.\",\"Log harvest\",\"Garden Log · a journal for one garden\"]} | {\"alerts\":[],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"No harvests in this range\",\"Pick a different date range, or log a harvest to see it here.\",\"Log harvest\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-193117-hunt-44d8",
+        "probe": "stats-errors",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "From date after To date (from the URL) shows the empty state instead of the validation reason",
+      "where": "/stats?from=2026-09-01&to=2026-06-01",
+      "steps": "Probe stats-more, expectation reversed-range-not-empty-state",
+      "expected": "The server's 422 'The From date must be on or before the To date.' is shown to the user",
+      "actual": "The page shows 'No harvests in this range' with no explanation",
+      "evidence": "{\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"No harvests in this range\",\"Pick a different date range, or log a harvest to see it here.\",\"Log harvest\",\"Garden Log · a journal for one garden\"]} | {\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"No harvests in this range\",\"Pick a different date range, or log a harvest to see it here.\",\"Log harvest\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-193117-hunt-44d8",
+        "probe": "stats-more",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Malformed stats response crashes the page and leaves it stuck on 'Loading stats…' with stale data",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Probe stats-more, expectation empty-object-no-crash",
+      "expected": "An unexpected response shape shows an error with no uncaught exception",
+      "actual": "Uncaught TypeError 'Cannot read properties of undefined (reading 'length')'. 'Loading stats…' stays on screen while the table still shows the previous range's data",
+      "evidence": "{\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\"]} | {\"pe\":[\"Cannot read properties of undefined (reading 'length')\"],\"text\":[\"Stats\",\"Harvest weight per plant and month.\",\"Log harvest\",\"From\",\"To\",\"This year\",\"Loading stats…\",\"Best plants\",\"NO. 1\",\"Courgette\",\"1.2 kg\",\"View\",\"Courgette\",\"NO. 2\",\"Tomato\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-193117-hunt-44d8",
+        "probe": "stats-more",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

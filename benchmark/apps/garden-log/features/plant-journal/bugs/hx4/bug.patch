@@ -1,0 +1,17 @@
+diff --git a/backend/routers/plants.py b/backend/routers/plants.py
+index ab89bc3..856f12f 100644
+--- a/backend/routers/plants.py
++++ b/backend/routers/plants.py
+@@ -17,10 +17,11 @@ SELECT p.id, p.name, p.variety, p.bed_id, b.name AS bed_name, p.spacing_cm,
+        p.planted_on, p.notes, p.created_at, p.updated_at,
+        COUNT(h.id) AS harvest_count,
+        COALESCE(SUM(h.weight_grams), 0) AS harvest_grams,
+-       (SELECT COUNT(*) FROM journal_entries j WHERE j.plant_id = p.id) AS journal_count
++       COUNT(DISTINCT j.id) AS journal_count
+ FROM plants p
+ JOIN beds b ON b.id = p.bed_id
+ LEFT JOIN harvests h ON h.plant_id = p.id
++LEFT JOIN journal_entries j ON j.plant_id = p.id
+ """
+ 
+ 

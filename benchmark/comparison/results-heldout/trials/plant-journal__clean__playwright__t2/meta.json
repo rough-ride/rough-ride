@@ -1,0 +1,75 @@
+{
+  "id": "plant-journal__clean__playwright__t2",
+  "feature": "plant-journal",
+  "bug": "clean",
+  "arm": "playwright",
+  "trial": 2,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:52:59.317Z",
+  "materializeMs": 5631,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__clean__playwright__t2/variant/3vzlkzxk/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "ebc0e467-bfab-4040-b405-41ec4477fc28",
+  "loadBefore": [
+    4.53369140625,
+    4.62744140625,
+    5.65869140625
+  ],
+  "loadAfter": [
+    3.42138671875,
+    3.857421875,
+    5.0361328125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 252299,
+  "reportedCostUsd": 0.8028088000000001,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 48,
+      "outputTokens": 13120,
+      "cacheReadInputTokens": 938524,
+      "cacheCreationInputTokens": 44064,
+      "webSearchRequests": 0,
+      "costUSD": 0.8028088000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 3114,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 44064,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 24,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 11 problems: 8 seen in the running app and 3 suspected from reading the code. The request itself is fully built (dated entries up to 500 characters, newest first, edit in place, delete, a Journal page with search, and entry counts in the plants list); most of the problems are in how it handles failures. All 11 are written to `out/findings.json`.\n\n**Seen in the app**\n1. **High – no request timeout.** If adding an entry gets no answer, the button stays on \"Saving…\" and disabled indefinitely. It was still stuck after 13 seconds, with no error shown.\n2. **Medium – a non-JSON reply is shown as results.** When the Journal page gets an HTML page back with a 200 status, it says \"18 entries match\" (18 is the length of the HTML text) and shows 18 blank cards with \"–\". Entries with null fields also show as blank cards.\n3. **Medium – no retry button when the journal fails to load.** This affects both the Journal page and the journal section of a plant's page. The plant page also keeps showing \"2 entries\" next to the error.\n4. **Medium – emoji are counted twice in the browser.** The browser counts each emoji as two characters but the server counts it as one. So you can only type 250 emoji, and an entry with 500 emoji (which the server accepts) shows \"-500 characters left\" and can't be saved after editing.\n5. **Medium – very large ids crash the server.** Numbers too large for the database in `plant_id` or the entry id give a 500 error on create, list, edit and delete. The plants endpoints already fail the same way, but the new journal endpoints repeat it.\n6. **Low – long plant names cause sideways scrolling.** At 375 px wide, the Journal page is 522 px wide because the plant name doesn't wrap.\n7. **Low – long searches show a raw validation message.** A search over 80 characters replaces the results with \"Query.q: String should have at most 80 characters\", and the search box has no length limit.\n8. **Low – implausible dates are accepted.** An entry dated 0001-01-01 is saved and shown as \"1 Jan 1\".\n\n**Suspected from the code**\n- **Medium – duplicate entries on retry.** If the server saves an entry but the reply is lost, clicking \"Add entry\" again creates a second copy; nothing prevents duplicates.\n- **Low – time-zone mismatch.** The server checks \"not in the future\" against its own date, so a user whose local date is already ahead can be refused an entry dated today.\n- **Low – stale list after a 404.** If an entry was already deleted (for example in another tab), deleting or editing it shows \"not found\" but leaves the entry on the page until a reload.\n\n**Checked and fine:** pressing Enter twice in the date field saves only once. A slow search answer arriving late doesn't overwrite newer results. A failed submit keeps the typed text. Typing a new search after a load error recovers without a reload.\n\nTo test, I added a few entries (including a 500-emoji entry on Courgette and a \"double enter test\" entry). I also added a plant with a long name, which I deleted along with its entry. I made no changes to the repository files.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 48,
+    "output": 13120,
+    "cacheRead": 938524,
+    "cacheWrite": 44064,
+    "requests": 23,
+    "toolCalls": {
+      "Bash": 10,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 11,
+      "mcp__playwright__browser_snapshot": 1
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 11,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T16:57:25.262Z"
+}

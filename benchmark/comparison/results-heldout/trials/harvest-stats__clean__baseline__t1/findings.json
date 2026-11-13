@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Stats page error state has no retry",
+      "where": "/stats (frontend/app/pages/stats.vue)",
+      "steps": "Open /stats while the API is unreachable or returns 5xx; bring the API back.",
+      "expected": "Error message with a Retry button that refetches without a reload.",
+      "actual": "Only an AlertMessage is shown; refresh() from useApiFetch is not destructured or wired to any button. The only way to recover is to change a date or reload the page.",
+      "evidence": "stats.vue destructures only { data, error, status } and renders <AlertMessage v-if=\"statsError\"> with no action.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout",
+      "where": "/stats -> GET /api/stats/harvests",
+      "steps": "Open /stats while the API hangs (accepts the connection but never answers).",
+      "expected": "The request fails after 10 s and shows an error with retry.",
+      "actual": "useApiFetch/useApiClient set no timeout, so the page shows 'Loading stats…' (or blocks SSR) indefinitely.",
+      "evidence": "No timeout option in composables/useApi.ts or in the stats.vue useApiFetch call.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing the From date yields a misleading 'From must be before To' error",
+      "where": "/stats From field; GET /api/stats/harvests?to=...",
+      "steps": "On /stats, clear the From field and set To to a date in a previous year, e.g. 2025-06-01.",
+      "expected": "A blank From means 'no lower bound' (or a clear 'From is required' message), and the page shows harvests up to 2025-06-01.",
+      "actual": "The frontend leaves out 'from', the server silently defaults it to Jan 1 of the current year, then rejects the request with 422 'The From date must be on or before the To date.' even though the user never set a From date.",
+      "evidence": "curl /api/stats/harvests?to=2025-06-01 -> 422 {\"detail\":\"The From date must be on or before the To date.\"}",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Months with no harvests are left out of the per-month table",
+      "where": "/stats table; GET /api/stats/harvests",
+      "steps": "Open /stats with the default range (Jan–Dec 2026).",
+      "expected": "One column per month in the chosen range, showing – or 0 for empty months.",
+      "actual": "Only months that have harvests appear (Jun, Jul, Aug, Sep 2026), so gaps such as an empty month in between disappear silently and the table doesn't show the range the user picked.",
+      "evidence": "API response months: [2026-06, 2026-07, 2026-08, 2026-09] for range 2026-01-01..2026-12-31.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid date query error is shown as raw technical text",
+      "where": "/stats?from=... ; GET /api/stats/harvests",
+      "steps": "Make the API receive an invalid date, e.g. a five-digit year typed into the date input (the browser allows years up to 275760), or call ?from=2026-13-01.",
+      "expected": "A friendly message about the From date.",
+      "actual": "The 422 detail array is shown as 'Query.from: Input should be a valid date or datetime, month value is outside expected range of 1-12'.",
+      "evidence": "curl ?from=2026-13-01 -> 422 detail loc [\"query\",\"from\"]; apiErrorMessage only drops 'body' from loc, so it shows 'Query.from'.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Date fields don't follow the URL query after in-app navigation",
+      "where": "/stats",
+      "steps": "While on /stats with a custom range, use browser back/forward or an in-app link to /stats?from=X.",
+      "expected": "From/To fields and the table follow the URL.",
+      "actual": "dateFrom/dateTo are read from route.query only once at setup and never watched, so the fields and the URL can drift apart.",
+      "evidence": "stats.vue: refs initialised from route.query; only a watch from refs to router.replace exists, nothing in the other direction.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

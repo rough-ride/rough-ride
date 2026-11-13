@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Double-clicking \"Water now\" records two waterings",
+      "where": "/beds, Water now button; POST /api/waterings",
+      "steps": "On /beds, double-click \"Water now\" on a bed (or retry after a slow response).",
+      "expected": "One watering is recorded. The button is disabled while the request is in flight, and/or the server deduplicates.",
+      "actual": "The Water now button has no :disabled binding (only its label changes, and only when the past form is closed). The server has no idempotency key or dedupe, so every click inserts a new row.",
+      "evidence": "Two concurrent POST {\"bed_id\":2} returned ids 6 and 7 with the same watered_at 2026-11-12 12:40:00. Both appear in GET /api/waterings?bed_id=2. beds.vue: the Water now <button> has @click=\"waterNow(bed)\" and no disabled attribute.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Very large bed_id returns 500 Internal Server Error",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":99999999999999999999}, or GET /api/waterings?bed_id=99999999999999999999, or DELETE /api/waterings/99999999999999999999",
+      "expected": "4xx validation error",
+      "actual": "500 Internal Server Error (plain text). The integer overflows SQLite's range.",
+      "evidence": "curl returned 'Internal Server Error 500' for all three requests.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Errors on the waterings page and dashboard section offer no retry",
+      "where": "/waterings and the Recent waterings section of /",
+      "steps": "Open /waterings or / while the API is down or returns an error, then bring the API back.",
+      "expected": "An error message with a Retry button that refetches without reloading the page.",
+      "actual": "Only an AlertMessage is shown. Neither page has a retry control, and the dashboard doesn't even destructure refresh for waterings. The user has to reload or change the filter.",
+      "evidence": "waterings.vue / index.vue templates: <AlertMessage v-if=\"wateringsError\"> with no button.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Requests have no timeout; Water now and Save watering can stay 'Watering…'/'Saving…' indefinitely",
+      "where": "/beds water actions, /waterings, dashboard",
+      "steps": "Make the API hang (accept the connection but never respond) and click Save watering or Water now.",
+      "expected": "The request fails after 10 seconds with a visible error, and the controls are usable again.",
+      "actual": "useApiClient/useApiFetch set no timeout, so the request waits forever. The Save button stays disabled with 'Saving…'.",
+      "evidence": "composables/useApi.ts: $fetch.create has no timeout option, and useFetch is called without one.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "When the beds list fails to load, the bed filter on /waterings silently shows only 'All beds'",
+      "where": "/waterings bed filter",
+      "steps": "Open /waterings when GET /api/beds fails.",
+      "expected": "An error saying the beds could not be loaded, with a retry.",
+      "actual": "bedsResult.error is ignored. The select just offers 'All beds', which looks like there are no beds.",
+      "evidence": "waterings.vue: const { data: beds } = bedsResult; the error is never rendered.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Absurd past dates such as year 0001 are accepted",
+      "where": "POST /api/waterings, Record past watering form",
+      "steps": "POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\",\"litres\":1}, or type year 0001 in the date field",
+      "expected": "The date is refused with a reason (e.g. not before some sensible minimum).",
+      "actual": "201 Created. The watering is stored with date 0001-01-01 and appears in the lists.",
+      "evidence": "The response had id 4 and watered_on 0001-01-01.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Boolean true is accepted as litres",
+      "where": "POST /api/waterings",
+      "steps": "POST {\"bed_id\":1,\"litres\":true}",
+      "expected": "422",
+      "actual": "201, stored as litres 1.0",
+      "evidence": "The response had id 5 and litres 1.0.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

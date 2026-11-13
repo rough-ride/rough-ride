@@ -1,0 +1,12 @@
+diff --git a/frontend/app/pages/beds.vue b/frontend/app/pages/beds.vue
+index 795b363..d7d6ce0 100644
+--- a/frontend/app/pages/beds.vue
++++ b/frontend/app/pages/beds.vue
+@@ -326,7 +326,6 @@ async function deleteBed(bed: Bed): Promise<void> {
+                 <button
+                   type="button"
+                   class="btn btn--primary btn--small"
+-                  :disabled="wateringBedId === bed.id"
+                   @click="waterNow(bed)"
+                 >
+                   {{ wateringBedId === bed.id && pastFormBedId !== bed.id ? 'Watering…' : 'Water now' }}<span

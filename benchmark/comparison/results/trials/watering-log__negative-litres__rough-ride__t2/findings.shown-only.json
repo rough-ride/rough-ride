@@ -1,0 +1,96 @@
+{
+  "findings": [
+    {
+      "title": "button \"Add bed\" stays busy after GET /api/beds returns malformed JSON",
+      "where": "/beds GET /api/beds",
+      "steps": "In the browser: beds-past-watering/GET /api/beds #1/malformed-json!; checks that failed: settles, no-uncaught-error",
+      "expected": "",
+      "actual": "no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function | settles: click button \"Add bed\": control stays disabled (Adding\\u2026) after 10.1 s | no-uncaught-error: overlay: dev error overlay",
+      "evidence": "no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function | settles: click button \"Add bed\": control stays disabled (Adding\\u2026) after 10.1 s | no-uncaught-error: overlay: dev error overlay",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-091355-plan-kux1",
+        "shown": "shown",
+        "members": [
+          "beds-past-watering/GET /api/beds #1/malformed-json!",
+          "beds-past-watering/GET /api/beds #1/hang!"
+        ]
+      }
+    },
+    {
+      "title": "Typed values lost after GET /api/beds fails with 500 (button \"Add bed\")",
+      "where": "/beds GET /api/beds",
+      "steps": "In the browser: beds-past-watering/GET /api/beds #1/500!; checks that failed: values-survive, retry-recovers",
+      "expected": "",
+      "actual": "values-survive: label \"Name\" held \"Bed 273y3zvc\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed yalx96jp\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed vkdkn5cu\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed r1rbg1yi\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s",
+      "evidence": "values-survive: label \"Name\" held \"Bed 273y3zvc\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed yalx96jp\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed vkdkn5cu\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s | values-survive: label \"Name\" held \"Bed r1rbg1yi\", then \"\" after the failed request | retry-recovers: step 4 (expect heading \"Bed ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-091355-plan-kux1",
+        "shown": "shown",
+        "members": [
+          "beds-past-watering/GET /api/beds #1/500!",
+          "beds-past-watering/GET /api/beds #1/400!",
+          "beds-past-watering/GET /api/beds #1/reset!",
+          "beds-past-watering/GET /api/beds #1/429!"
+        ]
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/waterings fails with 500",
+      "where": "/waterings GET /api/waterings",
+      "steps": "In the browser: waterings-filter/GET /api/waterings #2/500!; checks that failed: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-091355-plan-kux1",
+        "shown": "capped",
+        "members": [
+          "waterings-filter/GET /api/waterings #2/500!",
+          "waterings-filter/GET /api/waterings #2/400!",
+          "waterings-filter/GET /api/waterings #2/reset!",
+          "waterings-filter/GET /api/waterings #2/429!"
+        ]
+      }
+    },
+    {
+      "title": "Uncaught error on /waterings after GET /api/waterings returns malformed JSON",
+      "where": "/waterings GET /api/waterings (entry)",
+      "steps": "In the browser: waterings-filter/GET /api/waterings #1/malformed-json!; checks that failed: no-uncaught-error",
+      "expected": "",
+      "actual": "retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s",
+      "evidence": "retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s | retry-recovers: step 9 (expect button \"Delete watering of Plot ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-091355-plan-kux1",
+        "shown": "shown",
+        "members": [
+          "waterings-filter/GET /api/waterings #1/malformed-json!"
+        ]
+      }
+    },
+    {
+      "title": "Uncaught error on /waterings after GET /api/waterings returns malformed JSON",
+      "where": "/waterings GET /api/waterings",
+      "steps": "In the browser: waterings-filter/GET /api/waterings #2/malformed-json!; checks that failed: no-uncaught-error",
+      "expected": "",
+      "actual": "no-uncaught-error: overlay: dev error overlay",
+      "evidence": "no-uncaught-error: overlay: dev error overlay",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-091355-plan-kux1",
+        "shown": null,
+        "members": [
+          "waterings-filter/GET /api/waterings #2/malformed-json!"
+        ]
+      }
+    }
+  ]
+}

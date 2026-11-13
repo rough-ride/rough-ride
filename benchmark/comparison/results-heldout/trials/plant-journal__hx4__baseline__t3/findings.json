@@ -1,0 +1,114 @@
+{
+  "findings": [
+    {
+      "title": "Harvest count and total weight are multiplied by the number of journal entries",
+      "where": "GET /api/plants, GET /api/plants/{id}; plants list and plant detail pages",
+      "steps": "Add 2 journal entries to Tomato (3 harvests, 1350 g). Open /plants or /plants/1, or call GET /api/plants/1.",
+      "expected": "harvest_count 3, harvest_grams 1350",
+      "actual": "harvest_count 6, harvest_grams 2700. PLANT_SELECT LEFT JOINs both harvests and journal_entries, which makes a cross product; COUNT(h.id) and SUM(h.weight_grams) are not de-duplicated.",
+      "evidence": "GET /api/plants/1 returned harvest_count=6, harvest_grams=2700, but its harvests array has 3 items summing to 1350 g. The delete-plant confirmation and the average-harvest figure use the same wrong numbers.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal entry body containing a NUL character causes 500",
+      "where": "POST /api/journal (and PUT)",
+      "steps": "POST {\"plant_id\":1,\"entry_on\":\"2026-11-01\",\"body\":\"\\u0000abc\"}",
+      "expected": "4xx with a validation message",
+      "actual": "500 Internal Server Error. SQLite length() stops at the NUL, so the CHECK constraint fails with an IntegrityError that nothing catches.",
+      "evidence": "Response 'Internal Server Error' with status 500",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Out-of-range ids cause 500 on journal endpoints",
+      "where": "POST /api/journal plant_id, PUT/DELETE /api/journal/{id}, GET /api/journal?plant_id=",
+      "steps": "DELETE /api/journal/99999999999999999999999 or POST with plant_id 99999999999999999999",
+      "expected": "404 or 422",
+      "actual": "500 Internal Server Error (SQLite integer overflow)",
+      "evidence": "Every variant returned 500",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal load errors have no retry, on both the Journal page and the plant journal section",
+      "where": "/journal, /plants/{id} Journal section",
+      "steps": "Open /journal or a plant while the API is down or the journal request fails. Bring the API back.",
+      "expected": "An error message with a Retry button that refetches without a reload",
+      "actual": "Only an AlertMessage is shown, with no retry control. On the plant page, the journal list and the empty state both disappear. The user has to reload, or on /journal change the search text.",
+      "evidence": "pages/journal.vue and pages/plants/[id].vue render AlertMessage for loadError/journalLoadError and nothing calls refresh",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal requests have no 10-second timeout",
+      "where": "useApiClient / useApiFetch used by the journal list, add, edit and delete",
+      "steps": "Make the API hang (stalled response) and add, save or delete an entry",
+      "expected": "The request fails after 10 s with a visible error and the button comes back",
+      "actual": "$fetch.create has no timeout, so 'Saving…' and disabled buttons stay that way for as long as the connection hangs",
+      "evidence": "composables/useApi.ts: no timeout option. JournalEntryForm/Item rely on the promise settling.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying an add after a timeout or network error creates duplicate entries",
+      "where": "POST /api/journal from the plant detail 'Add entry' form",
+      "steps": "Submit an entry; the response is lost or slow (server committed). The error shows and the text is kept; click Add entry again.",
+      "expected": "One entry",
+      "actual": "Two identical entries. The POST has no idempotency key and the server has no de-duplication.",
+      "evidence": "routers/journal.py create_entry inserts on every call. The client sends no request id.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Search over 80 characters shows a raw validation error instead of results",
+      "where": "/journal search box",
+      "steps": "Type or paste 81+ characters into Search",
+      "expected": "The input limits length or shows a friendly reason",
+      "actual": "The API returns 422 and the page replaces the list with 'Q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "GET /api/journal?q=<81 chars> -> 422 string_too_long; journal.vue input has no maxlength and shows the loadError",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Character limit counts UTF-16 units, so emoji entries are capped at 250 and server-valid entries can't be edited",
+      "where": "JournalEntryForm (plant detail add/edit)",
+      "steps": "Through the API, create an entry with 500 emoji (accepted, 201; entry id 4 on Tomato). Open Tomato and click Edit, then Save.",
+      "expected": "The 500-character limit is the same on client and server; an existing entry can be saved",
+      "actual": "The client uses String.length and textarea maxlength (UTF-16), so an emoji counts as 2. The edit form shows a negative 'characters left' count and validate() refuses with 'Keep the entry to 500 characters.' New entries hit the cap at 250 emoji.",
+      "evidence": "The API accepted 500 emoji (201). The form uses form.body.length and :maxlength=500.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "'Today' differs between client and server, so valid dates can be refused or future dates allowed",
+      "where": "JournalEntryForm max date vs JournalEntryIn.not_in_future",
+      "steps": "Use a browser in a time zone ahead of the server (e.g. UTC+13) in the server's evening and pick today's local date",
+      "expected": "Consistent behavior",
+      "actual": "The server's date.today() (server local time) says it is in the future and returns 422 'Journal date cannot be in the future.', though the date picker allowed it",
+      "evidence": "Client uses the browser's local todayIso(); server uses date.today()",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Plant journal silently stops at 500 entries",
+      "where": "/plants/{id} Journal section",
+      "steps": "A plant with more than 500 entries",
+      "expected": "All entries, or paging",
+      "actual": "The list is fetched with limit=500. Older entries are missing with no indication, while the badge shows the full count.",
+      "evidence": "pages/plants/[id].vue query { plant_id, limit: 500 }",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long unbroken plant names can overflow the Journal feed at 375 px",
+      "where": "/journal feed item plant link",
+      "steps": "Create a plant with a long name that has no spaces, add an entry, and view /journal at 375 px",
+      "expected": "The name wraps",
+      "actual": ".journal-feed__plant has no overflow-wrap (only the body has overflow-wrap:anywhere), so it can cause horizontal scrolling",
+      "evidence": "main.css journal styles",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

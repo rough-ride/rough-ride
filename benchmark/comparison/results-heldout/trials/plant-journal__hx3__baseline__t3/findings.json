@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Failed journal delete leaves the entry hidden as if it were deleted",
+      "where": "Plant detail page /plants/:id, Journal section (removeEntry)",
+      "steps": "Open a plant with entries, stop the API or make DELETE /api/journal/:id fail, click Delete on an entry and confirm.",
+      "expected": "The entry stays in the list (or comes back) with an error, because nothing was deleted.",
+      "actual": "The code removes the entry from the list before the request and does not put it back or refresh when the request fails. The error alert appears, but the entry is gone from the page while it still exists on the server, and the count badge no longer matches the list.",
+      "evidence": "[id].vue removeEntry: journal.value = journal.value?.filter(...) runs before api(); the catch block only sets journalError.",
+      "status": "suspected",
+      "severity": "high"
+    },
+    {
+      "title": "Journal requests have no timeout and no retry; a hung server leaves 'Saving…' or 'Loading entries…' showing forever",
+      "where": "Plant detail journal (add/edit/delete), /journal page",
+      "steps": "Make the API stop answering (a hung connection), then add or edit an entry or search on /journal.",
+      "expected": "The request fails after 10 seconds with a visible error, and the button becomes usable again.",
+      "actual": "useApiClient/useApiFetch set no timeout, so the button stays disabled with 'Saving…' (or the page shows 'Loading entries…') for as long as the connection hangs.",
+      "evidence": "There is no timeout or retry option anywhere in frontend/app (grep finds none); $fetch.create in useApi.ts only sets baseURL, credentials and headers.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors offer no Retry button",
+      "where": "/journal page and the plant detail Journal section",
+      "steps": "Load /journal or a plant page while GET /api/journal fails, then bring the server back.",
+      "expected": "The error state has a Retry button that reloads the data without a page reload.",
+      "actual": "Only an AlertMessage is shown, with no retry control. On the plant page, refreshJournal only runs after adding or deleting an entry. On /journal, the only way to refetch is to change the search text.",
+      "evidence": "journal.vue and [id].vue render <AlertMessage v-if=\"loadError\"> / journalLoadError with no button that calls refresh.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "A search longer than 80 characters shows a raw validation error instead of results",
+      "where": "/journal search box -> GET /api/journal?q=",
+      "steps": "On /journal, type or paste more than 80 characters into Search.",
+      "expected": "The input limits the length or the page shows a friendly reason. Results are not replaced by an error.",
+      "actual": "The page shows 'Query.q: String should have at most 80 characters' in place of the list. The input has no maxlength.",
+      "evidence": "GET /journal?q=<81 'a'> rendered alert 'Query.q: String should have at most 80 characters'; the API returns 422 with max_length 80.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "A creation retried after a timeout makes a duplicate journal entry",
+      "where": "POST /api/journal (Add entry on plant detail)",
+      "steps": "Submit an entry. The response is lost or slow, so the user clicks Add entry again.",
+      "expected": "One entry is created.",
+      "actual": "Each POST inserts a new row. There is no idempotency key or duplicate check, so a retry makes two identical entries.",
+      "evidence": "journal.py create_entry inserts on every request; the frontend sends no request id.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Server returns 500 for out-of-range ids and for invalid Unicode in journal endpoints",
+      "where": "POST/PUT/DELETE /api/journal, GET /api/journal?plant_id=",
+      "steps": "POST {plant_id: 99999999999999999999,...}; GET /api/journal?plant_id=99999999999999999999; PUT or DELETE /api/journal/99999999999999999999; POST or PUT with body \"\\ud800\" (a lone surrogate).",
+      "expected": "4xx validation error",
+      "actual": "500 Internal Server Error (SQLite OverflowError or encoding error)",
+      "evidence": "curl gave 'Internal Server Error 500' for each of these requests.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal accepts nonsense dates such as year 0001",
+      "where": "POST /api/journal, Date field",
+      "steps": "POST entry_on 0001-01-01, or type year 1 in the date input.",
+      "expected": "Dates far in the past are refused with a reason, or at least limited to a sensible range.",
+      "actual": "The entry is accepted (201) and listed as the oldest entry, dated '1 Jan 1'.",
+      "evidence": "POST with entry_on 0001-01-01 returned 201 with id 4 (deleted afterwards).",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Character counter and limit count emoji as two characters",
+      "where": "JournalEntryForm textarea",
+      "steps": "Type emoji in an entry.",
+      "expected": "500 characters means 500 characters, the same limit the server applies.",
+      "actual": "The textarea maxlength and the 'N characters left' counter use UTF-16 length, so each emoji uses 2 of the 500. The user is blocked at about 250 emoji, although the server (which counts code points) would accept 500.",
+      "evidence": "form.body.length and :maxlength=500 in JournalEntryForm.vue; pydantic max_length counts code points.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Long plant names overflow the Journal feed at 375 px",
+      "where": "/journal feed item header (.journal-feed__plant)",
+      "steps": "Name a plant with a long unbroken word (up to 80 characters), add a journal entry, and view /journal at 375 px.",
+      "expected": "The name wraps inside the card.",
+      "actual": "The link has no overflow-wrap (only .journal-entry__body has overflow-wrap:anywhere), so a long unbroken name pushes the page sideways.",
+      "evidence": "main.css: .journal-feed__plant has no wrapping rule.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Search is case-sensitive for non-ASCII letters",
+      "where": "GET /api/journal?q=",
+      "steps": "Write an entry containing 'Église', then search for 'église'.",
+      "expected": "The entry matches, as ASCII searches do regardless of case.",
+      "actual": "SQLite LIKE ignores case only for ASCII letters, so the entry does not match.",
+      "evidence": "journal.py uses plain LIKE.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

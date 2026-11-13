@@ -1,0 +1,74 @@
+{
+  "id": "plant-journal__hx4__hunt__t3",
+  "feature": "plant-journal",
+  "bug": "hx4",
+  "arm": "hunt",
+  "trial": 3,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:45:19.009Z",
+  "materializeMs": 4664,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__hx4__hunt__t3/variant/thxzcm1c/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "fad1bd6f-0fe9-432b-8026-f0e2b85dcbc3",
+  "loadBefore": [
+    18.5341796875,
+    19.0185546875,
+    12.37890625
+  ],
+  "loadAfter": [
+    15.74755859375,
+    13.5244140625,
+    11.58447265625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 302477,
+  "reportedCostUsd": 0.358893,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 26,
+      "outputTokens": 8394,
+      "cacheReadInputTokens": 223020,
+      "cacheCreationInputTokens": 29261,
+      "webSearchRequests": 0,
+      "costUSD": 0.358893,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1010,
+      "cacheCreationEphemeral5mInputTokens": 29261,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 1,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 4m49s | run 20261112-184533-hunt-2f84 | 2 confirmed, 1 dropped on re-run\ntarget: http://localhost:3791\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Adding journal entries multiplies a plant's harvest count and harvested weight\n   where: GET /api/plants, GET /api/plants/{id}, /plants and /plants/{id}\n   expected: harvest_count equals the number of harvests (3) whatever the number of journal entries\n   saw: {\"harvest_count\":18,\"harvests\":3,\"jc\":6}\n   repro: .rough-ride/runs/20261112-184533-hunt-2f84/probes/harvest-count.mjs (expectation \"harvest-count-unchanged-by-journal\")\n2. HIGH   Harvested weight inflated by the number of journal entries\n   where: GET /api/plants/{id}, plants list 'HARVESTED' figure\n   expected: harvest_grams equals the sum of the plant's harvests (1350 g)\n   saw: {\"harvest_grams\":13500,\"actualSum\":1350}\n   repro: .rough-ride/runs/20261112-184533-hunt-2f84/probes/harvest-count.mjs (expectation \"harvest-grams-unchanged-by-journal\")\n\nDropped (did not reproduce):\n- Malformed journal feed response is shown as a list of blank entries with a count: expectation \"feed-fault-malformed-shows-error\" not reached: probe host gave no result (exit 0): \n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a292f8179507dc5b7.jsonl",
+    "agent-a292f8179507dc5b7.meta.json"
+  ],
+  "usage": {
+    "input": 26,
+    "output": 8394,
+    "cacheRead": 223020,
+    "cacheWrite": 29261,
+    "requests": 12,
+    "toolCalls": {
+      "Bash": 10,
+      "Read": 1
+    }
+  },
+  "findingCount": 2,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   4 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 276 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:50:34.858Z"
+}

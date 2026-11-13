@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-malformed-journal-response-no-error/scratch.
+
+The reported problem: When GET /api/journal returns a non-list body (object, string, HTML), the Journal page or plant journal section shows blank '–' entries or an empty/no-match state instead of a load error.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Unreadable (non-list) journal response is shown as an empty journal",
+  "where": "/journal (and the plant detail journal list)",
+  "steps": "Make GET /api/journal return 200 with {\"items\":[]} (any non-array), then navigate to Journal in the app.",
+  "expected": "Error state",
+  "actual": "Shows '0 entries' and 'No journal entries yet'",
+  "evidence": "Page text: '0 entries / No journal entries yet / Open a plant and write the first entry...'"
+ },
+ {
+  "title": "Journal page shows a malformed response as 14 blank entries",
+  "where": "/journal (GET /api/journal)",
+  "steps": "Probe journal-page-shape, expectation journal-page-malformed-shows-error",
+  "expected": "A visible load error.",
+  "actual": "The page says '14 entries' and lists 14 cards dated '–' with no plant name or text, and shows no error.",
+  "evidence": "{\"url\":\"/journal\",\"alerts\":[\"14 entries\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"],\"pageErrors\":[]} | {\"url\":\"/journal\",\"alerts\":[\"14 entries\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"],\"pageErrors\":[]}"
+ },
+ {
+  "title": "Malformed journal response on the plant page is drawn as junk entries with no error",
+  "where": "/plants/:id Journal section (GET /api/journal?plant_id=)",
+  "steps": "Probe detail-load-faults, expectation journal-load-malformed-shows-error",
+  "expected": "A visible error saying the journal could not be loaded.",
+  "actual": "No alert appears. The list shows made-up entries with date '–', blank text and Edit/Delete buttons.",
+  "evidence": "{\"url\":\"/plants/1\",\"alerts\":[],\"j\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\"],\"pageErrors\":[],\"hits\":1} | {\"url\":\"/plants/1\",\"alerts\":[],\"j\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\"],\"pageErrors\":[],\"hits\":1}"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-plant-journal-malformed-journal-response-no-error/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

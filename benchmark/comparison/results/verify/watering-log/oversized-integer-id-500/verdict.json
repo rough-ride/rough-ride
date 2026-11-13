@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "oversized-integer-id-500",
+  "sentence": "Sending a bed_id or watering id above 64 bits (e.g. 99999999999999999999) to POST/GET/DELETE /api/waterings returns a 500 Internal Server Error instead of a 4xx.",
+  "verdict": "confirmed",
+  "evidence": "Signed in via POST /api/auth/login as the demo user, then used curl against the running API. POST /api/waterings {\"bed_id\":99999999999999999999,\"litres\":1} -> 500 'Internal Server Error'; GET /api/waterings?bed_id=99999999999999999999 -> 500; DELETE /api/waterings/99999999999999999999 -> 500; POST with bed_id 9223372036854775808 (2^63) -> 500. For comparison, in-range bed_id 999999 -> 422 {\"detail\":\"Choose an existing bed.\"} and GET ?bed_id=999999 -> 200 []. Code: WateringIn.bed_id is Field(gt=0) and the query/path params are plain int with no upper bound, so Python ints above the 64-bit limit reach sqlite3, which raises OverflowError, and nothing handles it. Only the API is affected; the UI never sends such ids.",
+  "severity": "low",
+  "wallMs": 39159
+}

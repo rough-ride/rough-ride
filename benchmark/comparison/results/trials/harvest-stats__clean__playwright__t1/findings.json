@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Stats page crashes on an unreadable or incomplete 200 response; navigation stays stuck on the previous page",
+      "where": "/stats (GET /api/stats/harvests)",
+      "steps": "Signed in, on Dashboard. Mock GET /api/stats/harvests to return 200 with body '<html>proxy</html>' (text/html), or '{}' as JSON. Click 'Stats' in the nav.",
+      "expected": "An error state saying the stats could not be read, with a retry option.",
+      "actual": "The template reads stats.plants.length without a guard. The render throws, so the URL changes to /stats but the page still shows the Dashboard content, with no message.",
+      "evidence": "Console: 'TypeError: Cannot read properties of undefined (reading 'length') at _sfc_render (pages/stats.vue)'. Body text after clicking was still the Dashboard at URL /stats.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Stats request has no timeout; a hung API shows 'Loading stats…' forever",
+      "where": "/stats",
+      "steps": "Open /stats. Make GET /api/stats/harvests hang (never respond). Change the From date. Wait more than 10 s.",
+      "expected": "After 10 s the request fails and the page shows an error with a retry.",
+      "actual": "'Loading stats…' was still shown after 13 s. useApiFetch is called with no timeout.",
+      "evidence": "Text of .results-count after 13 s was 'Loading stats…'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Error state has no retry; recovering needs a reload or a date change",
+      "where": "/stats",
+      "steps": "Go Dashboard → Stats while GET /api/stats/harvests returns 503 (or 500 with an HTML body). Then let the server recover.",
+      "expected": "The error message comes with a 'Try again' button that refetches without reloading.",
+      "actual": "Only 'Could not load harvest stats.' is shown, with no button. With the default range there is no control at all on the page, and the error stays after the server is back.",
+      "evidence": "Buttons inside main: [] after the error. Text unchanged after the route was removed.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Long plant names or varieties overflow the 'Best plants' cards at 375 px",
+      "where": "/stats, Best plants section",
+      "steps": "Create a plant named 'Supercalifragilisticexpialidociousgiantheirloomtomatofromgrandma🍅 <b>x</b>' with variety 'Extremelylongvarietynamewithoutanyspacesatall_abcdefghijklmnop' and log a harvest this year. Open /stats at 375 px width.",
+      "expected": "The text wraps and there is no sideways page scroll.",
+      "actual": "The page scrolls sideways: document scrollWidth is 481 px at a 375 px viewport. p.stat__value has scrollWidth 1257 against clientWidth 290, and p.stat__hint 437 against 290. (The table scrolls inside its own wrapper, which is fine.)",
+      "evidence": "document.documentElement.scrollWidth = 481. The overflowing elements are OL.stats > LI.stat > P.stat__value and P.stat__hint. The dashboard at 375 px was fine (scrollWidth 375).",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing a date field silently falls back to this year's bound and can show a confusing error",
+      "where": "/stats From/To fields",
+      "steps": "Set To to 2025-06-01, then clear the From field.",
+      "expected": "A blank field is either refused with a clear reason or treated as open-ended, and the inputs match the range actually used.",
+      "actual": "The blank From is dropped from the query, so the server uses 2026-01-01 and replies 'The From date must be on or before the To date.' while From looks empty. Clearing both fields shows this year's stats under empty inputs. Opening /stats?to=2025-06-01 directly also prefills From with 2026-01-01 and gives the same error on load.",
+      "evidence": "URL became /stats?to=2025-06-01. The page showed 'The From date must be on or before the To date.' with an empty From input.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Monthly table leaves out months with no harvests",
+      "where": "/stats table, GET /api/stats/harvests",
+      "steps": "Open /stats with the default range (1 Jan to 31 Dec 2026).",
+      "expected": "A column for each month in the chosen range (zeros shown as –), so per-month totals can be read across the whole range.",
+      "actual": "Only months that have harvests get a column: Jun, Jul, Aug, Sept, Oct 2026. Jan–May, Nov and Dec are missing, because months are built only from returned rows.",
+      "evidence": "Table header: PLANT | JUN 2026 | JUL 2026 | AUG 2026 | SEPT 2026 | (OCT 2026) | TOTAL.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

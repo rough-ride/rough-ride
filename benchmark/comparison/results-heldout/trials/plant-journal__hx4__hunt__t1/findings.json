@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "title": "Journal entries multiply a plant's harvest count and harvest weight",
+      "where": "GET /api/plants/{id}, /plants list and plant detail page",
+      "steps": "Probe harvest-inflation, expectation api-harvest-grams-not-multiplied",
+      "expected": "A plant with 2 harvests (100 g + 200 g) and 3 journal entries shows 2 harvests and 300 g",
+      "actual": "API returns harvest_count 6 and harvest_grams 900; the plants list card shows 900 g and the detail page shows '900 g total, 6 harvests' while listing only 2 harvest rows. The new LEFT JOIN on journal_entries in PLANT_SELECT multiplies the harvest rows that COUNT(h.id) and SUM(h.weight_grams) add up",
+      "evidence": "{\"harvest_grams\":900} | {\"harvest_grams\":900}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-174254-hunt-9849",
+        "probe": "harvest-inflation",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Harvest count on plant detail page inflated by journal entries",
+      "where": "GET /api/plants/{id}",
+      "steps": "Probe harvest-inflation, expectation api-harvest-count-not-multiplied",
+      "expected": "harvest_count 2",
+      "actual": "harvest_count 6 (2 harvests x 3 journal entries)",
+      "evidence": "{\"harvest_count\":6,\"journal_count\":3} | {\"harvest_count\":6,\"journal_count\":3}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-174254-hunt-9849",
+        "probe": "harvest-inflation",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+id: hx5
+category: layout-375
+provenance: hand-written
+layer: frontend
+reach: direct
+needsAppKnowledge: false
+flow: beds
+exposedBy:
+  - { viewport: 375px wide, action: open Record past watering on a bed }
+checks: [usable-at-375]
+symptom: "At 375px wide the past-watering form keeps its three columns, so the Date and Litres inputs are squeezed to about 30px and cannot show or edit their values"
+addedIn: 0.1.1
+review: single
+allowWords: []

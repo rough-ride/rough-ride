@@ -1,0 +1,75 @@
+{
+  "id": "plant-journal__clean__playwright__t2",
+  "feature": "plant-journal",
+  "bug": "clean",
+  "arm": "playwright",
+  "trial": 2,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T09:40:50.505Z",
+  "materializeMs": 7531,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__clean__playwright__t2/variant/cv86dlmn/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "75033028-68e2-427b-8c7c-bec92265079b",
+  "loadBefore": [
+    11.69189453125,
+    13.17724609375,
+    10.88525390625
+  ],
+  "loadAfter": [
+    6.40185546875,
+    11.07763671875,
+    10.55810546875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 198020,
+  "reportedCostUsd": 0.7143823999999999,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 40,
+      "outputTokens": 10325,
+      "cacheReadInputTokens": 796852,
+      "cacheCreationInputTokens": 43544,
+      "webSearchRequests": 0,
+      "costUSD": 0.7143823999999999,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2271,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 43544,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 20,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 8 bugs in the journal change: 5 seen in the running app and 3 suspected from reading the code. The list is saved to `out/findings.json`, which is valid JSON.\n\n**Seen in the app:**\n1. **High – a hung request is stuck forever.** Requests have no timeout. If adding or saving an entry hangs, the button still says \"Saving…\" and stays disabled after 12 seconds. No error appears and there is no way to cancel or try again.\n2. **Medium – no retry on errors.** When the journal fails to load, the Journal page and the plant's journal section only say \"Could not load the journal.\" There is no Retry button. This happens whether you open the page directly or through a link.\n3. **Medium – very large ids crash the server.** On all four journal endpoints (add, list by plant, edit, delete), an id like `99999999999999999999` returns a 500 error instead of a 4xx.\n4. **Low – long plant names break the layout at 375 px.** On the Journal page, a plant name with no spaces doesn't wrap, so the page scrolls sideways (1568 px wide). Long entry text does wrap correctly.\n5. **Low – long searches show a raw error.** Typing more than 80 characters into the Journal search hides the entries and shows \"Query.q: String should have at most 80 characters\". The search box has no length limit.\n\n**Suspected:**\n- **Medium – duplicates after a timeout.** Adding an entry has nothing to prevent duplicates. An add I held pending in the browser was still saved later, so retrying it would create a second copy.\n- **Low – time zone mismatch on \"today\".** The server checks \"not in the future\" against its own date, while the form uses the browser's date. A user ahead of the server's time zone could have today's entry rejected.\n- **Low – \"edited\" label missing.** It compares two timestamps that only count whole seconds, so an edit made within a second of creating the entry isn't marked.\n\n**Checks that passed:**\n- A failed add or edit keeps the typed text.\n- A late search answer doesn't replace newer results.\n- Double-clicking Add creates only one entry.\n- Blank entries are refused with a 422.\n- Future dates are refused.\n- Emoji, Arabic text and markup display correctly.\n- The pages fit 375 px with normal data.\n\n**Data:** I deleted the test plant and test entries I created, so the sample data is back to how it was.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 40,
+    "output": 10325,
+    "cacheRead": 796852,
+    "cacheWrite": 43544,
+    "requests": 20,
+    "toolCalls": {
+      "Bash": 8,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 9,
+      "mcp__playwright__browser_snapshot": 1
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 8,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T09:44:25.185Z"
+}

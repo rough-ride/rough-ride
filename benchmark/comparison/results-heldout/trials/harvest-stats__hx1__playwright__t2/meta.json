@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__hx1__playwright__t2",
+  "feature": "harvest-stats",
+  "bug": "hx1",
+  "arm": "playwright",
+  "trial": 2,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T17:56:14.490Z",
+  "materializeMs": 4953,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__hx1__playwright__t2/variant/imwont40/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "f16b7b86-fe4d-4bf1-bd91-662c3f1d590b",
+  "loadBefore": [
+    4.86865234375,
+    8.98486328125,
+    10.35791015625
+  ],
+  "loadAfter": [
+    6.6826171875,
+    7.533203125,
+    9.34228515625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 228374,
+  "reportedCostUsd": 0.5714176,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 32,
+      "outputTokens": 8620,
+      "cacheReadInputTokens": 545768,
+      "cacheCreationInputTokens": 36217,
+      "webSearchRequests": 0,
+      "costUSD": 0.5714176,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1585,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 36217,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 16,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found six bugs on the new Stats page and saw every one in the running app. One is high severity, two medium and three low. They're written to `out/findings.json`.\n\n1. **High – an old answer can replace newer results.** If you change the From date twice quickly and the first request is slow, its results arrive last and overwrite the second. The page then shows the 1 Jul range while the field says 2026-09-01. This is easy to hit, because typing a year digit by digit sends a request for each partial year (0002, 0020, 0060…).\n2. **Medium – no timeout.** If the request hangs, \"Loading stats…\" stays on screen forever, with the previous range's table still showing beneath it. I waited 13 seconds.\n3. **Medium – no retry in the error state.** It only shows \"Could not load harvest stats.\" To try again you have to change a date or reload. This happens both when the page is opened from the nav and when a date is changed.\n4. **Low – old summary next to the error.** The previous range's line, e.g. \"5 harvests from 1 Jan 2026 to 31 Dec 2026\", stays above the error message.\n5. **Low – a blank date is quietly replaced.** Clearing From makes the server use 1 Jan of this year. Setting To to 2025 then shows \"The From date must be on or before the To date.\" even though From is visibly empty.\n6. **Low – odd data isn't treated as an error.** A successful response with null fields renders \"undefined harvests from – to –\" and an empty table instead of the error state.\n\nWhat held up:\n- **Server validation:** bad dates (year 10000, 30 Feb, `abc`, From after To) all get a 422, never a 5xx.\n- **Mobile width:** at 375 px neither Stats nor the dashboard scrolls sideways, even with an 80-character plant name.\n- **Unusual text:** emoji, markup and quotes in the variety field didn't break the page.\n- **Dashboard:** the \"best plant this year\" card works.\n- **Not tested:** what happens when the session expires.\n\nTo set up some of these tests I added a test plant and harvest through the API, then deleted both.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 32,
+    "output": 8620,
+    "cacheRead": 545768,
+    "cacheWrite": 36217,
+    "requests": 16,
+    "toolCalls": {
+      "Bash": 8,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 6
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 6,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T18:00:15.260Z"
+}

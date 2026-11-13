@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "beds-delete-stays-disabled",
+  "sentence": "After an injected failure on various requests (plants, beds, journal), an automated check navigating to /beds finds the DeleteBed control still disabled after 10 s (some runs also report the bed Name field emptied after a failed GET /api/beds).",
+  "verdict": "not-a-defect",
+  "evidence": "beds.vue is not touched by the change (git diff main has no beds files). Its Delete button is bound to :disabled=\"deletingId === bed.id || bed.plant_count > 0\" and shows the title 'Move or delete its plants first'. The backend also returns 409 for deleting a bed that still has plants. The live data has two beds, North bed (2 plants) and Shade corner (1 plant). In the browser, after injecting a 500 on GET /api/plants/1 and then going to /beds, both Delete buttons were disabled with that tooltip, so it is a deliberate guard with the reason shown, not a stuck busy state. I added an empty bed 'Verify empty bed': its Delete worked through the confirm dialog and removed the bed (checked through the API). The 'Name' field being empty is just the blank 'Add a bed' form, which starts empty. A failed GET /api/beds did not wipe any entered data (with server-side rendering the page still showed the beds). The DeleteBed ids in the reports (3z8839iz etc.) look like beds the checker created that contained plants.",
+  "severity": null,
+  "wallMs": 125273
+}

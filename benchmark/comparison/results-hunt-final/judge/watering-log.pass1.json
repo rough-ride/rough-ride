@@ -1,0 +1,148 @@
+{
+  "feature": "watering-log",
+  "pass": 1,
+  "count": 21,
+  "missing": [],
+  "costUsd": 0.1497808,
+  "reports": [
+    {
+      "id": "Ff00aa888",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__hunt__t2#0"
+    },
+    {
+      "id": "Fe348886f",
+      "planted": null,
+      "issue": "waterings-page-load-error-no-retry",
+      "key": "watering-log__clean__hunt__t2#3"
+    },
+    {
+      "id": "Fdbe202ca",
+      "planted": null,
+      "issue": "dashboard-invalid-response-shown-as-empty",
+      "key": "watering-log__clean__hunt__t1#2"
+    },
+    {
+      "id": "F3f929afa",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__hunt__t1#0"
+    },
+    {
+      "id": "Fa6a2e0dd",
+      "planted": null,
+      "issue": "waterings-page-crash-non-list-response",
+      "key": "watering-log__clean__hunt__t2#1"
+    },
+    {
+      "id": "F07275032",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__hunt__t3#0"
+    },
+    {
+      "id": "F11ee873a",
+      "planted": null,
+      "issue": "dashboard-invalid-response-shown-as-empty",
+      "key": "watering-log__clean__hunt__t3#1"
+    },
+    {
+      "id": "Faefc2db7",
+      "planted": null,
+      "issue": "waterings-page-crash-non-list-response",
+      "key": "watering-log__clean__hunt__t3#0"
+    },
+    {
+      "id": "F6f7b9c1f",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__hunt__t1#1"
+    },
+    {
+      "id": "F6dcdecef",
+      "planted": null,
+      "issue": "dashboard-waterings-error-no-retry",
+      "key": "watering-log__clean__hunt__t2#4"
+    },
+    {
+      "id": "F2b0c9c15",
+      "planted": "negative-litres",
+      "issue": "negative-litres",
+      "key": "watering-log__negative-litres__hunt__t1#0"
+    },
+    {
+      "id": "F90aa7398",
+      "planted": null,
+      "issue": "waterings-page-crash-non-list-response",
+      "key": "watering-log__clean__hunt__t1#0"
+    },
+    {
+      "id": "Fca055498",
+      "planted": null,
+      "issue": "waterings-page-crash-non-list-response",
+      "key": "watering-log__clean__hunt__t1#1"
+    },
+    {
+      "id": "F7052bdde",
+      "planted": null,
+      "issue": "tiny-litres-shown-as-zero",
+      "key": "watering-log__clean__hunt__t1#4"
+    },
+    {
+      "id": "F809c88b4",
+      "planted": null,
+      "issue": "year-one-date-accepted",
+      "key": "watering-log__clean__hunt__t2#2"
+    },
+    {
+      "id": "F33626ce8",
+      "planted": null,
+      "issue": "dashboard-malformed-response-renders-garbage-rows",
+      "key": "watering-log__clean__hunt__t1#3"
+    },
+    {
+      "id": "F695266ec",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__hunt__t3#0"
+    },
+    {
+      "id": "F7189a31b",
+      "planted": null,
+      "issue": "water-now-shared-busy-state-across-beds",
+      "key": "watering-log__clean__hunt__t3#2"
+    },
+    {
+      "id": "F66cc9184",
+      "planted": "water-now-twice",
+      "issue": "water-now-twice",
+      "key": "watering-log__water-now-twice__hunt__t2#0"
+    },
+    {
+      "id": "F6790981d",
+      "planted": null,
+      "issue": "dashboard-malformed-response-renders-garbage-rows",
+      "key": "watering-log__clean__hunt__t2#0"
+    },
+    {
+      "id": "Fd938a3d5",
+      "planted": null,
+      "issue": "unknown-bed-filter-select-mismatch",
+      "key": "watering-log__clean__hunt__t2#5"
+    }
+  ],
+  "issues": {
+    "negative-litres": "The Record past watering form on /beds and POST /api/waterings accept a negative amount such as -5 litres, save it, report success, and list it as a negative amount on /waterings.",
+    "water-now-twice": "Double-clicking the Water now button on /beds sends two POST /api/waterings requests and records two identical waterings because the button stays enabled while its request runs.",
+    "waterings-page-load-error-no-retry": "When GET /api/waterings fails on /waterings, only the error text is shown with no retry control, so the user must reload the page.",
+    "dashboard-invalid-response-shown-as-empty": "When GET /api/waterings?limit=5 returns an empty object instead of a list, the dashboard Recent waterings card shows the 'No waterings yet' empty state instead of an error.",
+    "waterings-page-crash-non-list-response": "When GET /api/waterings returns a non-array body (malformed or empty object), /waterings throws an uncaught 'waterings.value?.reduce is not a function' and never renders, leaving the previous page on screen with no error.",
+    "dashboard-waterings-error-no-retry": "When the dashboard Recent waterings request fails, the card shows only the error text with no retry control.",
+    "tiny-litres-shown-as-zero": "Recording a past watering of a tiny amount such as 0.004 L on /beds is accepted despite the field's 0.1 minimum and is reported and listed as '0 L'.",
+    "year-one-date-accepted": "The Record past watering form on /beds and POST /api/waterings accept an absurd date such as 0001-01-01, save it with 201, and report 'Recorded 2 L on 1 Jan 1.'.",
+    "dashboard-malformed-response-renders-garbage-rows": "When GET /api/waterings?limit=5 returns a malformed non-list body, the dashboard Recent waterings table renders rows reading 'Never', a blank bed, and '–' instead of an error.",
+    "water-now-shared-busy-state-across-beds": "On /beds, clicking Water now on two beds in quick succession re-enables the second bed's button when the first request finishes because a single shared wateringBedId tracks the in-flight request, and the first bed's notice is lost.",
+    "unknown-bed-filter-select-mismatch": "Opening /waterings?bed=99999 with an unknown bed id filters the list to 'No waterings for this bed' while the Bed select shows no selection, so the select and list disagree."
+  }
+}

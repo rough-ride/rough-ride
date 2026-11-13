@@ -1,0 +1,72 @@
+{
+  "id": "harvest-stats__clean__baseline__t2",
+  "feature": "harvest-stats",
+  "bug": "clean",
+  "arm": "baseline",
+  "trial": 2,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T12:44:44.720Z",
+  "materializeMs": 7070,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__clean__baseline__t2/variant/fl13u4zp/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "3df86a00-00db-4d7d-bf29-53ee02951111",
+  "loadBefore": [
+    11.3193359375,
+    11.96435546875,
+    13.6298828125
+  ],
+  "loadAfter": [
+    12.6923828125,
+    13.08544921875,
+    13.951171875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 94068,
+  "reportedCostUsd": 0.42761740000000004,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 20,
+      "outputTokens": 6649,
+      "cacheReadInputTokens": 291947,
+      "cacheCreationInputTokens": 29521,
+      "webSearchRequests": 0,
+      "costUSD": 0.42761740000000004,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2818,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 29521,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 11,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found five bugs in the stats page change. Only the first one was observed in the running app; the other four come from reading the code. The findings are written to `out/findings.json` and the file is valid JSON.\n\n| # | Severity | Status | Finding |\n|---|---|---|---|\n| 1 | Medium | observed | **No retry when stats fail to load.** The page shows only an error message, with no Retry button. To try again you have to change a date or reload the page. I confirmed this by opening `/stats?from=2026-05-01&to=2026-01-01`, which shows the error and nothing else. |\n| 2 | Medium | suspected | **No timeout on the stats request.** Nothing sets a timeout on the request in `composables/useApi.ts`, so if the API hangs, \"Loading stats…\" stays on screen forever. |\n| 3 | Low | suspected | **Clearing a date leaves a blank field.** The page drops the empty date from the request and the server quietly uses this year's start or end date instead. The field stays blank, and the \"This year\" button can show up even though this year's data is on screen. |\n| 4 | Low | suspected | **A request on every keystroke while typing a year.** Typing \"2026\" into the To field produces dates like `0002-12-31`, `0020-12-31` and so on. Each one sends a request that the server refuses, so the error message flashes before the full year is typed. |\n| 5 | Low | suspected | **A long word in a plant's variety can break the 375 px layout.** In the \"Best plants\" cards, a long variety with no spaces doesn't wrap and can push past the card. |\n\nWhat checked out:\n- **Bad input:** the API answers bad dates, from-after-to and 5-digit years with a 422, never a 500.\n- **Totals:** the table data and total row match the sample data (2,600 g over 5 harvests).\n- **Dashboard:** it shows this year's best plant (Courgette, 1.2 kg) and links to Stats.\n- **Sign-in:** opening `/stats` signed out sends you to sign in, and an expired session on the page goes there too.\n- **Narrow screens:** the date filters stack into one column at 375 px.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 20,
+    "output": 6649,
+    "cacheRead": 291947,
+    "cacheWrite": 29521,
+    "requests": 10,
+    "toolCalls": {
+      "Bash": 10
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 5,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T12:46:43.984Z"
+}

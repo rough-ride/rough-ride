@@ -1,0 +1,72 @@
+{
+  "id": "harvest-stats__clean__baseline__t3",
+  "feature": "harvest-stats",
+  "bug": "clean",
+  "arm": "baseline",
+  "trial": 3,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T11:34:58.017Z",
+  "materializeMs": 11631,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__clean__baseline__t3/variant/vq82nifj/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "977060df-fe86-432c-8253-d4a63c66d50c",
+  "loadBefore": [
+    17.97021484375,
+    19.61279296875,
+    17.65478515625
+  ],
+  "loadAfter": [
+    81.21875,
+    43.56396484375,
+    27.44287109375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 160333,
+  "reportedCostUsd": 0.5348496,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 26,
+      "outputTokens": 9458,
+      "cacheReadInputTokens": 423248,
+      "cacheCreationInputTokens": 32617,
+      "webSearchRequests": 0,
+      "costUSD": 0.5348496,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 4177,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 32617,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 13,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found seven bugs and wrote them to `out/findings.json`. None are high severity. Four I saw in the running app, by calling the API directly and by reading the stats page's server-rendered HTML; the other three come from reading the code only. I had no browser, so nothing here was checked by clicking.\n\nThe core feature works. The table shows a total row, the top three plants are listed, \"Stats\" is in the main navigation, the dashboard card shows \"Courgette, 1.2 kg harvested\", and the API answers bad dates with a 4xx, not a 5xx.\n\n| # | Finding | Status | Severity |\n|---|---|---|---|\n| 1 | When loading fails, the Stats page shows only an error message, with no Retry button. The user has to change a date or reload. | observed | medium |\n| 2 | Requests have no timeout, so if the API hangs, \"Loading stats…\" spins forever. This comes from the shared fetch code (`composables/useApi.ts`), which the dashboard uses too. | suspected | medium |\n| 3 | An impossible date in the URL, like `/stats?from=2026-02-31`, shows a raw technical message (\"Query.from: Input should be a valid date…\") and leaves the From field blank. | observed | low |\n| 4 | Clearing a date field doesn't give an error. The server quietly fills in Jan 1 or Dec 31 of this year. With From blank and To set to 2025-12-31, the page says \"The From date must be on or before the To date\" even though From is empty. | observed | low |\n| 5 | The table only has columns for months that have harvests. For May–October it shows only June to September, and an empty month in the middle of the range would be missing too. | observed | low |\n| 6 | A long variety name with no spaces (up to 80 characters) would likely run out of its Best plants card and cause sideways scrolling at 375 px. Nothing in the CSS wraps long words. | suspected | low |\n| 7 | The date fields are read from the URL only once. If the URL changes while you're on the page (the \"Stats\" nav link, or Back), the old range stays on screen. | suspected | low |\n\nThings I checked that held up:\n- Phone layout: the date filters drop to one column and the table scrolls inside its own box.\n- Late answers: a slow response shouldn't overwrite newer results, because the framework drops superseded requests.\n- Signed-out access: the API returns 401 when you're signed out.\n\nI didn't stop the server or edit any files, and I didn't change any app data.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 26,
+    "output": 9458,
+    "cacheRead": 423248,
+    "cacheWrite": 32617,
+    "requests": 13,
+    "toolCalls": {
+      "Bash": 12
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 7,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T11:38:01.782Z"
+}

@@ -1,0 +1,74 @@
+{
+  "id": "plant-journal__clean__hunt__t2",
+  "feature": "plant-journal",
+  "bug": "clean",
+  "arm": "hunt",
+  "trial": 2,
+  "lane": 2,
+  "ports": {
+    "web": 3792,
+    "api": 8792
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:33:43.680Z",
+  "materializeMs": 10549,
+  "repo": "$TMPDIR/rr-bench/work/plant-journal__clean__hunt__t2/variant/8jtj3vpp/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/plants.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/plants/[id].vue\n M frontend/app/pages/plants/index.vue\n M frontend/app/types/api.ts\n?? .rough-ride/specs/\n?? backend/routers/journal.py\n?? frontend/app/components/JournalEntryForm.vue\n?? frontend/app/components/JournalEntryItem.vue\n?? frontend/app/pages/journal.vue\n",
+  "sessionId": "9525390f-e93d-4bfa-88fc-0a561fda6ea4",
+  "loadBefore": [
+    10.31005859375,
+    9.5400390625,
+    7.6640625
+  ],
+  "loadAfter": [
+    5.8798828125,
+    6.58154296875,
+    6.95458984375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 460115,
+  "reportedCostUsd": 0.6379474,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 30,
+      "outputTokens": 16374,
+      "cacheReadInputTokens": 383187,
+      "cacheCreationInputTokens": 46742,
+      "webSearchRequests": 0,
+      "costUSD": 0.6379474,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2279,
+      "cacheCreationEphemeral5mInputTokens": 46742,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 1,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 7m18s | run 20261112-173407-hunt-0a37 | 5 confirmed, 0 dropped on re-run\ntarget: http://localhost:3792\n\nFindings (each reproduced twice from scratch)\n1. MEDIUM Journal page shows a malformed list response as a list of blank entries\n   where: /journal (GET /api/journal?limit=50)\n   expected: A malformed response shows an error such as 'Could not load the journal.'\n   saw: {\"alerts\":[\"14 entries\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"14 entries\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"–\",\"Garden Log · a journal for one garden\"],\"pe\":[]}\n   repro: .rough-ride/runs/20261112-173407-hunt-0a37/probes/plant-journal-load-faults.mjs (expectation \"journal-malformed-not-shown-as-entries\")\n2. MEDIUM Plant journal shows a malformed response as blank entries with Edit and Delete buttons\n   where: /plants/:id Journal section (GET /api/journal?plant_id=…)\n   expected: An error saying the journal could not be loaded\n   saw: {\"alerts\":[],\"text\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\",\"entry from –\",\"Delete\",\"entry from –\",\"–\",\"Edit\"],\"pe\":[]}\n   repro: .rough-ride/runs/20261112-173407-hunt-0a37/probes/plant-journal-load-faults.mjs (expectation \"plant-journal-malformed-not-shown-as-entries\")\n3. MEDIUM Plant journal shows a bad response as 'No journal entries yet' while the badge says 2 entries\n   where: /plants/:id Journal section\n   expected: A response that is not a list is shown as a load error\n   saw: {\"alerts\":[],\"text\":[\"Journal\",\"2 entries\",\"New entry\",\"Date\",\"Entry\",\"500 characters left\",\"Add entry\",\"Entries, newest first\",\"No journal entries yet\",\"Note what you see: first shoots, pests, the weather.\",\"Garden Log · a journal for one garden\"],\"pe\":[]}\n   repro: .rough-ride/runs/20261112-173407-hunt-0a37/probes/plant-journal-load-faults.mjs (expectation \"plant-journal-empty-object-not-shown-as-empty\")\n4. MEDIUM Journal search shows a bad response as 'No entries match'\n   where: /journal search (GET /api/journal?q=…)\n   expected: A response that is not a list is shown as an error\n   saw: {\"alerts\":[\"0 entries match\"],\"text\":[\"Journal\",\"The latest notes from across the garden, newest first.\",\"Write in a plant's journal\",\"Search\",\"Clear search\",\"0 entries match\",\"No entries match\",\"Try a different word or plant name.\",\"Clear search\",\"Garden Log · a journal for one garden\"]}\n   repro: .rough-ride/runs/20261112-173407-hunt-0a37/probes/plant-journal-load-faults.mjs (expectation \"journal-empty-object-not-shown-as-no-match\")\n5. MEDIUM Hung journal search stays on 'Loading entries…' and keeps showing the old results\n   where: /journal search\n   expected: After a while the page shows an error or a timeout and offers a retry\n   saw: {\"alerts\":[\"Loading entries…\"],\"text\":[\"Write in a plant's journal\",\"Search\",\"Clear search\",\"Loading entries…\",\"Tomato\",\"2 Jul 2026\",\"Tied the stems to canes.\",\"Tomato\",\"1 Jun 2026\",\"First flowers opened; watered deeply.\"]}\n   repro: .rough-ride/runs/20261112-173407-hunt-0a37/probes/journal-search-hang.mjs (expectation \"hung-search-not-stuck-loading\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a2424af03c0e43863.jsonl",
+    "agent-a2424af03c0e43863.meta.json"
+  ],
+  "usage": {
+    "input": 30,
+    "output": 16374,
+    "cacheRead": 383187,
+    "cacheWrite": 46742,
+    "requests": 15,
+    "toolCalls": {
+      "Bash": 14,
+      "Read": 1
+    }
+  },
+  "findingCount": 5,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                      |   4 +-\n backend/db.py                       |  21 +++++++-\n backend/routers/plants.py           |   3 +-\n backend/schemas.py                  |  27 ++++++++++\n frontend/app/assets/css/main.css    | 104 +++++++++++++++++++++++++++++++++++-\n frontend/app/layouts/default.vue    |   1 +\n frontend/app/pages/plants/[id].vue  | 104 ++++++++++++++++++++++++++++++++++--\n frontend/app/pages/plants/index.vue |   3 ++\n frontend/app/types/api.ts           |  16 ++++++\n 9 files changed, 275 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T16:41:44.909Z"
+}

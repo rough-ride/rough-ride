@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Dashboard 'Recent waterings' renders a malformed response as rows of 'Never' instead of an error",
+      "where": "/ (dashboard), GET /api/waterings?limit=5",
+      "steps": "Probe malformed, expectation dashboard-malformed-shows-error-not-rows",
+      "expected": "A non-list response shows an error message in the Recent waterings section",
+      "actual": "14 table rows each showing 'Never', an empty bed and '–'; no alert",
+      "evidence": "{\"never\":14,\"alerts\":[]} | {\"never\":14,\"alerts\":[]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-193422-hunt-19dc",
+        "probe": "malformed",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Waterings page crashes on a non-list response (reduce is not a function), navigation never completes",
+      "where": "/waterings, GET /api/waterings",
+      "steps": "Probe malformed, expectation waterings-malformed-shows-error",
+      "expected": "A visible error on the Waterings page",
+      "actual": "Uncaught 'waterings.value?.reduce is not a function'; the beds page stays on screen with no error shown",
+      "evidence": "{\"alerts\":[],\"text\":[\"Partial shade\",\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\",\"2\",\"HARVESTED\",\"2.55 kg\",\"LAST WATERED\",\"12 Nov 2026, 19:35\",\"Water now\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"]} | {\"alerts\":[],\"text\":[\"Partial shade\",\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\",\"2\",\"HARVESTED\",\"2.55 kg\",\"LAST WATERED\",\"12 Nov 2026, 19:35\",\"Water now\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-193422-hunt-19dc",
+        "probe": "malformed",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Past watering accepts year-1 date and reports it as recorded",
+      "where": "/beds Record past watering form, POST /api/waterings",
+      "steps": "Probe past-form, expectation year-1-date-refused",
+      "expected": "An absurd far-past date such as 0001-01-01 is refused with a reason",
+      "actual": "Saved with 201; success notice 'Recorded 2 L on 1 Jan 1.' and the entry shows in the log",
+      "evidence": "{\"alerts\":[\"Recorded 2 L on 1 Jan 1.\"],\"added\":1} | {\"alerts\":[\"Recorded 2 L on 1 Jan 1.\"],\"added\":1}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-193422-hunt-19dc",
+        "probe": "past-form",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Waterings page load error offers no way to retry",
+      "where": "/waterings",
+      "steps": "Probe waterings-page, expectation load-error-has-retry",
+      "expected": "After a failed load, a Retry / Try again control once the fault clears",
+      "actual": "Only the error text 'Injected 500' is shown; no retry control, reload is needed",
+      "evidence": "{\"retry\":0} | {\"retry\":0}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-193422-hunt-19dc",
+        "probe": "waterings-page",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Dashboard recent waterings error offers no way to retry",
+      "where": "/ (dashboard) Recent waterings",
+      "steps": "Probe past-form, expectation dashboard-waterings-retry",
+      "expected": "A retry control next to the 'could not load' error",
+      "actual": "Error text only, no retry control (refresh is not even destructured for waterings)",
+      "evidence": "{} | {}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-193422-hunt-19dc",
+        "probe": "past-form",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Filter by unknown bed id shows 'No waterings for this bed' while the Bed select shows no selection",
+      "where": "/waterings?bed=99999",
+      "steps": "Probe malformed, expectation unknown-bed-filter-consistent",
+      "expected": "The select and the list agree (unknown bed reset to All beds or flagged)",
+      "actual": "Select has no selected option (looks like All beds) while the list is filtered and says 'No waterings for this bed'",
+      "evidence": "{\"sel\":\"\",\"selText\":\"(none)\",\"text\":[\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\",\"Garden Log · a journal for one garden\"]} | {\"sel\":\"\",\"selText\":\"(none)\",\"text\":[\"Shade corner\",\"Clear filter\",\"0 waterings\",\"No waterings for this bed\",\"Pick another bed or record a watering on the beds page.\",\"Clear filter\",\"Garden Log · a journal for one garden\"]}",
+      "status": "observed",
+      "severity": "low",
+      "tool": {
+        "run": "20261112-193422-hunt-19dc",
+        "probe": "malformed",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

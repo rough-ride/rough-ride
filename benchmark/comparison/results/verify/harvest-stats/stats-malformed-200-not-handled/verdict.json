@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "stats-malformed-200-not-handled",
+  "sentence": "When GET /api/stats/harvests returns a malformed or non-JSON 200 response (e.g. '{}' or an HTML body), /stats throws a render error or shows a garbage table instead of an error state.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo user, loaded Dashboard, then used Playwright page.route to fulfil GET /api/stats/harvests with 200 (a) application/json '{}' and (b) text/html '<html>proxy</html>', and clicked the 'Stats' nav link. In both cases the URL changed to /stats but the Dashboard content stayed on screen (title 'Dashboard · Garden Log'), a Nuxt error dialog appeared with h1 \"Cannot read properties of undefined (reading 'length')\", the console logged '[Vue warn]: Unhandled error during execution of render function at <Stats>', and a pageerror 'Cannot read properties of undefined (reading 'length')' was thrown. No AlertMessage or retry was shown. Cause: stats.vue's template checks `stats && stats.plants.length` with no validation of the response shape (useApiFetch treats any 200 as data), and formatMonth calls value.slice without a null guard.",
+  "severity": "medium",
+  "wallMs": 82295
+}

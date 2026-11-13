@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "hung-filter-stale-rows",
+  "sentence": "On /waterings, when the request for a newly chosen bed filter hangs, the page stays on 'Loading waterings…' and keeps listing other beds' rows under the selected bed.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /waterings. The unfiltered list showed 2 rows: '5 Nov 2026 Shade corner 4 L' and '1 Nov 2026 North bed 10 L'. Then I used Playwright page.route to make GET /api/waterings?bed_id=... hang and picked 'Shade corner' (value 2). The URL changed to /waterings?bed=2 and the select showed value 2. 13 s later the results line still said 'Loading waterings…', there were no alerts or errors, and the table still showed both old rows, including the North bed row with its Delete button enabled, under the Shade corner filter. The cause is in frontend/app/pages/waterings.vue: the table renders whenever `waterings` holds data, even while status is 'pending'. Nothing hides or marks the old rows (no aria-busy, no dimming), and useApiFetch sets no timeout, so a request that never answers never becomes an error and there is no retry.",
+  "severity": "low",
+  "wallMs": 105019
+}

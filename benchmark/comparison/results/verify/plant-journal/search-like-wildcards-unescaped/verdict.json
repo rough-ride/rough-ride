@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "search-quote-crash",
+  "key": "search-like-wildcards-unescaped",
+  "sentence": "Searching the journal for '%' or '_' returns all entries because the term is used as an unescaped SQL LIKE pattern, so literal % or _ cannot be searched.",
+  "verdict": "confirmed",
+  "evidence": "Signed in via POST /api/auth/login with the demo credentials, then called GET http://localhost:8792/api/journal with different q values. q='' returned 3 entries, and none of them contains '%' or '_' in its body. q='%' returned all 3, q='_' returned all 3, q='%%%' returned all 3, and a control q='zzqx' returned 0. So searching for a literal % or _ matches everything. Code: backend/routers/journal.py list_entries builds the clause as f\"(j.body LIKE '%{term}%' OR p.name LIKE '%{term}%')\", which is raw interpolation with no escaping and no ESCAPE clause. The existing escape_like helper in routers/common.py, which plants.py uses, is not used here. The same interpolation also opens the query to SQL injection (term is not bound as a parameter).",
+  "severity": "medium",
+  "wallMs": 53641
+}

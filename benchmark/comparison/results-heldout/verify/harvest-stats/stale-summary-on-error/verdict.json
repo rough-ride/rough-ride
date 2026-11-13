@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "hx1",
+  "key": "stale-summary-on-error",
+  "sentence": "On /stats, after a successful load, a failed request for a new range leaves the old range's '<n> harvests from ... to ...' summary line visible next to the error; triggered by making the next stats request fail after changing dates.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo user, opened /stats: summary read '5 harvests from 1 Jan 2026 to 31 Dec 2026'. Routed **/api/stats/harvests** to return 500 {detail:'Injected 500'}, then filled From = 2026-07-01 (URL became /stats?from=2026-07-01). Page then showed 'Injected 500' alert AND still the summary '5 harvests from 1 Jan 2026 to 31 Dec 2026' for a range no longer selected. Cause in frontend/app/pages/stats.vue: loadStats catch sets statsError but leaves stats.value as the old data, and the results-count template uses `v-else-if=\"stats\"` with no statsError check, so stale rangeText renders beside the error.",
+  "severity": "low",
+  "wallMs": 83343
+}

@@ -1,0 +1,108 @@
+{
+  "findings": [
+    {
+      "title": "link \"Stats\" stays busy after GET /api/stats/harvests fails with 500",
+      "where": "/stats GET /api/stats/harvests (entry)",
+      "steps": "In the browser: harvest-stats/GET /api/stats/harvests #1/500!; checks that failed: settles, retry-recovers",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | retry-recovers: step 14 (expect heading \"Best plants\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | retry-recovers: step 14 (expect heading \"Best plants\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | retry-recovers: step 14 (expect heading \"Best plants\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 11.4 s | retry-recovers: step 14 (expect heading \"Best plants\"): not visible after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | retry-recovers: step 14 (expect heading \"Best plants\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | retry-recovers: step 14 (expect heading \"Best plants\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | retry-recovers: step 14 (expect heading \"Best plants\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 11.4 s | retry-recovers: step 14 (expect heading \"Best plants\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-110527-plan-avkf",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/GET /api/stats/harvests #1/500!",
+          "harvest-stats/GET /api/stats/harvests #1/empty-200!",
+          "harvest-stats/GET /api/stats/harvests #1/400!",
+          "harvest-stats/GET /api/stats/harvests #1/reset!",
+          "harvest-stats/GET /api/stats/harvests #1/401!",
+          "harvest-stats/GET /api/stats/harvests #1/429!"
+        ]
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after POST /api/beds fails with 500",
+      "where": "/beds POST /api/beds",
+      "steps": "In the browser: harvest-stats/POST /api/beds #1/500!; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-110527-plan-avkf",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/POST /api/beds #1/500!",
+          "harvest-stats/label \"Name\"/empty",
+          "harvest-stats/POST /api/beds #1/double-submit",
+          "harvest-stats/POST /api/beds #1/reset!",
+          "harvest-stats/label \"Name\"/long",
+          "harvest-stats/label \"Name\"/spaces",
+          "harvest-stats/label \"Name\"/specials",
+          "harvest-stats/label \"Name\"/unicode"
+        ]
+      }
+    },
+    {
+      "title": "button \"Log harvest\" stays busy after POST /api/harvests fails with 500",
+      "where": "/harvests/new POST /api/harvests",
+      "steps": "In the browser: harvest-stats/POST /api/harvests #1/500!; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-110527-plan-avkf",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/POST /api/harvests #1/500!",
+          "harvest-stats/label \"Weight (grams)\"/huge",
+          "harvest-stats/POST /api/harvests #1/double-submit",
+          "harvest-stats/POST /api/harvests #1/reset!",
+          "harvest-stats/label \"Weight (grams)\"/empty"
+        ]
+      }
+    },
+    {
+      "title": "button \"Save plant\" stays busy after POST /api/plants fails with 500",
+      "where": "/plants/new POST /api/plants",
+      "steps": "In the browser: harvest-stats/POST /api/plants #1/500!; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-110527-plan-avkf",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/POST /api/plants #1/500!",
+          "harvest-stats/POST /api/plants #1/double-submit",
+          "harvest-stats/POST /api/plants #1/reset!"
+        ]
+      }
+    },
+    {
+      "title": "button \"Add bed\" stays busy after GET /api/beds fails with 500",
+      "where": "/beds GET /api/beds",
+      "steps": "In the browser: harvest-stats/GET /api/beds #1/500!; checks that failed: settles, values-survive, retry-recovers",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | values-survive: label \"Name\" held \"Bed ekl252iu\", then \"\" after the failed request | retry-recovers: step 4 (click link \"Add plant to Bed ${unique}\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s | values-survive: label \"Name\" held \"Bed ekl252iu\", then \"\" after the failed request | retry-recovers: step 4 (click link \"Add plant to Bed ${unique}\"): not found after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0cms3d35) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-110527-plan-avkf",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/GET /api/beds #1/500!",
+          "harvest-stats/GET /api/beds #1/empty-200!"
+        ]
+      }
+    }
+  ]
+}

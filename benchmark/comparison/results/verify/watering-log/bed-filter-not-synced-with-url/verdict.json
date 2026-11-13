@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "bed-filter-not-synced-with-url",
+  "sentence": "On /waterings, the bed filter is read from the URL only at setup, so navigating to /waterings or using back/forward keeps the old filter while the URL changes.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and clicked North bed's history link on /beds (/waterings?bed=1): the select showed '1' and the list showed '1 watering, 10 L in total' (North bed only). Then I clicked the 'Waterings' nav link. The URL became /waterings, but the select stayed on '1' and the list still showed only North bed's 1 watering. Back (to ?bed=1) and Forward (to /waterings) changed only the URL; the filter and list stayed the same. A full page load of /waterings showed the correct unfiltered list: All beds, '2 waterings, 14 L in total' (Shade corner + North bed). Cause in the code: pages/waterings.vue sets bedFilter = ref(route.query.bed) once at setup and only has watch(bedFilter) -> router.replace. Nothing watches route.query, and NuxtPage has no key, so the page component is reused. So the 'Waterings' nav link and Back/Forward leave the user on a filtered list that doesn't match the URL.",
+  "severity": "medium",
+  "wallMs": 117375
+}

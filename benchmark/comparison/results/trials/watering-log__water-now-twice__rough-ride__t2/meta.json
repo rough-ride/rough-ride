@@ -1,0 +1,75 @@
+{
+  "id": "watering-log__water-now-twice__rough-ride__t2",
+  "feature": "watering-log",
+  "bug": "water-now-twice",
+  "arm": "rough-ride",
+  "trial": 2,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T10:02:07.224Z",
+  "materializeMs": 8810,
+  "repo": "$TMPDIR/rr-bench/work/watering-log__water-now-twice__rough-ride__t2/variant/vi0r8q04/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/beds.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/beds.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/waterings.py\n?? frontend/app/pages/waterings.vue\n",
+  "sessionId": "9d098a75-9f6c-4e53-944f-8de5b589ce46",
+  "loadBefore": [
+    9.8955078125,
+    11.71484375,
+    11.8154296875
+  ],
+  "loadAfter": [
+    6.20654296875,
+    9.8525390625,
+    10.87890625
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 548410,
+  "reportedCostUsd": 0.8239184,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 26,
+      "outputTokens": 11095,
+      "cacheReadInputTokens": 385747,
+      "cacheCreationInputTokens": 104953,
+      "webSearchRequests": 0,
+      "costUSD": 0.8239184,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 3089,
+      "cacheCreationEphemeral5mInputTokens": 104953,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 2,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride summary (copy this block unchanged) ---\nrough-ride attack | 6m05s | run 20261112-100227-plan-tfl1 | early preview: accuracy not measured yet, treat findings as leads to check\ndiff: main 679cd3d..working tree | 16 files -> 3 flows, 6 endpoints, 5 forms\ntarget: http://localhost:3791 (proven Nuxt dev server) | API http://localhost:8791 | Chrome 157.0.8103.52\nProtected files compared with local main (no remote). Commits on main count as reviewed, so rough-ride can't tell your commits there from an agent's.\nApp-wide change (frontend/app/assets/css/main.css, frontend/app/layouts/default.vue, frontend/app/utils/format.ts): 3 saved flows in scope at the lowest priority\n+2 more notes (report.txt)\nProtected files: 2 changes since main, used as written (report.txt)\nRejected plan entry: attacks[1] (already selected)\nRejected plan entry: attacks[4] (already selected)\n+8 more flow lines (report.txt)\nHIGH  button \"Water now Bed ${unique}\" sends 2 successful POST /api/waterings on a double click | repro r05 (if this control is a toggle, give it aria-pressed)\n      /beds | double-submit on POST /api/waterings #1 | fails: one-write, app-water-now-records-once (app-specific, spec request)\nHIGH  button \"Add bed\" stays busy after GET /api/beds returns malformed JSON | 3 attacks | repro r43\n      /beds | malformed-json!, 500, delay-3s on GET /api/beds #1 | fails: settles, no-uncaught-error | page showed a record from water-now/GET /api/beds #1/delay-3s\nMED   Typed values lost after GET /api/beds fails with 500 (button \"Add bed\") | 4 attacks | repro r06\n      /beds | 500!, 400!, reset!, 429! on GET /api/beds #1 | fails: values-survive, retry-recovers\nMED   No way to retry without a reload after GET /api/waterings fails with 500 | 4 attacks | repro r11\n      /waterings | 500!, 400!, reset!, 429! on GET /api/waterings #1 | fails: retry-recovers\nMED   Uncaught error on /waterings after GET /api/waterings returns malformed JSON | repro r52\n      /waterings | malformed-json! on GET /api/waterings #1 | fails: no-uncaught-error\nNew regression tests: .rough-ride/tests/water-now-double-submit-3a9ff9.yaml, .rough-ride/tests/water-now-malformed-json-3147de.yaml, .rough-ride/tests/water-now-500-816a7b.yaml, .rough-ride/tests/watering-history-500-ec7ee7.yaml, .rough-ride/tests/watering-history-malformed-json-2a6f68.yaml. Commit them with your fix.\nNot shown: 8 more finding groups, 2 not confirmed when run again alone (report.txt)\nAttacks: 10 of 12 changed files and 6 of 8 changed endpoints attacked | 100 attacks: 53 passed, 38 failed, 8 pending, 1 not judged | 80 skipped | 9 over the standard budget\nNot attacked: backend/routers/waterings.py delete_watering -> DELETE /api/waterings/{watering_id} (no flow sends it from the browser)\nNot attacked: backend/schemas.py BedOut -> PUT /api/beds/{bed_id} (no flow sends it from the browser)\nNot attacked: frontend/app/types/api.ts (no flow reaches it)\n+1 more not attacked (report.txt)\nRequests your servers send are never attacked in v1, including data a page loads while it renders on the server. A page's data load is attacked only when a flow opens the page by in-app navigation and the browser sends the request.\nResilience contract: not in the root CLAUDE.md, .claude/CLAUDE.md, AGENTS.md or .claude/AGENTS.md. Pasted into the root CLAUDE.md, it tells coding agents which failures to design for; it changes nothing rough-ride attacks or judges. Text: https://github.com/rough-ride/rough-ride/blob/v0.1.4/docs/resilience-contract.md#the-text (also at ~/workspace/opensource/rough-ride/packages/rough-ride/templates/resilience-contract.md). The user decides; agents leave instruction files alone.\nFix, then run: /rough-ride:regress water-now-double-submit-3a9ff9 water-now-malformed-json-3147de water-now-500-816a7b watering-history-500-ec7ee7 watering-history-malformed-json-2a6f68\nInvestigate (keeps running; start it in the background): node \"~/workspace/opensource/rough-ride/packages/rough-ride/dist/cli.mjs\" repro 20261112-100227-plan-tfl1/r05 --keep-open --plugin-data \"~/.claude/plugins/data/rough-ride-inline\" (other findings: r43, r06, r11, r52)\nFull report: $TMPDIR/rr-bench/work/watering-log__water-now-twice__rough-ride__t2/variant/vi0r8q04/garden-log/.rough-ride/runs/20261112-100227-plan-tfl1/report.txt\nRunner: rough-ride 0.1.4 from plugin rough-ride | Node 26.13.0 | Playwright 1.64.1 | Claude Code 2.1.322 | plugin data: ~/.claude/plugins/data/rough-ride-inline (from --plugin-data, not verified)\n--- end of rough-ride summary ---\n```\n\nAdversary notes (not checked by the runner):\nSpec not checked: \"records a watering with the current time\" (the time shown depends on the clock and is never a literal)\nSpec not checked: \"Show when each bed was last watered on the beds page\" (the shown value is a date or a time)",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a0903597b916caa36.jsonl",
+    "agent-a0903597b916caa36.meta.json"
+  ],
+  "usage": {
+    "input": 26,
+    "output": 11095,
+    "cacheRead": 385747,
+    "cacheWrite": 104953,
+    "requests": 13,
+    "toolCalls": {
+      "Bash": 8,
+      "Read": 6
+    }
+  },
+  "findingCount": 15,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |   4 +-\n backend/db.py                    |  14 ++++-\n backend/routers/beds.py          |   8 ++-\n backend/schemas.py               |  29 +++++++++\n frontend/app/assets/css/main.css |  24 ++++++-\n frontend/app/layouts/default.vue |   1 +\n frontend/app/pages/beds.vue      | 133 ++++++++++++++++++++++++++++++++++++++-\n frontend/app/pages/index.vue     |  44 ++++++++++++-\n frontend/app/types/api.ts        |  17 +++++\n frontend/app/utils/format.ts     |  26 ++++++++\n 10 files changed, 292 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T10:11:33.866Z",
+  "findingsSource": "report.txt, every state"
+}

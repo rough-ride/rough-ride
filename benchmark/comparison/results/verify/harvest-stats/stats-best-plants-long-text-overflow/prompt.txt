@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3790, API http://localhost:8790/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-harvest-stats-stats-best-plants-long-text-overflow/scratch.
+
+The reported problem: A plant with a long unbroken name or variety overflows the Best plants cards on /stats at 375 px, causing sideways page scrolling.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Long unbroken variety text can overflow the Best plants card at 375px",
+  "where": "/stats Best plants",
+  "steps": "Create a plant with an 80-character variety that has no spaces, log a harvest, then view /stats at 375px wide.",
+  "expected": "The text wraps or is truncated inside the card.",
+  "actual": "stat__hint has no overflow-wrap and the stylesheet has no overflow-wrap/word-break rules, so the text runs out of the card and can cause sideways scrolling.",
+  "evidence": "main.css: .stat__hint has no wrapping rules, and grep finds no overflow-wrap anywhere."
+ },
+ {
+  "title": "Long variety text overflows Best plants cards at 375px",
+  "where": "/stats Best plants section",
+  "steps": "Create a plant with an 80-character variety that has no spaces, log a harvest for it this year, and view /stats at 375px width.",
+  "expected": "The text wraps or is truncated inside the card.",
+  "actual": "stat__hint has no overflow-wrap, so a long unbroken variety pushes past the card and causes sideways scrolling.",
+  "evidence": "The .stat__hint CSS has only margin, font-size and color. Variety allows up to 80 characters (schemas.py)."
+ },
+ {
+  "title": "Long plant names or varieties overflow the 'Best plants' cards at 375 px",
+  "where": "/stats, Best plants section",
+  "steps": "Create a plant named 'Supercalifragilisticexpialidociousgiantheirloomtomatofromgrandma🍅 <b>x</b>' with variety 'Extremelylongvarietynamewithoutanyspacesatall_abcdefghijklmnop' and log a harvest this year. Open /stats at 375 px width.",
+  "expected": "The text wraps and there is no sideways page scroll.",
+  "actual": "The page scrolls sideways: document scrollWidth is 481 px at a 375 px viewport. p.stat__value has scrollWidth 1257 against clientWidth 290, and p.stat__hint 437 against 290. (The table scrolls inside its own wrapper, which is fine.)",
+  "evidence": "document.documentElement.scrollWidth = 481. The overflowing elements are OL.stats > LI.stat > P.stat__value and P.stat__hint. The dashboard at 375 px was fine (scrollWidth 375)."
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-harvest-stats-stats-best-plants-long-text-overflow/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

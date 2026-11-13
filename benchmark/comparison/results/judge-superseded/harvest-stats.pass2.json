@@ -1,0 +1,887 @@
+{
+  "feature": "harvest-stats",
+  "pass": 2,
+  "count": 143,
+  "missing": [],
+  "costUsd": 0.6631578,
+  "reports": [
+    {
+      "id": "F0a5094c5",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__to-date-excluded__playwright__t1#3"
+    },
+    {
+      "id": "F2c8f8f6b",
+      "planted": null,
+      "issue": "stats-table-long-plant-name-nowrap",
+      "key": "harvest-stats__clean__playwright__t2#7"
+    },
+    {
+      "id": "F21fbc527",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__to-date-excluded__baseline__t3#2"
+    },
+    {
+      "id": "F8ee2f420",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__playwright__t3#0"
+    },
+    {
+      "id": "Fe2e1f10f",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t3#2"
+    },
+    {
+      "id": "F5d921d51",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__to-date-excluded__playwright__t2#2"
+    },
+    {
+      "id": "F11452ab9",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t3#1"
+    },
+    {
+      "id": "F93b7f107",
+      "planted": null,
+      "issue": "best-plants-long-text-overflow",
+      "key": "harvest-stats__clean__playwright__t1#3"
+    },
+    {
+      "id": "Ff70baf07",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t3#1"
+    },
+    {
+      "id": "F998de0ff",
+      "planted": null,
+      "issue": "stats-invalid-url-date-raw-message",
+      "key": "harvest-stats__clean__baseline__t3#2"
+    },
+    {
+      "id": "F1afca9e6",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__baseline__t2#1"
+    },
+    {
+      "id": "F9517ddd3",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t2#3"
+    },
+    {
+      "id": "F48dcc4c0",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t1#3"
+    },
+    {
+      "id": "F45769ea6",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t3#0"
+    },
+    {
+      "id": "F97178e5a",
+      "planted": null,
+      "issue": "dashboard-signin-no-retry-without-reload",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t3#3"
+    },
+    {
+      "id": "F75ef8571",
+      "planted": null,
+      "issue": "best-plants-long-text-overflow",
+      "key": "harvest-stats__clean__playwright__t3#3"
+    },
+    {
+      "id": "F5e409618",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t2#2"
+    },
+    {
+      "id": "F96391aee",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t3#1"
+    },
+    {
+      "id": "F9c830d27",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t2#2"
+    },
+    {
+      "id": "Ff998f3cd",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__baseline__t2#0"
+    },
+    {
+      "id": "F8b46e2a9",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__clean__playwright__t3#4"
+    },
+    {
+      "id": "Fa1a6ed4a",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__clean__playwright__t1#4"
+    },
+    {
+      "id": "F96830423",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__clean__playwright__t3#6"
+    },
+    {
+      "id": "F8bed29cd",
+      "planted": null,
+      "issue": "stats-date-typing-fetch-per-keystroke",
+      "key": "harvest-stats__clean__baseline__t1#5"
+    },
+    {
+      "id": "F3f713186",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__to-date-excluded__baseline__t2#4"
+    },
+    {
+      "id": "F6f2246ac",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t2#0"
+    },
+    {
+      "id": "F4871c0f5",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__to-date-excluded__baseline__t1#3"
+    },
+    {
+      "id": "F23393f45",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t3#3"
+    },
+    {
+      "id": "F1afdc716",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t1#1"
+    },
+    {
+      "id": "F8eb3b2d2",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t1#4"
+    },
+    {
+      "id": "F03c97447",
+      "planted": null,
+      "issue": "undefined-text-after-api-failure",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t1#3"
+    },
+    {
+      "id": "F288507ec",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t2#2"
+    },
+    {
+      "id": "F0dcf895c",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__to-date-excluded__baseline__t1#2"
+    },
+    {
+      "id": "Fb5058cb6",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__clean__baseline__t3#3"
+    },
+    {
+      "id": "Fafa35b92",
+      "planted": null,
+      "issue": "stats-malformed-response-rendered-as-data",
+      "key": "harvest-stats__clean__playwright__t2#3"
+    },
+    {
+      "id": "F692f74a0",
+      "planted": null,
+      "issue": "dashboard-signin-no-retry-without-reload",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t3#4"
+    },
+    {
+      "id": "F0c2bb61c",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t2#4"
+    },
+    {
+      "id": "F6d445923",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t3#1"
+    },
+    {
+      "id": "F6e99adf0",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__to-date-excluded__baseline__t1#4"
+    },
+    {
+      "id": "Fa9f09128",
+      "planted": null,
+      "issue": "undefined-text-after-api-failure",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t3#1"
+    },
+    {
+      "id": "F8ca8c4a6",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__clean__baseline__t1#3"
+    },
+    {
+      "id": "F7027f227",
+      "planted": null,
+      "issue": "stats-date-typing-fetch-per-keystroke",
+      "key": "harvest-stats__clean__baseline__t2#3"
+    },
+    {
+      "id": "F9657ede8",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__to-date-excluded__baseline__t2#3"
+    },
+    {
+      "id": "F982d0793",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__playwright__t1#1"
+    },
+    {
+      "id": "F8826223c",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t2#3"
+    },
+    {
+      "id": "F02128f34",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__to-date-excluded__playwright__t3#4"
+    },
+    {
+      "id": "F84aafc1a",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__baseline__t2#1"
+    },
+    {
+      "id": "F2c21b63f",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t1#1"
+    },
+    {
+      "id": "Fa6bb95e4",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t2#2"
+    },
+    {
+      "id": "F01976e5d",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__playwright__t1#1"
+    },
+    {
+      "id": "F23fa5169",
+      "planted": null,
+      "issue": "dashboard-signin-no-retry-without-reload",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t1#2"
+    },
+    {
+      "id": "Fcaec36fd",
+      "planted": null,
+      "issue": "stats-dates-ignore-url-changes",
+      "key": "harvest-stats__clean__baseline__t3#6"
+    },
+    {
+      "id": "F56bcb4bf",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t2#0"
+    },
+    {
+      "id": "F7aab7da7",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t1#4"
+    },
+    {
+      "id": "Fd9cf5d9c",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__clean__baseline__t2#2"
+    },
+    {
+      "id": "Fbb1a4992",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__clean__playwright__t2#6"
+    },
+    {
+      "id": "F97e033c3",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__baseline__t1#1"
+    },
+    {
+      "id": "F093d26fc",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t3#4"
+    },
+    {
+      "id": "F5acb689e",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__baseline__t3#0"
+    },
+    {
+      "id": "F41143dbc",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__to-date-excluded__baseline__t2#2"
+    },
+    {
+      "id": "Fe0ab1101",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__to-date-excluded__playwright__t3#3"
+    },
+    {
+      "id": "Fe4a0fa0a",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t1#0"
+    },
+    {
+      "id": "Fe01796ad",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t3#3"
+    },
+    {
+      "id": "Fb47dafb5",
+      "planted": null,
+      "issue": "best-plants-long-text-overflow",
+      "key": "harvest-stats__clean__baseline__t1#6"
+    },
+    {
+      "id": "F585a3476",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__playwright__t3#2"
+    },
+    {
+      "id": "F77989675",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t2#1"
+    },
+    {
+      "id": "F148ee6cc",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t2#3"
+    },
+    {
+      "id": "Fdf52b574",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t2#0"
+    },
+    {
+      "id": "F73159dc3",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__baseline__t2#0"
+    },
+    {
+      "id": "Fce2e5b47",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t3#2"
+    },
+    {
+      "id": "F65031ece",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t2#0"
+    },
+    {
+      "id": "Ff179c3b6",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t2#0"
+    },
+    {
+      "id": "F617050e9",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t1#4"
+    },
+    {
+      "id": "F4b7a9a17",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__baseline__t3#1"
+    },
+    {
+      "id": "F1bca5fa0",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t1#0"
+    },
+    {
+      "id": "Fce7d10d7",
+      "planted": null,
+      "issue": "best-plants-long-text-overflow",
+      "key": "harvest-stats__clean__baseline__t2#4"
+    },
+    {
+      "id": "F597edbc6",
+      "planted": null,
+      "issue": "stats-invalid-url-date-raw-message",
+      "key": "harvest-stats__clean__playwright__t2#5"
+    },
+    {
+      "id": "F7be59ef9",
+      "planted": null,
+      "issue": "stats-invalid-url-date-raw-message",
+      "key": "harvest-stats__to-date-excluded__baseline__t3#4"
+    },
+    {
+      "id": "F17bdf63c",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t1#2"
+    },
+    {
+      "id": "Fe101e0a3",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t2#3"
+    },
+    {
+      "id": "Feb7fe5ec",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__to-date-excluded__playwright__t3#2"
+    },
+    {
+      "id": "Fbc8ed634",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__to-date-excluded__playwright__t2#3"
+    },
+    {
+      "id": "F064bcb48",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__clean__playwright__t3#0"
+    },
+    {
+      "id": "F4fccce1f",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t2#1"
+    },
+    {
+      "id": "Fc9e16735",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__playwright__t3#1"
+    },
+    {
+      "id": "F48256d85",
+      "planted": null,
+      "issue": "stats-malformed-response-rendered-as-data",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t2#5"
+    },
+    {
+      "id": "Fc6cf6de5",
+      "planted": null,
+      "issue": "dashboard-signin-no-retry-without-reload",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t3#0"
+    },
+    {
+      "id": "F28581e50",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t3#2"
+    },
+    {
+      "id": "F56cc7d65",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t1#3"
+    },
+    {
+      "id": "F9aa76e44",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t1#2"
+    },
+    {
+      "id": "F214ac3ff",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__playwright__t2#0"
+    },
+    {
+      "id": "F419bd411",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__clean__baseline__t3#4"
+    },
+    {
+      "id": "Fed412de7",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__clean__playwright__t1#5"
+    },
+    {
+      "id": "F82bbf368",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t1#2"
+    },
+    {
+      "id": "F2c9f7984",
+      "planted": null,
+      "issue": "signin-uncaught-render-error",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t3#2"
+    },
+    {
+      "id": "F62141c85",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t2#4"
+    },
+    {
+      "id": "F55633de7",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t1#3"
+    },
+    {
+      "id": "F76191ade",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t3#4"
+    },
+    {
+      "id": "Fb34bd83a",
+      "planted": null,
+      "issue": "stats-malformed-response-rendered-as-data",
+      "key": "harvest-stats__clean__playwright__t2#2"
+    },
+    {
+      "id": "F240bb340",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__playwright__t1#2"
+    },
+    {
+      "id": "F533ee75b",
+      "planted": null,
+      "issue": "best-plants-long-text-overflow",
+      "key": "harvest-stats__clean__baseline__t3#5"
+    },
+    {
+      "id": "Fb13b66a2",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t1#0"
+    },
+    {
+      "id": "Ff9e7e56d",
+      "planted": null,
+      "issue": "stats-empty-months-omitted",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t3#3"
+    },
+    {
+      "id": "F13a5abb0",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t1#1"
+    },
+    {
+      "id": "F9c5e4eed",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__baseline__t1#0"
+    },
+    {
+      "id": "F6418382b",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__playwright__t1#0"
+    },
+    {
+      "id": "Fa5b2bed3",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t2#1"
+    },
+    {
+      "id": "Fa99ebc5f",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__playwright__t2#0"
+    },
+    {
+      "id": "F300f6e3b",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t1#4"
+    },
+    {
+      "id": "F7ca6cd7c",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t1#1"
+    },
+    {
+      "id": "F92366e73",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t2#1"
+    },
+    {
+      "id": "F28107a3f",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__baseline__t1#1"
+    },
+    {
+      "id": "F1382ce1e",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__clean__playwright__t2#1"
+    },
+    {
+      "id": "Fc3887340",
+      "planted": null,
+      "issue": "dashboard-signin-no-retry-without-reload",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t1#1"
+    },
+    {
+      "id": "Fa0e07584",
+      "planted": null,
+      "issue": "dashboard-signin-no-retry-without-reload",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t1#4"
+    },
+    {
+      "id": "Fae7215e5",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__clean__playwright__t2#4"
+    },
+    {
+      "id": "F511104f5",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__to-date-excluded__baseline__t3#3"
+    },
+    {
+      "id": "F5fb292d9",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__baseline__t1#0"
+    },
+    {
+      "id": "Fc08193fd",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__playwright__t3#1"
+    },
+    {
+      "id": "F1689bf94",
+      "planted": null,
+      "issue": "stats-no-retry-after-error",
+      "key": "harvest-stats__to-date-excluded__playwright__t1#2"
+    },
+    {
+      "id": "Fec4f3aac",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__clean__baseline__t3#1"
+    },
+    {
+      "id": "F19e3d5ed",
+      "planted": null,
+      "issue": "stats-invalid-url-date-raw-message",
+      "key": "harvest-stats__clean__baseline__t1#2"
+    },
+    {
+      "id": "F0778f49f",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__baseline__t3#0"
+    },
+    {
+      "id": "F68cd26e8",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__to-date-excluded__playwright__t1#4"
+    },
+    {
+      "id": "F976a3bb4",
+      "planted": null,
+      "issue": "stats-invalid-url-date-raw-message",
+      "key": "harvest-stats__clean__playwright__t3#5"
+    },
+    {
+      "id": "Fe1c0b78f",
+      "planted": null,
+      "issue": "stats-cleared-date-silent-default",
+      "key": "harvest-stats__to-date-excluded__playwright__t2#4"
+    },
+    {
+      "id": "F07876a71",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t3#0"
+    },
+    {
+      "id": "Fe5cd16a4",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t2#2"
+    },
+    {
+      "id": "Fdd4c6758",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t3#0"
+    },
+    {
+      "id": "F7c22cce3",
+      "planted": null,
+      "issue": "stats-request-in-flight-after-429",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t1#0"
+    },
+    {
+      "id": "F4fd73575",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t3#2"
+    },
+    {
+      "id": "F0d07c176",
+      "planted": null,
+      "issue": "stats-no-request-timeout",
+      "key": "harvest-stats__error-shown-as-empty__playwright__t1#3"
+    },
+    {
+      "id": "F8cd722d3",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t3#3"
+    },
+    {
+      "id": "Fa033edc8",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t1#2"
+    },
+    {
+      "id": "F46e201a8",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t2#4"
+    },
+    {
+      "id": "F807ac4a1",
+      "planted": null,
+      "issue": "stats-malformed-response-crash",
+      "key": "harvest-stats__clean__playwright__t1#0"
+    },
+    {
+      "id": "F0e2ac949",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t3#0"
+    },
+    {
+      "id": "F9cae240c",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__clean__rough-ride__t1#0"
+    },
+    {
+      "id": "Fe5e05e9c",
+      "planted": null,
+      "issue": "stats-dates-ignore-url-changes",
+      "key": "harvest-stats__clean__baseline__t1#4"
+    },
+    {
+      "id": "Ff07ce579",
+      "planted": "error-shown-as-empty",
+      "issue": "error-shown-as-empty",
+      "key": "harvest-stats__error-shown-as-empty__baseline__t2#1"
+    },
+    {
+      "id": "Fda20b208",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__to-date-excluded__rough-ride__t2#4"
+    },
+    {
+      "id": "Fafa38a10",
+      "planted": "to-date-excluded",
+      "issue": "to-date-excluded",
+      "key": "harvest-stats__to-date-excluded__playwright__t2#1"
+    },
+    {
+      "id": "F98e1a48a",
+      "planted": null,
+      "issue": "beds-delete-control-stays-disabled",
+      "key": "harvest-stats__error-shown-as-empty__rough-ride__t2#3"
+    }
+  ],
+  "issues": {
+    "error-shown-as-empty": "On /stats, any failed GET /api/stats/harvests (5xx, network error, or a 422 from an invalid or inverted range) is rendered as the 'No harvests in this range' empty state instead of an error message.",
+    "to-date-excluded": "GET /api/stats/harvests and top_plants filter with harvested_on < To, so a harvest dated on the To date (including 31 Dec in the default range and the dashboard top plant) is left out of the table, totals and best plants.",
+    "stats-no-request-timeout": "On /stats, useApiFetch sets no timeout, so when GET /api/stats/harvests hangs the page shows 'Loading stats…' (or blocks navigation) indefinitely instead of failing after 10 s.",
+    "stats-no-retry-after-error": "On /stats, when loading the stats fails the error state offers no Retry control, so the same range can only be refetched by changing a date or reloading the page.",
+    "stats-table-long-plant-name-nowrap": "On /stats at 375 px, a long unbroken plant name in the nowrap row header widens the Plant column so all month and Total columns are pushed out of view inside the table scroller.",
+    "best-plants-long-text-overflow": "On /stats at 375 px, a long unbroken plant name or variety in the Best plants cards (.stat__value/.stat__hint) has no wrapping and overflows, making the page scroll sideways.",
+    "stats-invalid-url-date-raw-message": "Opening /stats with a regex-valid but impossible date in the URL (e.g. ?from=2026-02-30) shows the raw 'Query.from: Input should be a valid date...' validation text and a blank From field.",
+    "stats-cleared-date-silent-default": "Clearing the From or To field on /stats drops the parameter so the server silently uses 1 Jan or 31 Dec of the current year while the input stays blank, which can yield a contradictory 'From must be on or before To' error.",
+    "stats-empty-months-omitted": "The /stats per-month table (from GET /api/stats/harvests) only has columns for months with harvests, so months without harvests in the chosen range are missing instead of shown as zero.",
+    "stats-date-typing-fetch-per-keystroke": "Typing a year into a /stats date input fires a request for each intermediate value (e.g. 0002-12-31) and briefly flashes a 422 'From must be on or before To' error, because there is no debounce.",
+    "stats-dates-ignore-url-changes": "On /stats the From/To fields are read from the URL only at setup, so Back/Forward or clicking the Stats nav link changes the URL but the page keeps the old range.",
+    "stats-malformed-response-rendered-as-data": "When GET /api/stats/harvests returns 200 with null fields or a non-JSON body, /stats renders it as data, e.g. 'null harvests from – to –' and an empty table, instead of an error state.",
+    "stats-malformed-response-crash": "When GET /api/stats/harvests returns 200 with '{}', HTML, or null months, rendering /stats throws (stats.plants.length / formatMonth(null)) and the previous page content stays on screen at URL /stats.",
+    "beds-delete-control-stays-disabled": "In automated runs across many triggers, after navigating to /beds the DeleteBed control stays disabled for more than 10 s and some retry-recovery steps then fail.",
+    "dashboard-signin-no-retry-without-reload": "When GET /api/dashboard/summary, GET /api/tasks/upcoming or POST /api/auth/login fails with 500 on the sign-in or dashboard flow, the automated check finds no way to recover without reloading the page.",
+    "undefined-text-after-api-failure": "When GET /api/auth/me fails with 500 or GET /api/dashboard/summary returns malformed JSON, the page renders the literal text 'undefined'.",
+    "signin-uncaught-render-error": "When GET /api/auth/me fails with 500 on /login, a Vue unhandled render error and the dev error overlay appear.",
+    "stats-request-in-flight-after-429": "After GET /api/stats/harvests is answered with 429 on /stats, reloading the page leaves a request still in flight after 10 s."
+  }
+}

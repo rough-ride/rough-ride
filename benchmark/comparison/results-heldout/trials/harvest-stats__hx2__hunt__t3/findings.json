@@ -1,0 +1,49 @@
+{
+  "findings": [
+    {
+      "title": "Plants with the same name are merged into one row in the stats table",
+      "where": "GET /api/stats/harvests and /stats table",
+      "steps": "Probe same-name-plants, expectation api-each-plant-own-row",
+      "expected": "Two plants with the same name but different varieties (Red 100 g, Yellow 200 g) each get their own row with their own weight, matching the 'Best plants' list, which shows them separately",
+      "actual": "The API returns one row, labelled with the Red variety, holding 300 g. The Yellow plant disappears from the table and its weight is credited to Red. The query groups by p.name instead of p.id",
+      "evidence": "{\"rows\":[{\"plant_id\":6,\"plant_name\":\"Twin19009\",\"variety\":\"Red\",\"total_grams\":300,\"monthly_grams\":[300,0,0,0,0]}]} | {\"rows\":[{\"plant_id\":8,\"plant_name\":\"Twin22268\",\"variety\":\"Red\",\"total_grams\":300,\"monthly_grams\":[300,0,0,0,0]}]}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-183453-hunt-0b4d",
+        "probe": "same-name-plants",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Malformed or empty stats response crashes the page and leaves it stuck on 'Loading stats…' over stale results",
+      "where": "/stats",
+      "steps": "Probe bad-data-and-ranges, expectation empty-object-no-page-error",
+      "expected": "An error message, with no uncaught exception, and no older results shown for the new range",
+      "actual": "Uncaught 'Cannot read properties of undefined (reading \"length\")'. The page keeps showing 'Loading stats…' with the previous range's table, while the From field shows the new date",
+      "evidence": "{\"pe\":[\"Cannot read properties of undefined (reading 'length')\"]} | {\"pe\":[\"Cannot read properties of undefined (reading 'length')\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-183453-hunt-0b4d",
+        "probe": "bad-data-and-ranges",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Clearing the From date shows an error saying From is after To",
+      "where": "/stats (From field)",
+      "steps": "Probe cleared-from-and-race, expectation cleared-from-no-contradictory-error",
+      "expected": "An empty From either means no lower bound or is refused with a clear reason",
+      "actual": "With From empty and To = 2025-12-31, the server silently uses 1 Jan of the current year as From and the page shows 'The From date must be on or before the To date.', although From is blank",
+      "evidence": "{\"alerts\":[\"The From date must be on or before the To date.\"],\"fields\":[{\"label\":\"From\",\"value\":\"\"},{\"label\":\"To\",\"value\":\"2025-12-31\"}]} | {\"alerts\":[\"The From date must be on or before the To date.\"],\"fields\":[{\"label\":\"From\",\"value\":\"\"},{\"label\":\"To\",\"value\":\"2025-12-31\"}]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-183453-hunt-0b4d",
+        "probe": "cleared-from-and-race",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

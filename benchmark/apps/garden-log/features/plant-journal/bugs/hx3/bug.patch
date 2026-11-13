@@ -1,0 +1,12 @@
+diff --git a/frontend/app/pages/plants/[id].vue b/frontend/app/pages/plants/[id].vue
+index 31a5413..d6ce353 100644
+--- a/frontend/app/pages/plants/[id].vue
++++ b/frontend/app/pages/plants/[id].vue
+@@ -129,6 +129,7 @@ async function removeEntry(entry: JournalEntry): Promise<void> {
+   if (!window.confirm(`Delete the journal entry from ${formatDate(entry.entry_on)}?`)) return
+   removingEntryId.value = entry.id
+   journalError.value = null
++  journal.value = journal.value?.filter((e) => e.id !== entry.id)
+   try {
+     await api(`/journal/${entry.id}`, { method: 'DELETE' })
+     await refreshPlantAndJournal()

@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "failed-refresh-after-add-hides-list",
+  "sentence": "On the plant page, if adding an entry succeeds but the following journal refresh fails, the whole list is replaced by a load error with no retry while the badge count increases.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /plants/3 (Lettuce). Before: badge '1 entry' and one entry listed ('14 May 2026 Thinned the seedlings.' with Edit/Delete). Used a Playwright route that let POST /api/journal through and returned 503 for every later GET /api/journal. Added the entry 'Verify refresh failure entry'. After: POST succeeded, the form was cleared ('500 characters left'), the badge changed to '2 entries', and the entry list was gone (0 list items). The only thing left in its place was the load-error alert (it showed the mocked 503 detail text; without a detail it falls back to 'Could not load the journal.'). The only button left in the section was 'Add entry', so there was no retry control. Code cause: in pages/plants/[id].vue, addEntry calls refreshPlantAndJournal(), which refreshes the plant and the journal together. The plant refresh succeeds, so the count goes up. The journal useFetch fails, and Nuxt 4 resets its data to undefined, so the template condition `v-if=\"journal && journal.length\"` hides the list. AlertMessage has no retry slot or action, so the initial-load failure has no retry either.",
+  "severity": "medium",
+  "wallMs": 50493
+}

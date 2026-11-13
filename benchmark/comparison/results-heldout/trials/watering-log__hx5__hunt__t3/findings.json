@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Tiny litre amounts are accepted and then shown as \"0 L\"",
+      "where": "/beds Record past watering form (POST /api/waterings)",
+      "steps": "Probe misc, expectation tiny-litres-refused-or-shown-nonzero",
+      "expected": "An amount below the field's 0.1 L minimum is refused, or it is shown as a non-zero amount",
+      "actual": "0.004 L is saved and the confirmation reads \"Recorded 0 L on 11 Nov 2026.\". The waterings list also shows \"0 L\" for it",
+      "evidence": "{\"alerts\":[\"Recorded 0 L on 11 Nov 2026.\"]} | {\"alerts\":[\"Recorded 0 L on 11 Nov 2026.\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-190413-hunt-10ac",
+        "probe": "misc",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Waterings page crashes on a malformed list response and stays on \"Loading waterings…\"",
+      "where": "/waterings bed filter (GET /api/waterings?bed_id=)",
+      "steps": "Probe waterings-faults, expectation malformed-no-crash",
+      "expected": "A visible error, no uncaught exception, and the loading text cleared",
+      "actual": "Uncaught \"waterings.value?.reduce is not a function\". The status stays on \"Loading waterings…\" and the old rows (or blank \"Never\" rows) stay visible",
+      "evidence": "{\"pe\":[\"waterings.value?.reduce is not a function\"],\"alerts\":[\"Loading waterings…\"],\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"Loading waterings…\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\",\"ACTIONS\",\"12 Nov 2026, 19:05\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"11 Nov 2026\\tShade corner\\t0 L\\tDelete\",\"watering of Shade corner\",\"11 Nov 2026\\tShade corner\\t0 L\\tDelete\",\"watering of Shade corner\",\"11 Nov 2026\\tShade corner\\t0 L\\tDelete\"]} | {\"pe\":[\"waterings.value?.reduce is not a function\"],\"alerts\":[\"Loading waterings…\"],\"text\":[\"Waterings\",\"Every time a bed was watered.\",\"Water a bed\",\"Bed\",\"All beds\",\"North bed\",\"Shade corner\",\"Clear filter\",\"Loading waterings…\",\"Watering log\",\"Waterings, most recent first\",\"WHEN\\tBED\\tAMOUNT\",\"ACTIONS\",\"12 Nov 2026, 19:05\\tNorth bed\\t–\\tDelete\",\"watering of North bed\",\"11 Nov 2026\\tShade corner\\t0 L\\tDelete\",\"watering of Shade corner\",\"11 Nov 2026\\tShade corner\\t0 L\\tDelete\",\"watering of Shade corner\",\"11 Nov 2026\\tShade corner\\t0 L\\tDelete\"]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-190413-hunt-10ac",
+        "probe": "waterings-faults",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Hung filter request leaves other beds' waterings under the chosen bed filter, loading forever",
+      "where": "/waterings bed filter",
+      "steps": "Probe filter-hang, expectation hang-no-other-bed-rows-under-filter",
+      "expected": "After choosing Shade corner, only its waterings show, or a loading or timeout state replaces the old list",
+      "actual": "After 13 s the filter still says Shade corner and the page says \"Loading waterings…\", but the table still lists the North bed waterings from the unfiltered list",
+      "evidence": "{\"alerts\":[\"Loading waterings…\"],\"north\":[\"12 Nov 2026, 19:05\\tNorth bed\\t–\\tDelete\",\"10 Nov 2026\\tNorth bed\\t0 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\",\"1 Jan 1\\tNorth bed\\t1 L\\tDelete\"],\"fields\":[{\"label\":\"Bed\",\"value\":\"2\"}]} | {\"alerts\":[\"Loading waterings…\"],\"north\":[\"12 Nov 2026, 19:05\\tNorth bed\\t–\\tDelete\",\"10 Nov 2026\\tNorth bed\\t0 L\\tDelete\",\"1 Nov 2026\\tNorth bed\\t10 L\\tDelete\",\"1 Jan 1\\tNorth bed\\t1 L\\tDelete\"],\"fields\":[{\"label\":\"Bed\",\"value\":\"2\"}]}",
+      "status": "observed",
+      "severity": "medium",
+      "tool": {
+        "run": "20261112-190413-hunt-10ac",
+        "probe": "filter-hang",
+        "state": "confirmed"
+      }
+    },
+    {
+      "title": "Past watering accepts a date in year 1",
+      "where": "/beds Record past watering form (POST /api/waterings)",
+      "steps": "Probe misc, expectation ancient-date-refused",
+      "expected": "A date such as 0001-01-01 is refused as implausible",
+      "actual": "It is saved and confirmed as \"Recorded 2 L on 1 Jan 1.\", and it shows in the waterings log as \"1 Jan 1\"",
+      "evidence": "{\"alerts\":[\"Recorded 2 L on 1 Jan 1.\"]} | {\"alerts\":[\"Recorded 2 L on 1 Jan 1.\"]}",
+      "status": "observed",
+      "severity": "low",
+      "tool": {
+        "run": "20261112-190413-hunt-10ac",
+        "probe": "misc",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

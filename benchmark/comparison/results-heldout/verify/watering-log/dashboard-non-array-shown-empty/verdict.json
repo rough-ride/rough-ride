@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "dashboard-non-array-shown-empty",
+  "sentence": "When the dashboard's GET /api/waterings?limit=5 returns a non-array object, 'Recent waterings' shows the 'No waterings yet' empty state instead of an error.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo@example.com. The real GET /api/waterings?limit=5 returns 200 with 2 waterings (Shade corner 2026-11-05, North bed 2026-11-01). On /beds I added a Playwright route so that request returns 200 application/json {\"items\":[]}, then clicked the Dashboard nav link (client-side navigation, so the browser makes the fetch). The 'Recent waterings' section showed 'No waterings yet / Use “Water now” on a bed to record one. / Go to beds', and there were no role=alert elements. Code cause: frontend/app/pages/index.vue shows the error only when useFetch sets an error; a truthy non-array object fails `waterings.length` and falls through to `<EmptyState v-else-if=\"waterings\">`. useApiFetch (composables/useApi.ts) does no shape validation. So a malformed response looks like an empty watering log even though waterings exist.",
+  "severity": "low",
+  "wallMs": 102209
+}

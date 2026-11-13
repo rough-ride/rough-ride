@@ -1,0 +1,144 @@
+{
+  "findings": [
+    {
+      "title": "POST /api/waterings returns 500 for non-finite litres (1e309 / NaN)",
+      "where": "POST /api/waterings",
+      "steps": "Signed in, POST {\"bed_id\":1,\"litres\":1e309} or {\"bed_id\":1,\"litres\":NaN}",
+      "expected": "422 with a validation message",
+      "actual": "500 Internal Server Error, text/plain body",
+      "evidence": "curl: {\"bed_id\":1,\"litres\":1e309} -> 500; NaN -> 500 (Pydantic error containing inf/nan cannot be serialised)",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Oversized integer bed_id crashes waterings endpoints with 500",
+      "where": "POST /api/waterings, GET /api/waterings?bed_id=, DELETE /api/waterings/{id}",
+      "steps": "POST {\"bed_id\":99999999999999999999}; GET /api/waterings?bed_id=99999999999999999999 (also reachable via /waterings?bed=99999999999999999999 in the web app); DELETE /api/waterings/999999999999999999999",
+      "expected": "4xx (422/404)",
+      "actual": "500 Internal Server Error (SQLite integer overflow); the web page then shows a generic/unreachable error",
+      "evidence": "All three requests returned 'Internal Server Error 500'. No upper bound on bed_id/limit path/query ints.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Tiny litres amounts are stored but displayed as '0 L'",
+      "where": "Waterings page, dashboard Recent waterings",
+      "steps": "Record a watering with litres 0.001 (server accepts any value > 0; the number input only hints step 0.1), then open /waterings",
+      "expected": "Amount is refused (below 0.1) or shown accurately",
+      "actual": "Row shows '0 L'",
+      "evidence": "SSR HTML of /waterings: '1 Jan 1 North bed 0 L' for litres 0.001 (formatLitres uses maximumFractionDigits 2)",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Absurd past dates accepted (year 0001) and shown as '1 Jan 1'",
+      "where": "POST /api/waterings, Beds past-watering form, Waterings page",
+      "steps": "Record past watering with watered_on 0001-01-01",
+      "expected": "Date refused with a reason (no lower bound) or a sensible range enforced",
+      "actual": "201 Created; listed as '1 Jan 1'",
+      "evidence": "API returned 201; /waterings rendered '1 Jan 1 North bed'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Boolean accepted as litres",
+      "where": "POST /api/waterings",
+      "steps": "POST {\"bed_id\":1,\"litres\":true}",
+      "expected": "422",
+      "actual": "201, stored as 1.0 L",
+      "evidence": "curl -> 201",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Invalid ?bed= in URL shows a raw technical validation message",
+      "where": "/waterings?bed=abc",
+      "steps": "Open http://localhost:3791/waterings?bed=abc",
+      "expected": "Filter ignored or a friendly message with a way to recover",
+      "actual": "Page shows 'Query.bed id: Input should be a valid integer, unable to parse string as an integer'; select shows no matching option",
+      "evidence": "SSR HTML of /waterings?bed=abc",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "No retry on error states for the new watering lists",
+      "where": "/waterings page, dashboard 'Recent waterings' section",
+      "steps": "Make GET /api/waterings fail (server down/500) and open /waterings or the dashboard",
+      "expected": "Error message with a Try again button that refetches without reload",
+      "actual": "Only an AlertMessage; no retry control (dashboard does not even destructure refresh for waterings). User must reload the page",
+      "evidence": "waterings.vue and index.vue: AlertMessage without any retry button",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Beds list failure on waterings page silently shows only 'All beds'",
+      "where": "/waterings bed filter",
+      "steps": "Let GET /api/beds fail while /api/waterings succeeds",
+      "expected": "Visible error for the filter",
+      "actual": "bedsResult.error is ignored; the select just has 'All beds' with no explanation",
+      "evidence": "waterings.vue: const { data: beds } = bedsResult; no error handling",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "No request timeout on watering requests; buttons can stay 'Watering…'/'Saving…' indefinitely",
+      "where": "Beds page Water now / Save watering, Waterings delete, list fetches",
+      "steps": "Make the API hang (accept connection, never respond) and click Water now",
+      "expected": "Request fails after 10 s with a visible error, button re-enabled",
+      "actual": "useApiClient / useApiFetch set no timeout; button stays disabled and spinning until the browser gives up",
+      "evidence": "No 'timeout' option anywhere in frontend/app (grep)",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying 'Water now' after a timeout/lost response records a duplicate watering",
+      "where": "Beds page Water now, POST /api/waterings",
+      "steps": "Click Water now; the POST commits but the response is lost/times out; click Water now again",
+      "expected": "One watering recorded",
+      "actual": "Two waterings created; no idempotency key or dedupe",
+      "evidence": "create_watering inserts unconditionally; client sends no request id",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Watering two beds concurrently re-enables the first bed's buttons early (double submit possible)",
+      "where": "Beds page",
+      "steps": "Click Water now on bed A, then quickly on bed B before A finishes",
+      "expected": "Each bed's button stays disabled until its own request completes",
+      "actual": "Single wateringBedId ref is overwritten by B; A's button re-enables immediately and A can be watered twice; when A finishes, finally sets wateringBedId=null re-enabling B while still pending. Errors/notices are also single slots so one bed's error is replaced by another's",
+      "evidence": "beds.vue recordWatering: wateringBedId.value = bed.id ... finally wateringBedId.value = null",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Deleting a watering twice (retry after timeout) shows 'Watering not found.' error",
+      "where": "/waterings Delete",
+      "steps": "Delete a watering; response lost; retry the delete",
+      "expected": "Treated as already deleted (no error), list refreshed",
+      "actual": "DELETE returns 404 and the page shows an error even though the watering is gone",
+      "evidence": "delete_watering raises not_found when row missing; page shows listError",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Past-watering date of 'today' can be rejected as future when browser and server time zones differ",
+      "where": "Beds page Record past watering",
+      "steps": "Browser in a time zone ahead of the server (e.g., UTC+10 vs CET) after local midnight; keep default date (todayIso) and save",
+      "expected": "Watering for today saved",
+      "actual": "Server's date.today() is still yesterday so it returns 'Watering date cannot be in the future.'",
+      "evidence": "schemas.WateringIn.not_in_future uses server-local date.today(); form defaults/max from browser todayIso()",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Past watering form and waterings table may overflow at 375 px",
+      "where": "Beds page water form, /waterings table",
+      "steps": "View at 375 px width; open Record past watering; or have a 60-char unbroken bed name in the waterings table",
+      "expected": "No horizontal scrolling",
+      "actual": ".water-form uses a fixed 3-column grid (1fr 1fr auto with two buttons) with no mobile media query; the 4-column table has no wrapping/overflow handling for long names",
+      "evidence": "main.css .water-form grid-template-columns: 1fr 1fr auto; no @media override",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

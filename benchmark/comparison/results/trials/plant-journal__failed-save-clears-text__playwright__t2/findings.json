@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Failed 'Add entry' wipes the text the user typed",
+      "where": "Plant detail page /plants/:id, Journal > New entry (pages/plants/[id].vue addEntry)",
+      "steps": "Open /plants/2, make POST /api/journal fail (e.g. 500 text/plain or offline), type 'Aphids on lower leaves 🐛 — sprayed soap' in Entry, click Add entry.",
+      "expected": "Error shown and the typed text kept so the user can retry.",
+      "actual": "Error 'Could not add the entry.' is shown but the textarea is emptied. addEntry calls entryForm.reset() in the finally block, so it runs on failure as well as success.",
+      "evidence": "After the failed POST, the textarea value was '' and the alert said 'Could not add the entry.'",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Journal requests have no timeout: a hung save stays on 'Saving…' forever",
+      "where": "Plant detail journal form (POST /api/journal); also edit (PUT) and delete (DELETE) of entries",
+      "steps": "Open /plants/3, make POST /api/journal never respond, type text, click Add entry, wait more than 10 s.",
+      "expected": "The request fails after 10 s with a visible error, and the button becomes usable again.",
+      "actual": "After 12 s the button still reads 'Saving…' and is disabled. No timeout is set in useApiClient/useApiFetch, so the edit and delete buttons hang the same way.",
+      "evidence": "btnAfter12s='Saving…', disabled=true",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors offer no Retry (plant detail and Journal page)",
+      "where": "/plants/:id journal section and /journal",
+      "steps": "Make GET /api/journal?... return 503 with an HTML body. Go to a plant from the plants list, then click Journal in the nav.",
+      "expected": "Error state with a Retry button that reloads the data without a page reload.",
+      "actual": "Only 'Could not load the journal.' is shown. There is no retry button (plant section buttons: only 'Add entry'; Journal page: none). refreshJournal exists but is only called after a mutation.",
+      "evidence": "detailRetryBtns=['Add entry'], journalBtns=[]",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Out-of-range ids crash journal endpoints with 500",
+      "where": "POST /api/journal (plant_id), PUT/DELETE /api/journal/{id}, GET /api/journal?plant_id=",
+      "steps": "curl -X PUT /api/journal/99999999999999999999 with a valid body; DELETE the same id; GET /api/journal?plant_id=99999999999999999999; POST with plant_id 99999999999999999999.",
+      "expected": "4xx (404 or 422).",
+      "actual": "500 Internal Server Error. SQLite overflows on ints above 2^63 because the int params have no upper bound.",
+      "evidence": "All four requests returned 'Internal Server Error 500'",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Search box sends a request per keystroke with no length limit; past 80 characters it shows a raw validation error",
+      "where": "/journal search",
+      "steps": "Type or paste more than 80 characters into Search.",
+      "expected": "Input limited to 80 characters, or a friendly message.",
+      "actual": "The server returns 422 'String should have at most 80 characters' and the page swaps the results for the error alert ('Q: String should...'). The input has no maxlength.",
+      "evidence": "GET /api/journal?q=<81 chars> returns 422 string_too_long; journal.vue input has no maxlength",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Add/delete are not idempotent: retrying after a lost response duplicates the entry",
+      "where": "POST /api/journal",
+      "steps": "Click Add entry. The server saves the entry but the response is lost (network drop). The text is cleared anyway, but if the user retypes and resubmits, a second entry is created.",
+      "expected": "One entry, using an idempotency key or a duplicate check.",
+      "actual": "Nothing prevents a duplicate. Only the disabled button guards against double clicks.",
+      "evidence": "Code: addEntry posts with no idempotency key",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Character counter and maxlength count UTF-16 units, not characters",
+      "where": "JournalEntryForm textarea",
+      "steps": "Type emoji such as 🌱 into the entry.",
+      "expected": "Up to 500 characters, as the server allows (the server limit counts code points).",
+      "actual": "Each emoji counts as 2, so the browser stops at about 250 emoji and the counter shows the wrong number left.",
+      "evidence": "Code: maxlength=500 and form.body.length versus server max_length=500 in code points",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

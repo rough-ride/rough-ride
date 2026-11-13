@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Failed 'Add entry' wipes the text the user typed",
+      "where": "Plant detail page /plants/:id, Journal > New entry (pages/plants/[id].vue addEntry)",
+      "steps": "Open a plant, type an entry, make the POST /api/journal fail (server down, network error, or a server-side refusal such as a date the server considers future), click Add entry.",
+      "expected": "Error shown and the typed text is kept so the user can retry.",
+      "actual": "entryForm.reset() runs in the finally block, so the textarea is cleared on failure as well as success; the error is shown above an empty form.",
+      "evidence": "addEntry(): try { POST; refresh } catch { entryFormError = ... } finally { addingEntry=false; entryForm.value?.reset(); ... }. reset() sets form.body = ''.",
+      "status": "suspected",
+      "severity": "high"
+    },
+    {
+      "title": "Journal load errors have no retry button",
+      "where": "/journal page and plant detail Journal section",
+      "steps": "Open /journal (or a plant) while GET /api/journal fails.",
+      "expected": "Error state with a Retry action that refetches without reload.",
+      "actual": "Only an AlertMessage is shown; no retry control. On /journal the only way to refetch is to change the search text; on the plant page a reload is needed.",
+      "evidence": "journal.vue renders <AlertMessage v-if=\"loadError\"> with no button; [id].vue renders journalLoadError alert only, refreshJournal is never exposed to the user.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "No request timeout; double add after timeout/retry creates duplicate entries",
+      "where": "POST /api/journal, PUT/DELETE /api/journal/:id; useApiClient/useApiFetch",
+      "steps": "Make the API hang; the Saving… button stays disabled indefinitely. If the request eventually lands and the user retries, a second entry is created.",
+      "expected": "Requests time out after 10 s with a visible error; retrying a save does not create a duplicate.",
+      "actual": "$fetch.create/useFetch have no timeout option; POST has no idempotency key or dedupe, so a retry after an unseen success adds a second identical entry.",
+      "evidence": "useApi.ts has no timeout; journal.py create_entry inserts unconditionally.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Search longer than 80 characters shows a raw validation error instead of results",
+      "where": "/journal search box -> GET /api/journal?q=",
+      "steps": "Type or paste more than 80 characters into the Journal search.",
+      "expected": "Input is limited to 80 chars (maxlength) or a friendly message; page remains usable.",
+      "actual": "API returns 422 and the page replaces the list with 'Q: String should have at most 80 characters'. The search input has no maxlength.",
+      "evidence": "curl GET /api/journal?q=<81 a's> -> 422 {\"detail\":[{\"loc\":[\"query\",\"q\"],\"msg\":\"String should have at most 80 characters\"...}]}",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Oversized numeric ids cause 500 on journal endpoints",
+      "where": "GET /api/journal?plant_id=, POST /api/journal (plant_id), PUT/DELETE /api/journal/{id}",
+      "steps": "Send plant_id or entry id 99999999999999999999999.",
+      "expected": "4xx (422/404).",
+      "actual": "HTTP 500 (SQLite integer overflow).",
+      "evidence": "curl: GET ?plant_id=999...9 -> 500; POST with plant_id 999...9 -> 500; PUT /journal/999...9 -> 500; DELETE /journal/999...9 -> 500.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Emoji entries are capped at 250 in the browser though the server accepts 500",
+      "where": "JournalEntryForm textarea (maxlength / character counter)",
+      "steps": "Type or paste emoji (e.g. 🌱) into the entry text.",
+      "expected": "500 characters allowed, as the request specifies and the server enforces (code points).",
+      "actual": "textarea maxlength and form.body.length count UTF-16 code units, so each emoji counts as 2: input stops at 250 emoji and the 'characters left' counter is wrong.",
+      "evidence": "Server: POST with 500 x 🌱 -> 201. Client: :maxlength=\"500\" and remaining = 500 - form.body.length.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Delete retried after a timeout reports an error although the entry was deleted",
+      "where": "Plant detail, Delete journal entry",
+      "steps": "Delete an entry; first request succeeds server-side but the response is lost; click Delete again.",
+      "expected": "Treated as already deleted (success).",
+      "actual": "Second DELETE returns 404 'Journal entry not found.' which is shown as an error.",
+      "evidence": "delete_entry calls _get_entry first and raises 404; removeEntry shows the error in journalError.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

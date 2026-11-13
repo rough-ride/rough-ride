@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Stats table merges plants that share a name and credits the weight to the wrong plant",
+      "where": "GET /api/stats/harvests and the /stats table",
+      "steps": "Create a second plant named 'Tomato' (variety Roma) next to the existing 'Tomato' (Sungold). Log a 5000 g harvest for Roma on 2026-07-15 and another on 2026-10-01. Open /stats (or GET /api/stats/harvests).",
+      "expected": "Each plant gets its own row with its own monthly and total weights, and these match the 'Best plants' list.",
+      "actual": "The query groups by p.name, month instead of by plant id, so harvests of different plants with the same name are added together and assigned to whichever plant_id SQLite picks for each group. Roma's July 5000 g shows in Sungold's row (Sungold 6050 g total), Roma's row only shows 5000 g, while Best plants says Roma 10000 g and Sungold 1050 g. Plant names are not unique (plants.name has no UNIQUE constraint).",
+      "evidence": "API response: plants[Tomato id1 Sungold] total_grams 6050, monthly [0,5450,600,0,0]; plants[Tomato id4 Roma] total_grams 5000; top_plants: Roma 10000, Sungold 1050. backend/routers/stats.py: 'GROUP BY p.name, month'.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Stats error state has no retry action",
+      "where": "/stats",
+      "steps": "Open /stats while the API is down or returns an error (or with a range the server rejects).",
+      "expected": "An error message plus a Retry button that fetches again once the server is back.",
+      "actual": "Only an AlertMessage with text is shown. The page has no retry button and does not use useFetch's refresh, so the only way to retry is to change a date or reload the page.",
+      "evidence": "stats.vue shows <AlertMessage v-if=\"statsError\"> with no button and never uses refresh.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout; a hung API leaves 'Loading stats…' forever",
+      "where": "/stats (useApiFetch)",
+      "steps": "Open /stats or change a date while the API accepts the connection but never answers.",
+      "expected": "The request fails after 10 s and shows an error with a retry.",
+      "actual": "useApiFetch/useApiClient set no timeout, so the request stays pending and 'Loading stats…' stays on screen indefinitely.",
+      "evidence": "No timeout option is set anywhere in frontend/app (grep), and useApiFetch passes options through unchanged.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Raw validation text shown for invalid date in the URL",
+      "where": "/stats?from=2026-02-30",
+      "steps": "Open /stats?from=2026-02-30. The value passes the page's YYYY-MM-DD regex and is sent to the API.",
+      "expected": "A friendly message, or fall back to the default range, with the From field showing what was used.",
+      "actual": "The API returns 422 with loc [query, from]. apiErrorMessage turns this into 'Query.from: Input should be a valid date or datetime, day value is outside expected range', and the date input shows blank because the browser rejects the value.",
+      "evidence": "curl /api/stats/harvests?from=2026-02-30 -> 422, detail loc ['query','from']. apiErrorMessage only filters out 'body', not 'query'.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Clearing a date field silently falls back to the current-year bound, giving confusing results and errors",
+      "where": "/stats From/To fields",
+      "steps": "Set From to 2027-01-01 (or any date after this year) and clear the To field.",
+      "expected": "The empty field is refused with a clear reason, or the range is computed from what the user typed.",
+      "actual": "The empty field is dropped from the query and the server uses 31 Dec of this year, so the page says 'The From date must be on or before the To date.' while To looks empty. Likewise, clearing From with To=2025-01-01 gives the same error.",
+      "evidence": "GET /api/stats/harvests?from=2027-01-01 -> 422 'The From date must be on or before the To date.'; GET ?to=2025-01-01 -> 422.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Browser back/forward does not update the date range",
+      "where": "/stats",
+      "steps": "Change From a few times (the URL query updates through router.replace), then navigate to /stats?from=X from within the app while already on /stats, for example by clicking the 'Stats' nav link from /stats?from=2025-01-01.",
+      "expected": "The inputs and results follow the URL.",
+      "actual": "dateFrom/dateTo are read from route.query only once, on setup. Clicking the Stats nav link on a filtered /stats reuses the page, so the URL loses its query but the inputs and data keep the old range, and the 'Stats' link no longer resets to this year.",
+      "evidence": "stats.vue initializes refs from route.query once and has no watcher on route.query.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

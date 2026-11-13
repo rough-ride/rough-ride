@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "error-shown-as-empty",
+  "key": "dashboard-nan-on-malformed-tasks",
+  "sentence": "When GET /api/tasks/upcoming returns malformed JSON, the dashboard renders the text 'NaN'.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user. Used Playwright browser_route to make GET **/api/tasks/upcoming* return a 200 application/json response with the truncated body '{\"id\": 1, \"title\": \"broken'. The first full load is rendered on the server, so the browser route doesn't apply and the page looked normal. I then went to /plants and clicked the Dashboard nav link, which makes the browser send GET /api/tasks/upcoming?limit=5 itself (confirmed in performance entries). The 'Upcoming tasks' section then showed 26 rows reading '– · Due in NaN days' instead of an error message. The unparseable body is kept as a string (26 characters), and index.vue's `v-for=\"task in tasks\"` (guarded only by `tasks && tasks.length`) makes one TaskItem per character, each with no due date, so the due calculation gives NaN. The dashboard tasks code is unchanged in this diff, so this is probably pre-existing, but it happens on the dashboard and users would not accept it.",
+  "severity": "low",
+  "wallMs": 58731
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "year-one-date-accepted",
+  "sentence": "The Record past watering form on /beds and POST /api/waterings accept an absurd date such as 0001-01-01, save it with 201, and report 'Recorded 2 L on 1 Jan 1.'.",
+  "verdict": "confirmed",
+  "evidence": "Signed in through POST /api/auth/login as the demo user, then sent POST /api/waterings {bed_id:1, watered_on:'0001-01-01', litres:2}. It returned 201 with {id:3, watered_on:'0001-01-01', litres:2.0}, and GET /api/waterings?bed_id=1 now lists that entry. In the code, the WateringCreate validator in backend/schemas.py only rejects future dates (value > date.today()) and has no lower bound. The /beds past-watering date input (frontend/app/pages/beds.vue:297) sets :max=todayIso() but no min, and the page does no client-side check, so the form submits the date and shows the notice 'Recorded ${litres} on ${formatDate(date)}', which matches the reported 'Recorded 2 L on 1 Jan 1.'. A year-1 watering is plainly a typo, and saving it without complaint pollutes the watering log and its date ordering. Other date fields in the app get explicit validation (harvest and watering dates refuse future dates), so leaving out a lower bound looks like an oversight, not a design choice.",
+  "severity": "low",
+  "wallMs": 35169
+}

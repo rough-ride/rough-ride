@@ -1,0 +1,94 @@
+{
+  "findings": [
+    {
+      "title": "Double-clicking \"Water now\" records two waterings",
+      "where": "/beds, Water now button (POST /api/waterings)",
+      "steps": "Open /beds (POST slowed to 800 ms), click \"Water now\" on North bed, then click it again while it reads \"Watering…\".",
+      "expected": "Only one watering is recorded; the button is disabled while the request is in flight.",
+      "actual": "The button changes its label to \"Watering…\" but stays enabled. Each click sends a POST, and the server stores a duplicate row with nothing to stop it.",
+      "evidence": "isDisabled() returned false while the label read \"Watering…\". Waterings 5 and 6 were both created for North bed at 2026-11-12 11:48:39. In beds.vue the Water now button has no :disabled binding, and the API has no idempotency key or dedupe.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Watering requests never time out; \"Saving…\" stays disabled forever",
+      "where": "/beds, past watering form and Water now",
+      "steps": "Make POST /api/waterings hang, open \"Record past watering\", enter 3 litres and click Save watering. Wait more than 10 s.",
+      "expected": "The request fails after 10 s with a visible error, and the button is enabled again so the user can retry.",
+      "actual": "After 12 s the button still read \"Saving…\" and was disabled. No error was shown, and the only way out was Cancel or a reload.",
+      "evidence": "The api() call in recordWatering has no timeout, and useApiClient sets none either.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Recent waterings on the dashboard: error has no retry",
+      "where": "/ (dashboard), Recent waterings section",
+      "steps": "Make GET /api/waterings return 500, then go from Beds to Dashboard with the in-app link.",
+      "expected": "An error message with a Retry button that reloads the list.",
+      "actual": "Only the text \"Could not load recent waterings.\" appears, with no button. refresh is not even destructured from wateringsResult, so the user has to reload the page.",
+      "evidence": "The section held 0 buttons. In index.vue: const { data: waterings, error: wateringsError } = wateringsResult.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Waterings page: error has no retry",
+      "where": "/waterings",
+      "steps": "Make GET /api/waterings return 500, then click \"All waterings\" on the dashboard.",
+      "expected": "An error state with a Retry button.",
+      "actual": "Only \"Could not load waterings.\" appears, with no retry button. Changing the filter is the only way to send the request again.",
+      "evidence": "main held 0 buttons; the page text ended with \"Could not load waterings.\"",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Bed filter silently shows only \"All beds\" when loading beds fails",
+      "where": "/waterings, bed filter",
+      "steps": "Make GET /api/beds return 500 and go to Waterings with the in-app link.",
+      "expected": "A visible error saying the beds could not be loaded, with a retry.",
+      "actual": "The filter dropdown offers only \"All beds\" and no error is shown. The bed fetch error is ignored, so the failure looks like having no beds.",
+      "evidence": "The options list was [\"All beds\"] and the page showed no alert. bedsResult.error is never read.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Huge bed_id or watering id returns 500 instead of 4xx",
+      "where": "GET /api/waterings?bed_id=, POST /api/waterings, DELETE /api/waterings/{id}",
+      "steps": "curl GET /api/waterings?bed_id=99999999999999999999, POST {\"bed_id\":99999999999999999999}, and DELETE /api/waterings/99999999999999999999.",
+      "expected": "A 422 or 404.",
+      "actual": "All three return 500 Internal Server Error, because SQLite overflows on the integer. The 500 also carries no CORS headers, so the browser reports it as a network failure. A link like /waterings?bed=99999999999999999999 hits this.",
+      "evidence": "Status codes were 500, 500 and 500. bed_id has gt=0 but no upper bound.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Absurd dates and tiny amounts are accepted and display badly",
+      "where": "POST /api/waterings, past watering form, /waterings list",
+      "steps": "POST {\"bed_id\":1,\"watered_on\":\"0001-01-01\",\"litres\":0.0001}. The UI date field accepts the same values since it only sets max.",
+      "expected": "A date far in the past is refused, or at least shown sensibly. An amount that rounds to 0 is refused, or shown accurately.",
+      "actual": "The server returns 201. The list then shows \"1 Jan 1\" and \"0 L\". This row was test data and was deleted afterwards.",
+      "evidence": "The waterings table showed the row \"1 Jan 1 | North bed | 0 L\".",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Water now date mixes the server's local date with a UTC time",
+      "where": "POST /api/waterings (Water now)",
+      "steps": "Record \"Water now\" near midnight when the server's time zone differs from UTC or from the user's time zone.",
+      "expected": "The date and the time describe the same moment in the gardener's time zone.",
+      "actual": "watered_on is the server's local date, but watered_at is UTC and is shown in the browser's time zone. Entries can sort under the wrong day. not_in_future also uses the server's date.today(), so it can refuse \"today\" sent by a user who is ahead of the server.",
+      "evidence": "Code in waterings.py: now.astimezone().date() vs now.strftime(UTC); schemas.not_in_future uses date.today().",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Watering two beds in quick succession breaks the busy state",
+      "where": "/beds",
+      "steps": "Click Water now on bed A, then on bed B before A finishes.",
+      "expected": "Each bed shows its own progress and result.",
+      "actual": "A single wateringBedId, waterError and waterNotice are shared by all beds. B's request overwrites A's busy state, the first request to finish clears the busy state for both, and A's error or notice can be lost.",
+      "evidence": "Code in beds.vue: there is one wateringBedId ref, and its finally block sets it to null.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "waterings-page-crash-non-array",
+  "sentence": "When GET /api/waterings returns a non-array body, /waterings throws 'waterings.value?.reduce is not a function', navigation stalls or the page sticks on loading, and no error is shown.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as demo user (landed on /beds), routed GET /api/waterings to 200 {\"detail\":\"x\"} with Playwright, clicked the 'Waterings' nav link. Uncaught pageerror 'waterings.value?.reduce is not a function'; URL changed to /waterings but document title stayed 'Beds · Garden Log' and the Beds page content stayed on screen (an extra h1 with the raw TypeError text appeared). There was no 'could not load waterings' message and no retry. Cause: frontend/app/pages/waterings.vue:34 totalLitres calls waterings.value?.reduce without an Array.isArray check, and useApiFetch (composables/useApi.ts) does not validate or transform the response, so a non-array 200 body throws while rendering and navigation breaks.",
+  "severity": "medium",
+  "wallMs": 82039
+}

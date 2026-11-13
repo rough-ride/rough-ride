@@ -1,0 +1,104 @@
+{
+  "findings": [
+    {
+      "title": "Failed journal-entry delete hides the entry even though it still exists",
+      "where": "Plant detail page /plants/:id, Journal section (removeEntry)",
+      "steps": "Open a plant with journal entries, stop the API or let the DELETE fail (e.g. 500/network error), click Delete on an entry and confirm.",
+      "expected": "The entry stays in the list (or comes back) next to an error saying it could not be deleted.",
+      "actual": "The entry is removed from journal.value before the request is sent. The catch block only sets journalError and never puts the entry back or refreshes, so the page shows an error but the entry is gone until a reload, even though the server still has it.",
+      "evidence": "pages/plants/[id].vue removeEntry: `journal.value = journal.value?.filter(...)` before `await api(...)`; catch has no rollback/refresh.",
+      "status": "suspected",
+      "severity": "high"
+    },
+    {
+      "title": "NUL character in a journal body causes a 500 (create and edit)",
+      "where": "POST /api/journal, PUT /api/journal/{id}",
+      "steps": "POST {\"plant_id\":1,\"entry_on\":\"2026-11-01\",\"body\":\"\\u0000\"} (or PUT the same body to an existing entry).",
+      "expected": "422 with a validation message",
+      "actual": "500 Internal Server Error. Pydantic accepts the string (length 1), but SQLite's length() stops at NUL, so the CHECK constraint fails with an unhandled IntegrityError. A body like \"ok\\u0000hidden\" is stored and only the part before NUL counts toward the 1-500 check.",
+      "evidence": "curl: POST body \"\\u0000\" -> 'Internal Server Error 500'; PUT /api/journal/4 body \"\\u0000\" -> 500; POST \"ok\\u0000hidden\" -> 201.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Out-of-range integer ids in the journal endpoints return 500",
+      "where": "POST /api/journal (plant_id), GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+      "steps": "curl -X DELETE /api/journal/99999999999999999999; GET /api/journal?plant_id=99999999999999999999; POST with plant_id 99999999999999999999; PUT /api/journal/99999999999999999999",
+      "expected": "4xx (404 or 422)",
+      "actual": "500 Internal Server Error. SQLite overflows on an integer bigger than 64 bits, and the new schemas and route parameters set no upper bound.",
+      "evidence": "All four requests returned 'Internal Server Error 500'. (/api/plants/{huge} also 500s, so the same pattern exists elsewhere.)",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Journal load errors have no retry, on both the Journal page and the plant detail journal",
+      "where": "/journal and /plants/:id Journal section",
+      "steps": "Open /journal (or a plant page) while GET /api/journal fails, then bring the API back.",
+      "expected": "An error message with a Retry button that loads the data again without a page reload.",
+      "actual": "Only an AlertMessage is shown. No retry button or refresh is wired up (journal.vue never takes `refresh` from useApiFetch). On /journal the only way to refetch is to change the search text. On the plant page the journal section stays on the error until you add or delete something or reload.",
+      "evidence": "journal.vue: `const { data: entries, error: loadError, status } = await useApiFetch(...)` with no refresh, and the template shows only AlertMessage. [id].vue journal section shows AlertMessage for journalLoadError with no retry.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal requests have no 10-second timeout",
+      "where": "All journal fetches and mutations (useApiClient / useApiFetch)",
+      "steps": "Make the API hang (accept the connection, never answer), then add, save or delete an entry, or open /journal.",
+      "expected": "The request fails after 10 s with a visible error, and buttons are enabled again.",
+      "actual": "$fetch.create is called with no timeout option, so 'Saving…' stays and the button stays disabled, or 'Loading entries…' stays, for as long as the connection hangs.",
+      "evidence": "composables/useApi.ts useApiClient: no `timeout`; journal code adds none.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying an add after a timeout or network error creates duplicate journal entries",
+      "where": "Plant detail page, New entry form / POST /api/journal",
+      "steps": "Submit an entry, let the response get lost (slow server or dropped connection after commit), click Add entry again.",
+      "expected": "One entry is created.",
+      "actual": "POST has no idempotency key or dedupe, so each retry inserts another row and the same entry shows twice.",
+      "evidence": "journal.py create_entry always INSERTs; the client sends no request id.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Search over 80 characters shows a raw validation error instead of results",
+      "where": "/journal search box -> GET /api/journal?q=",
+      "steps": "Paste a text of 81+ characters into the Journal search box.",
+      "expected": "The input limits the length or shows a friendly message.",
+      "actual": "The API answers 422 ('String should have at most 80 characters'). The input has no maxlength, so the page replaces the list with an error alert like 'Query.q: String should have at most 80 characters'.",
+      "evidence": "curl GET /api/journal?q=<81 a's> -> 422 string_too_long; journal.vue search input has no maxlength.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "A long plant name can overflow the Journal feed at 375 px",
+      "where": "/journal feed item header (.journal-feed__plant)",
+      "steps": "Rename a plant to a long word with no spaces (up to 80 characters), write a journal entry for it, open /journal at 375 px wide.",
+      "expected": "The name wraps, with no sideways scrolling.",
+      "actual": "The plant link sits in a flex row and has no overflow-wrap or min-width:0. Only .journal-entry__body gets overflow-wrap:anywhere, so the unbreakable name pushes the card wider than the screen.",
+      "evidence": "main.css: .journal-feed__plant and .journal-entry__head have no overflow-wrap.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Client and server disagree on 'today' for the future-date check",
+      "where": "Journal entry form / POST,PUT /api/journal",
+      "steps": "Use a browser in a time zone ahead of the server (e.g. UTC+13) just after local midnight, and add an entry dated today.",
+      "expected": "Today's date is accepted.",
+      "actual": "The form allows today (browser-local todayIso), but the server compares against its own date.today() and rejects it with 'Journal date cannot be in the future.'",
+      "evidence": "schemas.py JournalEntryIn.not_in_future uses date.today(); the form uses todayIso() from local time.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Body limit counts emoji differently in browser and server",
+      "where": "Journal entry form textarea",
+      "steps": "Type emoji in the entry text.",
+      "expected": "Up to 500 characters, counted the same way the server counts them.",
+      "actual": "maxlength and the 'characters left' counter use UTF-16 code units, so each emoji counts as 2 and about 250 emoji fill the box, while the server would accept 500 code points.",
+      "evidence": "JournalEntryForm.vue: remaining = 500 - form.body.length, plus :maxlength.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

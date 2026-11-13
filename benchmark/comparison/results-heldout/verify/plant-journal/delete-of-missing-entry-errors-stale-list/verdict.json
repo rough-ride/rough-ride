@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "delete-of-missing-entry-errors-stale-list",
+  "sentence": "Deleting an entry that is already gone (second tab or retried delete) returns 404 'Journal entry not found.' as an error and the stale entry stays listed because the list only refreshes on success.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced: signed in, opened /plants/1 (journal entries 2 and 1), deleted entry 2 through the API (204), then clicked Delete on entry 2 in the open page and confirmed. The DELETE returned 404 {\"detail\":\"Journal entry not found.\"}. The page showed 'Journal entry not found.' and the entry stayed listed until reload, while the server list was [1,3]. Code: removeEntry (frontend/app/pages/plants/[id].vue:128) refreshes only on success, and delete_entry (backend/routers/journal.py:85) returns 404 for a missing id. But this matches the app's existing delete convention exactly: the pre-existing harvest delete in the initial commit (removeHarvest plus delete_harvest, and also delete_plant) does the same thing (404 for a missing id, error shown, no refresh on failure). The error message is accurate and no data is lost or wrongly changed; the only effect is a stale view after another tab or lost response changed the data, and a reload fixes it. The app has no live sync anywhere, and the request does not ask for idempotent deletes or cross-tab consistency. So the new feature follows the established design and does not introduce a regression.",
+  "severity": null,
+  "wallMs": 86795
+}

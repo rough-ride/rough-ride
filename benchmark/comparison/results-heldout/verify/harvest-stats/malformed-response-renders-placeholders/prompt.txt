@@ -1,0 +1,34 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a harvest statistics page. It shows the total weight harvested per plant and per month for a chosen date range (a "From" and a "To" date field, defaulting to the current year), as a table with a total row, plus the three best plants by weight. Link it from the main navigation as "Stats", and show this year's best plant on the dashboard.
+
+The app is running: web http://localhost:3795, API http://localhost:8795/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-malformed-response-renders-placeholders/scratch.
+
+The reported problem: On /stats, a stats response with null or missing fields renders as 'undefined/null harvests from – to –' with empty sections instead of an error state; triggered by mocking /api/stats/harvests with null fields.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Malformed or partial stats response renders 'undefined' and dashes instead of an error",
+  "where": "/stats",
+  "steps": "Mock /api/stats/harvests to return 200 with null fields, e.g. date_from:null, months:null, harvest_count missing, plant with null name or totals.",
+  "expected": "The response is treated as unreadable and the page shows the error state.",
+  "actual": "The page shows 'undefined harvests from – to –', an empty 'Best plants' section, and a table with a blank plant row.",
+  "evidence": "main text: 'undefined harvests from – to – Best plants Weight by plant and month – total ... PLANT TOTAL – Total –'"
+ },
+ {
+  "title": "Null fields in the response show as 'null harvests'",
+  "where": "/stats",
+  "steps": "Mock /api/stats/harvests with harvest_count:null, total_grams:null, date_from:null, top_plants:null and so on, then open Stats from the nav.",
+  "expected": "Fall back cleanly or show an error.",
+  "actual": "The page shows 'null harvests from – to –' and an empty 'Best plants' heading.",
+  "evidence": "#main text: 'null harvests from – to –\\n\\nBest plants\\nWeight by plant and month\\n– total'"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-ho/verify-harvest-stats-malformed-response-renders-placeholders/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

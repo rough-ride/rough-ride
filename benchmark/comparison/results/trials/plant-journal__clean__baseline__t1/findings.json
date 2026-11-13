@@ -1,0 +1,134 @@
+{
+  "findings": [
+    {
+      "title": "Journal page error state has no retry",
+      "where": "/journal page",
+      "steps": "Open /journal while the API is down or returns an error (e.g. 5xx).",
+      "expected": "An error message with a Retry button that refetches without a reload.",
+      "actual": "Only an AlertMessage is shown; there is no retry control (no refresh is taken from useApiFetch). The only way to recover is to edit the search box or reload.",
+      "evidence": "pages/journal.vue destructures only data/error/status from useApiFetch and renders <AlertMessage v-if=\"loadError\"> with no button.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Plant page journal load error has no retry",
+      "where": "/plants/:id Journal section",
+      "steps": "Open a plant while GET /api/journal?plant_id=… fails.",
+      "expected": "Error with a retry button.",
+      "actual": "'Could not load the journal.' alert with no retry; refreshJournal is only called after adding/deleting an entry.",
+      "evidence": "pages/plants/[id].vue Journal section: AlertMessage v-if=journalLoadError, no button.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Requests have no timeout; a hung API leaves 'Saving…' / 'Loading entries…' forever",
+      "where": "Journal page, plant journal add/edit/delete",
+      "steps": "Make the API hang (accept connection, never respond) and add, edit or delete an entry, or search on /journal.",
+      "expected": "Request fails after 10 s with a visible error and the buttons re-enable.",
+      "actual": "useApiClient/useApiFetch pass no timeout to $fetch, so the button stays disabled showing 'Saving…' (or the list shows 'Loading entries…') indefinitely.",
+      "evidence": "composables/useApi.ts: $fetch.create({baseURL, credentials, headers, onResponseError}) – no timeout option; new journal code uses these clients unchanged.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Retrying an add after a timeout/lost response creates duplicate journal entries",
+      "where": "POST /api/journal, plant detail 'Add entry'",
+      "steps": "Submit a new entry; the server stores it but the response is lost/slow and the client errors; click 'Add entry' again.",
+      "expected": "One entry.",
+      "actual": "Each POST inserts a new row; there is no idempotency key or duplicate check, so retrying creates a second identical entry.",
+      "evidence": "routers/journal.py create_entry does a plain INSERT; the form keeps the text after an error so the user naturally retries.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Emoji count double: an entry the server accepts cannot be typed or edited in the form",
+      "where": "Plant detail journal form / edit in place",
+      "steps": "POST an entry with 500 emoji (accepted, 201 – server counts code points). Open the plant and click Edit on it, then Save without changes. Also try typing 300 emoji in New entry.",
+      "expected": "Client and server agree on the 500-character limit; an existing valid entry can be re-saved.",
+      "actual": "The textarea maxlength and the counter use UTF-16 length, so emoji count as 2: the counter shows '-500 characters left' and Save is refused with 'Keep the entry to 500 characters.'; new entries are cut off at 250 emoji.",
+      "evidence": "API: POST body='🌱'*500 → 201 (entry id 6 on Tomato). JournalEntryForm.vue uses form.body.length and :maxlength=500 for the limit.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Huge ids return 500 Internal Server Error on journal endpoints",
+      "where": "POST /api/journal, GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}",
+      "steps": "curl -X DELETE /api/journal/99999999999999999999999 ; POST {\"plant_id\":99999999999999999999,...}; GET /api/journal?plant_id=99999999999999999999999",
+      "expected": "4xx (422 or 404).",
+      "actual": "500 Internal Server Error (plain text, not JSON) – SQLite integer overflow.",
+      "evidence": "All four requests answered 'Internal Server Error [500]'. No upper bound on plant_id/entry_id.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal date accepts year 0001 and any ancient date",
+      "where": "POST/PUT /api/journal, journal form",
+      "steps": "POST {\"plant_id\":1,\"entry_on\":\"0001-01-01\",\"body\":\"x\"} or pick year 0001 in the date input.",
+      "expected": "Implausible dates refused with a reason (e.g. before plant was planted or before 1900).",
+      "actual": "201 Created; entry is stored and shown as '1 Jan 1' at the bottom of the journal.",
+      "evidence": "API returned 201 with entry_on 0001-01-01. Form has :max but no :min, schema only checks not-in-future.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Search over 80 characters returns a raw validation error",
+      "where": "/journal search box",
+      "steps": "Type or paste a search longer than 80 characters.",
+      "expected": "Input limited to 80 chars (maxlength) or a friendly message, results kept.",
+      "actual": "API returns 422 and the page replaces the list with 'Q: String should have at most 80 characters'.",
+      "evidence": "GET /api/journal?q=<81 a's> → 422 string_too_long on query.q; the search input has no maxlength.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Search is case-sensitive for non-ASCII letters",
+      "where": "/journal search",
+      "steps": "Create an entry 'Été chaud, ÉPINARDS'; search 'épinards'.",
+      "expected": "Matches regardless of case, like ASCII search does ('tomato' matches 'Tomato').",
+      "actual": "No results; only 'Épinards' matches. SQLite LIKE folds only ASCII case.",
+      "evidence": "GET /api/journal?q=épinards → []; q=Épinards → entry 7.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Deleting an entry already deleted (retry after timeout / other tab) shows an error and leaves the stale entry",
+      "where": "Plant detail journal Delete",
+      "steps": "Delete an entry in one tab, then delete the same entry in another tab (or retry after a timed-out delete).",
+      "expected": "Treated as done; the entry disappears from the list.",
+      "actual": "DELETE returns 404 and the page shows 'Journal entry not found.' while the stale entry stays listed (list is not refreshed on error).",
+      "evidence": "Second DELETE /api/journal/4 → 404 {\"detail\":\"Journal entry not found.\"}; removeEntry only refreshes on success.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Plant journal silently truncated at 500 entries",
+      "where": "/plants/:id",
+      "steps": "Give a plant more than 500 entries.",
+      "expected": "All entries reachable (pagination / load more).",
+      "actual": "Only the newest 500 are fetched (limit=500) while the badge shows the full count; older entries cannot be seen, edited or deleted.",
+      "evidence": "[id].vue fetches /journal with limit: 500; no paging.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Back/forward navigation does not update the journal search",
+      "where": "/journal?q=",
+      "steps": "Search 'tomato', then navigate in the app and use Back, or change ?q= in the URL via in-app navigation.",
+      "expected": "Search box and results follow the URL.",
+      "actual": "search ref is initialised from route.query.q once and never watches the route, so URL and displayed results can disagree.",
+      "evidence": "pages/journal.vue: watch(search → router.replace) only one direction.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "'Today' is checked against the server's date, not the user's",
+      "where": "POST /api/journal",
+      "steps": "As a user in a timezone ahead of the server (e.g. UTC+12 in the morning), add an entry dated today (the form's default).",
+      "expected": "Today's entry is accepted.",
+      "actual": "Server's date.today() is still yesterday, so it answers 422 'Journal date cannot be in the future.' for the default date.",
+      "evidence": "schemas.JournalEntryIn.not_in_future uses server-local date.today(); form defaults to browser-local todayIso().",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

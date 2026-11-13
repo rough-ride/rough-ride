@@ -1,0 +1,98 @@
+{
+  "findings": [
+    {
+      "title": "link \"Stats\" stays busy after GET /api/stats/harvests fails with 500",
+      "where": "/stats GET /api/stats/harvests (entry)",
+      "steps": "In the browser: harvest-stats/GET /api/stats/harvests #1/500!; checks that failed: settles, retry-recovers",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed bjqzlo0a) after 10 s | retry-recovers: step 14 (expect heading \"Weight by plant and month\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed bjqzlo0a) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10.1 s | retry-recovers: step 14 (expect heading \"Weight by plant and month\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10.1 s | retry-recovers: step 14 (expect heading \"Weight by plant and month\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10 s | retry-recovers: step 14 (expect heading \"Weight by plant and month\"): not visible after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed bjqzlo0a) after 10 s | retry-recovers: step 14 (expect heading \"Weight by plant and month\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed bjqzlo0a) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10.1 s | retry-recovers: step 14 (expect heading \"Weight by plant and month\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10.1 s | retry-recovers: step 14 (expect heading \"Weight by plant and month\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10.1 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10 s | retry-recovers: step 14 (expect heading \"Weight by plant and month\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-115153-plan-hgy7",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/GET /api/stats/harvests #1/500!",
+          "harvest-stats/GET /api/stats/harvests #1/empty-200!",
+          "harvest-stats/GET /api/stats/harvests #1/400!",
+          "harvest-stats/GET /api/stats/harvests #1/reset!",
+          "harvest-stats/GET /api/stats/harvests #1/401!",
+          "harvest-stats/GET /api/stats/harvests #1/429!"
+        ]
+      }
+    },
+    {
+      "title": "label \"To\" stays busy after GET /api/stats/harvests fails with 500",
+      "where": "/stats GET /api/stats/harvests",
+      "steps": "In the browser: harvest-stats/GET /api/stats/harvests #2/500!; checks that failed: settles, retry-recovers",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed bjqzlo0a) after 10 s | retry-recovers: step 16 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed bjqzlo0a) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10.1 s | retry-recovers: step 16 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10 s | retry-recovers: step 16 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0y2z5ki2) after 10 s | retry-recovers: step 16 (expect rowheader \"Plant ${unique}\"): not visible after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed bjqzlo0a) after 10 s | retry-recovers: step 16 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed bjqzlo0a) after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10.1 s | retry-recovers: step 16 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10 s | retry-recovers: step 16 (expect rowheader \"Plant ${unique}\"): not visible after 10 s | settles: goto /beds: control stays disabled (DeleteBed 0y2z5ki2) after 10 s | retry-recovers: step 16 (expect rowheader \"Plant ${unique}\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-115153-plan-hgy7",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/GET /api/stats/harvests #2/500!",
+          "harvest-stats/GET /api/stats/harvests #2/empty-200!",
+          "harvest-stats/GET /api/stats/harvests #2/400!",
+          "harvest-stats/GET /api/stats/harvests #2/reset!",
+          "harvest-stats/GET /api/stats/harvests #2/429!"
+        ]
+      }
+    },
+    {
+      "title": "label \"To\" stays busy after GET /api/stats/harvests answers 401 (signed out)",
+      "where": "/stats GET /api/stats/harvests (entry)",
+      "steps": "In the browser: harvest-stats/GET /api/stats/harvests #2/401!; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 1uyabyql) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-115153-plan-hgy7",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/GET /api/stats/harvests #2/401!"
+        ]
+      }
+    },
+    {
+      "title": "goto /beds stays busy after a signed-out reload of /beds",
+      "where": "/beds signed-out-reload page /beds",
+      "steps": "In the browser: harvest-stats/page /beds #1/signed-out-reload; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0y2z5ki2) after 10.1 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0y2z5ki2) after 10.1 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-115153-plan-hgy7",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/page /beds #1/signed-out-reload"
+        ]
+      }
+    },
+    {
+      "title": "link \"Stats\" stays busy after a reload of /stats",
+      "where": "/stats refresh page /stats",
+      "steps": "In the browser: harvest-stats/page /stats #1/refresh; checks that failed: settles",
+      "expected": "",
+      "actual": "settles: goto /beds: control stays disabled (DeleteBed 0y2z5ki2) after 10 s",
+      "evidence": "settles: goto /beds: control stays disabled (DeleteBed 0y2z5ki2) after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-115153-plan-hgy7",
+        "shown": "shown",
+        "members": [
+          "harvest-stats/page /stats #1/refresh"
+        ]
+      }
+    }
+  ]
+}

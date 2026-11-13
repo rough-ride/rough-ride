@@ -1,0 +1,74 @@
+{
+  "id": "watering-log__clean__hunt__t1",
+  "feature": "watering-log",
+  "bug": "clean",
+  "arm": "hunt",
+  "trial": 1,
+  "lane": 2,
+  "ports": {
+    "web": 3792,
+    "api": 8792
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T18:38:22.578Z",
+  "materializeMs": 5329,
+  "repo": "$TMPDIR/rr-bench/work/watering-log__clean__hunt__t1/variant/p2i9tjv2/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/beds.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/beds.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/waterings.py\n?? frontend/app/pages/waterings.vue\n",
+  "sessionId": "f6f815de-2777-495e-ad5b-77271bec8eca",
+  "loadBefore": [
+    14.42236328125,
+    11.86474609375,
+    10.046875
+  ],
+  "loadAfter": [
+    7.607421875,
+    8.96728515625,
+    9.16748046875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 264035,
+  "reportedCostUsd": 0.4451684,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 24,
+      "outputTokens": 9726,
+      "cacheReadInputTokens": 293762,
+      "cacheCreationInputTokens": 38360,
+      "webSearchRequests": 0,
+      "costUSD": 0.4451684,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2037,
+      "cacheCreationEphemeral5mInputTokens": 38360,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 4m09s | run 20261112-193836-hunt-d57f | 5 confirmed, 0 dropped on re-run\ntarget: http://localhost:3792\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Waterings page crashes when the list response is not an array\n   where: /waterings (GET /api/waterings)\n   expected: A visible error that the waterings could not be loaded, and no uncaught error\n   saw: {\"hits\":1,\"alerts\":[],\"sec\":[\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\"]}\n   repro: .rough-ride/runs/20261112-193836-hunt-d57f/probes/client-faults.mjs (expectation \"list-malformed-shows-error\")\n2. HIGH   Waterings page crashes on an empty-object list response\n   where: /waterings (GET /api/waterings)\n   expected: A visible error, and no uncaught error\n   saw: {\"hits\":1,\"alerts\":[],\"sec\":[\"Shade\",\"Notes\",\"Add bed\",\"All beds\",\"North bed\",\"Full sun\",\"PLANTS\"],\"pageErrors\":[\"waterings.value?.reduce is not a function\",\"waterings.value?.reduce is not a function\"]}\n   repro: .rough-ride/runs/20261112-193836-hunt-d57f/probes/client-faults.mjs (expectation \"list-empty-object-shows-error\")\n3. HIGH   Dashboard shows a bad recent-waterings response as 'No waterings yet'\n   where: / Recent waterings (GET /api/waterings?limit=5)\n   expected: A visible error that recent waterings could not be loaded\n   saw: {\"hits\":1,\"alerts\":[],\"sec\":[\"Recent waterings\",\"All waterings\",\"No waterings yet\",\"Use “Water now” on a bed to record one.\",\"Go to beds\"],\"pageErrors\":[]}\n   repro: .rough-ride/runs/20261112-193836-hunt-d57f/probes/client-faults.mjs (expectation \"dash-empty-object-shows-error\")\n4. MEDIUM Dashboard renders a garbage row from a malformed recent-waterings response\n   where: / Recent waterings (GET /api/waterings?limit=5)\n   expected: A visible error\n   saw: {\"hits\":1,\"alerts\":[],\"sec\":[\"Recent waterings\",\"All waterings\",\"The five most recent waterings\",\"WHEN\\tBED\\tAMOUNT\",\"Never\\t\\t–\"],\"pageErrors\":[]}\n   repro: .rough-ride/runs/20261112-193836-hunt-d57f/probes/client-faults.mjs (expectation \"dash-malformed-shows-error\")\n5. MEDIUM Past watering accepts tiny amounts and reports them as '0 L'\n   where: /beds Record past watering form (POST /api/waterings)\n   expected: 0.004 L is refused (the field's min is 0.1), or it is shown as the amount actually saved\n   saw: {\"alerts\":[\"Recorded 0 L on 2 Nov 2026.\"]}\n   repro: .rough-ride/runs/20261112-193836-hunt-d57f/probes/tiny-litres.mjs (expectation \"tiny-amount-refused-or-shown-correctly\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a07ee3a205f451a44.jsonl",
+    "agent-a07ee3a205f451a44.meta.json"
+  ],
+  "usage": {
+    "input": 24,
+    "output": 9726,
+    "cacheRead": 293762,
+    "cacheWrite": 38360,
+    "requests": 12,
+    "toolCalls": {
+      "Bash": 11,
+      "Read": 1
+    }
+  },
+  "findingCount": 5,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |   4 +-\n backend/db.py                    |  14 +++-\n backend/routers/beds.py          |   8 ++-\n backend/schemas.py               |  29 +++++++++\n frontend/app/assets/css/main.css |  24 ++++++-\n frontend/app/layouts/default.vue |   1 +\n frontend/app/pages/beds.vue      | 134 ++++++++++++++++++++++++++++++++++++++-\n frontend/app/pages/index.vue     |  44 ++++++++++++-\n frontend/app/types/api.ts        |  17 +++++\n frontend/app/utils/format.ts     |  26 ++++++++\n 10 files changed, 293 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T18:42:59.456Z"
+}

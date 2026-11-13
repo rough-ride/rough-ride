@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "shared-watering-busy-state",
+  "sentence": "On /beds a single shared wateringBedId/notice/error state means starting 'Water now' on a second bed re-enables the first bed's button mid-request, allowing duplicate waterings and lost messages.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user on /beds. Used page.route to hold the first POST /api/waterings and let later ones go through. Clicked 'Water now' on North bed: its button showed 'Watering…' and was disabled. Clicked 'Water now' on Shade corner, which succeeded ('Watered Shade corner.' shown). North bed's button then read 'Water now' and was enabled (disabled=false) while its first POST was still held. Clicked it again, which sent a second POST {bed_id:1}. Captured POSTs: [{bed_id:1},{bed_id:2},{bed_id:1}], so North bed got a duplicate watering. After the held request was released, only 'Watered North bed.' was visible and Shade corner's success notice was gone, because waterNotice is a single shared value. Code cause: beds.vue recordWatering uses one wateringBedId ref (set to bed.id, set to null in finally) and single waterNotice/waterError refs.",
+  "severity": "medium",
+  "wallMs": 41926
+}

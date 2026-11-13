@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "title": "Plants with the same name are merged in the per-month table; harvests go to the wrong plant",
+      "where": "GET /api/stats/harvests (backend/routers/stats.py, GROUP BY p.name, month) and /stats table",
+      "steps": "Have plant 'Tomato' (Sungold, id 1). Create a second plant 'Tomato' variety 'Roma' (id 4). Log 500 g for Roma on 2026-08-12 (same month as a Sungold harvest) and 2000 g in Sep. Open /stats.",
+      "expected": "Sungold row: 1.05 kg (450 g Jul, 600 g Aug). Roma row: 2.5 kg (500 g Aug, 2 kg Sep). This matches the Best plants list.",
+      "actual": "The query groups by plant name rather than id. Roma's 500 g in August is merged into Sungold's row: Sungold shows 1.1 kg in Aug and 1.55 kg total, Roma shows 2 kg. Best plants (grouped by id) shows Roma 2.5 kg and Sungold 1.05 kg on the same page.",
+      "evidence": "API: plants[Tomato/Sungold].monthly_grams=[0,450,1100,0], total 1550; plants[Tomato/Roma].total_grams=2000; top_plants: Roma 2500, Sungold 1050. The page shows 'Tomato · Sungold ... 1.1 kg ... 1.55 kg' and 'Tomato · Roma ... 2 kg' while 'NO. 1 Tomato 2.5 kg · Roma'.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Stats error state has no retry",
+      "where": "/stats",
+      "steps": "On /stats, make GET /api/stats/harvests return 500 (or go offline), then change the From date. Restore the server.",
+      "expected": "An error message with a Retry button that refetches without a reload.",
+      "actual": "Only 'Could not load harvest stats.' is shown, with no retry button. The only ways to recover are editing a date or reloading.",
+      "evidence": "After the failure, the only buttons on the page were 'Sign out' and 'This year'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout; a hung API leaves 'Loading stats…' forever",
+      "where": "/stats (useApiFetch without timeout)",
+      "steps": "Route /api/stats/harvests to never respond, then change the From date. Wait more than 10 s.",
+      "expected": "The request fails after 10 s and shows an error with a retry.",
+      "actual": "The page still showed 'Loading stats…' after 13 s, with no error and no way out.",
+      "evidence": "main text after 13 s: 'From To This year Loading stats…'",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "A null month in the response crashes rendering (formatMonth calls .slice on null); the page gets stuck on old data plus 'Loading stats…'",
+      "where": "/stats, frontend/app/utils/format.ts formatMonth",
+      "steps": "Mock /api/stats/harvests to return 200 with months:[{month:null,total_grams:null}], plants with null name/fields, top_plants:null. Change the date.",
+      "expected": "The untrusted response is handled. The page shows an error or placeholders, never a crash.",
+      "actual": "TypeError 'Cannot read properties of null (reading 'slice')' opens the Nuxt error overlay. The page still shows the previous range's data under a stuck 'Loading stats…'. top_plants:null would also throw in v-for/length checks.",
+      "evidence": "Error dialog text 'TypeError ... Cannot read properties of null (reading 'slice')'; main shows 'Loading stats…' followed by the old table.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Long plant names make the table's first column huge at 375 px, so all numbers are off-screen",
+      "where": "/stats at 375 px (.stats-table th[scope=row] white-space: nowrap)",
+      "steps": "Create a plant with an 80-character name with no spaces and harvest it. View /stats at 375 px wide.",
+      "expected": "The name wraps or truncates, so weights stay visible at phone width.",
+      "actual": "The row header is nowrap, so the first column is 833 px wide inside a 309 px scroll box. On load, no month or total column is visible, only plant names.",
+      "evidence": "The .table-scroll is 309 px wide with scrollWidth 1345 and a first column 833 px wide. A screenshot shows only the PLANT column. The page itself does not scroll sideways.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "A blank From/To field silently uses the default year bound, so the input and results disagree, and can give a confusing error",
+      "where": "/stats date fields",
+      "steps": "Clear the From field. Separately, set To to 2025-06-01 and clear From.",
+      "expected": "A blank field is refused with a visible reason, or the input shows the date being used.",
+      "actual": "With From blank, the field shows nothing but results say '1 Jan 2026 to ...'. With From blank and To in a past year, the server fills in this year's start and answers 'The From date must be on or before the To date.' even though From is empty.",
+      "evidence": "Blank From: input value '' and text '7 harvests from 1 Jan 2026 to 31 Dec 2026'.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

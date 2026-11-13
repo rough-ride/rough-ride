@@ -1,0 +1,15 @@
+diff --git a/frontend/app/pages/waterings.vue b/frontend/app/pages/waterings.vue
+index 13584df..53f2995 100644
+--- a/frontend/app/pages/waterings.vue
++++ b/frontend/app/pages/waterings.vue
+@@ -23,8 +23,8 @@ const [wateringsResult, bedsResult] = await Promise.all([
+ const { data: waterings, error: wateringsError, status, refresh } = wateringsResult
+ const { data: beds } = bedsResult
+ 
+-watch(bedFilter, (bed) => {
+-  router.replace({ query: bed ? { bed } : {} })
++watch(bedFilter, (bedId) => {
++  router.replace({ query: bedId ? { bed_id: bedId } : {} })
+ })
+ 
+ const removingId = ref<number | null>(null)

@@ -1,0 +1,1 @@
+Written by hand for the comparison benchmark (benchmark/comparison/), held-out set. The clean feature adds .water-form to the narrow-screen rule that collapses grids to one column. This variant leaves it out of that rule, so the 1fr 1fr auto grid stays and the buttons take the room the inputs need.

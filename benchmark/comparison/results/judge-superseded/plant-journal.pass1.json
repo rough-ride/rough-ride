@@ -1,0 +1,1120 @@
+{
+  "feature": "plant-journal",
+  "pass": 1,
+  "count": 181,
+  "missing": [],
+  "costUsd": 0.7768888,
+  "reports": [
+    {
+      "id": "Fe684375d",
+      "planted": null,
+      "issue": "journal-add-retry-duplicates",
+      "key": "plant-journal__failed-save-clears-text__baseline__t3#7"
+    },
+    {
+      "id": "Fd52793f5",
+      "planted": null,
+      "issue": "journal-delete-retry-404",
+      "key": "plant-journal__failed-save-clears-text__playwright__t1#8"
+    },
+    {
+      "id": "Fb27a3fab",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__clean__baseline__t2#5"
+    },
+    {
+      "id": "F0e32f3a4",
+      "planted": null,
+      "issue": "journal-today-timezone-mismatch",
+      "key": "plant-journal__failed-save-clears-text__playwright__t3#6"
+    },
+    {
+      "id": "Fd6167787",
+      "planted": null,
+      "issue": "journal-delete-retry-404",
+      "key": "plant-journal__clean__baseline__t1#9"
+    },
+    {
+      "id": "Ff33bee15",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t2#0"
+    },
+    {
+      "id": "F7ca82080",
+      "planted": null,
+      "issue": "journal-feed-long-name-overflow",
+      "key": "plant-journal__clean__baseline__t3#6"
+    },
+    {
+      "id": "F2b8c35ff",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t1#2"
+    },
+    {
+      "id": "Fe00fda16",
+      "planted": null,
+      "issue": "journal-search-over-80-raw-error",
+      "key": "plant-journal__failed-save-clears-text__baseline__t1#3"
+    },
+    {
+      "id": "Fe04d554c",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t1#1"
+    },
+    {
+      "id": "F4d222d41",
+      "planted": null,
+      "issue": "journal-add-retry-duplicates",
+      "key": "plant-journal__clean__playwright__t2#5"
+    },
+    {
+      "id": "F754a72a2",
+      "planted": null,
+      "issue": "journal-search-like-wildcards",
+      "key": "plant-journal__search-quote-crash__baseline__t1#1"
+    },
+    {
+      "id": "Fa50f871d",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__clean__baseline__t3#5"
+    },
+    {
+      "id": "F5c2011a0",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t2#4"
+    },
+    {
+      "id": "F737df137",
+      "planted": null,
+      "issue": "journal-add-retry-duplicates",
+      "key": "plant-journal__clean__playwright__t1#0"
+    },
+    {
+      "id": "F42404498",
+      "planted": null,
+      "issue": "journal-search-over-80-raw-error",
+      "key": "plant-journal__clean__playwright__t2#4"
+    },
+    {
+      "id": "F9157eeb4",
+      "planted": null,
+      "issue": "journal-date-no-lower-bound",
+      "key": "plant-journal__clean__baseline__t1#6"
+    },
+    {
+      "id": "F932184bb",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__failed-save-clears-text__baseline__t1#5"
+    },
+    {
+      "id": "F382a8cfb",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__search-quote-crash__playwright__t3#2"
+    },
+    {
+      "id": "F9c9adeb4",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__search-quote-crash__baseline__t3#4"
+    },
+    {
+      "id": "F4e6d2eaa",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__failed-save-clears-text__baseline__t3#6"
+    },
+    {
+      "id": "F672aa4ae",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__clean__baseline__t1#4"
+    },
+    {
+      "id": "F0490b293",
+      "planted": null,
+      "issue": "journal-add-retry-duplicates",
+      "key": "plant-journal__failed-save-clears-text__playwright__t2#5"
+    },
+    {
+      "id": "Fe967d072",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__playwright__t2#2"
+    },
+    {
+      "id": "Fb8679ad3",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__failed-save-clears-text__playwright__t3#3"
+    },
+    {
+      "id": "F4ef38e49",
+      "planted": null,
+      "issue": "plant-journal-capped-at-500",
+      "key": "plant-journal__clean__baseline__t2#7"
+    },
+    {
+      "id": "Fc935c699",
+      "planted": null,
+      "issue": "journal-feed-long-name-overflow",
+      "key": "plant-journal__clean__baseline__t2#6"
+    },
+    {
+      "id": "F23405b89",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t1#0"
+    },
+    {
+      "id": "Fa6d9a35d",
+      "planted": null,
+      "issue": "journal-search-over-80-raw-error",
+      "key": "plant-journal__failed-save-clears-text__baseline__t2#3"
+    },
+    {
+      "id": "Fa0b91d48",
+      "planted": "search-quote-crash",
+      "issue": "search-quote-crash",
+      "key": "plant-journal__search-quote-crash__playwright__t3#0"
+    },
+    {
+      "id": "F9848a202",
+      "planted": null,
+      "issue": "journal-feed-long-name-overflow",
+      "key": "plant-journal__failed-save-clears-text__playwright__t1#5"
+    },
+    {
+      "id": "Ffe91fb36",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__failed-save-clears-text__playwright__t2#6"
+    },
+    {
+      "id": "F94836f2c",
+      "planted": null,
+      "issue": "journal-search-non-ascii-case-sensitive",
+      "key": "plant-journal__clean__baseline__t1#8"
+    },
+    {
+      "id": "Fdf530f09",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__playwright__t1#1"
+    },
+    {
+      "id": "F715a18a6",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__baseline__t2#0"
+    },
+    {
+      "id": "Ff76973f4",
+      "planted": null,
+      "issue": "journal-date-no-lower-bound",
+      "key": "plant-journal__search-quote-crash__playwright__t3#6"
+    },
+    {
+      "id": "F75e5a3ed",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__search-quote-crash__playwright__t2#3"
+    },
+    {
+      "id": "Fd6fdecdb",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t2#3"
+    },
+    {
+      "id": "F2e02e779",
+      "planted": null,
+      "issue": "journal-date-no-lower-bound",
+      "key": "plant-journal__search-quote-crash__playwright__t2#5"
+    },
+    {
+      "id": "Fab1a8c89",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__baseline__t3#0"
+    },
+    {
+      "id": "F1eafc1e8",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__search-quote-crash__baseline__t3#2"
+    },
+    {
+      "id": "F0a48a906",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__failed-save-clears-text__playwright__t2#3"
+    },
+    {
+      "id": "Fbd3f8749",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__baseline__t3#3"
+    },
+    {
+      "id": "F0caf6d95",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t2#2"
+    },
+    {
+      "id": "Fc7f87b59",
+      "planted": null,
+      "issue": "journal-today-timezone-mismatch",
+      "key": "plant-journal__clean__playwright__t2#6"
+    },
+    {
+      "id": "F9704d556",
+      "planted": null,
+      "issue": "journal-today-timezone-mismatch",
+      "key": "plant-journal__clean__playwright__t1#10"
+    },
+    {
+      "id": "F649eefe9",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__baseline__t2#3"
+    },
+    {
+      "id": "F5b814f92",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t2#2"
+    },
+    {
+      "id": "F10b515d1",
+      "planted": null,
+      "issue": "journal-nul-body-500",
+      "key": "plant-journal__clean__playwright__t1#6"
+    },
+    {
+      "id": "Fb2d0076b",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__failed-save-clears-text__playwright__t1#1"
+    },
+    {
+      "id": "F16f3a405",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__playwright__t2#0"
+    },
+    {
+      "id": "Fe495b75f",
+      "planted": null,
+      "issue": "journal-today-timezone-mismatch",
+      "key": "plant-journal__search-quote-crash__playwright__t2#6"
+    },
+    {
+      "id": "F47405d62",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__search-quote-crash__playwright__t1#1"
+    },
+    {
+      "id": "Fdc4778b3",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__failed-save-clears-text__playwright__t1#7"
+    },
+    {
+      "id": "Fd0a2d6f0",
+      "planted": null,
+      "issue": "journal-edit-refresh-failure-clears-list",
+      "key": "plant-journal__search-quote-crash__playwright__t1#3"
+    },
+    {
+      "id": "Fc5ffe52b",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t3#1"
+    },
+    {
+      "id": "F78c54c23",
+      "planted": null,
+      "issue": "journal-today-timezone-mismatch",
+      "key": "plant-journal__clean__baseline__t3#7"
+    },
+    {
+      "id": "F4a14b418",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__failed-save-clears-text__baseline__t2#1"
+    },
+    {
+      "id": "F0a826456",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__playwright__t3#2"
+    },
+    {
+      "id": "F3efda6b4",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__failed-save-clears-text__baseline__t3#3"
+    },
+    {
+      "id": "F79be0c43",
+      "planted": null,
+      "issue": "journal-feed-long-name-overflow",
+      "key": "plant-journal__clean__playwright__t1#5"
+    },
+    {
+      "id": "F9fc3d2eb",
+      "planted": null,
+      "issue": "journal-search-over-80-raw-error",
+      "key": "plant-journal__clean__playwright__t3#6"
+    },
+    {
+      "id": "F917e8ed6",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t1#4"
+    },
+    {
+      "id": "F20acb4fa",
+      "planted": null,
+      "issue": "journal-date-no-lower-bound",
+      "key": "plant-journal__failed-save-clears-text__playwright__t3#5"
+    },
+    {
+      "id": "F9d04bc02",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t2#0"
+    },
+    {
+      "id": "F8f863ea9",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__failed-save-clears-text__baseline__t1#4"
+    },
+    {
+      "id": "Fed53064a",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__baseline__t1#5"
+    },
+    {
+      "id": "F88309bf4",
+      "planted": null,
+      "issue": "journal-delete-retry-404",
+      "key": "plant-journal__failed-save-clears-text__baseline__t1#6"
+    },
+    {
+      "id": "F5493683c",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t3#4"
+    },
+    {
+      "id": "F088203b5",
+      "planted": null,
+      "issue": "journal-search-over-80-raw-error",
+      "key": "plant-journal__failed-save-clears-text__playwright__t1#6"
+    },
+    {
+      "id": "F6cb85454",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__failed-save-clears-text__baseline__t2#4"
+    },
+    {
+      "id": "Ff067b255",
+      "planted": null,
+      "issue": "journal-date-no-lower-bound",
+      "key": "plant-journal__failed-save-clears-text__baseline__t2#6"
+    },
+    {
+      "id": "F2ad8f15c",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t2#1"
+    },
+    {
+      "id": "F7e6c7e7a",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__failed-save-clears-text__baseline__t3#2"
+    },
+    {
+      "id": "F01b3e484",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__failed-save-clears-text__playwright__t2#2"
+    },
+    {
+      "id": "Fdcc78ae3",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__search-quote-crash__playwright__t3#4"
+    },
+    {
+      "id": "Fb81982ae",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__search-quote-crash__baseline__t3#3"
+    },
+    {
+      "id": "F9760e80e",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__playwright__t1#3"
+    },
+    {
+      "id": "F56d405e8",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t2#2"
+    },
+    {
+      "id": "Ff8478637",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t1#1"
+    },
+    {
+      "id": "F843eeff8",
+      "planted": null,
+      "issue": "journal-search-over-80-raw-error",
+      "key": "plant-journal__failed-save-clears-text__baseline__t3#4"
+    },
+    {
+      "id": "F6913c586",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t1#3"
+    },
+    {
+      "id": "Fa2e1cce4",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__clean__playwright__t1#7"
+    },
+    {
+      "id": "F17bf0e69",
+      "planted": null,
+      "issue": "journal-add-retry-duplicates",
+      "key": "plant-journal__failed-save-clears-text__baseline__t2#5"
+    },
+    {
+      "id": "F101dd66a",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__playwright__t1#0"
+    },
+    {
+      "id": "Fc10ca83b",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t3#3"
+    },
+    {
+      "id": "Fa92500fb",
+      "planted": null,
+      "issue": "journal-date-no-lower-bound",
+      "key": "plant-journal__search-quote-crash__baseline__t3#5"
+    },
+    {
+      "id": "F2350fa78",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__failed-save-clears-text__playwright__t3#4"
+    },
+    {
+      "id": "Ffb6d907d",
+      "planted": null,
+      "issue": "plant-journal-capped-at-500",
+      "key": "plant-journal__clean__baseline__t1#10"
+    },
+    {
+      "id": "F022245ab",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__failed-save-clears-text__baseline__t1#1"
+    },
+    {
+      "id": "F81d1784e",
+      "planted": null,
+      "issue": "journal-add-retry-duplicates",
+      "key": "plant-journal__clean__playwright__t3#4"
+    },
+    {
+      "id": "F8121d2cd",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t2#3"
+    },
+    {
+      "id": "F5136ee19",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__clean__playwright__t1#8"
+    },
+    {
+      "id": "Ff283d833",
+      "planted": null,
+      "issue": "journal-add-retry-duplicates",
+      "key": "plant-journal__search-quote-crash__playwright__t2#1"
+    },
+    {
+      "id": "F26769ed4",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t3#1"
+    },
+    {
+      "id": "Fff6db609",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__failed-save-clears-text__playwright__t1#4"
+    },
+    {
+      "id": "F900ee4ad",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t1#4"
+    },
+    {
+      "id": "F5ebbb0c2",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__baseline__t1#1"
+    },
+    {
+      "id": "F1b50a70f",
+      "planted": "search-quote-crash",
+      "issue": "search-quote-crash",
+      "key": "plant-journal__search-quote-crash__baseline__t1#0"
+    },
+    {
+      "id": "Fa35bb52f",
+      "planted": null,
+      "issue": "journal-feed-long-name-overflow",
+      "key": "plant-journal__clean__playwright__t2#3"
+    },
+    {
+      "id": "F2bd76abd",
+      "planted": "search-quote-crash",
+      "issue": "search-quote-crash",
+      "key": "plant-journal__search-quote-crash__baseline__t2#0"
+    },
+    {
+      "id": "F3e386efa",
+      "planted": null,
+      "issue": "journal-edited-marker-same-second",
+      "key": "plant-journal__clean__playwright__t2#7"
+    },
+    {
+      "id": "F49bd934d",
+      "planted": null,
+      "issue": "journal-malformed-response-shown-empty",
+      "key": "plant-journal__clean__playwright__t1#4"
+    },
+    {
+      "id": "Fd8482531",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t1#2"
+    },
+    {
+      "id": "Faf53ea48",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t1#2"
+    },
+    {
+      "id": "F14513159",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__failed-save-clears-text__baseline__t2#2"
+    },
+    {
+      "id": "Fc88a5296",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t1#1"
+    },
+    {
+      "id": "F93dffc15",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__failed-save-clears-text__playwright__t3#2"
+    },
+    {
+      "id": "F5aab153a",
+      "planted": null,
+      "issue": "journal-add-retry-duplicates",
+      "key": "plant-journal__clean__baseline__t2#4"
+    },
+    {
+      "id": "F1e72e19c",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__failed-save-clears-text__playwright__t1#3"
+    },
+    {
+      "id": "F1446e3f2",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t3#0"
+    },
+    {
+      "id": "Fc1bba775",
+      "planted": null,
+      "issue": "journal-add-refresh-failure-reported-as-failed",
+      "key": "plant-journal__clean__baseline__t3#1"
+    },
+    {
+      "id": "F36332092",
+      "planted": null,
+      "issue": "journal-search-like-wildcards",
+      "key": "plant-journal__search-quote-crash__baseline__t3#1"
+    },
+    {
+      "id": "Fd2a785d7",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__playwright__t3#1"
+    },
+    {
+      "id": "F6be2f1dd",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__search-quote-crash__playwright__t1#2"
+    },
+    {
+      "id": "Fed7bfd65",
+      "planted": null,
+      "issue": "journal-search-over-80-raw-error",
+      "key": "plant-journal__clean__baseline__t2#1"
+    },
+    {
+      "id": "Fbdef18d8",
+      "planted": null,
+      "issue": "journal-search-like-wildcards",
+      "key": "plant-journal__search-quote-crash__playwright__t3#1"
+    },
+    {
+      "id": "F5bb6eb19",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t3#0"
+    },
+    {
+      "id": "Fcbfecb28",
+      "planted": null,
+      "issue": "journal-search-over-80-raw-error",
+      "key": "plant-journal__clean__baseline__t1#7"
+    },
+    {
+      "id": "F8da2a9e3",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__baseline__t3#2"
+    },
+    {
+      "id": "F9393bd68",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t2#1"
+    },
+    {
+      "id": "F50294fa2",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__search-quote-crash__playwright__t3#3"
+    },
+    {
+      "id": "F4b9c34ea",
+      "planted": "search-quote-crash",
+      "issue": "search-quote-crash",
+      "key": "plant-journal__search-quote-crash__baseline__t3#0"
+    },
+    {
+      "id": "F32093826",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t3#1"
+    },
+    {
+      "id": "F8d9171f5",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__baseline__t2#0"
+    },
+    {
+      "id": "F859a1f33",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__playwright__t3#0"
+    },
+    {
+      "id": "F40330ff6",
+      "planted": null,
+      "issue": "journal-search-like-wildcards",
+      "key": "plant-journal__search-quote-crash__baseline__t2#1"
+    },
+    {
+      "id": "F9ff1008d",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t2#3"
+    },
+    {
+      "id": "Fbfd81a77",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__search-quote-crash__baseline__t1#2"
+    },
+    {
+      "id": "F668f1761",
+      "planted": "search-quote-crash",
+      "issue": "search-quote-crash",
+      "key": "plant-journal__search-quote-crash__playwright__t1#0"
+    },
+    {
+      "id": "Fe77ab998",
+      "planted": null,
+      "issue": "journal-feed-long-name-overflow",
+      "key": "plant-journal__failed-save-clears-text__baseline__t3#8"
+    },
+    {
+      "id": "Fe6dac775",
+      "planted": null,
+      "issue": "journal-search-url-not-synced",
+      "key": "plant-journal__clean__baseline__t3#9"
+    },
+    {
+      "id": "F5923d176",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t3#3"
+    },
+    {
+      "id": "F8c27aa4f",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__playwright__t2#0"
+    },
+    {
+      "id": "Fa0995dca",
+      "planted": null,
+      "issue": "journal-feed-long-name-overflow",
+      "key": "plant-journal__search-quote-crash__baseline__t3#7"
+    },
+    {
+      "id": "F5becbe80",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__failed-save-clears-text__playwright__t2#1"
+    },
+    {
+      "id": "F357f6565",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t3#0"
+    },
+    {
+      "id": "Fa094bb73",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__search-quote-crash__playwright__t2#4"
+    },
+    {
+      "id": "F16a1df5c",
+      "planted": null,
+      "issue": "journal-delete-retry-404",
+      "key": "plant-journal__clean__playwright__t1#2"
+    },
+    {
+      "id": "Fb86b03a1",
+      "planted": null,
+      "issue": "plant-journal-capped-at-500",
+      "key": "plant-journal__clean__baseline__t3#8"
+    },
+    {
+      "id": "F0f03142a",
+      "planted": null,
+      "issue": "journal-feed-long-name-overflow",
+      "key": "plant-journal__clean__playwright__t3#3"
+    },
+    {
+      "id": "F520eb53f",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__failed-save-clears-text__playwright__t1#2"
+    },
+    {
+      "id": "F01cc0911",
+      "planted": null,
+      "issue": "journal-stale-count-with-error",
+      "key": "plant-journal__clean__baseline__t2#8"
+    },
+    {
+      "id": "Fde754682",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t1#3"
+    },
+    {
+      "id": "Fe00e48f5",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__baseline__t2#2"
+    },
+    {
+      "id": "F8e491c4b",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t3#2"
+    },
+    {
+      "id": "F654071e5",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__playwright__t2#1"
+    },
+    {
+      "id": "Fb5b73c2d",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t2#1"
+    },
+    {
+      "id": "F4329c3dc",
+      "planted": null,
+      "issue": "journal-search-over-80-raw-error",
+      "key": "plant-journal__clean__playwright__t1#9"
+    },
+    {
+      "id": "Fc1cdb617",
+      "planted": null,
+      "issue": "journal-search-over-80-raw-error",
+      "key": "plant-journal__clean__baseline__t3#4"
+    },
+    {
+      "id": "F931022dc",
+      "planted": null,
+      "issue": "journal-nul-body-500",
+      "key": "plant-journal__failed-save-clears-text__baseline__t3#1"
+    },
+    {
+      "id": "F504b7741",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t3#2"
+    },
+    {
+      "id": "F9d9e33ea",
+      "planted": null,
+      "issue": "journal-search-over-80-raw-error",
+      "key": "plant-journal__failed-save-clears-text__playwright__t2#4"
+    },
+    {
+      "id": "Fe5a21c2c",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__clean__baseline__t1#0"
+    },
+    {
+      "id": "F50bc8a46",
+      "planted": null,
+      "issue": "journal-today-timezone-mismatch",
+      "key": "plant-journal__clean__playwright__t3#7"
+    },
+    {
+      "id": "F430d8138",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__baseline__t1#2"
+    },
+    {
+      "id": "F54927a03",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__clean__playwright__t3#0"
+    },
+    {
+      "id": "Fdf84aa05",
+      "planted": null,
+      "issue": "journal-search-url-not-synced",
+      "key": "plant-journal__clean__baseline__t1#11"
+    },
+    {
+      "id": "F75ccf210",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t2#0"
+    },
+    {
+      "id": "F344b55b1",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__search-quote-crash__playwright__t3#5"
+    },
+    {
+      "id": "Ff587a2b7",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t1#0"
+    },
+    {
+      "id": "Fb7bdc25f",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__search-quote-crash__playwright__t2#2"
+    },
+    {
+      "id": "Fdbbe6ddd",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t3#2"
+    },
+    {
+      "id": "F73bf589e",
+      "planted": null,
+      "issue": "journal-huge-id-500",
+      "key": "plant-journal__search-quote-crash__playwright__t1#4"
+    },
+    {
+      "id": "F66f5e885",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t2#4"
+    },
+    {
+      "id": "Fd058b484",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__search-quote-crash__baseline__t2#2"
+    },
+    {
+      "id": "F6552f24c",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__failed-save-clears-text__playwright__t3#1"
+    },
+    {
+      "id": "F2c062249",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__clean__rough-ride__t1#3"
+    },
+    {
+      "id": "F842688b0",
+      "planted": "search-quote-crash",
+      "issue": "search-quote-crash",
+      "key": "plant-journal__search-quote-crash__playwright__t2#0"
+    },
+    {
+      "id": "F7477c05c",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__search-quote-crash__playwright__t1#5"
+    },
+    {
+      "id": "Fac530f37",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__search-quote-crash__rough-ride__t3#3"
+    },
+    {
+      "id": "Fc97f98da",
+      "planted": null,
+      "issue": "journal-add-retry-duplicates",
+      "key": "plant-journal__clean__baseline__t1#3"
+    },
+    {
+      "id": "Fb0ddd6d4",
+      "planted": null,
+      "issue": "journal-load-error-no-retry",
+      "key": "plant-journal__failed-save-clears-text__baseline__t3#5"
+    },
+    {
+      "id": "Ff2e1285a",
+      "planted": null,
+      "issue": "journal-today-timezone-mismatch",
+      "key": "plant-journal__clean__baseline__t1#12"
+    },
+    {
+      "id": "F96078166",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__baseline__t3#0"
+    },
+    {
+      "id": "Ff6617f16",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__search-quote-crash__baseline__t3#6"
+    },
+    {
+      "id": "Ffaac0c7c",
+      "planted": null,
+      "issue": "journal-emoji-utf16-limit",
+      "key": "plant-journal__clean__playwright__t3#5"
+    },
+    {
+      "id": "F47fa5bde",
+      "planted": null,
+      "issue": "journal-requests-no-timeout",
+      "key": "plant-journal__failed-save-clears-text__baseline__t1#2"
+    },
+    {
+      "id": "F56069e92",
+      "planted": null,
+      "issue": "journal-feed-long-name-overflow",
+      "key": "plant-journal__failed-save-clears-text__baseline__t2#7"
+    },
+    {
+      "id": "F15a94a61",
+      "planted": null,
+      "issue": "beds-control-stays-disabled-after-500",
+      "key": "plant-journal__failed-save-clears-text__rough-ride__t1#0"
+    },
+    {
+      "id": "Fbdea36e7",
+      "planted": "failed-save-clears-text",
+      "issue": "failed-save-clears-text",
+      "key": "plant-journal__failed-save-clears-text__baseline__t1#0"
+    }
+  ],
+  "issues": {
+    "search-quote-crash": "Searching the journal (GET /api/journal?q=) for text containing an apostrophe such as it's returns a 500 and the Journal page shows 'Could not load the journal.', because the term is interpolated into the SQL.",
+    "failed-save-clears-text": "On the plant detail page, when POST /api/journal fails while adding an entry, the error is shown but the typed entry text is cleared from the textarea.",
+    "journal-add-retry-duplicates": "Retrying Add entry after the POST /api/journal response is lost or times out creates a second identical entry because creation has no idempotency key or duplicate check.",
+    "journal-delete-retry-404": "Deleting a journal entry that was already deleted (retry after a lost response or another tab) returns 404 and the plant page shows 'Journal entry not found.' while the stale entry stays listed.",
+    "journal-emoji-utf16-limit": "The journal entry form's maxlength and character counter count UTF-16 units, so emoji count as two, new entries stop at about 250 emoji, and existing server-accepted emoji entries cannot be re-saved.",
+    "journal-today-timezone-mismatch": "For a browser in a time zone ahead of the server, adding an entry dated the browser's today is rejected with 'Journal date cannot be in the future.' because the server checks against its own date.today().",
+    "beds-control-stays-disabled-after-500": "Automated resilience checks report that after a mocked 500 on a plants, beds or journal request, navigating to /beds leaves a DeleteBed control disabled for over 10 seconds.",
+    "journal-feed-long-name-overflow": "On /journal at 375 px width, a plant name that is one long unbroken word does not wrap in the feed item and makes the page scroll sideways.",
+    "journal-search-over-80-raw-error": "Typing more than 80 characters into the /journal search box replaces the results with a raw validation message such as 'Query.q: String should have at most 80 characters', and the input has no maxlength.",
+    "journal-search-like-wildcards": "Searching the journal for '%' or '_' returns every entry because the characters act as unescaped SQL LIKE wildcards.",
+    "journal-load-error-no-retry": "When GET /api/journal fails, the /journal page and the plant detail Journal section show only 'Could not load the journal.' with no retry control, so recovery needs a reload or a search change.",
+    "journal-huge-id-500": "Sending a plant_id or entry id larger than 64 bits to POST, GET, PUT or DELETE journal endpoints returns 500 Internal Server Error instead of a 4xx.",
+    "journal-requests-no-timeout": "Journal requests have no client timeout, so when the API hangs, Add, Save or Delete stays on 'Saving…' and disabled, or the list stays on 'Loading entries…', indefinitely.",
+    "journal-date-no-lower-bound": "POST or PUT /api/journal accepts implausible dates such as 0001-01-01, stores them and shows them as '1 Jan 1' at the bottom of the list.",
+    "plant-journal-capped-at-500": "The plant detail page fetches journal entries with limit=500 and no paging, so for plants with more than 500 entries the older ones are not shown while the badge shows the full count.",
+    "journal-search-non-ascii-case-sensitive": "Journal search is case-sensitive for non-ASCII letters, so searching 'épinards' does not match 'ÉPINARDS'.",
+    "journal-nul-body-500": "Posting or putting a journal entry whose body starts with a NUL character returns 500 because the SQLite length CHECK constraint fails unhandled.",
+    "journal-edit-refresh-failure-clears-list": "On the plant page, after a successful entry edit, a failed journal list refresh removes the whole list and shows only 'Could not load the journal.'.",
+    "journal-edited-marker-same-second": "An entry edited within the same second it was created is not marked 'edited' because the timestamps have one-second resolution.",
+    "journal-malformed-response-shown-empty": "When GET /api/journal returns 200 with a non-list body, the Journal page shows '0 entries' and 'No journal entries yet' instead of an error.",
+    "journal-add-refresh-failure-reported-as-failed": "On the plant page, if the refresh after a successful POST /api/journal fails, Add entry reports 'Could not add the entry' and resubmitting creates a duplicate.",
+    "journal-search-url-not-synced": "On /journal the search box is read from ?q= only once, so browser Back/Forward or in-app URL changes leave the box and results out of sync with the URL.",
+    "journal-stale-count-with-error": "On /journal, when a later search request fails, the previous results count is still shown above the load error."
+  }
+}

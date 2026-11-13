@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "year-one-date-accepted",
+  "sentence": "The past-watering form and POST /api/waterings accept implausible dates such as 0001-01-01, which are saved and listed as '1 Jan 1'.",
+  "verdict": "confirmed",
+  "evidence": "API: signed in as the demo user and sent POST /api/waterings {bed_id:1, watered_on:'0001-01-01', litres:5}. It returned 201 with watered_on '0001-01-01', and GET /api/waterings listed the row. UI: on /beds I opened 'Record past watering' for North bed, typed 0001-01-01 and 2 L, and submitted. The date input passed checkValidity(), because it only has max=today and no min. The page confirmed 'Recorded 2 L on 1 Jan 1.' /waterings then showed two '1 Jan 1 North bed' rows, and the totals counted them ('4 waterings, 21 L in total'). Code: the WateringIn validator in backend/schemas.py only refuses future dates; there is no lower bound in the backend or the frontend. An entry from the year 1 is clearly a typo, and it is saved without any reason shown and goes into the log and totals. Because last-watered uses the latest date, the bed's 'Last watered' value was not affected. I deleted my test rows afterwards.",
+  "severity": "low",
+  "wallMs": 98892
+}

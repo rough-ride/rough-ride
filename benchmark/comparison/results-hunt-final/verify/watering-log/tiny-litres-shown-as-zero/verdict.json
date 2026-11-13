@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "tiny-litres-shown-as-zero",
+  "sentence": "Recording a past watering of a tiny amount such as 0.004 L on /beds is accepted despite the field's 0.1 minimum and is reported and listed as '0 L'.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user and opened /beds. Clicked 'Record past watering' for North bed, set the date to 2026-11-02 and Litres to 0.004, then clicked Save watering. POST /api/waterings returned 201 with litres 0.004 saved. The success notice said 'Recorded 0 L on 2 Nov 2026.' and /waterings listed '2 Nov 2026 | North bed | 0 L'. Cause: the form has novalidate, so the input's min=0.1 is never checked. The client check (beds.vue:128) only rejects values <= 0, and the backend WateringIn uses gt=0. formatLitres (format.ts:40) rounds to at most 2 decimal places, so 0.004 is shown as '0 L'. The user is told a positive amount was saved as 0 L, which contradicts the field's own 0.1 minimum. I deleted the test row afterwards.",
+  "severity": "low",
+  "wallMs": 67223
+}

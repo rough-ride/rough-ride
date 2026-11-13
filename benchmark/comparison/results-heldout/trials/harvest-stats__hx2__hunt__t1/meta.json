@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__hx2__hunt__t1",
+  "feature": "harvest-stats",
+  "bug": "hx2",
+  "arm": "hunt",
+  "trial": 1,
+  "lane": 2,
+  "ports": {
+    "web": 3792,
+    "api": 8792
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:58:32.380Z",
+  "materializeMs": 4742,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__hx2__hunt__t1/variant/e40qurb0/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "e24a5e25-cc9c-4470-b844-20ca4f685ce4",
+  "loadBefore": [
+    5.0341796875,
+    4.23193359375,
+    5.06982421875
+  ],
+  "loadAfter": [
+    4.330078125,
+    4.1259765625,
+    4.88818359375
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 144823,
+  "reportedCostUsd": 0.3842714,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 22,
+      "outputTokens": 7649,
+      "cacheReadInputTokens": 207842,
+      "cacheCreationInputTokens": 37927,
+      "webSearchRequests": 0,
+      "costUSD": 0.3842714,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 977,
+      "cacheCreationEphemeral5mInputTokens": 37927,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride hunt (copy this block unchanged) ---\nrough-ride hunt | 2m12s | run 20261112-175847-hunt-a54c | 2 confirmed, 0 dropped on re-run\ntarget: http://localhost:3792\n\nFindings (each reproduced twice from scratch)\n1. HIGH   Stats table merges plants that share a name, crediting one plant's harvests to the other\n   where: /stats (GET /api/stats/harvests)\n   expected: Each plant has its own row. Tomato · Sungold shows 450 g in Jul 2026 and 1.05 kg in total, which matches its 1.05 kg on the Best plants card.\n   saw: [\"Courgette\\t–\\t1.2 kg\\t–\\t–\\t1.2 kg\",\"Lettuce · Little Gem\\t200 g\\t–\\t–\\t150 g\\t350 g\",\"Tomato · Cherry RR\\t–\\t950 g\\t–\\t–\\t950 g\",\"Tomato · Sungold\\t–\\t–\\t600 g\\t–\\t600 g\"]\n   repro: .rough-ride/runs/20261112-175847-hunt-a54c/probes/same-name-plants.mjs (expectation \"ui-sungold-total-is-1050\")\n2. MEDIUM An unexpected stats response crashes the page and leaves 'Loading stats…' on screen\n   where: /stats\n   expected: If /api/stats/harvests returns a body without the expected fields, an error message appears and there is no uncaught exception.\n   saw: [\"Cannot read properties of undefined (reading 'length')\"]\n   repro: .rough-ride/runs/20261112-175847-hunt-a54c/probes/empty-object-crash.mjs (expectation \"no-uncaught-error-on-unexpected-body\")\n--- end of rough-ride hunt ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-a39aad8fd909e4906.jsonl",
+    "agent-a39aad8fd909e4906.meta.json"
+  ],
+  "usage": {
+    "input": 22,
+    "output": 7649,
+    "cacheRead": 207842,
+    "cacheWrite": 37927,
+    "requests": 11,
+    "toolCalls": {
+      "Bash": 10,
+      "Read": 1
+    }
+  },
+  "findingCount": 2,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:01:09.361Z"
+}

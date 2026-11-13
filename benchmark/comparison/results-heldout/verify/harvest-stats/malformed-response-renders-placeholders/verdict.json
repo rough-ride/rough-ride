@@ -1,0 +1,10 @@
+{
+  "feature": "harvest-stats",
+  "variant": "clean",
+  "key": "malformed-response-renders-placeholders",
+  "sentence": "On /stats, a stats response with null or missing fields renders as 'undefined/null harvests from – to –' with empty sections instead of an error state; triggered by mocking /api/stats/harvests with null fields.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced: signed in as the demo user, used Playwright page.route to make GET /api/stats/harvests return 200 with date_from/date_to/total_grams null, harvest_count missing, months [] and one plant with null name/totals, then clicked Stats in the nav. The main text read 'undefined harvests from – to – Best plants Weight by plant and month – total ... PLANT TOTAL – Total –', which matches the reports. This is not a real defect, though. The backend endpoint is declared with response_model=HarvestStatsOut (backend/routers/stats.py:40), and that Pydantic model makes date_from/date_to dates, total_grams/harvest_count ints and months/plants/top_plants lists, all required (backend/schemas.py:155-162). So the real API cannot send this payload; it only appears when the response is faked in the browser. No other page in the app checks response shapes either: useApiFetch is a plain useFetch wrapper and every page trusts the typed API. The request asked for nothing about handling malformed responses. The page does show its error state for real failures (statsError leads to AlertMessage), and nulls are shown as '–' instead of crashing. At most this is a hardening nicety.",
+  "severity": null,
+  "wallMs": 110168
+}

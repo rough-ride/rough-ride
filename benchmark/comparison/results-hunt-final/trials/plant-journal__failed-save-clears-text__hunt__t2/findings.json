@@ -1,0 +1,19 @@
+{
+  "findings": [
+    {
+      "title": "A failed 'Add entry' wipes the text the gardener typed",
+      "where": "/plants/:id, Journal > New entry form (POST /api/journal)",
+      "steps": "Probe add-fail-keeps-text, expectation failed-add-keeps-typed-text",
+      "expected": "When saving the new journal entry fails, the error shows and the typed entry text stays in the textarea so it can be retried",
+      "actual": "The error 'Injected 500' shows, but the textarea is emptied. addEntry() calls entryForm.reset() in its finally block, so the text is cleared on failure as well as on success, and the entry is lost",
+      "evidence": "{\"value\":\"\",\"hits\":1} | {\"value\":\"\",\"hits\":1}",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-192122-hunt-17ac",
+        "probe": "add-fail-keeps-text",
+        "state": "confirmed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+diff --git a/frontend/app/pages/plants/[id].vue b/frontend/app/pages/plants/[id].vue
+index 31a5413..a708aff 100644
+--- a/frontend/app/pages/plants/[id].vue
++++ b/frontend/app/pages/plants/[id].vue
+@@ -111,12 +111,12 @@ async function addEntry(value: JournalEntryInput): Promise<void> {
+   try {
+     await api('/journal', { method: 'POST', body: { ...value, plant_id: plantId } })
+     await refreshPlantAndJournal()
+-    entryForm.value?.reset()
+-    entryForm.value?.focus()
+   } catch (err) {
+     entryFormError.value = apiErrorMessage(err, 'Could not add the entry.')
+   } finally {
+     addingEntry.value = false
++    entryForm.value?.reset()
++    entryForm.value?.focus()
+   }
+ }
+ 

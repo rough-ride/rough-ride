@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "title": "Harvests on the \"To\" date are left out of the stats (range treated as end-exclusive)",
+      "where": "GET /api/stats/harvests and the /stats page",
+      "steps": "Signed in, request /api/stats/harvests?from=2026-09-30&to=2026-09-30 (or on /stats set From and To to 30 Sep 2026). A Lettuce harvest of 150 g exists on 2026-09-30. Also try from=2026-07-01&to=2026-07-20; a Courgette harvest of 1200 g exists on 2026-07-20.",
+      "expected": "The range includes both ends: the 30 Sep request shows Lettuce 150 g, and the 1–20 Jul request includes Courgette 1200 g (1650 g total).",
+      "actual": "The 30 Sep request returns no plants, months or harvests (the page says \"No harvests in this range\"). The 1–20 Jul request returns only Tomato 450 g. Both SQL queries use `harvested_on < date_to` (routers/stats.py, in the main query and in top_plants).",
+      "evidence": "{\"date_from\":\"2026-09-30\",\"date_to\":\"2026-09-30\",\"months\":[],\"plants\":[],\"total_grams\":0,\"harvest_count\":0,\"top_plants\":[]}",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "The dashboard's \"Top plant this year\" leaves out harvests from 31 December and no longer matches the year totals",
+      "where": "GET /api/dashboard/summary (dashboard Top plant card)",
+      "steps": "Log harvests on 31 December of the current year (possible on that day), then open the dashboard.",
+      "expected": "The top plant and its grams cover the whole year, the same range as harvest_grams_year (which uses BETWEEN).",
+      "actual": "The summary now calls top_plants(year_from, year_to), and that function excludes the end date. Harvests from 31 Dec count toward the year total but not toward the top plant, which can therefore be the wrong plant or show the wrong grams.",
+      "evidence": "Code: dashboard.py uses top_plants(conn, year_from, year_to, limit=1), and stats.py has `h.harvested_on < ?`. I could not reproduce it today because the API rejects harvests dated in the future.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats error state has no Retry button",
+      "where": "/stats page",
+      "steps": "Open /stats while the API is down or returns 5xx (or let a request fail).",
+      "expected": "The error message comes with a Retry action that reloads the stats without a page reload.",
+      "actual": "Only an AlertMessage with text is shown. There is no retry control. The only way to retry is to change a date field or reload the page.",
+      "evidence": "stats.vue: `<AlertMessage v-if=\"statsError\">` with no button and no call to refresh() anywhere on the page.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no 10 s timeout",
+      "where": "/stats page (useApiFetch /stats/harvests)",
+      "steps": "Make the API hang (slow network or stalled server), then open /stats or change a date.",
+      "expected": "After 10 seconds the request fails and the error state is shown.",
+      "actual": "useApiFetch/useApiClient set no timeout, so the page can say \"Loading stats…\" forever.",
+      "evidence": "composables: $fetch.create({...}) has no timeout option, and stats.vue passes only { query }.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "A cleared date field silently falls back to the default year bound",
+      "where": "/stats page",
+      "steps": "Clear the From (or To) date input.",
+      "expected": "The page either refuses the blank value with a reason, or makes clear which range is used.",
+      "actual": "The parameter is dropped and the server quietly uses 1 Jan or 31 Dec of the current year. The input stays blank and the \"This year\" reset button stays visible, while the data shown is for the default range. The only hint is the summary line.",
+      "evidence": "stats.vue builds the query only from non-empty values, and stats.py uses `date_from or year_start`.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

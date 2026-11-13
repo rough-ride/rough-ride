@@ -1,0 +1,42 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3792, API http://localhost:8792/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work/verify-plant-journal-journal-requests-no-timeout/scratch.
+
+The reported problem: Journal requests have no client timeout, so when the API hangs the add/save/delete buttons stay disabled on 'Saving…' or the list stays on 'Loading entries…' indefinitely instead of failing after 10 s.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "No request timeouts; a hung API leaves 'Saving…' and 'Loading entries…' indefinitely",
+  "where": "All journal requests (useApiClient/useApiFetch)",
+  "steps": "Make the API hang without responding, then add, edit or delete an entry, or search.",
+  "expected": "Requests fail after 10 seconds with a visible error and the buttons are re-enabled.",
+  "actual": "No timeout is configured on $fetch, so the buttons stay disabled and the page shows 'Saving…' or 'Loading entries…' until the browser gives up.",
+  "evidence": "No `timeout` option in useApiClient or in the journal calls."
+ },
+ {
+  "title": "Journal requests have no timeout, so 'Saving…' can spin forever",
+  "where": "Plant detail page journal form/edit/delete, Journal page (useApiClient / useApiFetch)",
+  "steps": "Make POST /api/journal hang (route that never answers for 14 s), then click Add entry.",
+  "expected": "The request fails after 10 s with a visible error and the button is enabled again",
+  "actual": "12 s after the click the button still said 'Saving…' and stayed disabled. It only recovered when the mocked request was aborted at 14 s. A real hang would never recover.",
+  "evidence": "The submit button text was 'Saving…' at 12 s. $fetch.create in composables/useApi.ts sets no timeout, and neither do the new journal calls."
+ },
+ {
+  "title": "Journal requests have no timeout: a hanging search spins forever and keeps showing stale results",
+  "where": "/journal search (and all journal fetches/mutations)",
+  "steps": "On /journal, make GET /api/journal hang, type 'Lettuce' in Search, wait 12+ seconds",
+  "expected": "Request fails after 10 s with an error and retry",
+  "actual": "'Loading entries…' stays indefinitely while the previous search's results (for 'Thinned') remain displayed under the new query. No timeout is configured in useApiFetch/useApiClient, so Add/Save buttons would also stay on 'Saving…' forever if the server hangs.",
+  "evidence": "After 12 s: 'Loading entries…' with the old 'Lettuce / Thinned the seedlings.' card still shown"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work/verify-plant-journal-journal-requests-no-timeout/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

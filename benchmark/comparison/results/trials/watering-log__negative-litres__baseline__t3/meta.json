@@ -1,0 +1,72 @@
+{
+  "id": "watering-log__negative-litres__baseline__t3",
+  "feature": "watering-log",
+  "bug": "negative-litres",
+  "arm": "baseline",
+  "trial": 3,
+  "lane": 1,
+  "ports": {
+    "web": 3791,
+    "api": 8791
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T11:50:22.049Z",
+  "materializeMs": 4677,
+  "repo": "$TMPDIR/rr-bench/work/watering-log__negative-litres__baseline__t3/variant/b0z0xg1z/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/db.py\n M backend/routers/beds.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/beds.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/waterings.py\n?? frontend/app/pages/waterings.vue\n",
+  "sessionId": "d4a4b8e7-5163-4c2a-997f-b4f982775bc5",
+  "loadBefore": [
+    5.42236328125,
+    11.3251953125,
+    17.615234375
+  ],
+  "loadAfter": [
+    4.783203125,
+    9.99267578125,
+    16.64892578125
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 65230,
+  "reportedCostUsd": 0.34315239999999997,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 14,
+      "outputTokens": 4986,
+      "cacheReadInputTokens": 191762,
+      "cacheCreationInputTokens": 25628,
+      "webSearchRequests": 0,
+      "costUSD": 0.34315239999999997,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 750,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 25628,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 7,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found 7 problems with the watering change. The worst is that the app saves negative amounts of water. The findings are written to `out/findings.json`. Four I reproduced against the running API; three come only from reading the code. I didn't use a browser, so none of the page behaviour was checked on screen.\n\n**Reproduced against the API:**\n1. **Negative litres are saved (high).** Posting `litres: -5` returns 201 and stores -5; -1e308 is also accepted, and `-Infinity` is saved and comes back as `null`. The server only sets a maximum of 10,000, with no minimum. The page's own check rejects exactly 0 and nothing else, even though its message says \"greater than zero\". Negative rows then show as \"-5 L\" and throw off the totals on the Waterings page.\n2. **Very large ids crash the server (medium).** An id like `99999999999999999999` gets a plain \"Internal Server Error\" (500) instead of a 4xx. This happens when creating, filtering or deleting waterings. A user can hit it from the page by opening `/waterings?bed=99999999999999999999`. Creating a plant with such a bed id also gives a 500, so the bug may predate this change.\n3. **Any old date is accepted (low).** A watering dated 1 Jan 0001 was saved.\n4. **Deleting an already-deleted watering shows an error (low).** The second delete gets a 404 and the page shows \"Watering not found.\" without refreshing the list. This happens if the user deletes from two tabs or retries after a timeout.\n\n**From reading the code only:**\n5. **Load errors offer no retry (medium).** The dashboard's \"Recent waterings\" section and the Waterings page show an error message but no Retry button, so the user has to reload.\n6. **Retries create duplicate waterings (medium).** \"Water now\" and \"Save watering\" have no protection against repeats, so clicking again after a slow or lost response adds a second row. Requests also have no 10-second timeout, so the button can stay on \"Watering…\" indefinitely while the server hangs.\n7. **The bed filter fails silently (low).** If loading the bed list fails, the Waterings page ignores the error and the filter just shows \"All beds\" with no explanation.\n\nI deleted the test waterings I created (ids 3–7), so the sample data is back as it was.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 14,
+    "output": 4986,
+    "cacheRead": 191762,
+    "cacheWrite": 25628,
+    "requests": 7,
+    "toolCalls": {
+      "Bash": 6
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 7,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |   4 +-\n backend/db.py                    |  14 ++++-\n backend/routers/beds.py          |   8 ++-\n backend/schemas.py               |  29 +++++++++\n frontend/app/assets/css/main.css |  24 ++++++-\n frontend/app/layouts/default.vue |   1 +\n frontend/app/pages/beds.vue      | 133 ++++++++++++++++++++++++++++++++++++++-\n frontend/app/pages/index.vue     |  44 ++++++++++++-\n frontend/app/types/api.ts        |  17 +++++\n frontend/app/utils/format.ts     |  26 ++++++++\n 10 files changed, 292 insertions(+), 8 deletions(-)\n",
+  "finishedAt": "2026-11-12T11:51:39.008Z"
+}

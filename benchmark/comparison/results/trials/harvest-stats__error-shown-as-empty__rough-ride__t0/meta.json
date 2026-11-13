@@ -1,0 +1,65 @@
+{
+  "id": "harvest-stats__error-shown-as-empty__rough-ride__t0",
+  "feature": "harvest-stats",
+  "bug": "error-shown-as-empty",
+  "arm": "rough-ride",
+  "trial": 0,
+  "lane": 2,
+  "ports": {
+    "web": 3792,
+    "api": 8792
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T08:36:21.165Z",
+  "materializeMs": 15009,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__error-shown-as-empty__rough-ride__t0/variant/9zxpoewm/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "b729e6f7-8893-4052-be11-aea86d66da1e",
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 694780,
+  "reportedCostUsd": 0.9676566000000001,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 38,
+      "outputTokens": 11089,
+      "cacheReadInputTokens": 602948,
+      "cacheCreationInputTokens": 125027,
+      "webSearchRequests": 0,
+      "costUSD": 0.9676566000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2547,
+      "cacheCreationEphemeral5mInputTokens": 125027,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 0,
+  "permissionDenials": 2,
+  "isError": false,
+  "resultText": "```text\n--- rough-ride summary (copy this block unchanged) ---\nrough-ride attack | 7m16s | run 20261112-083651-plan-vjjt | early preview: accuracy not measured yet, treat findings as leads to check\ndiff: main efd2157..working tree | 13 files -> 2 flows, 2 endpoints, 4 forms\ntarget: http://localhost:3792 (proven Nuxt dev server) | API http://localhost:8792 | Chrome 157.0.8103.52\nProtected files compared with local main (no remote). Commits on main count as reviewed, so rough-ride can't tell your commits there from an agent's.\nRan slower than planned: 66 attacks and 0 confirmation runs did not start before the standard budget ran out.\n+3 more notes (report.txt)\nProtected files: 1 change since main, used as written (report.txt)\nRejected plan entry: attacks[0] (already selected)\nRejected plan entry: attacks[1] (already selected)\n+8 more flow lines (report.txt)\nHIGH  link \"Stats\" stays busy after GET /api/stats/harvests fails with 500 | 6 attacks | repro r01\n      /stats | 500!, empty-200!, 400!, reset!, 401!, 429! on GET /api/stats/harvests #1 | fails: settles, retry-recovers | page showed a record from harvest-stats/GET /api/plants/{plant_id} #1/500!\nHIGH  button \"Add bed\" stays busy after POST /api/beds fails with 500 | 5 attacks | repro r03\n      /beds | 500!, reset! on POST /api/beds #1; double-submit on POST /api/beds #1; 2 bad ... | fails: settles, retry-recovers | page showed a record from harvest-stats/POST /api/plants #1/500!\nHIGH  button \"Save plant\" stays busy after POST /api/plants fails with 500 | 3 attacks | repro r04\n      /plants/new | 500!, reset! on POST /api/plants #1; double-submit on POST /api/plants #1 | fails: settles | page showed a record from harvest-stats/POST /api/plants #1/500!\nHIGH  goto /beds stays busy after a signed-out reload of /beds | repro r23\n      /beds | signed-out-reload on page /beds #1 | fails: settles | page showed a record from harvest-stats/GET /api/plants/{plant_id} #1/500!\nHIGH  link \"Stats\" stays busy after a reload of /stats | repro r22\n      /stats | refresh on page /stats #1 | fails: settles | page showed a record from harvest-stats/GET /api/plants/{plant_id} #1/500!\nNew regression tests: .rough-ride/tests/harvest-stats-500-9f0f12.yaml, .rough-ride/tests/harvest-stats-500-d44b2e.yaml, .rough-ride/tests/harvest-stats-500-de8154.yaml, .rough-ride/tests/harvest-stats-signed-out-reload-84f2fb.yaml, .rough-ride/tests/harvest-stats-refresh-a95629.yaml. Commit them with your fix.\nNot shown: 5 more finding groups (report.txt)\nAttacks: 8 of 10 changed files and 2 of 4 changed endpoints attacked | 25 attacks: 25 failed | 16 skipped | 78 over the standard budget\nNot attacked: frontend/app/pages/index.vue (over the standard budget (time))\nNot attacked: backend/routers/dashboard.py summary -> GET /api/dashboard/summary (no attack loaded it)\nNot attacked: backend/schemas.py SummaryOut -> GET /api/dashboard/summary (no attack loaded it)\n+1 more not attacked (report.txt)\nRequests your servers send are never attacked in v1, including data a page loads while it renders on the server. A page's data load is attacked only when a flow opens the page by in-app navigation and the browser sends the request.\nResilience contract: not in the root CLAUDE.md, .claude/CLAUDE.md, AGENTS.md or .claude/AGENTS.md. Pasted into the root CLAUDE.md, it tells coding agents which failures to design for; it changes nothing rough-ride attacks or judges. Text: https://github.com/rough-ride/rough-ride/blob/v0.1.4/docs/resilience-contract.md#the-text (also at ~/workspace/opensource/rough-ride/packages/rough-ride/templates/resilience-contract.md). The user decides; agents leave instruction files alone.\nFix, then run: /rough-ride:regress harvest-stats-500-9f0f12 harvest-stats-500-d44b2e harvest-stats-500-de8154 harvest-stats-signed-out-reload-84f2fb harvest-stats-refresh-a95629\nInvestigate (keeps running; start it in the background): node \"~/workspace/opensource/rough-ride/packages/rough-ride/dist/cli.mjs\" repro 20261112-083651-plan-vjjt/r01 --keep-open --plugin-data \"~/.claude/plugins/data/rough-ride-inline\" (other findings: r03, r04, r23, r22)\nFull report: $TMPDIR/rr-bench/work/harvest-stats__error-shown-as-empty__rough-ride__t0/variant/9zxpoewm/garden-log/.rough-ride/runs/20261112-083651-plan-vjjt/report.txt\nRunner: rough-ride 0.1.4 from plugin rough-ride | Node 26.13.0 | Playwright 1.64.1 | Claude Code 2.1.322 | plugin data: ~/.claude/plugins/data/rough-ride-inline (from --plugin-data, not verified)\n--- end of rough-ride summary ---\n```",
+  "transcripts": [
+    "main.jsonl",
+    "agent-ac15e2b028a7f2b58.jsonl",
+    "agent-ac15e2b028a7f2b58.meta.json"
+  ],
+  "usage": {
+    "input": 38,
+    "output": 11089,
+    "cacheRead": 602948,
+    "cacheWrite": 125027,
+    "requests": 19,
+    "toolCalls": {
+      "Bash": 9,
+      "Read": 17
+    }
+  },
+  "findingCount": 10,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T08:48:19.599Z",
+  "findingsSource": "report.txt, every state"
+}

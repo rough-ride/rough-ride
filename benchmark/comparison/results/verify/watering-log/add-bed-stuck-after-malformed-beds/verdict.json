@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "clean",
+  "key": "add-bed-stuck-after-malformed-beds",
+  "sentence": "On /beds, when GET /api/beds returns malformed JSON, a render error is thrown and the 'Add bed' button stays disabled on 'Adding…'.",
+  "verdict": "confirmed",
+  "evidence": "Signed in as the demo user (via POST /api/auth/login in the Playwright context), opened /beds and let it load normally. Then I routed GET /api/beds so it returns 200 application/json with the truncated body '{\"oops\": [1,2,'. I typed a bed name and clicked 'Add bed'. The POST went through, and the refresh() GET (1 intercepted request) got the malformed body. ofetch could not parse it, so beds.value became a raw string. The totalPlants computed (beds.value?.reduce) then threw 'beds.value?.reduce is not a function' as an uncaught pageerror, with console warnings '[Vue warn]: Unhandled error during execution of render function' and '... of component update'. The component stopped re-rendering, so after 10 s the submit button still showed 'Adding…' and was disabled: adding=false was set in the finally block but never got rendered. The page stays frozen until reload and no error message is shown. Note: the code that throws (totalPlants, and the template's beds.length / v-for with no shape check) is not new in this diff. The beds page as changed still hits the problem, though, and nothing guards against a non-array response.",
+  "severity": "low",
+  "wallMs": 135008
+}

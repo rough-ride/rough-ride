@@ -1,0 +1,22 @@
+diff --git a/backend/routers/stats.py b/backend/routers/stats.py
+index bd5a25b..685c722 100644
+--- a/backend/routers/stats.py
++++ b/backend/routers/stats.py
+@@ -27,7 +27,7 @@ def top_plants(
+         SELECT p.id AS plant_id, p.name AS plant_name, p.variety,
+                SUM(h.weight_grams) AS total_grams
+         FROM harvests h JOIN plants p ON p.id = h.plant_id
+-        WHERE h.harvested_on BETWEEN ? AND ?
++        WHERE h.harvested_on >= ? AND h.harvested_on < ?
+         GROUP BY p.id
+         ORDER BY total_grams DESC, p.name, p.id
+         LIMIT ?
+@@ -58,7 +58,7 @@ def harvest_stats(
+                substr(h.harvested_on, 1, 7) AS month,
+                SUM(h.weight_grams) AS grams, COUNT(*) AS harvests
+         FROM harvests h JOIN plants p ON p.id = h.plant_id
+-        WHERE h.harvested_on BETWEEN ? AND ?
++        WHERE h.harvested_on >= ? AND h.harvested_on < ?
+         GROUP BY p.id, month
+         ORDER BY p.name, p.id, month
+         """,

@@ -1,0 +1,26 @@
+Testers reported a problem with a change to this garden-log web app. Your job is to check, independently and sceptically, whether the problem is real.
+
+The change (uncommitted, see `git diff main` and `git status`) implements this request:
+Add a journal to each plant. On the plant detail page, the gardener can write dated journal entries (a date and a text of up to 500 characters), see them newest first, edit an entry in place and delete one. Add a "Journal" page that shows the latest entries across all plants with a search box, and show the number of journal entries next to each plant in the plants list.
+
+The app is running: web http://localhost:3797, API http://localhost:8797/api. Sign in with DEMO_EMAIL / DEMO_PASSWORD from the environment. You have a Playwright browser (playwright MCP tools; `browser_route` can make requests fail, hang or return odd data). You may read the code. Do not edit files in this repository; scratch files go in $TMPDIR/rr-bench/work-verify-hf/verify-plant-journal-add-entry-error-not-cleared/scratch.
+
+The reported problem: On the plant detail page, the error from a failed 'Add entry' save stays visible after the form is cleared and another journal action (such as editing an entry) succeeds.
+
+Sample reports (they may be wrong, exaggerated or right):
+[
+ {
+  "title": "Failed 'Add entry' error stays visible after later successful journal actions",
+  "where": "/plants/:id journal section",
+  "steps": "Probe faults2, expectation stale-add-error-cleared-after-successful-edit",
+  "expected": "The add-entry error clears when the user does something else that succeeds, or at least when the form is cleared",
+  "actual": "'Injected 500' stays above the new-entry form after the text is cleared and another entry is edited and saved",
+  "evidence": "[\"Injected 500\"] | [\"Injected 500\"]"
+ }
+]
+
+Decide one verdict:
+- "confirmed": you made it happen in the running app (or, for a server-only problem, through the API), and it is a defect a user or the request would not accept.
+- "not-a-defect": it happens, but it is how the app is meant to work, what the request asks for, or a deliberate design choice (for example a control that is disabled on purpose with a reason shown).
+- "not-reproduced": you could not make it happen by following the reports and reasonable variations.
+Be strict: "confirmed" needs something you saw. Write JSON to $TMPDIR/rr-bench/work-verify-hf/verify-plant-journal-add-entry-error-not-cleared/out/verdict.json: {"verdict": "...", "evidence": "what you did and saw", "severity": "high" | "medium" | "low" | null}.

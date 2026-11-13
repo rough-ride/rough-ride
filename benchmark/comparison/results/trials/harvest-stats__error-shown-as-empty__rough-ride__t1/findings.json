@@ -1,0 +1,124 @@
+{
+  "findings": [
+    {
+      "title": "link \"Stats\" stays busy after a signed-out reload of /stats",
+      "where": "/stats",
+      "steps": "In the browser: /stats | signed-out-reload on page /stats #1 | fails: settles",
+      "expected": "",
+      "actual": "settles: reload: a request is still in flight after 10 s",
+      "evidence": "settles: reload: a request is still in flight after 10 s",
+      "status": "observed",
+      "severity": "high",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "state": "not-confirmed",
+        "repro": "r09"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/stats/harvests is rate limited (429)",
+      "where": "/stats",
+      "steps": "In the browser: /stats | 500!, 400!, reset!, 429!, malformed-json! on GET /api/stats/harvests #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | no-uncaught-error: overlay: dev error overlay | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function",
+      "evidence": "retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | no-uncaught-error: overlay: dev error overlay | retry-recovers: step 3 (expect text \"harvests from\"): not visible after 10 s | no-uncaught-error: console: [Vue warn]: Unhandled error during execution of render function",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "state": "shown",
+        "repro": "r06"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/dashboard/summary fails with 500",
+      "where": "/",
+      "steps": "In the browser: / | 500!, 400!, reset!, 429! on GET /api/dashboard/summary #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "state": "shown",
+        "repro": "r15"
+      }
+    },
+    {
+      "title": "\"undefined\" shown on / after GET /api/dashboard/summary returns malformed JSON",
+      "where": "/",
+      "steps": "In the browser: / | malformed-json! on GET /api/dashboard/summary #1 | fails: no-broken-text",
+      "expected": "",
+      "actual": "no-broken-text: \"undefined\" in a new line",
+      "evidence": "no-broken-text: \"undefined\" in a new line",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "state": "shown",
+        "repro": "r32"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/auth/me fails with 500",
+      "where": "/login",
+      "steps": "In the browser: /login | 500!, 400!, reset!, 429! on GET /api/auth/me #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "state": "shown",
+        "repro": "r17"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after GET /api/tasks/upcoming fails with 500",
+      "where": "/",
+      "steps": "In the browser: / | 500!, 400!, reset!, 429! on GET /api/tasks/upcoming #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "evidence": "retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload | retry-recovers: no retry path without a reload",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "state": "shown",
+        "repro": "r18"
+      }
+    },
+    {
+      "title": "No way to retry without a reload after POST /api/auth/login fails with 500",
+      "where": "/login",
+      "steps": "In the browser: /login | 500!, reset!, 400!, 429! on POST /api/auth/login #1 | fails: retry-recovers",
+      "expected": "",
+      "actual": "retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s",
+      "evidence": "retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s | retry-recovers: step 5 (expect heading \"Dashboard\"): not visible after 10 s",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "state": "capped",
+        "repro": "r16"
+      }
+    },
+    {
+      "title": "\"NaN\" shown on / after GET /api/tasks/upcoming returns malformed JSON",
+      "where": "/",
+      "steps": "In the browser: / | malformed-json! on GET /api/tasks/upcoming #1 | fails: no-broken-text",
+      "expected": "",
+      "actual": "no-broken-text: \"NaN\" in a new line",
+      "evidence": "no-broken-text: \"NaN\" in a new line",
+      "status": "observed",
+      "severity": "med",
+      "tool": {
+        "run": "20261112-114151-plan-pgnm",
+        "state": "capped",
+        "repro": "r37"
+      }
+    }
+  ]
+}

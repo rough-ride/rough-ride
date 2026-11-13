@@ -1,0 +1,10 @@
+{
+  "feature": "plant-journal",
+  "variant": "clean",
+  "key": "control-chars-accepted-in-body",
+  "sentence": "POST /api/journal accepts and stores control characters such as an embedded NUL in the entry text, which are later rendered in the feed.",
+  "verdict": "not-a-defect",
+  "evidence": "Reproduced the behaviour: after logging in as demo, POST /api/journal {plant_id:2, entry_on:'2026-11-01', body:'a\\u0000b\\u0007c\\u001bd'} returned 201, and GET /api/journal returned the body unchanged. The code agrees: JournalEntryIn.body is only Field(min_length=1, max_length=500) with str_strip_whitespace, and there is no control-character check. But this matches how the whole app already handles text, and it is not something the journal change introduced or that the request asks for. POST /api/plants with name 'x\\u0000y' is also accepted (201) and stored as-is, and on main the bed/plant schemas (name/notes) have no control-character filtering either. The request only says 'a text of up to 500 characters', and that limit is enforced (blank text gets a 422). A gardener cannot normally type NUL into the textarea. The text is shown through Vue text interpolation, which escapes it, so there is no injection risk. Test entry 4 and test plant 4 were deleted afterwards.",
+  "severity": null,
+  "wallMs": 51279
+}

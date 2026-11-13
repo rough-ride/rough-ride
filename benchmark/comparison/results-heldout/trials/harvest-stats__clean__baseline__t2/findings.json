@@ -1,0 +1,44 @@
+{
+  "findings": [
+    {
+      "title": "Stats error state has no retry; recovering requires changing dates or reloading",
+      "where": "/stats (frontend/app/pages/stats.vue)",
+      "steps": "Open /stats while the API is down or returns 5xx (or a request fails). Bring the API back.",
+      "expected": "Error message with a Retry button that refetches /api/stats/harvests without a reload.",
+      "actual": "Only an AlertMessage with the error text is shown; no retry control. The `refresh` function from useApiFetch isn't destructured or used anywhere on the page.",
+      "evidence": "stats.vue destructures only { data, error, status } and renders <AlertMessage v-if=\"statsError\"> with no button.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Clearing a date field silently uses the default and can produce a confusing 'From must be on or before To' error",
+      "where": "/stats From/To fields; GET /api/stats/harvests",
+      "steps": "On /stats set To = 2025-06-01, then clear the From field (or set From = 2027-02-01 and clear To).",
+      "expected": "A blank field gets a visible reason (e.g. 'Enter a From date'), or means an open range; the request doesn't fail over a date the user never entered.",
+      "actual": "The blank param is left out, the backend swaps in the current year's 1 Jan / 31 Dec, and the page shows 'The From date must be on or before the To date.' while From looks empty. If no error comes back, the table covers a range other than the one shown in the inputs.",
+      "evidence": "curl /api/stats/harvests?to=2025-06-01 -> {\"detail\":\"The From date must be on or before the To date.\"}; ?from=2027-02-01 -> same. In stats.vue the query computed drops empty values.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats request has no timeout; 'Loading stats…' can stay forever",
+      "where": "/stats (useApiFetch)",
+      "steps": "Open /stats while the API accepts connections but doesn't answer (hung server).",
+      "expected": "Request fails after 10 s and shows the error state with retry.",
+      "actual": "useApiFetch / $fetch.create set no timeout, so the request and the 'Loading stats…' text can stay up indefinitely.",
+      "evidence": "composables/useApi.ts has no timeout option; stats.vue passes none.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Monthly table leaves out months with no harvests",
+      "where": "/stats table; GET /api/stats/harvests",
+      "steps": "Open /stats with the default range (current year).",
+      "expected": "Weight per month for the chosen range, with months that have no harvests shown as – or 0.",
+      "actual": "Only months that have harvests become columns (Jun, Jul, Aug, Sep 2026), so gaps in the range are hidden and columns from different ranges don't line up.",
+      "evidence": "API response months: 2026-06, 2026-07, 2026-08, 2026-09 only, for range 2026-01-01..2026-12-31.",
+      "status": "observed",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "id": "harvest-stats__hx2__baseline__t3",
+  "feature": "harvest-stats",
+  "bug": "hx2",
+  "arm": "baseline",
+  "trial": 3,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T16:59:16.225Z",
+  "materializeMs": 4810,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__hx2__baseline__t3/variant/w82odfst/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "0ba9247c-057e-40e5-af2e-31b8a1098df4",
+  "loadBefore": [
+    4.94189453125,
+    4.28515625,
+    5.04833984375
+  ],
+  "loadAfter": [
+    3.03125,
+    3.8798828125,
+    4.8310546875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 72809,
+  "reportedCostUsd": 0.3825758,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 18,
+      "outputTokens": 5842,
+      "cacheReadInputTokens": 254519,
+      "cacheCreationInputTokens": 26845,
+      "webSearchRequests": 0,
+      "costUSD": 0.3825758,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1101,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 26845,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 9,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found five problems. The worst one makes the stats table give wrong numbers when two plants share a name. The findings are saved to `out/findings.json`.\n\n1. **High (observed): plants with the same name are merged into one row.** The new stats query groups harvests by plant name instead of by plant. I added a second \"Tomato\" (variety Cherry RR) and logged 2000 g for it. The table then showed a single row, \"Tomato · Sungold\", with 3050 g, linking to the original plant. \"Best plants\" counts each plant separately, so it listed Cherry RR first with 2000 g and Sungold third with 1050 g. Neither of those figures appears in the table. I deleted the test plant and harvest afterwards.\n2. **Medium (observed): the error state has no retry.** When loading fails (for example From set after To), the page shows the message but no Retry button. The only way to recover is to change a date or reload the page.\n3. **Medium (suspected): no 10-second timeout.** Neither the stats page nor the shared fetch helper sets a timeout. If the API hangs, \"Loading stats…\" can stay on screen indefinitely. This applies to the dashboard summary too.\n4. **Low (observed): months with no harvests have no column.** Over a 2000–2030 range, the columns jump from Aug 2025 straight to Jun 2026, so the gap is invisible.\n5. **Low (suspected): invalid dates show a raw validation message.** A five-digit year (e.g. `20261-01-01`) gets a 422 that the page turns into \"Query.from: Input should be a valid date or datetime, invalid date separator…\" instead of a plain message.\n\nThe date checks on the API held up when I sent them directly: bad dates, an empty \"to\", and From after To all return 422, and extreme years like 0001 and 9999 return 200. Without a browser, I couldn't check the 375 px layout, slow-response ordering or session expiry on the page.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 18,
+    "output": 5842,
+    "cacheRead": 254519,
+    "cacheWrite": 26845,
+    "requests": 9,
+    "toolCalls": {
+      "Bash": 8
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 5,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T17:00:41.278Z"
+}

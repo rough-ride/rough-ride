@@ -1,0 +1,74 @@
+{
+  "id": "harvest-stats__error-shown-as-empty__playwright__t2",
+  "feature": "harvest-stats",
+  "bug": "error-shown-as-empty",
+  "arm": "playwright",
+  "trial": 2,
+  "lane": 0,
+  "ports": {
+    "web": 3790,
+    "api": 8790
+  },
+  "model": "claude-opus-5-5",
+  "startedAt": "2026-11-12T12:06:58.028Z",
+  "materializeMs": 5451,
+  "repo": "$TMPDIR/rr-bench/work/harvest-stats__error-shown-as-empty__playwright__t2/variant/8vhadf3c/garden-log",
+  "diffBefore": " M backend/app.py\n M backend/routers/dashboard.py\n M backend/schemas.py\n M frontend/app/assets/css/main.css\n M frontend/app/layouts/default.vue\n M frontend/app/pages/index.vue\n M frontend/app/types/api.ts\n M frontend/app/utils/format.ts\n?? .rough-ride/specs/\n?? backend/routers/stats.py\n?? frontend/app/pages/stats.vue\n",
+  "sessionId": "f1a33931-d0d7-4dc8-b4f6-5e9f9fb49c76",
+  "loadBefore": [
+    9.42138671875,
+    13.0400390625,
+    14.482421875
+  ],
+  "loadAfter": [
+    3.32958984375,
+    9.1318359375,
+    12.638671875
+  ],
+  "claudeExit": 0,
+  "killedAtLimit": false,
+  "wallMs": 157683,
+  "reportedCostUsd": 0.413393,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 22,
+      "outputTokens": 5762,
+      "cacheReadInputTokens": 297925,
+      "cacheCreationInputTokens": 29810,
+      "webSearchRequests": 0,
+      "costUSD": 0.413393,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 542,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 29810,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "numTurns": 10,
+  "permissionDenials": 0,
+  "isError": false,
+  "resultText": "I found six problems with the new Stats page and saw each one happen in the running app. The main one: whenever the stats request fails, the page says there are no harvests instead of showing an error. The findings are saved to `out/findings.json`.\n\n1. **High: a failed request looks like an empty result.** When I made the stats request return a server error, the page said \"No harvests in this range\" with no error message and no retry. The page never checks whether the request failed, so every failure ends up in the empty state.\n2. **Medium: a reversed date range looks empty too.** If you type a From date after the To date, the date pickers don't stop you. The server rejects it with a clear message (\"The From date must be on or before the To date\"), but the page just says \"No harvests in this range\".\n3. **Medium: no timeout, and old results stay on screen.** With the request hanging, the page still said \"Loading stats…\" after 13 seconds. Underneath it, the table for the previous range (1 Jan to 31 Dec 2026) was still showing while the From field said 1 Apr.\n4. **Medium: no way to retry.** Since there's no error state, there's no Retry button. The only way to recover is to change a date or reload the page.\n5. **Low: impossible dates in the link.** Opening `/stats?from=2026-02-30` sends the date as-is, because the page only checks the format, not whether the date exists. The server rejects it and the page again says \"No harvests in this range\".\n6. **Low: \"null\" shows up as text.** When I faked a response with a missing harvest count, the line read \"null harvests from – to –\". The real server always sends numbers, so a user would only hit this if the server misbehaved.\n\nWhat worked:\n- **Expired session:** it took me off the page rather than blanking it.\n- **Small screens:** the page fits a 375 px screen without sideways scrolling.\n- **Odd date ranges:** the server answers bad dates with a 4xx error and handles extreme ranges (year 0001 to 9999) correctly.",
+  "transcripts": [
+    "main.jsonl"
+  ],
+  "usage": {
+    "input": 22,
+    "output": 5762,
+    "cacheRead": 297925,
+    "cacheWrite": 29810,
+    "requests": 10,
+    "toolCalls": {
+      "Bash": 5,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_run_code_unsafe": 3
+    }
+  },
+  "findingsFile": "ok",
+  "findingCount": 6,
+  "sourceChanged": false,
+  "sourceDiff": " backend/app.py                   |  4 ++--\n backend/routers/dashboard.py     | 19 ++++++++-----------\n backend/schemas.py               | 28 ++++++++++++++++++++++++++++\n frontend/app/assets/css/main.css | 32 ++++++++++++++++++++++++++++++++\n frontend/app/layouts/default.vue |  1 +\n frontend/app/pages/index.vue     |  8 +++++++-\n frontend/app/types/api.ts        | 30 ++++++++++++++++++++++++++++++\n frontend/app/utils/format.ts     | 12 ++++++++++++\n 8 files changed, 120 insertions(+), 14 deletions(-)\n",
+  "finishedAt": "2026-11-12T12:09:50.329Z"
+}

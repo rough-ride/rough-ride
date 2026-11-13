@@ -1,0 +1,10 @@
+{
+  "feature": "watering-log",
+  "variant": "negative-litres",
+  "key": "huge-litres-breaks-layout",
+  "sentence": "A stored extreme litres value such as -1e308 renders as a 300+ digit amount on /waterings and the dashboard, forcing horizontal scrolling at 375 px.",
+  "verdict": "confirmed",
+  "evidence": "WateringIn.litres has only le=10_000 and no lower bound (backend/schemas.py), so POST /api/waterings {bed_id:1, litres:-1e308} returned 201 with litres -1e+308. formatLitres renders it via toLocaleString with no compacting. At a 375x800 viewport in the signed-in app: dashboard Recent waterings Amount cell is 414 chars ('-100,000,000,000,...'), documentElement scrollWidth=3380 vs clientWidth=375; /waterings Amount cell 414 chars, scrollWidth=3466 vs clientWidth=375 — forced horizontal scrolling. Negative amounts are not a sensible watering amount and the API accepts them. Test record deleted afterwards.",
+  "severity": "low",
+  "wallMs": 75277
+}

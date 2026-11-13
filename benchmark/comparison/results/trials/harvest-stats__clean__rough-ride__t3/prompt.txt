@@ -1,0 +1,1 @@
+/rough-ride:standard

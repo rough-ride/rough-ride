@@ -1,0 +1,74 @@
+{
+  "findings": [
+    {
+      "title": "Stats error state has no retry; the same range can't be reloaded after a failure",
+      "where": "/stats (frontend/app/pages/stats.vue)",
+      "steps": "Open /stats while the API is down or returns 5xx (or open /stats?from=2026-05-01&to=2026-01-01 to see the error branch). Bring the server back.",
+      "expected": "Error message with a Retry button that refetches the current range without a page reload.",
+      "actual": "Only an AlertMessage is shown. There is no retry control, and loadStats only runs when the date query changes, so the user has to edit a date or reload the page.",
+      "evidence": "SSR HTML for the reversed range renders 'The From date must be on or before the To date.' with no button. The template has no refresh/retry call.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Late stats responses overwrite newer ones (no stale-request guard)",
+      "where": "/stats date fields",
+      "steps": "Change From or To quickly, e.g. type a year in a date input (Chrome emits 0002-, 0020-, 0202-, 2025- values one after another), or change the range twice while the first request is slow.",
+      "expected": "Only the response for the latest range is shown.",
+      "actual": "watch(query, loadStats) starts a request on every change and assigns stats.value whenever each one resolves, so an older, slower response can replace the newer one. The fields then show one range and the table shows another.",
+      "evidence": "loadStats has no request token or AbortController. Each call sets stats.value/status without checking that it is still the latest.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Stats requests have no timeout; page can show 'Loading stats…' forever",
+      "where": "/stats, /api/stats/harvests",
+      "steps": "Make the API hang (accept the connection but never respond), then open /stats or change a date.",
+      "expected": "The request fails after 10 s and an error with a retry is shown.",
+      "actual": "useApiClient/useApiFetch set no timeout, so status stays 'pending' and 'Loading stats…' never goes away.",
+      "evidence": "$fetch.create in composables/useApi.ts has no timeout option. stats.vue passes none either.",
+      "status": "suspected",
+      "severity": "medium"
+    },
+    {
+      "title": "Months with no harvests are left out of the per-month table",
+      "where": "/stats table, GET /api/stats/harvests",
+      "steps": "Open /stats?from=2025-01-01&to=2026-12-31",
+      "expected": "One column per month in the chosen range (zero months shown as –), as in 'per month for a chosen date range'.",
+      "actual": "Only months that have harvests appear. The columns jump from Aug 2025 straight to Jun 2026, and Jan–Jul 2025 and Sep 2025–May 2026 are missing, so a gap looks like adjacent months.",
+      "evidence": "Rendered header: 'Plant Aug 2025 Jun 2026 Jul 2026 Aug 2026 Sept 2026 Total'. The API builds months from sorted({row['month'] for row in rows}).",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Error state shows an outdated summary line for the previous range",
+      "where": "/stats",
+      "steps": "Load a valid range, then change the dates so the next request fails (server down, or To before From by typing).",
+      "expected": "Only the error is shown, or the summary is clearly marked as stale.",
+      "actual": "The results-count line still reads e.g. '5 harvests from 1 Jan 2026 to 31 Dec 2026' (from the old stats.value) above the error alert, because rangeText only checks stats, not the error.",
+      "evidence": "Template: <span v-else-if=\"stats\">{{ rangeText }}</span> runs regardless of statsError. loadStats never clears stats on error.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Cleared date field shows blank but results silently use the year default",
+      "where": "/stats From/To inputs",
+      "steps": "Clear the From date input.",
+      "expected": "Either refuse a blank value with a visible reason or show which date is being used in the field.",
+      "actual": "The field stays empty, the request omits 'from', and the server falls back to 1 Jan of this year. The input then disagrees with the data, which is only explained by the small summary line.",
+      "evidence": "The query computed drops empty values, and harvest_stats defaults date_from to year_start.",
+      "status": "suspected",
+      "severity": "low"
+    },
+    {
+      "title": "Date fields don't follow URL changes (Stats nav link / back) while on the page",
+      "where": "/stats",
+      "steps": "On /stats pick a non-default range (URL becomes /stats?from=...). Click 'Stats' in the main navigation.",
+      "expected": "The page resets to the current year, matching the URL /stats.",
+      "actual": "dateFrom/dateTo are read from route.query only once at setup. The component is reused, so the URL changes to /stats but the fields and table keep the old range.",
+      "evidence": "There is no watch on route.query in stats.vue. The refs are initialised once with queryDate(route.query.from, ...).",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "findings": [
+    {
+      "title": "A failed delete hides the journal entry as if it was deleted",
+      "where": "/plants/:id Journal section (removeEntry)",
+      "steps": "Open a plant with journal entries. Make DELETE /api/journal/:id fail (500). Click Delete on an entry and confirm.",
+      "expected": "The entry stays in the list next to the error, because it was not deleted.",
+      "actual": "The entry is removed from the list straight away and is not put back when the request fails. The page shows 'Could not delete the entry.' and lists 2 entries while the badge still says '3 entries'. The entry comes back only after a reload.",
+      "evidence": "After the forced 500, the section text showed 'Could not delete the entry.' and the 2 Jul entry was missing; a reload showed it was still on the server.",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Add/save/delete journal requests have no timeout; button stays on 'Saving…' forever",
+      "where": "/plants/:id New entry form, edit form, delete (useApiClient)",
+      "steps": "Make POST /api/journal hang. Type an entry and click Add entry. Wait more than 10 s.",
+      "expected": "The request times out after 10 s and shows an error, and the button can be used again.",
+      "actual": "The button still said 'Saving…' and was disabled after 13 s, with no error. Nothing stops a retry after a reload from creating a duplicate entry (no idempotency).",
+      "evidence": "Form text after 13 s: 'Date Entry 491 characters left Saving…'. The held request later went through and created the entry ('Hang test').",
+      "status": "observed",
+      "severity": "high"
+    },
+    {
+      "title": "Entries over 250 emoji (allowed by the API) cannot be edited, and the counter goes negative",
+      "where": "JournalEntryForm (edit in place), POST/PUT /api/journal",
+      "steps": "Create an entry of 300 🌱 (the server accepts it because it counts code points). On the plant page click Edit, then Save entry.",
+      "expected": "The client and server count characters the same way, so a saved entry can be edited and saved again.",
+      "actual": "The form counts UTF-16 units (600) and shows '-100 characters left' and 'Keep the entry to 500 characters.', so the entry cannot be saved. The textarea maxlength also stops new entries at 250 emoji, though the server allows 500.",
+      "evidence": "textarea value.length=600; the form showed 'Keep the entry to 500 characters.' and '-100 characters left'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal load errors have no retry button",
+      "where": "/journal and the /plants/:id Journal section",
+      "steps": "Make GET /api/journal return 502/500. Open a plant from the plants list, or open /journal and search.",
+      "expected": "The error state has a Retry button that loads the data again once the server is back.",
+      "actual": "Only 'Could not load the journal.' is shown. The plant page has no retry and no way to fetch the list except a reload. The journal page offers only 'Clear search'.",
+      "evidence": "Buttons in the journal section: only 'Add entry'. Buttons on the journal page: only 'Clear search'.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "A long plant name scrolls the Journal page sideways at 375 px",
+      "where": "/journal",
+      "steps": "Create a plant with a long single-word name (e.g. 76 chars) and a journal entry. Open /journal at 375 px width.",
+      "expected": "No sideways scrolling; the name wraps.",
+      "actual": "document scrollWidth is 694 px. The .journal-feed__plant link has no overflow-wrap and pushes the whole card wider. With that plant deleted, scrollWidth is back to 375.",
+      "evidence": "scrollWidth 694 vs clientWidth 375; overflowing elements were all inside the feed cards, starting with A.journal-feed__plant.",
+      "status": "observed",
+      "severity": "medium"
+    },
+    {
+      "title": "Journal endpoints return 500 for out-of-range ids",
+      "where": "GET /api/journal?plant_id=, PUT/DELETE /api/journal/{id}, POST /api/journal plant_id",
+      "steps": "curl GET /api/journal?plant_id=99999999999999999999, PUT /api/journal/99999999999999999999, DELETE the same, POST with plant_id 99999999999999999999.",
+      "expected": "4xx (422 or 404).",
+      "actual": "500 Internal Server Error (SQLite integer overflow).",
+      "evidence": "Every one of these calls returned 'Internal Server Error' with status 500.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Search longer than 80 characters gives a raw validation message instead of results",
+      "where": "/journal search box",
+      "steps": "Type or paste 81+ characters in Search.",
+      "expected": "The input is limited to 80 characters, or the page shows a friendly reason.",
+      "actual": "The list is replaced with 'Query.q: String should have at most 80 characters'. The input has no maxlength.",
+      "evidence": "The page text showed 'Query.q: String should have at most 80 characters'.",
+      "status": "observed",
+      "severity": "low"
+    },
+    {
+      "title": "Future-date check uses server date while the form uses the browser's local date",
+      "where": "JournalEntryIn.not_in_future / JournalEntryForm max=today",
+      "steps": "Use the app in a time zone ahead of the server (e.g. UTC+10 early morning) and add an entry dated local today.",
+      "expected": "Today's date is accepted.",
+      "actual": "The server's date.today() is still yesterday, so it rejects the entry with 'Journal date cannot be in the future.' even though the form allowed it. Behind-UTC users get the reverse mismatch.",
+      "evidence": "Code: the server uses date.today(); the client todayIso() uses the local time zone.",
+      "status": "suspected",
+      "severity": "low"
+    }
+  ]
+}
